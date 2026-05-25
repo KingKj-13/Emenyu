@@ -1,0 +1,26 @@
+{
+  "table_number": "3",
+  "items": [
+    {
+      "name": "Biftekia",
+      "price": 85,
+      "qty": 1
+    },
+    {
+      "name": "Bifteki Burger",
+      "price": 145,
+      "qty": 1
+    }
+  ],
+  "timestamp": "2025-12-03T16:14:01.859Z",
+  "totals": {
+    "subtotal": 230,
+    "vat": 34.5,
+    "service": 11.5,
+    "tip": 0,
+    "total": 276
+  },
+  "Table": "Table: 3",
+  "filename": "order_table_3_1764778441859.json",
+  "status": "pending"
+}

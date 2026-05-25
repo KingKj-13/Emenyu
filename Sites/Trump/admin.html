@@ -1,0 +1,224 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Panel - Trump Prime Grillhouse</title>
+  <script src="/Trump/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="/Trump/frontend/styles/admin.css" />
+</head>
+<body>
+  <header>
+    <span>Trump Prime Grillhouse - Operations</span>
+    <div class="admin-header-actions">
+      <strong id="currentUserPill" class="admin-user-pill">Checking session</strong>
+      <button id="logoutButton" class="admin-logout" type="button">Logout</button>
+    </div>
+  </header>
+  <nav>
+    <button id="tabMenu" class="active">Menu Editor</button>
+    <button id="tabCurrentOrders">Current Orders</button>
+    <button id="tabOrderHistory">Order History</button>
+    <button id="tabDeal">Deal of the Day</button>
+    <button id="tabRecommend">Recommendations</button>
+    <button id="tabCurrentChat">Current Chat</button>
+    <button id="tabChatHistory">Chat History</button>
+    <button id="tabAccounts">Accounts</button>
+  </nav>
+  <main>
+    <section id="menuEditor" class="section active">
+      <h2 class="section-header">Menu Editor</h2>
+      <div id="mainCategoryContainer" class="flex-row" style="align-items: center;">
+        <label for="mainCategorySelect" style="flex: 1; min-width: 150px;">Main Category (view/edit)</label>
+        <select id="mainCategorySelect" required style="flex: 1; min-width: 200px;"></select>
+        <button id="toggleMainCategoryDisplay" class="toggle-display-btn" style="flex: 0 0 100px;"></button>
+        <button id="addCategoryBtn" title="Add new main category" style="flex: 0 0 auto;">+ Add Category</button>
+        <button id="addSubcategoryBtn" title="Add new subcategory" style="flex: 0 0 auto;">+ Add Subcategory</button>
+      </div>
+      <div id="subCategoryContainer" class="flex-row" style="align-items: center;">
+        <label for="subCategorySelect" style="flex: 1; min-width: 150px;">Subcategory (view/edit)</label>
+        <select id="subCategorySelect" required style="flex: 1; min-width: 200px;"></select>
+        <button id="toggleSubCategoryDisplay" class="toggle-display-btn" style="flex: 0 0 100px;"></button>
+      </div>
+      <div class="item-list-container" aria-label="Menu items list">
+        <div id="menuItemList" class="item-list" aria-live="polite" aria-relevant="all"></div>
+      </div>
+      
+      <hr style="margin: 2rem 0; border-color: #444;" />
+      
+      <h3 id="formTitle" class="section-header">Add New Item</h3>
+      <label for="addMainCategorySelect">Main Category (for adding)</label>
+      <select id="addMainCategorySelect" required></select>
+      <label for="addSubCategorySelect">Subcategory (for adding)</label>
+      <select id="addSubCategorySelect" required></select>
+      
+      <form id="itemForm" autocomplete="off" style="margin-top: 1rem;">
+        <input type="hidden" id="editIndex" value="-1" />
+        
+        <label for="itemName">Name</label>
+        <input id="itemName" type="text" required />
+        
+        <label for="itemDescription">Description</label>
+        <textarea id="itemDescription"></textarea>
+        
+        <div class="flex-row">
+          <div>
+            <label for="itemPrice">Price (R)</label>
+            <input id="itemPrice" type="number" step="0.01" min="0" />
+          </div>
+          <div>
+            <label for="itemCalories">Calories</label>
+            <input id="itemCalories" type="text" />
+          </div>
+        </div>
+        
+        <label for="itemAllergens">Allergens</label>
+        <input id="itemAllergens" type="text" />
+        
+        <label>Spice Level</label>
+        <div class="spice-control-row">
+            <button type="button" class="spice-btn" onclick="adjustSpice(-1)">-</button>
+            <input id="itemSpice" class="spice-display" type="number" value="0" min="0" max="10" readonly />
+            <button type="button" class="spice-btn" onclick="adjustSpice(1)">+</button>
+        </div>
+
+        <label>Media Display Settings</label>
+        <div class="flex-row" style="margin-top: 5px;">
+             <label class="toggle-label" style="margin-top:0;">
+                <input type="checkbox" id="itemImageVisible" checked />
+                <span>Show Image?</span>
+            </label>
+            <label class="toggle-label" style="margin-top:0;">
+                <input type="checkbox" id="itemVideoVisible" checked />
+                <span>Show Video?</span>
+            </label>
+        </div>
+
+        <label>Media Upload (Drop Box)</label>
+        <div class="file-upload-box" onclick="document.getElementById('mediaUploadInput').click()">
+            <p style="margin:0; color:#aaa;">Click to Select File (.jpg or .mp4)</p>
+            <input type="file" id="mediaUploadInput" accept=".jpg, .jpeg, .mp4" style="display:none;" onchange="handleFileUpload(this)" />
+            <div id="uploadStatus" class="upload-status"></div>
+        </div>
+
+        <input type="hidden" id="itemImg" />
+        <input type="hidden" id="itemVideo" />
+        
+        <button id="saveItemBtn" type="submit">Add Item</button>
+        <button id="cancelEditBtn" type="button" style="display: none; background: #6E1F1F; color: #fff; margin-left: 1rem;">Cancel</button>
+      </form>
+    </section>
+
+    <section id="currentOrders" class="section">
+      <h2 class="section-header">Current Orders</h2>
+      <div id="currentOrdersContent" tabindex="0" aria-live="polite"></div>
+    </section>
+
+    <section id="orderHistory" class="section">
+      <h2 class="section-header">Order History</h2>
+      <div id="revenueSummary" style="background: linear-gradient(90deg, #B08A4218 60%, transparent); border-radius: 10px; margin-bottom: 18px; padding: 14px 24px; font-size: 1.25rem; font-family: inherit; display: flex; gap: 2.5rem; color: #B08A42; font-weight: 700; box-shadow: 0 1px 8px #151515;"></div>
+      <div id="orderHistoryContent" tabindex="0" aria-live="polite"></div>
+    </section>
+
+    <section id="dealSection" class="section">
+      <h2 class="section-header">Deal of the Day</h2>
+      <div id="dealCategorySelectors" style="margin-bottom: 1em;">
+        <label for="dealMainCategorySelect">Main Category:</label>
+        <select id="dealMainCategorySelect"></select>
+        <label for="dealSubCategorySelect" style="margin-left: 1em;">Subcategory:</label>
+        <select id="dealSubCategorySelect"></select>
+      </div>
+      <div id="dealFoodList" style="margin-bottom: 1em; max-height: 260px; overflow-y: auto;"></div>
+      <div style="margin: 1em 0;">
+        <b>Deal Includes:</b>
+        <ul id="dealSelectedList"></ul>
+        <div><span>Regular Price Total: <span id="dealTotalPrice">R0.00</span></span></div>
+        <div style="margin-top: 1em;">
+          <label for="dealNewPrice"><b>Deal Price:</b></label>
+          <input type="number" id="dealNewPrice" min="0" step="0.01" style="width: 120px;" />
+        </div>
+      </div>
+      <button id="saveDealBtn">Save Deal of the Day</button>
+      <div id="dealStatus" style="margin-top: 1em; color: var(--accent-success);"></div>
+      <hr style="margin: 1em 0;" />
+      <h3>All Saved Deals</h3>
+      <div id="allDealsList" class="saved-list-container" aria-live="polite" role="region" aria-label="All saved deals"></div>
+    </section>
+
+    <section id="recommendSection" class="section">
+      <h2 class="section-header">Chef's Pairings & Recommendations</h2>
+      <div id="recCategorySelectors" style="margin-bottom: 1em;">
+        <label for="recMainCategorySelect">Main Category:</label>
+        <select id="recMainCategorySelect"></select>
+        <label for="recSubCategorySelect" style="margin-left: 1em;">Subcategory:</label>
+        <select id="recSubCategorySelect"></select>
+      </div>
+      <div id="recFoodList" style="margin-bottom: 1em; max-height: 260px; overflow-y: auto;"></div>
+      <div style="margin: 1em 0;">
+        <b>Selected Pairing Items:</b>
+        <ul id="recSelectedList"></ul>
+        <div style="margin-top: 1em;">
+           <label for="recDescription"><b>Pairing Name / Description (Optional):</b></label>
+           <input type="text" id="recDescription" placeholder="e.g. Steak & Red Wine Special" />
+        </div>
+      </div>
+      <button id="saveRecBtn">Save Recommendation</button>
+      <div id="recStatus" style="margin-top: 1em; color: var(--accent-success);"></div>
+      <hr style="margin: 1em 0;" />
+      <h3>Current Recommendations</h3>
+      <div id="allRecsList" class="saved-list-container" aria-live="polite" role="region" aria-label="All saved recommendations"></div>
+    </section>
+
+    <section id="currentChatSection" class="section">
+      <h2 class="section-header">Live Chat Monitor</h2>
+      <div style="margin-bottom:10px;">
+        <button onclick="Notification.requestPermission()">Enable Desktop Notifications</button>
+      </div>
+      <div id="currentChatContainer" class="saved-list-container" style="max-height: 600px;">
+        <p style="text-align:center; color: gray;">Waiting for messages...</p>
+      </div>
+    </section>
+
+    <section id="chatHistorySection" class="section">
+      <h2 class="section-header">Permanent History</h2>
+      <div class="flex-row" style="margin-bottom: 10px; align-items: flex-end;">
+          <div><label>Table No.</label><input type="text" id="searchHistoryTable" placeholder="Table ID"></div>
+          <div><label>Date</label><input type="date" id="searchHistoryDate"></div>
+          <button id="btnRefreshHistory" style="margin-top:0">Search/Refresh</button>
+      </div>
+      <div id="historyChatContainer" class="saved-list-container" style="max-height: 500px;"></div>
+    </section>
+
+    <section id="accountSection" class="section">
+      <h2 class="section-header">Account Management</h2>
+      <div class="account-grid">
+        <form id="accountForm" class="account-panel" autocomplete="off">
+          <h3>Create Staff Account</h3>
+          <label for="accountUsername">Username</label>
+          <input id="accountUsername" type="text" minlength="3" maxlength="32" required />
+          <label for="accountLabel">Display Name</label>
+          <input id="accountLabel" type="text" maxlength="48" />
+          <label for="accountRole">Role</label>
+          <select id="accountRole" required>
+            <option value="manager">Manager</option>
+            <option value="waiter">Waiter</option>
+          </select>
+          <label for="accountPassword">Temporary Password</label>
+          <input id="accountPassword" type="password" minlength="6" autocomplete="new-password" required />
+          <button id="createAccountBtn" type="submit">Create Account</button>
+          <div id="accountStatus" class="account-status" role="status"></div>
+        </form>
+        <div class="account-panel">
+          <div class="section-heading-inline">
+            <h3>Managed Accounts</h3>
+            <button id="refreshAccountsBtn" type="button">Refresh</button>
+          </div>
+          <div id="accountList" class="account-list" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="/Trump/frontend/scripts/admin.js"></script>
+</body>
+</html>
+

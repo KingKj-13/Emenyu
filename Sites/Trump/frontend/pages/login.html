@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trump Prime Grillhouse - Staff Login</title>
+  <link rel="stylesheet" href="/Trump/frontend/styles/admin.css">
+</head>
+<body class="auth-body">
+  <main class="auth-shell">
+    <section class="auth-card" aria-labelledby="loginTitle">
+      <p class="auth-eyebrow">Restaurant OS</p>
+      <h1 id="loginTitle">Staff access</h1>
+      <p class="auth-copy">Secure local access for floor, manager, and owner operations.</p>
+      <div class="auth-role-row" aria-label="Available roles">
+        <span>Owner</span>
+        <span>Manager</span>
+        <span>Waiter</span>
+      </div>
+      <form id="loginForm" class="auth-form">
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username" required>
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button type="submit">Enter Dashboard</button>
+      </form>
+      <p id="loginStatus" class="auth-status" role="status"></p>
+    </section>
+  </main>
+  <script src="/Trump/frontend/scripts/login.js"></script>
+</body>
+</html>

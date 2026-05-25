@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Butchery Counter</title>
+  <link rel="stylesheet" href="/Trump/frontend/styles/base.css">
+  <link rel="stylesheet" href="/Trump/frontend/styles/layout.css">
+  <link rel="stylesheet" href="/Trump/frontend/styles/components.css">
+</head>
+<body data-page="butchery" data-collection-file="Buchery.json">
+  <div data-component="header"></div>
+
+  <main class="page-shell page-shell--collection">
+    <section class="hero hero--collection hero--butchery">
+      <div class="hero__copy">
+        <p class="hero__eyebrow">The Butchery Counter</p>
+        <h1 class="hero__title">Prime cuts and take-home favourites.</h1>
+        <p class="hero__lead">A cleaner counter browse for premium meats, biltong, and any special home selection the kitchen is stocking.</p>
+      </div>
+    </section>
+    <section id="collectionSections" class="menu-sections"></section>
+  </main>
+
+  <script type="module" src="/Trump/frontend/scripts/ui.js"></script>
+</body>
+</html>

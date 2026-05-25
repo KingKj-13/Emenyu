@@ -1,0 +1,90 @@
+[
+  {
+    "items": [
+      {
+        "name": "OYSTERS (Each)",
+        "description": "Cultivated oysters",
+        "price": 45,
+        "calories": "8 kcal",
+        "allergens": "Shellfish",
+        "spice": "",
+        "img": "Images/Oyster.jpg",
+        "video": "Video/Oysters.mp4",
+        "visible": true,
+        "main": "Starter Meze",
+        "sub": "SEAFOOD"
+      },
+      {
+        "name": "Beef Fillet",
+        "description": "300g Beef fillet, served with fresh-cut chips",
+        "price": 299,
+        "calories": "672 kcal",
+        "allergens": "Beef",
+        "spice": "",
+        "img": "Images/Beef Fillet.jpg",
+        "video": "Video/Beef Fillet.mp4",
+        "visible": true,
+        "main": "Main Meals Kirios Piata",
+        "sub": "Meat Kreas"
+      },
+      {
+        "name": "Chicken Pasta",
+        "description": "Chicken strips in a mild, spicy & creamy sauce",
+        "price": 159,
+        "calories": "800 kcal",
+        "allergens": "Gluten, Dairy, Egg",
+        "spice": "🌶️",
+        "img": "Images/Chicken Pasta.jpg",
+        "video": "Video/Chicken Pasta.mp4",
+        "visible": true,
+        "main": "Main Meals Kirios Piata",
+        "sub": "Pasta"
+      }
+    ],
+    "price": 400
+  },
+  {
+    "items": [
+      {
+        "name": "SOUVLAKIA (Beef)",
+        "description": "Skewers of meat marinated in olive oil & herbs",
+        "price": 99,
+        "calories": "155 kcal",
+        "allergens": "",
+        "spice": "🌶️",
+        "img": "Images/SOUVLAKIA (Beef).jpg",
+        "video": "Video/SOUVLAKIA (Beef).mp4",
+        "visible": true,
+        "main": "Starter Meze",
+        "sub": "MEAT"
+      },
+      {
+        "name": "Crispy Chops Lamb 150g",
+        "description": "Chargrilled chops basted with olive oil & oregano, served with fresh-cut chips",
+        "price": 169,
+        "calories": "324 kcal",
+        "allergens": "Dairy, Egg, Gluten",
+        "spice": "",
+        "img": "Images/Crispy Lamb Chops.jpg",
+        "video": "Video/Crispy Lamb Chops.mp4",
+        "visible": true,
+        "main": "Main Meals Kirios Piata",
+        "sub": "Meat Kreas"
+      },
+      {
+        "name": "Heineken (330ml)",
+        "description": "",
+        "price": 28,
+        "calories": "",
+        "allergens": "",
+        "spice": "",
+        "img": "Images/Heineken (330ml).jpg",
+        "video": "Video/Heineken (330ml).mp4",
+        "visible": true,
+        "main": "Beverages",
+        "sub": "Beers"
+      }
+    ],
+    "price": 250
+  }
+]

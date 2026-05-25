@@ -1,0 +1,135 @@
+.inner {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(160deg, #001828, #020f1c);
+  border-radius: 12px;
+  overflow: hidden;
+  max-height: 80vh;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(198,162,75,0.15);
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wineIcon { color: var(--color-gold); flex-shrink: 0; }
+
+.eyebrow {
+  margin: 0 0 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  opacity: 0.7;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-cream);
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  color: var(--color-sand);
+  flex-shrink: 0;
+  transition: color 160ms ease;
+}
+.closeBtn:hover { color: var(--color-cream); }
+
+.body {
+  padding: 18px 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 0;
+  color: var(--color-sand);
+  font-size: 13px;
+}
+
+.error {
+  color: #e08080;
+  font-size: 13px;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.pairings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pairingCard {
+  padding: 12px 14px;
+  border: 1px solid rgba(198,162,75,0.18);
+  border-radius: 8px;
+  background: rgba(198,162,75,0.04);
+  width: 100%;
+  text-align: left;
+  display: block;
+}
+
+.pairingCardClickable {
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.pairingCardClickable:hover {
+  border-color: rgba(198,162,75,0.5);
+  background: rgba(198,162,75,0.1);
+}
+.pairingCardClickable:focus-visible {
+  outline: 2px solid #c6a24b;
+  outline-offset: 2px;
+}
+
+.pairingName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-gold);
+  margin-bottom: 4px;
+}
+
+.pairingReason {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-sand);
+  line-height: 1.5;
+}
+
+.talkTrack {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(201,187,165,0.6);
+  line-height: 1.55;
+  font-style: italic;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 14px;
+}

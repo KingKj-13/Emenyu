@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trump Prime Grillhouse</title>
+  <script src="/Trump/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="/Trump/frontend/styles/base.css">
+  <link rel="stylesheet" href="/Trump/frontend/styles/layout.css">
+  <link rel="stylesheet" href="/Trump/frontend/styles/components.css">
+  <link rel="stylesheet" href="/Trump/frontend/styles/book.css">
+</head>
+<body data-page="book">
+
+  <div data-component="header"></div>
+
+  <nav id="bookRibbon" class="book-ribbon" aria-label="Menu books">
+    <div class="book-ribbon__books">
+      <button id="ribbonFood" class="book-ribbon__btn is-active" type="button" data-book="food">Food Menu</button>
+      <span class="book-ribbon__sep" aria-hidden="true">|</span>
+      <button id="ribbonDrinks" class="book-ribbon__btn" type="button" data-book="drinks">Wine &amp; Drinks</button>
+    </div>
+    <button id="ribbonFilterToggle" type="button" aria-label="Toggle filters">&#9776;</button>
+    <div class="book-ribbon__meta">
+      <span class="book-ribbon__meta-label">Table</span>
+      <strong id="heroTableLabel">—</strong>
+      <span class="book-ribbon__meta-sep" aria-hidden="true">·</span>
+      <strong id="connectionBadge">Connecting...</strong>
+    </div>
+  </nav>
+
+  <!-- Filter drawer -->
+  <div id="filterDrawer" class="filter-drawer" hidden>
+    <div id="filterDrawerBackdrop" class="filter-drawer__backdrop"></div>
+    <div class="filter-drawer__panel">
+      <div class="filter-drawer__header">
+        <h2 class="filter-drawer__title">Menu</h2>
+        <button id="filterDrawerClose" type="button" aria-label="Close menu">&#x2715;</button>
+      </div>
+      <div data-component="filter-bar"></div>
+      <div class="filter-drawer__staff">
+        <p class="filter-drawer__staff-label">Staff Access</p>
+        <a href="/Trump/login.html?next=/Trump/Waiter" class="filter-drawer__staff-btn">
+          <span>&#128119;</span> Waiter App
+        </a>
+        <a href="/Trump/login.html?next=/Trump/Admin" class="filter-drawer__staff-btn">
+          <span>&#9881;</span> Admin Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Book intro overlay -->
+  <div id="bookIntro" hidden>
+    <div id="bookIntroCard" hidden>
+      <div id="bookIntroCardContent"></div>
+    </div>
+    <div id="bookIntroCover">
+      <div class="book-intro__cover-left"></div>
+      <div class="book-intro__cover-right"></div>
+    </div>
+    <div id="bookIntroTitle"></div>
+  </div>
+
+  <!-- Gold star deals button -->
+  <button id="goldStarBtn" type="button" aria-label="Deals just for you" hidden>&#9733;</button>
+
+  <!-- Deals drawer -->
+  <div id="dealsDrawer" hidden>
+    <div id="dealsBackdrop"></div>
+    <div class="deals-drawer__panel">
+      <div class="deals-drawer__header">
+        <h2 id="dealsDrawerTitle">Deals Just For You</h2>
+        <button id="dealsCloseBtn" type="button" aria-label="Close deals">&#x2715;</button>
+      </div>
+      <div id="dealsContent"></div>
+    </div>
+  </div>
+
+  <!-- Book viewport -->
+  <main id="bookViewport">
+    <div id="flipBook"></div>
+    <button id="bookPrev" class="book-nav" type="button" aria-label="Previous page">&#9664;</button>
+    <button id="bookNext" class="book-nav" type="button" aria-label="Next page">&#9654;</button>
+    <nav id="chapterIndex" aria-label="Chapters"></nav>
+  </main>
+
+  <button id="waiterButton" class="floating-action floating-action--waiter" type="button">Call</button>
+  <div id="waiterToast" class="toast" hidden></div>
+
+  <div data-component="cart"></div>
+  <div data-component="chat"></div>
+  <div data-component="bottom-cart"></div>
+
+  <script type="module" src="/Trump/frontend/scripts/book.js"></script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<div class="overlay-sheet" id="cartModal" hidden>
+  <div class="overlay-sheet__backdrop" data-action="close-cart"></div>
+  <section class="overlay-sheet__panel" aria-labelledby="cartTitle">
+    <div class="overlay-sheet__header">
+      <div>
+        <p class="overlay-sheet__eyebrow">Current table</p>
+        <h2 class="overlay-sheet__title" id="cartTitle">Your Cart</h2>
+      </div>
+      <button class="icon-button" type="button" data-action="close-cart" aria-label="Close cart">Close</button>
+    </div>
+    <div class="table-status" id="cartTableDisplay">Table: Unknown</div>
+    <div id="cartItems" class="cart-list"></div>
+    <div class="cart-tip">
+      <span class="cart-tip__label">Gratuity</span>
+      <div class="cart-tip__controls">
+        <label><input type="radio" name="tipMode" value="0" checked> None</label>
+        <label><input type="radio" name="tipMode" value="0.05"> 5%</label>
+        <label><input type="radio" name="tipMode" value="0.10"> 10%</label>
+        <label><input type="radio" name="tipMode" value="custom"> Custom</label>
+        <input id="customTipInput" class="cart-tip__custom" type="number" min="0" placeholder="%">
+      </div>
+    </div>
+    <div class="cart-summary">
+      <div><span>Subtotal</span><strong id="subtotalValue">R0.00</strong></div>
+      <div><span>VAT (15%)</span><strong id="vatValue">R0.00</strong></div>
+      <div><span>Service Fee (5%)</span><strong id="serviceValue">R0.00</strong></div>
+      <div><span>Tip</span><strong id="tipValue">R0.00</strong></div>
+      <div class="cart-summary__total"><span>Total</span><strong id="totalValue">R0.00</strong></div>
+    </div>
+    <div class="overlay-sheet__actions">
+      <button class="button button--ghost" type="button" data-action="open-history">Ordered Items</button>
+      <button class="button button--accent" id="checkoutButton" type="button">Place Order</button>
+    </div>
+  </section>
+</div>
+
+<div class="overlay-sheet overlay-sheet--narrow" id="historyModal" hidden>
+  <div class="overlay-sheet__backdrop" data-action="close-history"></div>
+  <section class="overlay-sheet__panel" aria-labelledby="historyTitle">
+    <div class="overlay-sheet__header">
+      <div>
+        <p class="overlay-sheet__eyebrow">Kitchen status</p>
+        <h2 class="overlay-sheet__title" id="historyTitle">Ordered Items</h2>
+      </div>
+      <button class="icon-button" type="button" data-action="close-history" aria-label="Close ordered items">Close</button>
+    </div>
+    <div id="historyItems" class="history-list"></div>
+  </section>
+</div>
+
+<div class="overlay-sheet overlay-sheet--detail" id="itemDetailModal" hidden>
+  <div class="overlay-sheet__backdrop" data-action="close-item-detail"></div>
+  <section class="overlay-sheet__panel" aria-labelledby="itemDetailTitle">
+    <div class="overlay-sheet__header">
+      <div>
+        <p class="overlay-sheet__eyebrow">Item detail</p>
+        <h2 class="overlay-sheet__title" id="itemDetailTitle">Item</h2>
+      </div>
+      <button class="icon-button" type="button" data-action="close-item-detail" aria-label="Close item detail">Close</button>
+    </div>
+    <div id="itemDetailMedia" class="detail-media"></div>
+    <div class="detail-copy">
+      <p id="itemDetailDescription" class="detail-copy__description"></p>
+      <div class="detail-copy__stats">
+        <span id="itemDetailPrice"></span>
+        <span id="itemDetailMeta"></span>
+      </div>
+      <p id="itemDetailAllergens" class="detail-copy__allergens"></p>
+    </div>
+    <div class="overlay-sheet__actions">
+      <button class="button button--accent" id="itemDetailAddButton" type="button">Add to Cart</button>
+    </div>
+  </section>
+</div>

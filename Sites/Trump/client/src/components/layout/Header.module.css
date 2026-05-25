@@ -1,0 +1,130 @@
+.header {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: var(--header-h);
+  padding: 14px clamp(16px, 4vw, 48px);
+  border-bottom: 1px solid rgba(198, 162, 75, 0.22);
+  background: rgba(0, 15, 24, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brandMark {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(198, 162, 75, 0.6);
+  background: #050505;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.06), 0 8px 20px rgba(0,0,0,0.3);
+  color: var(--color-gold);
+}
+
+.brandTitle {
+  margin: 0;
+  font-size: clamp(18px, 3vw, 24px);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  font-family: var(--font-heading);
+  color: var(--color-cream);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brandLine {
+  width: min(16rem, 34vw);
+  height: 2px;
+  margin-top: 6px;
+  background: linear-gradient(90deg, var(--red), var(--color-gold), transparent);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.tablePill {
+  padding: 4px 12px;
+  border: 1px solid rgba(198, 162, 75, 0.4);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--color-gold);
+  background: rgba(198, 162, 75, 0.08);
+}
+
+.viewToggle,
+.cartButton,
+.userButton,
+.menuButton {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(198, 162, 75, 0.5);
+  border-radius: 3px;
+  background: linear-gradient(145deg, #0a0a0a, var(--blue-black));
+  color: var(--muted);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.08);
+  transition: border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  cursor: pointer;
+  position: relative;
+  text-decoration: none;
+}
+
+.viewToggle:hover,
+.cartButton:hover,
+.userButton:hover,
+.menuButton:hover {
+  border-color: var(--gold-soft);
+  color: var(--white);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+.viewToggle.active {
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+  background: rgba(198, 162, 75, 0.1);
+}
+
+.cartBadge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 480px) {
+  .brandMark { display: none; }
+  .tablePill { display: none; }
+  .brandLine { width: 28vw; }
+}

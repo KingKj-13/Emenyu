@@ -1,0 +1,209 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Trump Prime Grillhouse - Waiter Pro</title>
+<script src="/Trump/socket.io/socket.io.js"></script>
+<link rel="stylesheet" href="/Trump/frontend/styles/waiter.css" />
+</head>
+<body>
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <div class="status-left">
+    <span class="pill pill-gold" id="tablePill">No Table</span>
+    <button class="pill pill-waiter" id="waiterPill" onclick="openWaiterModal()">Set Name</button>
+    <span class="pill pill-conn connecting" id="connPill">Connecting...</span>
+    <button class="pill pill-logout" id="waiterLogout" type="button">Logout</button>
+  </div>
+  <!-- NOTIFICATION BELL (NEW) -->
+  <div class="notif-bell-wrap" id="notifBell" onclick="toggleNotifPanel()">
+    <span class="material-icons">!</span>
+    <span class="notif-badge" id="notifBadge">0</span>
+  </div>
+  <button class="pill pill-rush" id="rushBtn" onclick="toggleRush()">Rush</button>
+</div>
+
+<!-- NOTIFICATION PANEL (NEW) -->
+<div class="notif-panel" id="notifPanel">
+  <div class="notif-panel-hdr">Alerts</div>
+  <div id="notifList"><div class="notif-empty">No alerts yet</div></div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main-content">
+
+  <!-- TABLES VIEW -->
+  <div class="view active" id="viewTables">
+    <div class="sticky-wrap">
+      <div class="search-wrap">
+        <span class="search-ico material-icons">S</span>
+        <input class="tbl-search" id="tableSearch" placeholder="Search table number..." oninput="filterTables(this.value)">
+      </div>
+    </div>
+    <div class="table-grid" id="tableGrid"></div>
+  </div>
+
+  <!-- MENU VIEW -->
+  <div class="view" id="viewMenu">
+    <div class="menu-controls">
+      <div class="search-wrap">
+        <span class="search-ico material-icons">S</span>
+        <input class="mnu-search" id="menuSearch" placeholder="Search menu..." oninput="debounceSearch(this.value)">
+      </div>
+      <div class="cat-chips" id="catChips"></div>
+    </div>
+    <div class="menu-grid" id="menuGrid"></div>
+  </div>
+
+  <!-- ORDER VIEW -->
+  <div class="view" id="viewOrder">
+    <div class="order-hdr">
+      <h2 id="orderViewTitle">Current Order</h2>
+      <p id="orderViewSub">Select a table first</p>
+    </div>
+    <!-- RECOMMENDATIONS STRIP (NEW) -->
+    <div class="rec-strip" id="recStrip">
+      <div class="rec-strip-lbl">Suggested Add-ons</div>
+      <div class="rec-chips" id="recChips"></div>
+    </div>
+    <div class="order-list" id="orderList"></div>
+    <div class="order-summary" id="orderSummaryCard" style="display:none">
+      <div class="os-row">
+        <span class="os-lbl">Total</span>
+        <span class="os-val" id="orderTotalVal">R0</span>
+      </div>
+      <div class="os-btns">
+        <button class="btn-kitchen" id="btnKitchen" onclick="sendOrder()">
+          <span class="material-icons" style="font-size:18px">Send</span> Send to Kitchen
+        </button>
+        <button class="btn-archive" onclick="openArchiveModal()">Done</button>
+      </div>
+    </div>
+    <div class="order-empty" id="orderEmpty">
+      <span class="material-icons">Cart</span>
+      <div class="order-empty-title">Order is empty</div>
+      <div style="font-size:13px">Select a table then browse the menu</div>
+    </div>
+    <div class="history-section" id="historySection" style="display:none">
+      <div class="history-title">Today's Archived Tables</div>
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS VIEW -->
+  <div class="view" id="viewStats">
+    <div class="analytics-grid">
+      <div class="stat-card"><div class="stat-val" id="statSales">R0</div><div class="stat-lbl">Today Sales</div></div>
+      <div class="stat-card"><div class="stat-val" id="statUpsell">0%</div><div class="stat-lbl">Upsell Rate</div></div>
+      <div class="stat-card"><div class="stat-val" id="statTables">0</div><div class="stat-lbl">Tables Served</div></div>
+      <div class="stat-card"><div class="stat-val" id="statAvg">R0</div><div class="stat-lbl">Avg Check</div></div>
+    </div>
+    <div class="perf-section">
+      <div class="perf-title">Category Performance</div>
+      <div class="perf-row"><div class="perf-labels"><span>Starters</span><span id="pctStarter">0%</span></div><div class="perf-bar"><div class="perf-fill" id="fillStarter" style="width:0%"></div></div></div>
+      <div class="perf-row"><div class="perf-labels"><span>Mains</span><span id="pctMain">0%</span></div><div class="perf-bar"><div class="perf-fill" id="fillMain" style="width:0%"></div></div></div>
+      <div class="perf-row"><div class="perf-labels"><span>Drinks</span><span id="pctDrink">0%</span></div><div class="perf-bar"><div class="perf-fill" id="fillDrink" style="width:0%"></div></div></div>
+      <div class="perf-row"><div class="perf-labels"><span>Desserts</span><span id="pctDessert">0%</span></div><div class="perf-bar"><div class="perf-fill" id="fillDessert" style="width:0%"></div></div></div>
+    </div>
+  </div>
+
+</div><!-- /main-content -->
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-item active" data-view="Tables" onclick="switchView(this,'viewTables')">
+    <span class="material-icons">Tbl</span>
+    <span class="nav-label">Tables</span>
+  </button>
+  <button class="nav-item" data-view="Menu" onclick="switchView(this,'viewMenu')">
+    <span class="material-icons">Menu</span>
+    <span class="nav-label">Menu</span>
+  </button>
+  <button class="nav-item" data-view="Order" onclick="switchView(this,'viewOrder')">
+    <span class="material-icons">Cart</span>
+    <span class="nav-label">Order</span>
+    <span class="nav-badge" id="orderBadge" style="display:none">0</span>
+  </button>
+  <button class="nav-item" data-view="Stats" onclick="switchView(this,'viewStats')">
+    <span class="material-icons">Stats</span>
+    <span class="nav-label">Stats</span>
+  </button>
+</div>
+
+<!-- FAB TOWER -->
+<div class="fab-tower">
+  <button class="fab fab-send" title="Send to Kitchen" onclick="sendOrder()">
+    <span class="material-icons">Send</span>
+  </button>
+  <button class="fab fab-note" title="Service Notes" id="fabNote" onclick="openNotesModal()">
+    <span class="material-icons">Note</span>
+  </button>
+  <button class="fab fab-call" title="Call Manager" onclick="callManager()">
+    <span class="material-icons">Help</span>
+  </button>
+  <button class="fab fab-arch" title="Archive Table" onclick="openArchiveModal()">
+    <span class="material-icons">Done</span>
+  </button>
+</div>
+
+<!-- BACKDROP -->
+<div class="backdrop" id="backdrop" onclick="closeAllSheets()"></div>
+
+<!-- ITEM DETAIL SHEET -->
+<div class="sheet" id="itemSheet">
+  <div class="sheet-handle"><div class="sheet-handle-bar"></div></div>
+  <div class="sheet-hdr">
+    <span class="sheet-title" id="itemSheetTitle">Item</span>
+    <button class="sheet-close" onclick="closeItemSheet()"><span class="material-icons">x</span></button>
+  </div>
+  <div class="sheet-body" id="itemSheetBody"></div>
+</div>
+
+<!-- WAITER NAME MODAL -->
+<div class="modal-overlay" id="waiterModal">
+  <div class="modal">
+    <div class="modal-title">Welcome</div>
+    <div class="modal-sub">Enter your name so the kitchen knows who's sending orders.</div>
+    <label class="form-label">Your Name</label>
+    <input class="form-input" id="waiterInput" placeholder="e.g. Kshitij" maxlength="30" onkeypress="if(event.key==='Enter')saveWaiterName()">
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="saveWaiterName()">Start Shift</button>
+    </div>
+  </div>
+</div>
+
+<!-- SERVICE NOTES MODAL -->
+<div class="modal-overlay" id="notesModal">
+  <div class="modal">
+    <div class="modal-title">Service Notes</div>
+    <div class="modal-sub" id="notesModalSub">Table notes for kitchen / allergies</div>
+    <label class="form-label">Notes</label>
+    <textarea class="form-textarea" id="notesInput" placeholder="e.g. Allergy: nuts. Guest celebrating birthday."></textarea>
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeNotesModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveNotes()">Save Notes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ARCHIVE CONFIRM MODAL -->
+<div class="modal-overlay" id="archiveModal">
+  <div class="modal">
+    <div class="modal-title">Archive Table</div>
+    <div class="modal-sub" id="archiveModalSub">This will mark the table as complete and move all orders to history.</div>
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeArchiveModal()">Cancel</button>
+      <button class="btn-danger" onclick="archiveTable()">Archive & Complete</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="/Trump/frontend/scripts/waiter-app.js"></script>
+</body>
+</html>
+

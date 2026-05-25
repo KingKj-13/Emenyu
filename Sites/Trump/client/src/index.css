@@ -1,0 +1,119 @@
+:root {
+  /* Navy-black theme from prototype */
+  --blue-black: #001724;
+  --blue-deep: #021f32;
+  --red: #a52b2d;
+  --gold: #c6a24b;
+  --gold-soft: #e4c987;
+  --paper-edge: #e7ddc9;
+  --white: #f7fbff;
+  --muted: rgba(247, 251, 255, 0.72);
+
+  /* Existing design system tokens */
+  --color-ink: #001724;
+  --color-coal: #021f32;
+  --color-panel: #062030;
+  --color-panel-soft: #0a2d42;
+  --color-cream: #f7f1e8;
+  --color-sand: #c9bba5;
+  --color-gold: #c6a24b;
+  --color-gold-soft: #e4c987;
+  --color-burgundy: #a52b2d;
+  --color-moss: #71806a;
+  --color-teal: #4d7f82;
+  --color-line: rgba(198, 162, 75, 0.2);
+  --color-overlay: rgba(0, 23, 36, 0.82);
+  --shadow-soft: 0 18px 46px rgba(0, 0, 0, 0.42);
+  --shadow-lift: 0 24px 70px rgba(0, 0, 0, 0.56);
+  --ease-premium: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --radius-card: 6px;
+  --radius-pill: 999px;
+  --space-1: 8px;
+  --space-2: 12px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 40px;
+  --font-heading: Georgia, 'Times New Roman', serif;
+  --font-body: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --header-h: 76px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--header-h) + 16px);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 48% 16%, rgba(30, 85, 108, 0.42), transparent 36rem),
+    radial-gradient(circle at 80% 84%, rgba(165, 43, 45, 0.18), transparent 26rem),
+    linear-gradient(135deg, #000c14 0%, var(--blue-black) 48%, var(--blue-deep) 100%);
+  color: var(--color-cream);
+  font-family: var(--font-body);
+  line-height: 1.5;
+  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, video { display: block; max-width: 100%; }
+button, input, textarea { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: 0.62; }
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+a { color: var(--color-gold); text-decoration: none; }
+
+::selection { background: rgba(198, 162, 75, 0.28); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--blue-black); }
+::-webkit-scrollbar-thumb { background: rgba(198, 162, 75, 0.4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(198, 162, 75, 0.6); }
+
+/* Utility classes */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+.gold-text { color: var(--color-gold); }
+.muted-text { color: var(--muted); }
+
+/* Loading skeleton */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--radius-card);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

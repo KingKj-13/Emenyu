@@ -1,0 +1,16 @@
+# TTS (Edge)
+edge-tts
+pygame
+python-dotenv
+nest-asyncio
+
+# STT (Selenium)
+selenium
+webdriver-manager
+mtranslate
+
+# Our Helpers
+word2number
+
+flask_cors
+flask

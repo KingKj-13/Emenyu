@@ -1,0 +1,13 @@
+<section class="filter-bar" aria-label="Menu Filters">
+  <div class="filter-bar__top">
+    <label class="search-field" for="menuSearchInput">
+      <span class="search-field__label">Search the menu</span>
+      <input id="menuSearchInput" type="search" placeholder="Steaks, wines, seafood...">
+      <button id="menuSearchClear" class="search-field__clear" type="button" aria-label="Clear search" hidden>Clear</button>
+    </label>
+    <button class="button button--ghost filter-bar__history" type="button" data-action="open-history">Ordered Items</button>
+  </div>
+  <div id="filterChipList" class="filter-chip-list" role="group" aria-label="Dietary filters"></div>
+  <div id="activeFilterList" class="active-filter-list" aria-live="polite"></div>
+  <p id="searchNoResults" class="empty-inline" hidden>No items match this search and filter combination.</p>
+</section>

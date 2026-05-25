@@ -1,0 +1,20 @@
+<template id="menu-card-template">
+  <article class="menu-card">
+    <button class="menu-card__media" type="button" data-action="open-item">
+      <img class="menu-card__image" alt="" loading="lazy">
+      <span class="menu-card__media-badge" data-role="media-badge" hidden>Video</span>
+    </button>
+    <div class="menu-card__body">
+      <div class="menu-card__copy">
+        <span class="menu-card__tag" data-role="tag" hidden></span>
+        <h3 class="menu-card__title" data-role="title"></h3>
+        <p class="menu-card__description" data-role="description"></p>
+      </div>
+      <div class="menu-card__meta">
+        <span class="menu-card__price" data-role="price"></span>
+        <button class="button button--accent menu-card__add" type="button" data-action="add-item" aria-label="Add item">+</button>
+      </div>
+      <div class="menu-card__footnote" data-role="footnote"></div>
+    </div>
+  </article>
+</template>

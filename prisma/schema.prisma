@@ -1,0 +1,234 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   Int       @id @default(autoincrement())
+  username             String    @unique
+  password             String
+  role                 String
+  label                String?
+  suspended            Boolean   @default(false)
+  suspendedAt          DateTime?
+  sessionInvalidBefore BigInt?
+  createdBy            String    @default("system")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([role])
+  @@index([suspended])
+}
+
+model MenuCategory {
+  id           Int            @id @default(autoincrement())
+  restaurantId String         @default("trump")
+  title        String
+  slug         String
+  path         String         @unique
+  parentId     Int?
+  parent       MenuCategory?  @relation("MenuCategoryChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children     MenuCategory[] @relation("MenuCategoryChildren")
+  sortOrder    Int            @default(0)
+  visible      Boolean        @default(true)
+  courseType   String?        @default("MAIN")
+  metadata     Json?
+  items        MenuItem[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([restaurantId, parentId, sortOrder])
+  @@index([restaurantId, slug])
+  @@index([restaurantId, courseType])
+  @@index([visible])
+}
+
+model MenuItem {
+  id             Int          @id @default(autoincrement())
+  restaurantId   String       @default("trump")
+  categoryId     Int
+  category       MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name           String
+  normalizedName String
+  description    String       @default("")
+  price          Float        @default(0)
+  calories       String       @default("")
+  allergens      String       @default("")
+  spice          String       @default("")
+  imagePath      String       @default("")
+  videoPath      String       @default("")
+  imageVisible   Boolean      @default(true)
+  videoVisible   Boolean      @default(true)
+  visible        Boolean      @default(true)
+  chefPick       Boolean      @default(false)
+  popular        Boolean      @default(false)
+  sourceTitle    String       @default("")
+  sortOrder      Int          @default(0)
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([restaurantId, normalizedName])
+  @@index([restaurantId, categoryId, sortOrder])
+  @@index([visible])
+  @@index([chefPick])
+  @@index([popular])
+}
+
+model FeaturedItem {
+  id           Int       @id @default(autoincrement())
+  restaurantId String    @default("trump")
+  group        String
+  itemId       Int?
+  itemName     String
+  reason       String    @default("")
+  active       Boolean   @default(true)
+  sortOrder    Int       @default(0)
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([restaurantId, group, sortOrder])
+  @@index([itemId])
+  @@index([active])
+}
+
+model Recommendation {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("trump")
+  description  String   @default("")
+  items        Json
+  active       Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([restaurantId, active, sortOrder])
+}
+
+model RestaurantMenuSettings {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @unique @default("trump")
+  settings     Json?
+  source       String   @default("json-hybrid")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Table {
+  id              Int                @id @default(autoincrement())
+  restaurantId    String             @default("trump")
+  tableId         String
+  displayName     String             @default("")
+  status          String             @default("active")
+  metadata        Json?
+  orders          Order[]
+  cartState       ActiveCartState?
+  waiterAssignments WaiterAssignment[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@unique([restaurantId, tableId])
+  @@index([restaurantId, status])
+}
+
+model Order {
+  id            Int                  @id @default(autoincrement())
+  restaurantId  String               @default("trump")
+  filename      String
+  tableId       String
+  table         Table                @relation(fields: [restaurantId, tableId], references: [restaurantId, tableId])
+  status        String               @default("active")
+  waiterName    String               @default("")
+  notes         String               @default("")
+  subtotal      Float                @default(0)
+  vat           Float                @default(0)
+  service       Float                @default(0)
+  tip           Float                @default(0)
+  total         Float                @default(0)
+  timestamp     DateTime             @default(now())
+  sourceKind    String               @default("orders")
+  raw           Json?
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([restaurantId, status, timestamp])
+  @@index([restaurantId, tableId, status])
+  @@index([timestamp])
+  @@unique([restaurantId, sourceKind, filename])
+}
+
+model OrderItem {
+  id          Int      @id @default(autoincrement())
+  orderId     Int
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  name        String
+  price       Float    @default(0)
+  quantity    Float    @default(1)
+  note        String   @default("")
+  imagePath   String   @default("")
+  description String   @default("")
+  metadata    Json?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([orderId, sortOrder])
+  @@index([name])
+}
+
+model OrderStatusHistory {
+  id          Int      @id @default(autoincrement())
+  orderId     Int
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus  String   @default("")
+  toStatus    String
+  actor       String   @default("system")
+  reason      String   @default("")
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([orderId, createdAt])
+  @@index([toStatus])
+}
+
+model ActiveCartState {
+  id             Int      @id @default(autoincrement())
+  restaurantId   String   @default("trump")
+  tableId        String
+  table          Table    @relation(fields: [restaurantId, tableId], references: [restaurantId, tableId])
+  cart           Json
+  adminOverrides Json?
+  updatedBy      String   @default("system")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([restaurantId, tableId])
+  @@index([restaurantId, updatedAt])
+}
+
+model WaiterAssignment {
+  id           Int       @id @default(autoincrement())
+  restaurantId String    @default("trump")
+  tableId      String
+  table        Table     @relation(fields: [restaurantId, tableId], references: [restaurantId, tableId])
+  waiterName   String
+  socketId     String    @default("")
+  status       String    @default("active")
+  assignedAt   DateTime  @default(now())
+  releasedAt   DateTime?
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([restaurantId, tableId, status])
+  @@index([restaurantId, waiterName])
+  @@index([socketId])
+}

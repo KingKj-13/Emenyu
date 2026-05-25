@@ -1,0 +1,23 @@
+{
+  "scripts": {
+    "env:check": "node scripts/validate-prisma-env.js",
+    "prisma:validate": "npx prisma validate",
+    "prisma:startup": "node scripts/prisma-safe-start.js",
+    "db:check": "node scripts/check-postgres.js",
+    "auth:migrate": "node Sites/Trump/scripts/migrate-auth-to-postgres.js",
+    "menu:migrate": "node Sites/Trump/scripts/migrate-menu-to-postgres.js",
+    "orders:migrate": "node Sites/Trump/scripts/migrate-orders-to-postgres.js",
+    "menu:migrate:greek": "node scripts/migrate-greek-menu.js",
+    "menu:migrate:imli": "node scripts/migrate-imli-menu.js",
+    "menu:migrate:alpescatore": "node scripts/migrate-alpescatore-menu.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "dotenv": "^17.4.2",
+    "postgres": "^3.4.7",
+    "prisma": "^6.19.3"
+  },
+  "overrides": {
+    "@hono/node-server": "1.19.13"
+  }
+}

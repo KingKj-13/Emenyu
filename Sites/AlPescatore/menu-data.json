@@ -1,0 +1,16 @@
+{
+  "western": {
+    "starter": [],
+    "main": [],
+    "dessert": []
+  },
+  "eastern": {
+    "starter": [],
+    "main": [],
+    "dessert": []
+  },
+  "drinks": {
+    "cold": [],
+    "hot": []
+  }
+}

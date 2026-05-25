@@ -1,0 +1,113 @@
+.wrapper { position: relative; }
+
+.bookTypeToggle {
+  position: fixed;
+  top: calc(var(--header-h) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(0,15,24,0.8);
+  border: 1px solid rgba(198,162,75,0.2);
+  border-radius: var(--radius-pill);
+  backdrop-filter: blur(12px);
+}
+
+.typeBtn {
+  padding: 6px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.typeBtnActive {
+  background: rgba(198,162,75,0.15);
+  border-color: rgba(198,162,75,0.4);
+  color: var(--color-gold);
+}
+
+.typeBtn:hover:not(.typeBtnActive) {
+  color: var(--color-cream);
+}
+
+.coverFront {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(30,85,108,0.5), transparent 60%),
+    linear-gradient(160deg, #00101a, #021d2c 65%, #00080d);
+  border: 1px solid rgba(198,162,75,0.4);
+}
+
+.coverTitle {
+  font-family: Georgia, serif;
+  font-size: clamp(28px, 6vw, 56px);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--color-cream);
+  text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.coverSub {
+  font-size: clamp(8px, 1.5vw, 12px);
+  letter-spacing: 0.2em;
+  color: var(--color-gold);
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+.coverLine {
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+  margin: 16px 0;
+}
+
+.coverInstruction {
+  font-size: 11px;
+  color: rgba(247,251,255,0.4);
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 640px) {
+  .bookTypeToggle { display: none; }
+}
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .bookTypeToggle {
+    top: calc(var(--header-h) + 6px);
+    padding: 2px;
+  }
+
+  .typeBtn { padding: 4px 12px; font-size: 11px; }
+
+  .pageReadout { bottom: 8px; padding: 4px 10px; font-size: 10px; }
+}
+
+.pageReadout {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  padding: 6px 14px;
+  background: rgba(0,15,24,0.8);
+  border: 1px solid rgba(198,162,75,0.2);
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}

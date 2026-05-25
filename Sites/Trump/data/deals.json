@@ -1,0 +1,48 @@
+[
+  {
+    "items": [
+      {
+        "name": "Chicken lasagna",
+        "description": "Chicken",
+        "price": 135,
+        "calories": "600 kcal",
+        "allergens": "",
+        "spice": "",
+        "img": "Images/Chicken lasagna.jpg",
+        "video": "Video/Chicken lasagna.mp4",
+        "visible": true,
+        "main": "Main Meals Kirios Piata",
+        "sub": "Chicken Kota"
+      },
+      {
+        "name": "Beef Fillet",
+        "description": "300g Beef fillet, served with fresh-cut chips",
+        "price": 299,
+        "calories": "672 kcal",
+        "allergens": "Beef",
+        "spice": "",
+        "img": "Images/Beef fillet.jpg",
+        "video": "Video/Beef Fillet.mp4",
+        "visible": true,
+        "main": "Main Meals Kirios Piata",
+        "sub": "Meat Kreas"
+      },
+      {
+        "name": "Castle Lite (330ml)",
+        "description": "",
+        "price": 24,
+        "calories": "",
+        "allergens": "",
+        "spice": 0,
+        "imageVisible": true,
+        "videoVisible": false,
+        "img": "Images/Castle Lite (330ml).jpeg",
+        "video": "Video/Castle Lite (330ml).mp4",
+        "visible": true,
+        "main": "Beverages",
+        "sub": "Beers"
+      }
+    ],
+    "price": 400
+  }
+]

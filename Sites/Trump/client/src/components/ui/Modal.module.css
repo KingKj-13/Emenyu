@@ -1,0 +1,26 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--color-overlay);
+  backdrop-filter: blur(6px);
+}
+
+.panel {
+  position: relative;
+  background: linear-gradient(160deg, #001d2e, #021828);
+  border: 1px solid rgba(198, 162, 75, 0.3);
+  border-radius: 6px;
+  box-shadow: var(--shadow-lift);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.sm  { width: min(420px, 100%); }
+.md  { width: min(580px, 100%); }
+.lg  { width: min(780px, 100%); }
+.full { width: 100%; height: calc(100vh - 32px); }

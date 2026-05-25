@@ -1,0 +1,26 @@
+<button id="chatLauncher" class="floating-action floating-action--chat" type="button" data-action="toggle-chat" aria-expanded="false">
+  AI Chat
+</button>
+
+<section id="chatPanel" class="chat-panel" hidden aria-labelledby="chatTitle">
+  <div class="chat-panel__header">
+    <div>
+      <p class="chat-panel__eyebrow">AI concierge</p>
+      <h2 id="chatTitle" class="chat-panel__title">Grillhouse Concierge</h2>
+    </div>
+    <button class="icon-button" type="button" data-action="toggle-chat" aria-label="Close chat">Close</button>
+  </div>
+  <div id="chatMessages" class="chat-panel__messages">
+    <div class="chat-bubble chat-bubble--bot">Welcome. Ask about the grillhouse menu, pairings, or specials.</div>
+  </div>
+  <div class="chat-panel__prompts" aria-label="Suggested questions">
+    <button type="button" class="chat-prompt" data-chat-prompt="What is popular tonight?">Popular</button>
+    <button type="button" class="chat-prompt" data-chat-prompt="Recommend a premium steak pairing">Steak Pairing</button>
+    <button type="button" class="chat-prompt" data-chat-prompt="Build a seafood combo">Seafood Combo</button>
+  </div>
+  <div id="chatSuggestions" class="chat-panel__suggestions"></div>
+  <div class="chat-panel__composer">
+    <input id="chatInput" type="text" placeholder="Ask about menu, deals, or pairings...">
+    <button class="button button--accent" id="chatSendButton" type="button">Send</button>
+  </div>
+</section>

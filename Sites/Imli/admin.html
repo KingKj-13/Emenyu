@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Panel - Mythos Menu</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-dark-primary: #1a1a1a;
+      --bg-dark-secondary: #2c2c2c;
+      --bg-dark-tertiary: #3a3a3a;
+      --text-primary: #e0e0e0;
+      --text-secondary: #a0a0a0;
+      --accent-gold: #ffd700;
+      --accent-gold-dark: #cca300;
+      --accent-danger: #e53935;
+      --accent-success: #43a047;
+      --font-family-main: 'Inter', sans-serif;
+      --border-radius-sm: 6px;
+      --border-radius-md: 8px;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: var(--font-family-main);
+      background: var(--bg-dark-primary);
+      color: var(--text-primary);
+      margin: 0; padding: 0;
+      min-height: 100vh;
+    }
+    header {
+      background: #000; padding: 1rem 1.5rem; text-align: center;
+      font-size: 1.5rem; font-weight: 700; border-bottom: 4px solid var(--accent-gold);
+      position: sticky; top: 0; z-index: 1000; box-shadow: var(--shadow-sm); user-select: none;
+    }
+    nav {
+      display: flex; background: var(--bg-dark-secondary); gap: 0.5rem;
+      padding: 0.75rem 1.5rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      position: sticky; top: 56px; z-index: 999; user-select: none; overflow-x: auto;
+    }
+    nav button {
+      flex: 1; background: var(--bg-dark-tertiary); border: none; padding: 0.75rem;
+      color: var(--text-secondary); font-weight: 600; cursor: pointer;
+      border-radius: var(--border-radius-sm); transition: all 0.2s ease; white-space: nowrap;
+    }
+    nav button.active, nav button:hover {
+      background: var(--accent-gold); color: #000;
+      box-shadow: 0 4px 8px rgba(255, 215, 0, 0.2); transform: translateY(-2px);
+    }
+    main { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .section-header {
+      font-size: 1.8rem; font-weight: 700; margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--bg-dark-tertiary); padding-bottom: 0.75rem;
+      display: flex; align-items: center; gap: 12px; user-select: none;
+    }
+    label { font-weight: 600; color: var(--text-secondary); font-size: 0.9rem; display: block; margin-top: 1rem; margin-bottom: 0.5rem; }
+    select, input, textarea {
+      width: 100%; padding: 0.75rem; border: 1px solid #555;
+      border-radius: var(--border-radius-sm); background: var(--bg-dark-secondary);
+      color: var(--text-primary); font-family: var(--font-family-main); font-size: 1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    select:focus, input:focus, textarea:focus {
+      outline: none; border-color: var(--accent-gold);
+      box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
+    }
+    textarea { resize: vertical; min-height: 80px; }
+    button {
+      background: var(--accent-gold); border: none; color: #111;
+      padding: 0.75rem 1.5rem; font-weight: 700; font-size: 1rem;
+      border-radius: var(--border-radius-sm); cursor: pointer; margin-top: 1.5rem;
+      transition: background-color 0.2s, transform 0.1s; user-select: none;
+    }
+    button:hover { background: var(--accent-gold-dark); }
+    button:active { transform: scale(0.98); }
+    .flex-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .flex-row > * { flex: 1; min-width: 150px; }
+    
+    .item-list-container {
+      margin-top: 1rem; background: var(--bg-dark-secondary);
+      border-radius: var(--border-radius-md); padding: 1rem;
+      box-shadow: var(--shadow-sm); max-height: 420px; overflow-y: auto;
+    }
+    .item-list-item {
+      background: var(--bg-dark-tertiary); margin-bottom: 1rem; padding: 1rem;
+      border-radius: var(--border-radius-md); display: flex;
+      justify-content: space-between; align-items: center; gap: 1rem;
+      user-select: none; position: relative;
+    }
+    .item-list-item:hover { background: var(--bg-dark-primary); }
+    .item-list-item img {
+      border-radius: 6px; max-width: 80px; max-height: 60px; object-fit: cover;
+    }
+    .toggle-display-btn {
+      font-size: 0.85rem; padding: 3px 8px; border-radius: 4px;
+      cursor: pointer; border: none; width: 100%; user-select: none;
+    }
+    .toggle-display-btn.toggle-visible { background-color: var(--accent-success); color: white; }
+    .toggle-display-btn.toggle-hidden { background-color: var(--accent-danger); color: white; }
+    
+    /* Saved lists */
+    .saved-list-container {
+      margin-top: 2rem; background: var(--bg-dark-secondary);
+      border-radius: var(--border-radius-md); padding: 1rem;
+      box-shadow: var(--shadow-sm); max-height: 320px; overflow-y: auto; color: var(--text-primary);
+    }
+    .saved-list-container h4 {
+      margin: 0 0 0.5rem; font-weight: 700; border-bottom: 1px solid var(--bg-dark-tertiary);
+      padding-bottom: 0.3rem; user-select: none;
+    }
+    .saved-list-container ul { margin: 0.2rem 0 1rem 1.5rem; padding: 0; list-style-type: disc; }
+    .saved-list-container li { margin-bottom: 0.2rem; }
+    .saved-list-container button {
+      padding: 4px 8px; font-size: 0.85rem; font-weight: 600;
+      border-radius: 4px; cursor: pointer;
+    }
+    .edit-btn { background-color: var(--accent-gold); border: none; color: black; }
+    .hide-btn { background-color: var(--accent-danger); color: white; border: none; }
+    .delete-btn { background-color: #b71c1c; color: white; border: none; }
+
+    /* --- CHAT & ORDER BUBBLE STYLES --- */
+    .chat-bubble {
+        background: var(--bg-dark-tertiary);
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border-left: 4px solid var(--text-secondary);
+        animation: slideIn 0.3s ease-out;
+        position: relative;
+    }
+    
+    /* Special Event: Glowing Gold/Red */
+    .special-event-bubble {
+        border-left: 4px solid var(--accent-gold);
+        background: linear-gradient(90deg, #3a2a00 0%, #2c2c2c 100%);
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+        border: 1px solid rgba(255, 215, 0, 0.4);
+    }
+    .special-event-bubble::after {
+        content: "★ SPECIAL EVENT";
+        position: absolute;
+        top: -10px;
+        right: 10px;
+        background: var(--accent-gold);
+        color: black;
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+    /* Text Highlighting */
+    .highlight-word {
+        background-color: var(--accent-gold);
+        color: black;
+        font-weight: bold;
+        padding: 0 3px;
+        border-radius: 3px;
+    }
+
+    /* Table Badges */
+    .table-badge {
+        background: #444; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.95rem; font-weight: bold; border: 1px solid #555;
+    }
+    .special-event-bubble .table-badge {
+        background: var(--accent-danger);
+        color: white;
+        border: 1px solid red;
+        font-size: 1.1em;
+        box-shadow: 0 0 5px red;
+    }
+
+    @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+  </style>
+</head>
+<body>
+  <header>Mythos Restaurant – Admin Panel</header>
+  <nav>
+    <button id="tabMenu" class="active">Menu Editor</button>
+    <button id="tabCurrentOrders">Current Orders</button>
+    <button id="tabOrderHistory">Order History</button>
+    <button id="tabDeal">Deal of the Day</button>
+    <button id="tabRecommend">Recommendations</button>
+    <button id="tabCurrentChat">Current Chat</button>
+    <button id="tabChatHistory">Chat History</button>
+  </nav>
+  <main>
+    <section id="menuEditor" class="section active">
+      <h2 class="section-header">Menu Editor</h2>
+      <div id="mainCategoryContainer" class="flex-row" style="align-items: center;">
+        <label for="mainCategorySelect" style="flex: 1; min-width: 150px;">Main Category (view/edit)</label>
+        <select id="mainCategorySelect" required style="flex: 1; min-width: 200px;"></select>
+        <button id="toggleMainCategoryDisplay" class="toggle-display-btn" style="flex: 0 0 100px;"></button>
+        <button id="addCategoryBtn" title="Add new main category" style="flex: 0 0 auto;">+ Add Category</button>
+        <button id="addSubcategoryBtn" title="Add new subcategory" style="flex: 0 0 auto;">+ Add Subcategory</button>
+      </div>
+      <div id="subCategoryContainer" class="flex-row" style="align-items: center;">
+        <label for="subCategorySelect" style="flex: 1; min-width: 150px;">Subcategory (view/edit)</label>
+        <select id="subCategorySelect" required style="flex: 1; min-width: 200px;"></select>
+        <button id="toggleSubCategoryDisplay" class="toggle-display-btn" style="flex: 0 0 100px;"></button>
+      </div>
+      <div class="item-list-container" aria-label="Menu items list">
+        <div id="menuItemList" class="item-list" aria-live="polite" aria-relevant="all"></div>
+      </div>
+      <hr style="margin: 2rem 0; border-color: #444;" />
+      <h3 id="formTitle" class="section-header">Add New Item</h3>
+      <label for="addMainCategorySelect">Main Category (for adding)</label>
+      <select id="addMainCategorySelect" required></select>
+      <label for="addSubCategorySelect">Subcategory (for adding)</label>
+      <select id="addSubCategorySelect" required></select>
+      <form id="itemForm" autocomplete="off" style="margin-top: 1rem;">
+        <input type="hidden" id="editIndex" value="-1" />
+        <label for="itemName">Name</label>
+        <input id="itemName" type="text" required />
+        <label for="itemDescription">Description</label>
+        <textarea id="itemDescription"></textarea>
+        <div class="flex-row">
+          <div>
+            <label for="itemPrice">Price (R)</label>
+            <input id="itemPrice" type="number" step="0.01" min="0" />
+          </div>
+          <div>
+            <label for="itemCalories">Calories</label>
+            <input id="itemCalories" type="text" />
+          </div>
+        </div>
+        <label for="itemAllergens">Allergens</label>
+        <input id="itemAllergens" type="text" />
+        <label for="itemSpice">Spice Level</label>
+        <input id="itemSpice" type="text" />
+        <label for="itemImg">Image URL</label>
+        <input id="itemImg" type="url" />
+        <label for="itemVideo">Video URL</label>
+        <input id="itemVideo" type="url" />
+        <button id="saveItemBtn" type="submit">Add Item</button>
+        <button id="cancelEditBtn" type="button" style="display: none; background: #e53935; color: #fff; margin-left: 1rem;">Cancel</button>
+      </form>
+    </section>
+
+    <section id="currentOrders" class="section">
+      <h2 class="section-header">Current Orders</h2>
+      <div id="currentOrdersContent" tabindex="0" aria-live="polite"></div>
+    </section>
+
+    <section id="orderHistory" class="section">
+      <h2 class="section-header">Order History</h2>
+      <div id="revenueSummary" style="
+          background: linear-gradient(90deg, #ffd70011 60%, transparent);
+          border-radius: 10px; margin-bottom: 18px; padding: 14px 24px;
+          font-size: 1.25rem; font-family: inherit; display: flex;
+          gap: 2.5rem; color: #ffd700; font-weight: 700; box-shadow: 0 1px 8px #2225;
+        "></div>
+      <div id="orderHistoryContent" tabindex="0" aria-live="polite"></div>
+    </section>
+
+    <section id="dealSection" class="section">
+      <h2 class="section-header">Deal of the Day</h2>
+      <div id="dealCategorySelectors" style="margin-bottom: 1em;">
+        <label for="dealMainCategorySelect">Main Category:</label>
+        <select id="dealMainCategorySelect"></select>
+        <label for="dealSubCategorySelect" style="margin-left: 1em;">Subcategory:</label>
+        <select id="dealSubCategorySelect"></select>
+      </div>
+      <div id="dealFoodList" style="margin-bottom: 1em; max-height: 260px; overflow-y: auto;"></div>
+      <div style="margin: 1em 0;">
+        <b>Deal Includes:</b>
+        <ul id="dealSelectedList"></ul>
+        <div><span>Regular Price Total: <span id="dealTotalPrice">R0.00</span></span></div>
+        <div style="margin-top: 1em;">
+          <label for="dealNewPrice"><b>Deal Price:</b></label>
+          <input type="number" id="dealNewPrice" min="0" step="0.01" style="width: 120px;" />
+        </div>
+      </div>
+      <button id="saveDealBtn">Save Deal of the Day</button>
+      <div id="dealStatus" style="margin-top: 1em; color: var(--accent-success);"></div>
+      <hr style="margin: 1em 0;" />
+      <h3>All Saved Deals</h3>
+      <div id="allDealsList" class="saved-list-container" aria-live="polite" role="region" aria-label="All saved deals"></div>
+    </section>
+
+    <section id="recommendSection" class="section">
+      <h2 class="section-header">Chef's Pairings & Recommendations</h2>
+      <div id="recCategorySelectors" style="margin-bottom: 1em;">
+        <label for="recMainCategorySelect">Main Category:</label>
+        <select id="recMainCategorySelect"></select>
+        <label for="recSubCategorySelect" style="margin-left: 1em;">Subcategory:</label>
+        <select id="recSubCategorySelect"></select>
+      </div>
+      <div id="recFoodList" style="margin-bottom: 1em; max-height: 260px; overflow-y: auto;"></div>
+      <div style="margin: 1em 0;">
+        <b>Selected Pairing Items:</b>
+        <ul id="recSelectedList"></ul>
+        <div style="margin-top: 1em;">
+           <label for="recDescription"><b>Pairing Name / Description (Optional):</b></label>
+           <input type="text" id="recDescription" placeholder="e.g. Steak & Red Wine Special" />
+        </div>
+      </div>
+      <button id="saveRecBtn">Save Recommendation</button>
+      <div id="recStatus" style="margin-top: 1em; color: var(--accent-success);"></div>
+      <hr style="margin: 1em 0;" />
+      <h3>Current Recommendations</h3>
+      <div id="allRecsList" class="saved-list-container" aria-live="polite" role="region" aria-label="All saved recommendations"></div>
+    </section>
+
+    <section id="currentChatSection" class="section">
+      <h2 class="section-header">Live Chat Monitor</h2>
+      <div style="margin-bottom:10px;">
+        <button onclick="Notification.requestPermission()">Enable Desktop Notifications</button>
+      </div>
+      <div id="currentChatContainer" class="saved-list-container" style="max-height: 600px;">
+        <p style="text-align:center; color: gray;">Waiting for messages...</p>
+      </div>
+    </section>
+
+    <section id="chatHistorySection" class="section">
+      <h2 class="section-header">Permanent History</h2>
+      <div class="flex-row" style="margin-bottom: 10px; align-items: flex-end;">
+          <div><label>Table No.</label><input type="text" id="searchHistoryTable" placeholder="Table ID"></div>
+          <div><label>Date</label><input type="date" id="searchHistoryDate"></div>
+          <button id="btnRefreshHistory" style="margin-top:0">Search/Refresh</button>
+      </div>
+      <div id="historyChatContainer" class="saved-list-container" style="max-height: 500px;"></div>
+    </section>
+  </main>
+</body>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const socket = io(); // Connect socket immediately
+  
+  // *** CRITICAL: AUTH HEADERS FOR FETCH REQUESTS ***
+  const authHeaders = { 
+    'Authorization': 'Basic ' + btoa('admin:Kshitij'),
+    'Content-Type': 'application/json'
+  };
+
+  // --- DOM Element References ---
+  const mainCategorySelect = document.getElementById("mainCategorySelect");
+  const subCategorySelect = document.getElementById("subCategorySelect");
+  const addMainCategorySelect = document.getElementById("addMainCategorySelect");
+  const addSubCategorySelect = document.getElementById("addSubCategorySelect");
+  const menuItemList = document.getElementById("menuItemList");
+  const itemForm = document.getElementById("itemForm");
+  const editIndexInput = document.getElementById("editIndex");
+  const saveItemBtn = document.getElementById("saveItemBtn");
+  const cancelEditBtn = document.getElementById("cancelEditBtn");
+  const toggleMainCategoryBtn = document.getElementById("toggleMainCategoryDisplay");
+  const toggleSubCategoryBtn = document.getElementById("toggleSubCategoryDisplay");
+  const addCategoryBtn = document.getElementById("addCategoryBtn");
+  const addSubcategoryBtn = document.getElementById("addSubcategoryBtn");
+  const currentOrdersContent = document.getElementById("currentOrdersContent");
+  const orderHistoryContent = document.getElementById("orderHistoryContent");
+  const revenueSummary = document.getElementById("revenueSummary");
+
+  // Tab buttons
+  const tabMenuBtn = document.getElementById("tabMenu");
+  const tabCurrentOrdersBtn = document.getElementById("tabCurrentOrders");
+  const tabOrderHistoryBtn = document.getElementById("tabOrderHistory");
+  const tabDealBtn = document.getElementById("tabDeal");
+  const tabRecommendBtn = document.getElementById("tabRecommend");
+  // NEW TAB BUTTONS
+  const tabCurrentChatBtn = document.getElementById("tabCurrentChat");
+  const tabChatHistoryBtn = document.getElementById("tabChatHistory");
+
+  // Sections
+  const menuSection = document.getElementById("menuEditor");
+  const currentOrdersSection = document.getElementById("currentOrders");
+  const orderHistorySection = document.getElementById("orderHistory");
+  const dealSection = document.getElementById("dealSection");
+  const recommendSection = document.getElementById("recommendSection");
+  // NEW SECTIONS
+  const currentChatSection = document.getElementById("currentChatSection");
+  const chatHistorySection = document.getElementById("chatHistorySection");
+
+  // Chat Elements
+  const currentChatContainer = document.getElementById("currentChatContainer");
+  const historyChatContainer = document.getElementById("historyChatContainer");
+  const btnRefreshHistory = document.getElementById("btnRefreshHistory");
+
+  // --- SPECIAL EVENT KEYWORDS (For Highlighting) ---
+  const SPECIAL_WORDS = [
+    "birthday", "anniversary", "event", "celebration", "party", "gathering",
+    "festival", "ceremony", "function", "occasion", "milestone", "achievement",
+    "accomplishment", "success", "breakthrough", "win", "completion", "goal",
+    "target", "engagement", "wedding", "proposal", "reception", "honeymoon",
+    "commitment", "union", "reunion", "graduation", "convocation", "admission",
+    "orientation", "farewell", "retirement", "promotion", "transfer", "date"
+  ];
+
+  // --- State Management ---
+  let menuData = {};
+  let categoryStructure = {};
+  
+  // Deal State
+  let dealOfTheDay = { items: [], price: 0 }; 
+  let allDealsData = []; 
+
+  // Recommendation State
+  let currentPairing = []; 
+  let allRecommendationsData = [];
+
+  // --- Utility Functions ---
+  const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const itemKey = (item) => `${item.main || ''}::${item.sub || ''}::${item.name}`;
+
+  // --- Core Application Logic ---
+
+  async function refreshUI() {
+    await loadMenu();
+    populateMainCategories();
+    populateSubcategories();
+    renderItemList();
+    setupAddCategorySelectors();
+    
+    // Setup Deal & Recommend Selectors
+    populateCategorySelectorsForTab(dealMainCategorySelect);
+    populateCategorySelectorsForTab(recMainCategorySelect);
+
+    await loadAllDeals();
+    await loadAllRecommendations();
+    await loadCurrentOrders(); // Load orders on start
+  }
+
+  // --- Menu and Category Management ---
+  async function loadMenu() {
+    try {
+      const resp = await fetch('/api/menu');
+      if (!resp.ok) throw new Error(`Server responded with ${resp.status}`);
+      menuData = await resp.json();
+      categoryStructure = getCategoryStructure(menuData);
+    } catch (err) {
+      console.error("Loading menu failed:", err);
+      menuData = {};
+      categoryStructure = {};
+    }
+  }
+
+  async function saveMenu() {
+    try {
+      const resp = await fetch('/api/menu', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify(menuData),
+      });
+      if (!resp.ok) throw new Error('Failed to save menu');
+    } catch (err) {
+      console.error("Saving menu failed:", err);
+      alert("Failed to save menu data.");
+    }
+  }
+
+  function getCategoryStructure(data) {
+    const struct = {};
+    if (!data || typeof data !== 'object') return struct;
+    for (const key in data) {
+      const value = data[key];
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        struct[key] = Object.keys(value).filter(subKey => subKey !== 'items' && subKey !== 'visible');
+      } else {
+        struct[key] = [];
+      }
+    }
+    return struct;
+  }
+
+  function populateDropdown(selectElem, items, defaultOptionText) {
+    selectElem.innerHTML = '';
+    if (defaultOptionText) {
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = "";
+      defaultOpt.textContent = defaultOptionText;
+      selectElem.appendChild(defaultOpt);
+    }
+    items.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = item;
+      opt.textContent = item;
+      selectElem.appendChild(opt);
+    });
+  }
+
+  function populateMainCategories() {
+    const categories = Object.keys(categoryStructure);
+    populateDropdown(mainCategorySelect, categories);
+    populateDropdown(addMainCategorySelect, categories);
+  }
+
+  function populateSubcategories() {
+    const mainCat = mainCategorySelect.value;
+    const subcats = categoryStructure[mainCat] || [];
+    toggleSubCategoryBtn.style.display = subcats.length > 0 ? 'inline-block' : 'none';
+    subCategorySelect.style.display = subcats.length > 0 ? 'inline-block' : 'none';
+    subCategorySelect.required = subcats.length > 0;
+    if (subcats.length > 0) populateDropdown(subCategorySelect, subcats);
+    renderItemList();
+  }
+
+  function setupAddCategorySelectors() {
+    const mainCat = addMainCategorySelect.value;
+    const subcats = categoryStructure[mainCat] || [];
+    addSubCategorySelect.style.display = subcats.length > 0 ? 'inline-block' : 'none';
+    addSubCategorySelect.required = subcats.length > 0;
+    if (subcats.length > 0) populateDropdown(addSubCategorySelect, subcats);
+  }
+
+  // --- Item List Rendering (Menu Editor) ---
+  function renderItemList() {
+    const mainCat = mainCategorySelect.value;
+    const subCat = subCategorySelect.style.display !== 'none' ? subCategorySelect.value : null;
+    let items = getItems(mainCat, subCat);
+    menuItemList.innerHTML = '';
+    if (!items || items.length === 0) {
+      menuItemList.innerHTML = `<p style='text-align:center;color:#999;'>No items in this category.</p>`;
+      return;
+    }
+    items.forEach((item, index) => {
+      const visible = item.visible !== false;
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'item-list-item';
+      itemDiv.innerHTML = `
+        <img src="${escapeHtml(item.img || 'https://via.placeholder.com/80x60?text=No+Image')}" alt="${escapeHtml(item.name)}" onerror="this.style.display='none';"/>
+        <div style="flex:1;">
+          <strong>${escapeHtml(item.name)}</strong>
+          <small style="display:block;">${escapeHtml(item.description || '')}</small>
+          <small style="display:block;">Price: R${(item.price ?? 0).toFixed(2)}</small>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:5px; width:80px;">
+          <button onclick="moveItem(${index}, 'up')" ${index === 0 ? 'disabled' : ''}>↑</button>
+          <button onclick="moveItem(${index}, 'down')" ${index === items.length - 1 ? 'disabled' : ''}>↓</button>
+          <button onclick="editItem(${index})">Edit</button>
+          <button onclick="deleteItem(${index})" style="background:var(--accent-danger);color:white;">Delete</button>
+          <button class="toggle-display-btn ${visible ? 'toggle-visible' : 'toggle-hidden'}">${visible ? 'Visible' : 'Hidden'}</button>
+        </div>`;
+      
+      const toggleBtn = itemDiv.querySelector('.toggle-display-btn');
+      toggleBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const currentItems = getItems(mainCat, subCat);
+        currentItems[index].visible = !currentItems[index].visible;
+        await saveMenu();
+        renderItemList();
+      });
+      menuItemList.appendChild(itemDiv);
+    });
+  }
+
+  function getItems(mainCat, subCat) {
+    if (!menuData || !mainCat) return [];
+    const mainCatData = menuData[mainCat];
+    if (!mainCatData) return [];
+    if (subCat) {
+      const subCatData = mainCatData[subCat];
+      return subCatData ? subCatData.items || [] : [];
+    }
+    return Array.isArray(mainCatData) ? mainCatData : mainCatData.items || [];
+  }
+  
+  window.moveItem = async (index, direction) => {
+    const mainCat = mainCategorySelect.value;
+    const subCat = subCategorySelect.style.display !== 'none' ? subCategorySelect.value : null;
+    let items = getItems(mainCat, subCat);
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= items.length) return;
+    [items[index], items[newIndex]] = [items[newIndex], items[index]];
+    await saveMenu();
+    renderItemList();
+  };
+
+  window.editItem = (index) => {
+    const mainCat = mainCategorySelect.value;
+    const subCat = subCategorySelect.style.display !== 'none' ? subCategorySelect.value : null;
+    let items = getItems(mainCat, subCat);
+    const item = items[index];
+    if (!item) return;
+    addMainCategorySelect.value = mainCat;
+    setupAddCategorySelectors();
+    if(subCat) addSubCategorySelect.value = subCat;
+    editIndexInput.value = index;
+    itemForm.itemName.value = item.name || '';
+    itemForm.itemDescription.value = item.description || '';
+    itemForm.itemPrice.value = item.price ?? '';
+    itemForm.itemCalories.value = item.calories || '';
+    itemForm.itemAllergens.value = item.allergens || '';
+    itemForm.itemSpice.value = item.spice || '';
+    itemForm.itemImg.value = item.img || '';
+    itemForm.itemVideo.value = item.video || '';
+    saveItemBtn.textContent = 'Save Changes';
+    cancelEditBtn.style.display = 'inline-block';
+    document.getElementById('formTitle').scrollIntoView({ behavior: 'smooth' });
+  };
+
+  window.deleteItem = async (index) => {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+    const mainCat = mainCategorySelect.value;
+    const subCat = subCategorySelect.style.display !== 'none' ? subCategorySelect.value : null;
+    let items = getItems(mainCat, subCat);
+    items.splice(index, 1);
+    await saveMenu();
+    renderItemList();
+  };
+
+  itemForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const mainCat = addMainCategorySelect.value;
+    const subCat = addSubCategorySelect.style.display !== 'none' ? addSubCategorySelect.value : null;
+    if (!mainCat) { alert("Please select a main category."); return; }
+    
+    let items;
+    if (subCat) {
+      if (!menuData[mainCat][subCat]) menuData[mainCat][subCat] = { visible: true, items: [] };
+      items = menuData[mainCat][subCat].items;
+    } else {
+      if (!menuData[mainCat].items) menuData[mainCat].items = [];
+      items = menuData[mainCat].items;
+    }
+    const newItem = {
+      name: itemForm.itemName.value.trim(),
+      description: itemForm.itemDescription.value.trim(),
+      price: parseFloat(itemForm.itemPrice.value) || 0,
+      calories: itemForm.itemCalories.value.trim(),
+      allergens: itemForm.itemAllergens.value.trim(),
+      spice: itemForm.itemSpice.value.trim(),
+      img: itemForm.itemImg.value.trim(),
+      video: itemForm.itemVideo.value.trim(),
+      visible: true
+    };
+    const idx = parseInt(editIndexInput.value, 10);
+    if (idx > -1) {
+      newItem.visible = items[idx].visible;
+      items[idx] = newItem;
+    } else {
+      items.push(newItem);
+    }
+    await saveMenu();
+    await refreshUI();
+    itemForm.reset();
+    editIndexInput.value = -1;
+    saveItemBtn.textContent = 'Add Item';
+    cancelEditBtn.style.display = 'none';
+  });
+
+  cancelEditBtn.addEventListener("click", () => {
+    itemForm.reset();
+    editIndexInput.value = -1;
+    saveItemBtn.textContent = "Add Item";
+    cancelEditBtn.style.display = "none";
+  });
+
+  function switchTab(tabKey) {
+    // 1. Hide all sections
+    [menuSection, currentOrdersSection, orderHistorySection, dealSection, recommendSection, currentChatSection, chatHistorySection].forEach(s => s.classList.remove('active'));
+    // 2. Deactivate all buttons
+    [tabMenuBtn, tabCurrentOrdersBtn, tabOrderHistoryBtn, tabDealBtn, tabRecommendBtn, tabCurrentChatBtn, tabChatHistoryBtn].forEach(b => b.classList.remove('active'));
+
+    // 3. Map keys to sections/buttons
+    const tabMap = {
+      menu: { section: menuSection, btn: tabMenuBtn },
+      current: { section: currentOrdersSection, btn: tabCurrentOrdersBtn },
+      history: { section: orderHistorySection, btn: tabOrderHistoryBtn },
+      deal: { section: dealSection, btn: tabDealBtn },
+      recommend: { section: recommendSection, btn: tabRecommendBtn },
+      // NEW MAPPINGS
+      currentChat: { section: currentChatSection, btn: tabCurrentChatBtn },
+      chatHistory: { section: chatHistorySection, btn: tabChatHistoryBtn }
+    };
+    
+    // 4. Activate selected
+    if(tabMap[tabKey]) {
+        tabMap[tabKey].section.classList.add('active');
+        tabMap[tabKey].btn.classList.add('active');
+    }
+
+    if(tabKey === 'chatHistory') loadChatHistory();
+  }
+
+  // --- Orders & History Logic ---
+  async function loadCurrentOrders() {
+    try {
+      const resp = await fetch("/orders", { headers: authHeaders });
+      if (!resp.ok) throw new Error("Failed to load");
+      const orders = await resp.json();
+      renderOrders(orders, currentOrdersContent, { canComplete: true, canDelete: true, type: "orders" });
+    } catch (err) {
+      currentOrdersContent.innerHTML = "<p style='text-align:center;'>Failed to load current orders.</p>";
+    }
+  }
+
+  async function loadOrderHistory() {
+    try {
+      const resp = await fetch("/history", { headers: authHeaders });
+      if (!resp.ok) throw new Error("Failed to load");
+      const orders = await resp.json();
+      renderOrders(orders, orderHistoryContent, { canDelete: true, canMarkIncomplete: true, type: "history" });
+      renderRevenueSummary(orders);
+    } catch (err) {
+      orderHistoryContent.innerHTML = "<p style='text-align:center;'>Failed to load order history.</p>";
+      revenueSummary.innerHTML = '';
+    }
+  }
+
+  function renderRevenueSummary(orders) {
+    const totalsByDate = {};
+    orders.forEach(order => {
+      if (!order.timestamp || !order.totals) return;
+      const dateObj = new Date(order.timestamp);
+      const monthDay = `${dateObj.getMonth() + 1}-${dateObj.getDate()}`;
+      totalsByDate[monthDay] = (totalsByDate[monthDay] || 0) + (order.totals.total || 0);
+    });
+    let html = '<strong>Revenue by Month-Day (ZAR):</strong> ';
+    for (const [date, total] of Object.entries(totalsByDate)) {
+      html += `<span style="margin-right:1rem;">${date}: R${total.toFixed(2)}</span>`;
+    }
+    revenueSummary.innerHTML = html;
+  }
+
+  // --- UPDATED RENDER ORDERS FUNCTION WITH TABLE NUMBER ---
+  function renderOrders(orders, container, options) {
+    container.innerHTML = '';
+    if (!orders || orders.length === 0) {
+      container.innerHTML = "<p style='text-align:center;'>No orders found.</p>";
+      return;
+    }
+    const wrapper = document.createElement("div");
+    wrapper.className = "flex-row";
+    orders.forEach(order => {
+      const card = document.createElement("div");
+      card.style.cssText = `background:var(--bg-dark-tertiary); padding:12px; border-radius:8px; margin:8px; width:320px; box-shadow:var(--shadow-sm);`;
+      const orderDate = order.timestamp ? new Date(order.timestamp).toLocaleString() : 'No timestamp';
+      const itemsHtml = order.items.map(item => `<li>${escapeHtml(item.name)} × ${item.qty}</li>`).join('');
+      let buttonsHtml = '';
+      if (options.canComplete) buttonsHtml += `<button onclick="markComplete('${order.filename}')" style="flex:1;">Complete</button>`;
+      if (options.canMarkIncomplete) buttonsHtml += `<button onclick="markIncomplete('${order.filename}')" style="flex:1;">Mark Incomplete</button>`;
+      if (options.canDelete) buttonsHtml += `<button onclick="deleteOrder('${options.type}', '${order.filename}')" style="flex:1; background:var(--accent-danger);color:white;">Delete</button>`;
+      
+      // Determine table string from stored data
+      const tableText = order.table_number ? `Table: ${order.table_number}` : (order.Table || "Unknown Table");
+
+      card.innerHTML = `
+        <h4 style="margin:0 0 6px;color:var(--accent-gold);">${escapeHtml(order.filename.replace(/\.json$/, ''))}</h4>
+        
+        <div style="background: #333; color: #4caf50; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px; font-weight: bold; border: 1px solid #4caf50;">
+           ${escapeHtml(tableText)}
+        </div>
+
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">${orderDate}</div>
+        <ul>${itemsHtml}</ul>
+        <div>Total: R${(order.totals?.total ?? 0).toFixed(2)}</div>
+        <div style="margin-top:10px;display:flex;gap:5px;">${buttonsHtml}</div>
+      `;
+      wrapper.appendChild(card);
+    });
+    container.appendChild(wrapper);
+  }
+
+  window.markComplete = async (filename) => {
+    if (!confirm("Mark order as complete? This will RESET the table cart.")) return;
+    await fetch('/complete', { method: 'POST', headers: authHeaders, body: JSON.stringify({ filename }) });
+    loadCurrentOrders();
+    loadOrderHistory();
+  };
+
+  window.markIncomplete = async (filename) => {
+    if (!confirm("Mark order as incomplete?")) return;
+    await fetch('/incomplete', { method: 'POST', headers: authHeaders, body: JSON.stringify({ filename }) });
+    loadCurrentOrders();
+    loadOrderHistory();
+  };
+
+  window.deleteOrder = async (type, filename) => {
+    if (!confirm("Delete this order permanently?")) return;
+    await fetch(`/delete/${type}/${encodeURIComponent(filename)}`, { method: 'DELETE', headers: authHeaders });
+    if (type === 'orders') loadCurrentOrders();
+    else loadOrderHistory();
+  };
+
+  // --- Generic Data Helpers for Deals & Recommendations ---
+  function populateCategorySelectorsForTab(mainSelectElem) {
+     const categories = Object.keys(categoryStructure);
+     populateDropdown(mainSelectElem, categories, "Select a Category");
+  }
+
+  function getFilteredFoodItems(mainCat, subCat) {
+    if (!mainCat) return [];
+    let allItems = [];
+    const mainData = menuData[mainCat];
+    if (!mainData) return [];
+    if (subCat && subCat !== "") {
+      if (mainData[subCat] && mainData[subCat].items) {
+        allItems = mainData[subCat].items.map(i => ({...i, main: mainCat, sub: subCat}));
+      }
+    } else {
+      if(mainData.items) allItems.push(...mainData.items.map(i => ({...i, main: mainCat, sub: null})));
+      Object.keys(mainData).forEach(key => {
+        if (key !== 'items' && key !== 'visible' && mainData[key]?.items) {
+          allItems.push(...mainData[key].items.map(i => ({...i, main: mainCat, sub: key})));
+        }
+      });
+    }
+    return allItems;
+  }
+
+  // --- Deal of the Day Logic ---
+  function populateDealSubcategories() {
+    const mainCat = dealMainCategorySelect.value;
+    const subcats = categoryStructure[mainCat] || [];
+    dealSubCategorySelect.style.display = subcats.length > 0 ? 'inline-block' : 'none';
+    if (subcats.length > 0) populateDropdown(dealSubCategorySelect, subcats, "All Subcategories");
+    renderDealEditor();
+  }
+
+  function renderDealEditor() {
+    const mainCat = dealMainCategorySelect.value;
+    const subCat = dealSubCategorySelect.style.display !== 'none' ? dealSubCategorySelect.value : null;
+    const foodItems = getFilteredFoodItems(mainCat, subCat);
+    dealFoodList.innerHTML = '';
+    foodItems.forEach(item => {
+      const id = `deal-item-${itemKey(item).replace(/::/g, '-')}`;
+      const isChecked = dealOfTheDay.items.some(dealItem => itemKey(dealItem) === itemKey(item));
+      const div = document.createElement('div');
+      div.innerHTML = `<input type="checkbox" id="${id}" ${isChecked ? 'checked' : ''}> <label for="${id}">${escapeHtml(item.name)}</label>`;
+      div.querySelector('input').addEventListener('change', (e) => {
+        if (e.target.checked) dealOfTheDay.items.push(item);
+        else dealOfTheDay.items = dealOfTheDay.items.filter(i => itemKey(i) !== itemKey(item));
+        renderDealSelectedList();
+      });
+      dealFoodList.appendChild(div);
+    });
+  }
+
+  function renderDealSelectedList() {
+    dealSelectedList.innerHTML = '';
+    let total = 0;
+    dealOfTheDay.items.forEach(item => {
+      total += item.price || 0;
+      const li = document.createElement('li');
+      li.textContent = escapeHtml(item.name);
+      dealSelectedList.appendChild(li);
+    });
+    dealTotalPrice.textContent = `R${total.toFixed(2)}`;
+  }
+  
+  async function loadAllDeals() {
+    try {
+      const resp = await fetch('/api/deals', { headers: authHeaders });
+      allDealsData = resp.ok ? await resp.json() : [];
+      renderAllDealsList();
+    } catch(e) { allDealsData = []; renderAllDealsList(); }
+  }
+
+  function renderAllDealsList() {
+    allDealsList.innerHTML = '';
+    if (allDealsData.length === 0) {
+      allDealsList.innerHTML = '<p>No deals have been saved yet.</p>';
+      return;
+    }
+    allDealsData.forEach((deal, index) => {
+      const originalPrice = deal.items.reduce((sum, item) => sum + (item.price || 0), 0);
+      const dealCard = document.createElement('div');
+      dealCard.style.cssText = "background:var(--bg-dark-tertiary); padding:12px; border-radius:8px; margin-bottom:12px; position:relative;";
+      const hiddenStyle = deal.hidden ? 'opacity:0.5; filter: grayscale(0.7);' : '';
+      dealCard.innerHTML = `
+        <h4>Deal #${index + 1}: <span style="color:var(--accent-gold)">R${deal.price.toFixed(2)}</span> (was R${originalPrice.toFixed(2)})</h4>
+        <ul>${deal.items.map(item => `<li>${escapeHtml(item.name)}</li>`).join('')}</ul>
+        <div style="display:flex; gap:0.5rem; margin-top:8px; ${hiddenStyle}">
+          <button data-index="${index}" class="edit-deal-btn edit-btn">Edit</button>
+          <button data-index="${index}" class="hide-deal-btn hide-btn">${deal.hidden ? 'Unhide' : 'Hide'}</button>
+          <button data-index="${index}" class="delete-deal-btn delete-btn">Delete</button>
+        </div>
+      `;
+      allDealsList.appendChild(dealCard);
+    });
+
+    document.querySelectorAll('.edit-deal-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = +e.target.dataset.index;
+        dealOfTheDay = structuredClone(allDealsData[idx]);
+        dealNewPrice.value = dealOfTheDay.price;
+        if(dealOfTheDay.items.length > 0) {
+          dealMainCategorySelect.value = dealOfTheDay.items[0].main || '';
+          populateDealSubcategories();
+          dealSubCategorySelect.value = dealOfTheDay.items[0].sub || '';
+        } else {
+          dealMainCategorySelect.value = '';
+          dealSubCategorySelect.value = '';
+        }
+        renderDealEditor();
+        renderDealSelectedList();
+        switchTab('deal');
+      });
+    });
+
+    document.querySelectorAll('.hide-deal-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const idx = +e.target.dataset.index;
+        allDealsData[idx].hidden = !allDealsData[idx].hidden;
+        await saveDealsData(allDealsData);
+        await loadAllDeals();
+      });
+    });
+
+    document.querySelectorAll('.delete-deal-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        if (!confirm('Delete this deal?')) return;
+        allDealsData.splice(+e.target.dataset.index, 1);
+        await saveDealsData(allDealsData);
+        await loadAllDeals();
+      });
+    });
+  }
+
+  async function saveDealsData(deals) {
+    try {
+      const resp = await fetch('/api/deals', { method: 'POST', headers: authHeaders, body: JSON.stringify(deals) });
+      if (!resp.ok) throw new Error("Failed");
+    } catch(e) { dealStatus.textContent = 'Error saving deals.'; }
+  }
+
+  saveDealBtn.addEventListener('click', async () => {
+    const price = parseFloat(dealNewPrice.value);
+    if (isNaN(price) || price <= 0 || dealOfTheDay.items.length === 0) {
+      dealStatus.textContent = 'Invalid price or no items.';
+      setTimeout(() => dealStatus.textContent = '', 3000);
+      return;
+    }
+    const newDeal = { ...dealOfTheDay, price };
+    let foundIndex = allDealsData.findIndex(d => {
+       if (d.price !== newDeal.price) return false;
+       if (d.items.length !== newDeal.items.length) return false;
+       return newDeal.items.every(ni => d.items.some(di => itemKey(di) === itemKey(ni)));
+    });
+    if (foundIndex > -1) allDealsData[foundIndex] = newDeal;
+    else allDealsData.push(newDeal);
+
+    await saveDealsData(allDealsData);
+    dealStatus.textContent = 'Deal saved!';
+    dealOfTheDay = { items: [], price: 0 };
+    dealNewPrice.value = '';
+    renderDealEditor();
+    renderDealSelectedList();
+    await loadAllDeals();
+    setTimeout(() => dealStatus.textContent = '', 3000);
+  });
+
+  // --- RECOMMENDATIONS / CHEF'S PAIRINGS LOGIC ---
+
+  function populateRecSubcategories() {
+    const mainCat = recMainCategorySelect.value;
+    const subcats = categoryStructure[mainCat] || [];
+    recSubCategorySelect.style.display = subcats.length > 0 ? 'inline-block' : 'none';
+    if (subcats.length > 0) populateDropdown(recSubCategorySelect, subcats, "All Subcategories");
+    renderRecEditor();
+  }
+
+  function renderRecEditor() {
+    const mainCat = recMainCategorySelect.value;
+    const subCat = recSubCategorySelect.style.display !== 'none' ? recSubCategorySelect.value : null;
+    const foodItems = getFilteredFoodItems(mainCat, subCat);
+
+    recFoodList.innerHTML = '';
+    foodItems.forEach(item => {
+      const id = `rec-item-${itemKey(item).replace(/::/g, '-')}`;
+      const isChecked = currentPairing.some(pItem => itemKey(pItem) === itemKey(item));
+      const div = document.createElement('div');
+      div.innerHTML = `<input type="checkbox" id="${id}" ${isChecked ? 'checked' : ''}> <label for="${id}">${escapeHtml(item.name)}</label>`;
+      div.querySelector('input').addEventListener('change', (e) => {
+        if (e.target.checked) currentPairing.push(item);
+        else currentPairing = currentPairing.filter(i => itemKey(i) !== itemKey(item));
+        renderRecSelectedList();
+      });
+      recFoodList.appendChild(div);
+    });
+  }
+
+  function renderRecSelectedList() {
+    recSelectedList.innerHTML = '';
+    currentPairing.forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = escapeHtml(item.name);
+      recSelectedList.appendChild(li);
+    });
+  }
+
+  async function loadAllRecommendations() {
+    try {
+      const resp = await fetch('/api/recommendations', { headers: authHeaders }); // This route requires adding code to server.js
+      allRecommendationsData = resp.ok ? await resp.json() : [];
+      renderAllRecsList();
+    } catch(e) { 
+      allRecommendationsData = []; 
+      renderAllRecsList();
+    }
+  }
+
+  function renderAllRecsList() {
+    allRecsList.innerHTML = '';
+    if (allRecommendationsData.length === 0) {
+      allRecsList.innerHTML = '<p>No recommendations saved.</p>';
+      return;
+    }
+    allRecommendationsData.forEach((rec, index) => {
+      const recCard = document.createElement('div');
+      recCard.style.cssText = "background:var(--bg-dark-tertiary); padding:12px; border-radius:8px; margin-bottom:12px; position:relative;";
+      recCard.innerHTML = `
+        <h4>${escapeHtml(rec.description || 'Pairing #' + (index+1))}</h4>
+        <ul>${rec.items.map(item => `<li>${escapeHtml(item.name)}</li>`).join('')}</ul>
+        <div style="display:flex; gap:0.5rem; margin-top:8px;">
+          <button data-index="${index}" class="delete-rec-btn delete-btn">Delete</button>
+        </div>
+      `;
+      allRecsList.appendChild(recCard);
+    });
+
+    document.querySelectorAll('.delete-rec-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        if (!confirm('Remove this recommendation?')) return;
+        allRecommendationsData.splice(+e.target.dataset.index, 1);
+        await saveRecommendationsData(allRecommendationsData);
+        await loadAllRecommendations();
+      });
+    });
+  }
+
+  async function saveRecommendationsData(recs) {
+    try {
+      const resp = await fetch('/api/recommendations', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify(recs)
+      });
+      if (!resp.ok) throw new Error("Failed");
+    } catch(e) {
+      recStatus.textContent = 'Error saving recommendations.';
+      setTimeout(() => recStatus.textContent = '', 3000);
+    }
+  }
+
+  saveRecBtn.addEventListener('click', async () => {
+    if (currentPairing.length === 0) {
+      recStatus.textContent = 'Please select at least one item.';
+      setTimeout(() => recStatus.textContent = '', 3000);
+      return;
+    }
+    
+    const newRec = { 
+      items: currentPairing, 
+      description: recDescription.value.trim() 
+    };
+    
+    allRecommendationsData.push(newRec);
+    await saveRecommendationsData(allRecommendationsData);
+    
+    recStatus.textContent = 'Recommendation saved!';
+    currentPairing = [];
+    recDescription.value = '';
+    renderRecEditor();
+    renderRecSelectedList();
+    await loadAllRecommendations();
+    setTimeout(() => recStatus.textContent = '', 3000);
+  });
+
+  // --- Socket.IO Listeners ---
+  socket.on('menuUpdated', refreshUI);
+  
+  // REAL-TIME ORDER UPDATES:
+  socket.on('orderPlaced', () => {
+      loadCurrentOrders(); 
+      if(Notification.permission === "granted") new Notification("New Order Received!");
+      console.log("New order received!");
+  });
+  
+  socket.on('orderUpdated', () => { loadCurrentOrders(); loadOrderHistory(); });
+  socket.on('dealUpdated', loadAllDeals);
+  socket.on('recommendationUpdated', loadAllRecommendations);
+
+  // --- NEW: LIVE CHAT & SPECIAL EVENTS ---
+  socket.on('newChatLog', (log) => {
+    if (currentChatContainer.querySelector('p')) currentChatContainer.innerHTML = '';
+    
+    const div = document.createElement('div');
+    const isSpecial = log.is_special || false; // Check flag from Python
+
+    div.className = isSpecial ? 'chat-bubble special-event-bubble' : 'chat-bubble';
+
+    // Highlight special words
+    let safeMsg = escapeHtml(log.message);
+    if(isSpecial) {
+        // Highlighting Logic
+        const regex = new RegExp(`(${SPECIAL_WORDS.join('|')})`, 'gi');
+        safeMsg = safeMsg.replace(regex, '<span class="highlight-word">$1</span>');
+        
+        // Browser Notification
+        if(Notification.permission === "granted") {
+            new Notification(`🎉 Special Event at Table ${log.tableId}!`, { body: log.message });
+        }
+    }
+
+    div.innerHTML = `
+      <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+          <span class="table-badge">Table ${log.tableId}</span>
+          <small style="color:#888">${log.timestamp}</small>
+      </div>
+      <div style="margin-bottom:5px;">${safeMsg}</div>
+      <div style="color:var(--accent-success); font-size:0.9rem;"><strong>Bot:</strong> ${log.reply}</div>`;
+    
+    currentChatContainer.prepend(div);
+  });
+
+  // --- NEW: CHAT HISTORY FETCH ---
+  async function loadChatHistory() {
+      const tableQuery = document.getElementById('searchHistoryTable').value.toLowerCase();
+      const dateQuery = document.getElementById('searchHistoryDate').value;
+      
+      try {
+        const resp = await fetch('/api/chat-history', { headers: authHeaders });
+        const data = await resp.json();
+        historyChatContainer.innerHTML = '';
+        
+        const filtered = data.filter(log => {
+            const mTable = log.tableId.toString().toLowerCase().includes(tableQuery);
+            const mDate = dateQuery ? log.date === dateQuery : true;
+            return mTable && mDate;
+        });
+
+        filtered.reverse().forEach(log => {
+            const div = document.createElement('div');
+            const isSpecial = log.is_special || false;
+            div.className = isSpecial ? 'chat-bubble special-event-bubble' : 'chat-bubble';
+            
+            let safeMsg = escapeHtml(log.message);
+            if(isSpecial) {
+                const regex = new RegExp(`(${SPECIAL_WORDS.join('|')})`, 'gi');
+                safeMsg = safeMsg.replace(regex, '<span class="highlight-word">$1</span>');
+            }
+
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <span class="table-badge">Table ${log.tableId}</span>
+                    <small>${log.date} ${log.timestamp}</small>
+                </div>
+                <div style="margin-bottom:5px;">${safeMsg}</div>
+                <div style="color:var(--accent-success); font-size:0.9rem;"><strong>Bot:</strong> ${log.reply}</div>`;
+            historyChatContainer.appendChild(div);
+        });
+      } catch(e) {
+        historyChatContainer.innerHTML = "<p>History not available.</p>";
+      }
+  }
+  btnRefreshHistory.addEventListener('click', loadChatHistory);
+
+  // --- Event Listeners ---
+  mainCategorySelect.addEventListener('change', populateSubcategories);
+  subCategorySelect.addEventListener('change', renderItemList);
+  addMainCategorySelect.addEventListener('change', setupAddCategorySelectors);
+  
+  dealMainCategorySelect.addEventListener('change', populateDealSubcategories);
+  dealSubCategorySelect.addEventListener('change', renderDealEditor);
+
+  recMainCategorySelect.addEventListener('change', populateRecSubcategories);
+  recSubCategorySelect.addEventListener('change', renderRecEditor);
+
+  tabMenuBtn.addEventListener('click', () => switchTab('menu'));
+  tabCurrentOrdersBtn.addEventListener('click', () => { switchTab('current'); loadCurrentOrders(); });
+  tabOrderHistoryBtn.addEventListener('click', () => { switchTab('history'); loadOrderHistory(); });
+  tabDealBtn.addEventListener('click', () => { switchTab('deal'); populateCategorySelectorsForTab(dealMainCategorySelect); });
+  tabRecommendBtn.addEventListener('click', () => { switchTab('recommend'); populateCategorySelectorsForTab(recMainCategorySelect); loadAllRecommendations(); });
+  // NEW TAB LISTENERS
+  tabCurrentChatBtn.addEventListener('click', () => switchTab('currentChat'));
+  tabChatHistoryBtn.addEventListener('click', () => switchTab('chatHistory'));
+
+  // --- Initial Load ---
+  refreshUI();
+});
+</script>
+</html>

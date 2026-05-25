@@ -1,0 +1,111 @@
+.wrap {
+  margin-top: 16px;
+  border-top: 1px solid var(--color-line);
+  padding-top: 14px;
+}
+
+.label {
+  margin: 0 0 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  opacity: 0.8;
+}
+
+.strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.strip::-webkit-scrollbar { display: none; }
+
+.card {
+  flex-shrink: 0;
+  width: 96px;
+  border: 1px solid rgba(198,162,75,0.15);
+  border-radius: 8px;
+  background: rgba(0,24,40,0.6);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.card:hover { border-color: rgba(198,162,75,0.4); background: rgba(198,162,75,0.06); }
+.card:focus-visible { outline: 2px solid #c6a24b; outline-offset: 2px; }
+
+.img {
+  width: 100%;
+  height: 64px;
+  object-fit: cover;
+}
+
+.info {
+  padding: 6px 8px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-cream);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.price {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-gold);
+}
+
+.addBtn {
+  margin: 0 6px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0;
+  border: 1px solid rgba(198,162,75,0.4);
+  border-radius: 20px;
+  background: rgba(198,162,75,0.08);
+  color: var(--color-gold);
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.addBtn:hover { background: rgba(198,162,75,0.18); }
+
+.cardPairing {
+  border-color: rgba(198,162,75,0.28);
+  background: rgba(198,162,75,0.05);
+}
+
+.wineThumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  padding: 8px 0 4px;
+}
+
+.pairingTag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  opacity: 0.7;
+}

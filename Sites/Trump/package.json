@@ -1,0 +1,42 @@
+{
+  "name": "emenuy-trump",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production restaurant SaaS runtime for the Emenyu Trump deployment.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "env:bootstrap": "node scripts/bootstrap-env.js",
+    "env:check": "node scripts/validate-env.js",
+    "health": "node scripts/healthcheck.js",
+    "audit:prod": "npm audit --omit=dev",
+    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:restart": "pm2 reload ecosystem.config.js --only emenuy-trump-api --update-env",
+    "pm2:stop": "pm2 stop emenuy-trump-api",
+    "pm2:logs": "pm2 logs emenuy-trump-api",
+    "auth:migrate": "node scripts/migrate-auth-to-postgres.js",
+    "menu:migrate": "node scripts/migrate-menu-to-postgres.js",
+    "orders:migrate": "node scripts/migrate-orders-to-postgres.js",
+    "prisma:generate": "npx prisma generate --schema ../../prisma/schema.prisma"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.1.0",
+    "multer": "^2.0.2",
+    "socket.io": "^4.8.1"
+  },
+  "overrides": {
+    "ws": "8.20.1"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.3"
+  }
+}

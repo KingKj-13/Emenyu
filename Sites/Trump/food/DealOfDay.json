@@ -1,0 +1,90 @@
+[
+  {
+    "items": [
+      {
+        "name": "Dry-Aged Tomahawk",
+        "description": "A showpiece rib cut, aged for depth and grilled over high heat. Served carved with marrow jus.",
+        "price": 595,
+        "calories": "980 kcal",
+        "allergens": "Beef, Dairy",
+        "spice": "",
+        "img": "Images/Tomahawk.jpg",
+        "video": "Video/Beef Tomahawk.mp4",
+        "visible": true,
+        "main": "Butchery",
+        "sub": "Premium Cuts"
+      },
+      {
+        "name": "Reserve Biltong Board",
+        "description": "Sliced beef biltong, cured sausage, pickled onions and mustard butter for the table.",
+        "price": 155,
+        "calories": "410 kcal",
+        "allergens": "Beef, Dairy",
+        "spice": "",
+        "img": "Images/Beef Strips.jpg",
+        "video": "Video/Beef Strips.mp4",
+        "visible": true,
+        "main": "Butchery",
+        "sub": "Biltong & Home Selection"
+      },
+      {
+        "name": "Porcupine Ridge Shiraz",
+        "description": "Peppery, plush and ideal with lamb, pork and flame-grilled beef.",
+        "price": 245,
+        "calories": "",
+        "allergens": "Sulphites",
+        "spice": "",
+        "img": "Images/Porcupine Ridge Shiraz.jpg",
+        "video": "",
+        "visible": true,
+        "main": "Drinks",
+        "sub": "Wine Cellar"
+      }
+    ],
+    "price": 850
+  },
+  {
+    "items": [
+      {
+        "name": "Centre-Cut Fillet",
+        "description": "Tender fillet, charred outside and blush inside. Served with pepper cream or red wine jus.",
+        "price": 325,
+        "calories": "540 kcal",
+        "allergens": "Beef, Dairy",
+        "spice": "",
+        "img": "Images/Beef fillet.jpg",
+        "video": "Video/beef fillet.mp4",
+        "visible": true,
+        "main": "Butchery",
+        "sub": "Premium Cuts"
+      },
+      {
+        "name": "Coal-Roasted Oysters",
+        "description": "Fresh oysters warmed over the coals with lemon butter, parsley and cracked pepper.",
+        "price": 68,
+        "calories": "90 kcal",
+        "allergens": "Seafood, Dairy",
+        "spice": "",
+        "img": "Images/Oyster.jpg",
+        "video": "Video/Oysters.mp4",
+        "visible": true,
+        "main": "Menu",
+        "sub": "Fire Starters"
+      },
+      {
+        "name": "Smoked Old Fashioned",
+        "description": "Whiskey, bitters and orange oil served with a light smoke finish.",
+        "price": 115,
+        "calories": "",
+        "allergens": "",
+        "spice": "",
+        "img": "Images/Old Fashioned.jpg",
+        "video": "",
+        "visible": true,
+        "main": "Drinks",
+        "sub": "Cocktails"
+      }
+    ],
+    "price": 460
+  }
+]

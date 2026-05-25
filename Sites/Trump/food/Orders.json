@@ -1,0 +1,43 @@
+[
+  {
+    "items": [
+      {
+        "name": "chicken",
+        "price": 150,
+        "qty": 1
+      },
+      {
+        "name": "beer",
+        "price": 35,
+        "qty": 1
+      },
+      {
+        "name": "chicken",
+        "price": 150,
+        "qty": 1
+      }
+    ],
+    "subtotal": 335,
+    "vat": 50.25,
+    "service": 33.5,
+    "final_total": 418.75
+  },
+  {
+    "items": [
+      {
+        "name": "chicken",
+        "price": 150,
+        "qty": 1
+      },
+      {
+        "name": "beer",
+        "price": 35,
+        "qty": 1
+      }
+    ],
+    "subtotal": 185,
+    "vat": 27.75,
+    "service": 18.5,
+    "final_total": 231.25
+  }
+]

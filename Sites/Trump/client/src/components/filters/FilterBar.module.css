@@ -1,0 +1,115 @@
+.bar {
+  padding: 16px clamp(16px, 4vw, 48px);
+  background: rgba(0, 15, 24, 0.6);
+  border-bottom: 1px solid var(--color-line);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: var(--header-h);
+  z-index: 50;
+}
+
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.searchWrap {
+  position: relative;
+  flex: 1;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-sand);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 9px 36px 9px 38px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-card);
+  color: var(--color-cream);
+  font-size: 14px;
+  transition: border-color 160ms ease;
+}
+
+.searchInput::placeholder { color: rgba(201,187,165,0.4); }
+.searchInput:focus { outline: none; border-color: rgba(198,162,75,0.4); }
+
+.clearSearch {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--color-sand);
+}
+
+.clearAll {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  border: 1px solid rgba(198,162,75,0.3);
+  border-radius: var(--radius-pill);
+  background: rgba(198,162,75,0.08);
+  color: var(--color-gold);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 160ms ease;
+}
+.clearAll:hover { background: rgba(198,162,75,0.16); }
+
+.chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 5px 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-pill);
+  background: rgba(255,255,255,0.04);
+  color: var(--color-sand);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: rgba(165,43,45,0.5);
+  color: var(--color-cream);
+}
+
+.chipActive {
+  border-color: rgba(165,43,45,0.7);
+  background: rgba(165,43,45,0.14);
+  color: #e08080;
+}
+
+.chipInclude:hover,
+.chipInclude.chipActive {
+  border-color: rgba(113,128,106,0.7);
+  background: rgba(113,128,106,0.14);
+  color: #a8c4a0;
+}
+
+@media (max-width: 480px) {
+  .chip { font-size: 10px; padding: 4px 10px; }
+}
