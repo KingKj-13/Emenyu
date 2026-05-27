@@ -510,3 +510,33 @@
         flex-direction: column;
       }
     }
+
+    /* Analytics tab */
+    .analytics-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(198,162,75,0.18);
+      border-radius: 10px;
+      padding: 16px 20px;
+    }
+
+    .analytics-card-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(198,162,75,0.7);
+      margin-bottom: 6px;
+    }
+
+    .analytics-card-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: #e0d8c8;
+      font-family: Georgia, serif;
+    }
+
+    .analytics-card-sub {
+      font-size: 12px;
+      color: rgba(198,162,75,0.6);
+      margin-top: 2px;
+    }

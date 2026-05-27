@@ -114,11 +114,13 @@ export function ItemModal({
   const [imgError, setImgError] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [playMedia, setPlayMedia] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     if (!open || !item) return;
     setPlayMedia(false);
+    setVideoReady(false);
     setImgError(false);
     setVideoError(false);
     const timer = window.setTimeout(() => setPlayMedia(true), 3000);
@@ -126,9 +128,9 @@ export function ItemModal({
   }, [open, item?.name]);
 
   useEffect(() => {
-    if (!playMedia || !videoRef.current) return;
+    if (!playMedia || !videoReady || !videoRef.current) return;
     videoRef.current.play().catch(() => {});
-  }, [playMedia]);
+  }, [playMedia, videoReady]);
 
   if (!item) return null;
 
@@ -148,17 +150,26 @@ export function ItemModal({
       <div className={styles.modal}>
         <div className={styles.media}>
           {videoSrc ? (
-            <video
-              ref={videoRef}
-              src={videoSrc}
-              poster={imgSrc || undefined}
-              muted
-              loop
-              playsInline
-              controls={playMedia}
-              className={styles.video}
-              onError={() => setVideoError(true)}
-            />
+            <>
+              <video
+                ref={videoRef}
+                src={videoSrc}
+                muted
+                loop
+                playsInline
+                className={styles.videoLayer}
+                onCanPlay={() => setVideoReady(true)}
+                onError={() => setVideoError(true)}
+              />
+              {imgSrc && (
+                <img
+                  src={imgSrc}
+                  alt={item.name}
+                  className={`${styles.imageOverlay}${playMedia && videoReady ? ` ${styles.imageOverlayHidden}` : ''}`}
+                  onError={() => setImgError(true)}
+                />
+              )}
+            </>
           ) : youtubeSrc ? (
             <iframe
               src={youtubeSrc}

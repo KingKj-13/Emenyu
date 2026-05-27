@@ -991,6 +991,18 @@ function setupLogout() {
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    INIT
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+async function loadServerStats() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const data = await fetchWithRetry(`${CFG.API_BASE}/api/analytics/summary?from=${today}&to=${today}`);
+    if (data && typeof data.revenue === 'number') {
+      S.todayStats.sales  = data.revenue;
+      S.todayStats.tables = data.orderCount || 0;
+      updateStatsDisplay();
+    }
+  } catch (_) {}
+}
+
 async function init() {
   notifInit();
   await loadSessionUser();
@@ -1000,6 +1012,7 @@ async function init() {
   setupSocket();
   initTables();
   await loadMenu();
+  loadServerStats();
   updateStatsDisplay();
   updateHistorySection();
   console.log('Trump Prime Waiter Pro ready');

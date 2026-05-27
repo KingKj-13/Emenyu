@@ -216,6 +216,11 @@ async function startServer() {
     auth.requirePage(['owner', 'manager', 'waiter']),
     controllers.waiter.serveWaiterPage
   );
+  app.get(
+    ['/owner.html', '/Trump/owner.html', '/trump/owner.html'],
+    auth.requirePage(['owner']),
+    (req, res) => res.sendFile(path.join(config.directories.base, 'owner.html'))
+  );
 
   const staticOptions = createStaticOptions(config);
   const clientDist = path.join(__dirname, '../client/dist');

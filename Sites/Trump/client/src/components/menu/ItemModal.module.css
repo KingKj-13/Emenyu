@@ -8,13 +8,31 @@
   flex-shrink: 0;
 }
 
-.image, .video, .youtube {
+.image, .video, .youtube, .videoLayer, .imageOverlay {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-.image, .video { object-fit: cover; }
+.image, .video, .videoLayer, .imageOverlay { object-fit: cover; }
+
+.videoLayer {
+  position: absolute;
+  inset: 0;
+}
+
+.imageOverlay {
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+  transition: opacity 700ms ease;
+  will-change: opacity;
+}
+
+.imageOverlayHidden {
+  opacity: 0;
+  pointer-events: none;
+}
 
 .youtube {
   border: 0;

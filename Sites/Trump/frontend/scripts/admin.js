@@ -51,6 +51,8 @@
   const currentChatSection = document.getElementById("currentChatSection");
   const chatHistorySection = document.getElementById("chatHistorySection");
   const accountSection = document.getElementById("accountSection");
+  const analyticsSection = document.getElementById("analyticsSection");
+  const tabAnalyticsBtn = document.getElementById("tabAnalytics");
 
   const currentChatContainer = document.getElementById("currentChatContainer");
   const historyChatContainer = document.getElementById("historyChatContainer");
@@ -496,10 +498,10 @@
   });
 
   function switchTab(tabKey) {
-    [menuSection, currentOrdersSection, orderHistorySection, dealSection, recommendSection, currentChatSection, chatHistorySection, accountSection]
+    [menuSection, currentOrdersSection, orderHistorySection, dealSection, recommendSection, currentChatSection, chatHistorySection, accountSection, analyticsSection]
       .filter(Boolean)
       .forEach(s => s.classList.remove('active'));
-    [tabMenuBtn, tabCurrentOrdersBtn, tabOrderHistoryBtn, tabDealBtn, tabRecommendBtn, tabCurrentChatBtn, tabChatHistoryBtn, tabAccountsBtn]
+    [tabMenuBtn, tabCurrentOrdersBtn, tabOrderHistoryBtn, tabDealBtn, tabRecommendBtn, tabCurrentChatBtn, tabChatHistoryBtn, tabAccountsBtn, tabAnalyticsBtn]
       .filter(Boolean)
       .forEach(b => b.classList.remove('active'));
 
@@ -511,7 +513,8 @@
       recommend: { section: recommendSection, btn: tabRecommendBtn },
       currentChat: { section: currentChatSection, btn: tabCurrentChatBtn },
       chatHistory: { section: chatHistorySection, btn: tabChatHistoryBtn },
-      accounts: { section: accountSection, btn: tabAccountsBtn }
+      accounts: { section: accountSection, btn: tabAccountsBtn },
+      analytics: { section: analyticsSection, btn: tabAnalyticsBtn }
     };
     
     if(tabMap[tabKey]) {
@@ -1032,6 +1035,16 @@
   tabCurrentChatBtn.addEventListener('click', () => switchTab('currentChat'));
   tabChatHistoryBtn.addEventListener('click', () => switchTab('chatHistory'));
   if (tabAccountsBtn) tabAccountsBtn.addEventListener('click', () => switchTab('accounts'));
+  if (tabAnalyticsBtn) tabAnalyticsBtn.addEventListener('click', () => { switchTab('analytics'); loadAnalyticsToday(); });
+
+  const loadAnalyticsBtn = document.getElementById('loadAnalyticsBtn');
+  const loadTodayAnalyticsBtn = document.getElementById('loadTodayAnalyticsBtn');
+  if (loadAnalyticsBtn) loadAnalyticsBtn.addEventListener('click', () => {
+    const from = document.getElementById('analyticsFrom').value;
+    const to = document.getElementById('analyticsTo').value;
+    loadAnalytics(from || null, to || null);
+  });
+  if (loadTodayAnalyticsBtn) loadTodayAnalyticsBtn.addEventListener('click', loadAnalyticsToday);
   if (accountForm) accountForm.addEventListener('submit', createAccount);
   if (refreshAccountsBtn) refreshAccountsBtn.addEventListener('click', loadAccounts);
   if (accountList) {
@@ -1040,6 +1053,80 @@
       if (!button) return;
       updateAccountStatus(button.dataset.username, button.dataset.status);
     });
+  }
+
+  // --- ANALYTICS ---
+  function fmtCurrency(n) { return 'R ' + parseFloat(n || 0).toFixed(2); }
+
+  function loadAnalyticsToday() {
+    const today = new Date().toISOString().split('T')[0];
+    const fromEl = document.getElementById('analyticsFrom');
+    const toEl = document.getElementById('analyticsTo');
+    if (fromEl) fromEl.value = today;
+    if (toEl) toEl.value = today;
+    loadAnalytics(today, today);
+  }
+
+  async function loadAnalytics(from, to) {
+    const qs = new URLSearchParams();
+    if (from) qs.set('from', from);
+    if (to) qs.set('to', to);
+    const q = qs.toString() ? '?' + qs.toString() : '';
+
+    try {
+      const [summary, items, hours] = await Promise.all([
+        fetch(apiPath('/api/analytics/summary' + q), { headers: authHeaders }).then(r => r.ok ? r.json() : {}),
+        fetch(apiPath('/api/analytics/items' + q), { headers: authHeaders }).then(r => r.ok ? r.json() : []),
+        fetch(apiPath('/api/analytics/hours' + q), { headers: authHeaders }).then(r => r.ok ? r.json() : [])
+      ]);
+
+      // KPI cards
+      document.getElementById('kpiRevenueVal').textContent = fmtCurrency(summary.revenue ?? summary.totalRevenue);
+      document.getElementById('kpiOrdersVal').textContent = summary.orderCount ?? '0';
+      document.getElementById('kpiAvgVal').textContent = fmtCurrency(summary.avgOrderValue);
+      document.getElementById('kpiTopTableVal').textContent = summary.topTable ? 'Table ' + summary.topTable : '—';
+      document.getElementById('kpiTopTableRev').textContent = summary.topTableRevenue ? fmtCurrency(summary.topTableRevenue) : '';
+
+      // Top items table
+      const tbody = document.getElementById('analyticsItemsBody');
+      if (tbody) {
+        const rows = Array.isArray(items) ? items.slice(0, 10) : [];
+        if (!rows.length) {
+          tbody.innerHTML = '<tr><td colspan="4" style="padding:16px;text-align:center;color:#555;">No data for this period</td></tr>';
+        } else {
+          tbody.innerHTML = rows.map((it, i) => `
+            <tr style="border-bottom:1px solid #1e1e2e;">
+              <td style="padding:8px 10px;color:#c6a24b;font-weight:700;">${i + 1}</td>
+              <td style="padding:8px 10px;color:#e0d8c8;">${escapeHtml(it.name || it.itemName || '')}</td>
+              <td style="padding:8px 10px;text-align:right;color:#a0b0c0;">${it.quantity ?? it.qty ?? '—'}</td>
+              <td style="padding:8px 10px;text-align:right;color:#c6a24b;">${it.revenue != null ? fmtCurrency(it.revenue) : '—'}</td>
+            </tr>
+          `).join('');
+        }
+      }
+
+      // Hourly chart
+      const chartEl = document.getElementById('analyticsHourlyChart');
+      const labelsEl = document.getElementById('analyticsHourlyLabels');
+      if (chartEl && Array.isArray(hours) && hours.length) {
+        const maxVal = Math.max(...hours.map(h => h.count ?? h.orders ?? 0), 1);
+        chartEl.innerHTML = hours.map(h => {
+          const count = h.count ?? h.orders ?? 0;
+          const pct = Math.round((count / maxVal) * 100);
+          return `<div title="Hour ${h.hour ?? ''}: ${count} orders" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
+            <div style="width:100%;background:#c6a24b;border-radius:2px 2px 0 0;height:${pct}%;min-height:${count > 0 ? 2 : 0}px;transition:height 0.3s ease;"></div>
+          </div>`;
+        }).join('');
+        if (labelsEl) {
+          labelsEl.style.display = 'flex';
+          labelsEl.innerHTML = hours.map(h => `<span style="flex:1;text-align:center;overflow:hidden;">${String(h.hour ?? '').padStart(2,'0')}</span>`).join('');
+        }
+      } else if (chartEl) {
+        chartEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;color:#555;font-size:12px;">No hourly data for this period</div>';
+      }
+    } catch (err) {
+      console.error('Analytics load error:', err);
+    }
   }
 
   initializeAdmin();

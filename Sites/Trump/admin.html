@@ -24,6 +24,7 @@
     <button id="tabCurrentChat">Current Chat</button>
     <button id="tabChatHistory">Chat History</button>
     <button id="tabAccounts">Accounts</button>
+    <button id="tabAnalytics">Analytics</button>
   </nav>
   <main>
     <section id="menuEditor" class="section active">
@@ -216,6 +217,69 @@
           <div id="accountList" class="account-list" aria-live="polite"></div>
         </div>
       </div>
+    </section>
+
+    <section id="analyticsSection" class="section">
+      <h2 class="section-header">Analytics Dashboard</h2>
+
+      <div class="analytics-filters" style="display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;">
+        <div>
+          <label for="analyticsFrom" style="display:block;font-size:12px;margin-bottom:4px;color:#aaa;">From</label>
+          <input type="date" id="analyticsFrom" style="padding:6px 10px;background:#1a1a2e;border:1px solid #444;border-radius:6px;color:#e0d8c8;" />
+        </div>
+        <div>
+          <label for="analyticsTo" style="display:block;font-size:12px;margin-bottom:4px;color:#aaa;">To</label>
+          <input type="date" id="analyticsTo" style="padding:6px 10px;background:#1a1a2e;border:1px solid #444;border-radius:6px;color:#e0d8c8;" />
+        </div>
+        <button id="loadAnalyticsBtn" type="button">Load Analytics</button>
+        <button id="loadTodayAnalyticsBtn" type="button" style="background:rgba(198,162,75,0.12);border:1px solid #c6a24b;color:#c6a24b;">Today</button>
+      </div>
+
+      <!-- KPI cards -->
+      <div id="analyticsKPIs" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:28px;">
+        <div class="analytics-card" id="kpiRevenue">
+          <div class="analytics-card-label">Total Revenue</div>
+          <div class="analytics-card-value" id="kpiRevenueVal">—</div>
+        </div>
+        <div class="analytics-card" id="kpiOrders">
+          <div class="analytics-card-label">Total Orders</div>
+          <div class="analytics-card-value" id="kpiOrdersVal">—</div>
+        </div>
+        <div class="analytics-card" id="kpiAvg">
+          <div class="analytics-card-label">Avg Order Value</div>
+          <div class="analytics-card-value" id="kpiAvgVal">—</div>
+        </div>
+        <div class="analytics-card" id="kpiTopTable">
+          <div class="analytics-card-label">Top Table</div>
+          <div class="analytics-card-value" id="kpiTopTableVal">—</div>
+          <div class="analytics-card-sub" id="kpiTopTableRev"></div>
+        </div>
+      </div>
+
+      <!-- Top items -->
+      <h3 class="section-header" style="font-size:14px;margin-bottom:12px;">Top Items</h3>
+      <div style="overflow-x:auto;margin-bottom:28px;">
+        <table id="analyticsItemsTable" style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="color:#c6a24b;text-align:left;border-bottom:1px solid #333;">
+              <th style="padding:8px 10px;">#</th>
+              <th style="padding:8px 10px;">Item</th>
+              <th style="padding:8px 10px;text-align:right;">Qty Sold</th>
+              <th style="padding:8px 10px;text-align:right;">Revenue</th>
+            </tr>
+          </thead>
+          <tbody id="analyticsItemsBody">
+            <tr><td colspan="4" style="padding:20px;text-align:center;color:#666;">Load analytics to see data</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Hourly chart -->
+      <h3 class="section-header" style="font-size:14px;margin-bottom:12px;">Orders by Hour (24h)</h3>
+      <div id="analyticsHourlyChart" style="display:flex;align-items:flex-end;gap:3px;height:120px;background:rgba(255,255,255,0.03);border-radius:8px;padding:12px 12px 0;border:1px solid #222;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:center;width:100%;color:#555;font-size:12px;">Load analytics to see chart</div>
+      </div>
+      <div id="analyticsHourlyLabels" style="display:flex;gap:3px;padding:0 12px;font-size:9px;color:#666;overflow:hidden;"></div>
     </section>
   </main>
   <script src="/Trump/frontend/scripts/admin.js"></script>

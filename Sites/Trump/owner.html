@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Owner Overview — Trump Prime Grillhouse</title>
+  <script src="/Trump/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="/Trump/frontend/styles/owner.css" />
+</head>
+<body>
+
+<header class="owner-header">
+  <div class="owner-header-brand">
+    <span class="owner-header-title">Trump Prime Grillhouse</span>
+    <span class="owner-header-sub">Owner Overview</span>
+  </div>
+  <div class="owner-header-actions">
+    <span class="owner-user-pill" id="ownerUserPill">Loading...</span>
+    <a href="/Trump/admin.html" class="owner-link-btn">Admin Panel</a>
+    <button class="owner-logout-btn" id="ownerLogoutBtn" type="button">Logout</button>
+  </div>
+</header>
+
+<main class="owner-main">
+
+  <!-- KPI Row -->
+  <section class="owner-section">
+    <div class="owner-kpi-grid" id="ownerKPIs">
+      <div class="kpi-card">
+        <div class="kpi-label">Revenue Today</div>
+        <div class="kpi-value" id="kpiRevenue">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Orders Today</div>
+        <div class="kpi-value" id="kpiOrders">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Avg Check</div>
+        <div class="kpi-value" id="kpiAvg">—</div>
+      </div>
+      <div class="kpi-card kpi-card-highlight">
+        <div class="kpi-label">Top Table</div>
+        <div class="kpi-value" id="kpiTopTable">—</div>
+        <div class="kpi-sub" id="kpiTopTableRev"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="owner-two-col">
+
+    <!-- Live Table Status -->
+    <section class="owner-section owner-section-tables">
+      <h2 class="owner-section-title">Live Tables</h2>
+      <div class="table-legend">
+        <span class="tleg empty">Empty</span>
+        <span class="tleg active">Active</span>
+        <span class="tleg ringing">Ringing</span>
+      </div>
+      <div class="owner-table-grid" id="ownerTableGrid"></div>
+    </section>
+
+    <!-- Top Items -->
+    <section class="owner-section">
+      <h2 class="owner-section-title">Top Items Today</h2>
+      <div class="owner-items-list" id="ownerTopItems">
+        <div class="owner-placeholder">Loading...</div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Hourly Activity -->
+  <section class="owner-section">
+    <h2 class="owner-section-title">Orders by Hour</h2>
+    <div class="hourly-chart-wrap">
+      <div class="hourly-chart" id="ownerHourlyChart">
+        <div class="owner-placeholder">Loading...</div>
+      </div>
+    </div>
+    <div class="hourly-labels" id="ownerHourlyLabels"></div>
+  </section>
+
+  <!-- Staff Roster -->
+  <section class="owner-section">
+    <h2 class="owner-section-title">Staff Accounts</h2>
+    <div class="owner-staff-grid" id="ownerStaffGrid">
+      <div class="owner-placeholder">Loading...</div>
+    </div>
+  </section>
+
+</main>
+
+<script src="/Trump/frontend/scripts/owner.js"></script>
+</body>
+</html>
