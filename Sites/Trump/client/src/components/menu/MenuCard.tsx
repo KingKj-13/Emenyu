@@ -1,5 +1,5 @@
 import { useState, memo } from 'react';
-import { Heart, Plus, Star, TrendingUp, Wine, PlayCircle } from 'lucide-react';
+import { Heart, Plus, Star, Sparkles, Wine, PlayCircle } from 'lucide-react';
 import { resolveImage, resolveVideo, normalizeYouTubeId } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import type { MenuItem } from '../../types/menu';
@@ -70,12 +70,12 @@ export const MenuCard = memo(function MenuCard({
         )}
         {!soldOut && item.chefPick && (
           <span className={styles.chipChef} aria-label="Chef's pick">
-            <Star size={10} /> Chef
+            <Star size={10} /> Chef Recommends
           </span>
         )}
         {!soldOut && item.popular && (
-          <span className={styles.chipPopular} aria-label="Popular item">
-            <TrendingUp size={10} /> Popular
+          <span className={styles.chipAi} aria-label="AI recommended item">
+            <Sparkles size={10} /> AI Recommend
           </span>
         )}
         <button
@@ -114,6 +114,7 @@ export const MenuCard = memo(function MenuCard({
             disabled={soldOut}
           >
             <Plus size={16} />
+            <span>Add</span>
           </button>
         </div>
         {item.allergens && (

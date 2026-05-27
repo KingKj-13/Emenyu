@@ -3,7 +3,7 @@ import styles from './Badge.module.css';
 
 interface BadgeProps {
   children: ReactNode;
-  variant?: 'gold' | 'red' | 'muted';
+  variant?: 'gold' | 'red' | 'purple' | 'muted';
 }
 
 export function Badge({ children, variant = 'gold' }: BadgeProps) {

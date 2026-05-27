@@ -28,10 +28,10 @@
   pointer-events: none;
 }
 
-.closeBtn {
+.closeBtn,
+.backBtn {
   position: absolute;
   top: 12px;
-  right: 12px;
   width: 36px;
   height: 36px;
   display: grid;
@@ -45,6 +45,15 @@
 }
 
 .closeBtn:hover { border-color: rgba(255,255,255,0.5); }
+
+.closeBtn { right: 12px; }
+
+.backBtn {
+  left: 12px;
+  z-index: 2;
+}
+
+.backBtn:hover { border-color: rgba(255,255,255,0.5); }
 
 .favBtn {
   position: absolute;
@@ -63,6 +72,7 @@
 }
 
 .favBtn:hover, .favActive { color: #e06060; border-color: rgba(224,96,96,0.5); }
+.favBtnOffset { left: 56px; }
 
 .body { padding: 20px 24px 24px; }
 
@@ -128,7 +138,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-gold);
+  color: #d9c8ff;
   opacity: 0.8;
 }
 
@@ -150,19 +160,19 @@
 
 .pairChip {
   flex-shrink: 0;
-  max-width: 150px;
-  padding: 6px 10px;
-  border: 1px solid rgba(198,162,75,0.2);
+  width: min(210px, 72vw);
+  padding: 8px 10px;
+  border: 1px solid rgba(180,145,255,0.24);
   border-radius: 6px;
-  background: rgba(0,15,24,0.5);
+  background: rgba(113,72,188,0.08);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   cursor: pointer;
   text-align: left;
   transition: border-color 160ms ease, background 160ms ease;
 }
-.pairChip:hover { border-color: rgba(198,162,75,0.5); background: rgba(198,162,75,0.08); }
+.pairChip:hover { border-color: rgba(180,145,255,0.5); background: rgba(113,72,188,0.14); }
 .pairChip:focus-visible { outline: 2px solid #c6a24b; outline-offset: 2px; }
 
 .pairChipDrink {
@@ -174,13 +184,29 @@
 
 .pairStripSecond { margin-top: 8px; }
 
+.pairBadge {
+  align-self: flex-start;
+  padding: 2px 6px;
+  border: 1px solid rgba(180,145,255,0.34);
+  border-radius: 2px;
+  color: #d9c8ff;
+  background: rgba(113,72,188,0.14);
+  font-family: var(--font-label);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .pairName {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--color-gold);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-cream);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .pairReason {

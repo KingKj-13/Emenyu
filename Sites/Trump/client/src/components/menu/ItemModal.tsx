@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Heart, Plus, Minus, ShoppingCart, Sparkles } from 'lucide-react';
+import { X, Heart, Plus, Minus, ShoppingCart, Sparkles, ChevronLeft } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
 import { resolveImage, resolveVideo, resolveYouTubeEmbed } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import { api } from '../../services/api';
-import { useApp } from '../../context/AppContext';
 import type { MenuItem } from '../../types/menu';
 import styles from './ItemModal.module.css';
 
@@ -17,6 +16,9 @@ interface ItemModalProps {
   isFavorite: boolean;
   onFavoriteToggle: (name: string) => void;
   onAddToCart: (item: MenuItem, qty: number, note: string) => void;
+  onRequestItem?: (name: string) => void;
+  canGoBack?: boolean;
+  onBack?: () => void;
 }
 
 interface PairingItem {
@@ -31,11 +33,10 @@ interface PairingResult {
   pairings?: PairingItem[];
 }
 
-function ItemPairings({ item }: { item: MenuItem }) {
+function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?: (name: string) => void }) {
   const [foodPairings, setFoodPairings] = useState<PairingItem[]>([]);
   const [drinkPairings, setDrinkPairings] = useState<PairingItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const { setPendingItemName } = useApp();
 
   useEffect(() => {
     let cancelled = false;
@@ -62,7 +63,7 @@ function ItemPairings({ item }: { item: MenuItem }) {
     <div className={styles.pairSection}>
       <div className={styles.pairHeader}>
         <Sparkles size={13} className={styles.pairIcon} />
-        <span className={styles.pairLabel}>Pair With</span>
+        <span className={styles.pairLabel}>AI Recommendations</span>
       </div>
       {loading ? (
         <div className={styles.pairLoading}><Spinner size={16} /></div>
@@ -71,7 +72,8 @@ function ItemPairings({ item }: { item: MenuItem }) {
           {hasFood && (
             <div className={styles.pairStrip}>
               {foodPairings.map((p, i) => (
-                <button key={i} className={styles.pairChip} onClick={() => setPendingItemName(p.name)} aria-label={`View ${p.name}`}>
+                <button key={i} className={styles.pairChip} onClick={() => onRequestItem?.(p.name)} aria-label={`View ${p.name}`}>
+                  <span className={styles.pairBadge}>AI Recommend</span>
                   <span className={styles.pairName}>{p.name}</span>
                   <span className={styles.pairReason}>{p.reason}</span>
                 </button>
@@ -81,7 +83,8 @@ function ItemPairings({ item }: { item: MenuItem }) {
           {hasDrink && (
             <div className={`${styles.pairStrip} ${hasFood ? styles.pairStripSecond : ''}`}>
               {drinkPairings.map((p, i) => (
-                <button key={i} className={`${styles.pairChip} ${styles.pairChipDrink}`} onClick={() => setPendingItemName(p.name)} aria-label={`View ${p.name}`}>
+                <button key={i} className={`${styles.pairChip} ${styles.pairChipDrink}`} onClick={() => onRequestItem?.(p.name)} aria-label={`View ${p.name}`}>
+                  <span className={styles.pairBadge}>AI Recommend</span>
                   <span className={styles.pairName}>{p.name}</span>
                   <span className={styles.pairReason}>{p.reason}</span>
                 </button>
@@ -94,7 +97,17 @@ function ItemPairings({ item }: { item: MenuItem }) {
   );
 }
 
-export function ItemModal({ item, open, onClose, isFavorite, onFavoriteToggle, onAddToCart }: ItemModalProps) {
+export function ItemModal({
+  item,
+  open,
+  onClose,
+  isFavorite,
+  onFavoriteToggle,
+  onAddToCart,
+  onRequestItem,
+  canGoBack = false,
+  onBack,
+}: ItemModalProps) {
   const [qty, setQty] = useState(1);
   const [note, setNote] = useState('');
   const [imgError, setImgError] = useState(false);
@@ -162,8 +175,13 @@ export function ItemModal({ item, open, onClose, isFavorite, onFavoriteToggle, o
           <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
             <X size={18} />
           </button>
+          {canGoBack && (
+            <button className={styles.backBtn} onClick={onBack} aria-label="Back to previous item">
+              <ChevronLeft size={20} />
+            </button>
+          )}
           <button
-            className={`${styles.favBtn} ${isFavorite ? styles.favActive : ''}`}
+            className={`${styles.favBtn} ${canGoBack ? styles.favBtnOffset : ''} ${isFavorite ? styles.favActive : ''}`}
             onClick={() => onFavoriteToggle(item.name)}
             aria-label={isFavorite ? 'Remove from favourites' : 'Add to favourites'}
             aria-pressed={isFavorite}
@@ -180,8 +198,8 @@ export function ItemModal({ item, open, onClose, isFavorite, onFavoriteToggle, o
           )}
 
           <div className={styles.chips}>
-            {item.chefPick && <Badge variant="gold">Chef's Pick</Badge>}
-            {item.popular && <Badge variant="red">Popular</Badge>}
+            {item.chefPick && <Badge variant="gold">Chef Recommends</Badge>}
+            {item.popular && <Badge variant="purple">AI Recommend</Badge>}
             {item.spice && <Badge variant="muted">{item.spice}</Badge>}
           </div>
 
@@ -202,7 +220,7 @@ export function ItemModal({ item, open, onClose, isFavorite, onFavoriteToggle, o
             <p className={styles.calories}>{item.calories}</p>
           )}
 
-          {open && <ItemPairings item={item} />}
+          {open && <ItemPairings item={item} onRequestItem={onRequestItem} />}
 
           <div className={styles.actions}>
             <div className={styles.qtyRow}>

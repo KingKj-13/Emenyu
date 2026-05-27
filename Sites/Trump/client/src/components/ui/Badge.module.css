@@ -12,4 +12,5 @@
 
 .gold { background: transparent; color: var(--color-gold); border: 1px solid rgba(200, 165, 85, 0.5); }
 .red  { background: rgba(165, 43, 45, 0.14); color: #e06060; border: 1px solid rgba(165, 43, 45, 0.28); border-radius: 2px; }
+.purple { background: rgba(113, 72, 188, 0.16); color: #d9c8ff; border: 1px solid rgba(180, 145, 255, 0.34); }
 .muted { background: rgba(255,255,255,0.04); color: var(--color-gold-dim); border: 1px solid rgba(255,255,255,0.08); }

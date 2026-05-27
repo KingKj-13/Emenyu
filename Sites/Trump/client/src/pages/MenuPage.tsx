@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useCallback, Suspense, lazy } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useMemo, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useSocketEvent } from '../hooks/useSocket';
 import { AppShell } from '../components/layout/AppShell';
 import { SideDrawer } from '../components/layout/SideDrawer';
@@ -18,7 +18,7 @@ import type { ChatSuggestionItem } from '../types/menu';
 import { useFavorites } from '../hooks/useFavorites';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { useApp } from '../context/AppContext';
-import { buildMenuSections, normalizeName } from '../lib/menuUtils';
+import { buildMenuSections, flattenMenu, normalizeName } from '../lib/menuUtils';
 import { resolveImage } from '../lib/imageResolver';
 import { FOOD_CHAPTERS } from '../constants/chapters';
 import type { MenuItem } from '../types/menu';
@@ -38,6 +38,7 @@ const SETMENU_TITLES = new Set([
 
 export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   const { tableId: paramTableId } = useParams<{ tableId: string }>();
+  const navigate = useNavigate();
   const { setTableId, pendingItemName, setPendingItemName } = useApp();
   const { menuData, loading, error } = useMenu();
   const { addItem } = useCart();
@@ -45,13 +46,17 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   const { favorites, toggle: toggleFavorite } = useFavorites();
   const { addItem: addRecent } = useRecentlyViewed();
 
-  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [itemStack, setItemStack] = useState<MenuItem[]>([]);
   const [pairingItem, setPairingItem] = useState<MenuItem | null>(null);
   const [orderStatus, setOrderStatus] = useState<string | null>(null);
   const [ratingOrderId, setRatingOrderId] = useState<number | null>(null);
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
   const tableId = paramTableId || 'table1';
+  const itemStackRef = useRef<MenuItem[]>([]);
+  const modalDepthRef = useRef(0);
+  const suppressNextPopRef = useRef(false);
+  const selectedItem = itemStack[itemStack.length - 1] ?? null;
+  const modalOpen = itemStack.length > 0;
 
   useSocketEvent<{ order: { tableId: string; id?: number; kitchenStatus?: string } }>('orderPlaced', useCallback(({ order }) => {
     if (order.tableId === tableId) setOrderStatus('new');
@@ -71,8 +76,11 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
     }
   }, [tableId]));
 
-  // Sync table ID from URL param
-  if (paramTableId) setTableId(paramTableId);
+  useEffect(() => {
+    if (paramTableId) setTableId(paramTableId);
+    // setTableId is provided by context and intentionally not used as a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paramTableId]);
 
   const sections = useMemo(() => {
     const all = buildMenuSections(menuData, activeFilters, searchQuery);
@@ -81,24 +89,118 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
     return all;
   }, [menuData, activeFilters, searchQuery, sectionFilter]);
 
+  const allItems = useMemo(() => flattenMenu(menuData), [menuData]);
+
+  const findItemByName = useCallback((name: string) => {
+    const key = normalizeName(name);
+    return allItems.find(item => normalizeName(item.name) === key) ?? null;
+  }, [allItems]);
+
+  const pushModalHistory = useCallback((depth: number) => {
+    window.history.pushState(
+      { ...(window.history.state || {}), emenyuModal: true, emenyuModalDepth: depth },
+      '',
+      window.location.href
+    );
+    modalDepthRef.current = depth;
+  }, []);
+
+  const setStack = useCallback((next: MenuItem[]) => {
+    itemStackRef.current = next;
+    setItemStack(next);
+    modalDepthRef.current = next.length;
+  }, []);
+
+  const openItem = useCallback((item: MenuItem, mode: 'replace' | 'push' = 'replace') => {
+    const current = itemStackRef.current;
+    const next = mode === 'push' && current.length > 0 ? [...current, item] : [item];
+    setStack(next);
+    pushModalHistory(next.length);
+    addRecent(item);
+  }, [addRecent, pushModalHistory, setStack]);
+
+  const openItemByName = useCallback((name: string, mode: 'replace' | 'push' = 'push') => {
+    const found = findItemByName(name);
+    if (!found) return;
+    openItem(found, mode);
+  }, [findItemByName, openItem]);
+
+  const closeItemModal = useCallback(() => {
+    const depth = modalDepthRef.current;
+    setStack([]);
+    if (depth > 0 && window.history.state?.emenyuModal) {
+      suppressNextPopRef.current = true;
+      window.history.go(-depth);
+    }
+  }, [setStack]);
+
+  const goBackItem = useCallback(() => {
+    if (itemStackRef.current.length > 1) {
+      window.history.back();
+    }
+  }, []);
+
+  useEffect(() => {
+    const state = window.history.state || {};
+    if (!state.emenyuBase && !state.emenyuGuard && !state.emenyuModal) {
+      window.history.replaceState({ ...state, emenyuBase: true }, '', window.location.href);
+    }
+    if (!window.history.state?.emenyuGuard && !window.history.state?.emenyuModal) {
+      window.history.pushState(
+        { ...(window.history.state || {}), emenyuGuard: true },
+        '',
+        window.location.href
+      );
+    }
+  }, [tableId, sectionFilter]);
+
+  useEffect(() => {
+    function handlePopState() {
+      if (suppressNextPopRef.current) {
+        suppressNextPopRef.current = false;
+        return;
+      }
+
+      const stack = itemStackRef.current;
+      if (stack.length > 1) {
+        const next = stack.slice(0, -1);
+        setStack(next);
+        return;
+      }
+
+      if (stack.length === 1) {
+        setStack([]);
+        return;
+      }
+
+      if (sectionFilter) {
+        navigate(`/${tableId}`, { replace: true });
+        return;
+      }
+
+      const shouldExit = window.confirm('Do you want to exit?');
+      if (shouldExit) {
+        window.location.href = 'https://www.google.com';
+      } else {
+        window.history.pushState(
+          { ...(window.history.state || {}), emenyuGuard: true },
+          '',
+          window.location.href
+        );
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [navigate, sectionFilter, setStack, tableId]);
+
   useEffect(() => {
     if (!pendingItemName) return;
     const key = normalizeName(pendingItemName);
-    let found: MenuItem | null = null;
-    outer: for (const section of sections) {
-      for (const item of section.items) {
-        if (normalizeName(item.name) === key) { found = item; break outer; }
-      }
-      for (const sub of section.subSections) {
-        for (const item of sub.items) {
-          if (normalizeName(item.name) === key) { found = item; break outer; }
-        }
-      }
-    }
-    if (found) handleItemClick(found);
+    const found = allItems.find(item => normalizeName(item.name) === key);
+    if (found) openItem(found, itemStackRef.current.length > 0 ? 'push' : 'replace');
     setPendingItemName(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingItemName]);
+  }, [allItems, openItem, pendingItemName, setPendingItemName]);
 
   const SECTION_ICONS: Record<string, string> = {
     'To Start': '🥗', 'Tempura': '🍤', 'Bespoke Salads': '🥙',
@@ -134,9 +236,7 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   })), []);
 
   function handleItemClick(item: MenuItem) {
-    setSelectedItem(item);
-    setModalOpen(true);
-    addRecent(item);
+    openItem(item, 'replace');
   }
 
   function handleChatItemClick(item: ChatSuggestionItem) {
@@ -188,10 +288,13 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
         <ItemModal
           item={selectedItem}
           open={modalOpen}
-          onClose={() => setModalOpen(false)}
+          onClose={closeItemModal}
           isFavorite={selectedItem ? favorites.includes(selectedItem.name) : false}
           onFavoriteToggle={toggleFavorite}
           onAddToCart={handleAddToCartWithDetails}
+          onRequestItem={(name) => openItemByName(name, 'push')}
+          canGoBack={itemStack.length > 1}
+          onBack={goBackItem}
         />
         <PairingModal item={pairingItem} open={!!pairingItem} onClose={() => setPairingItem(null)} />
         <BottomBar />
@@ -249,10 +352,13 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
       <ItemModal
         item={selectedItem}
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeItemModal}
         isFavorite={selectedItem ? favorites.includes(selectedItem.name) : false}
         onFavoriteToggle={toggleFavorite}
         onAddToCart={handleAddToCartWithDetails}
+        onRequestItem={(name) => openItemByName(name, 'push')}
+        canGoBack={itemStack.length > 1}
+        onBack={goBackItem}
       />
 
       <PairingModal item={pairingItem} open={!!pairingItem} onClose={() => setPairingItem(null)} />
