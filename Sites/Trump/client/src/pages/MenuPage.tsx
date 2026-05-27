@@ -93,7 +93,33 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
 
   const findItemByName = useCallback((name: string) => {
     const key = normalizeName(name);
-    return allItems.find(item => normalizeName(item.name) === key) ?? null;
+    const exact = allItems.find(item => normalizeName(item.name) === key);
+    if (exact) return exact;
+
+    const partial = allItems.find(item => {
+      const itemKey = normalizeName(item.name);
+      return itemKey.includes(key) || key.includes(itemKey);
+    });
+    if (partial) return partial;
+
+    const tokens = String(name || '')
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(token => token.length > 2);
+    if (tokens.length === 0) return null;
+
+    let best: MenuItem | null = null;
+    let bestScore = 0;
+    allItems.forEach(item => {
+      const haystack = `${item.name} ${item.description || ''} ${item.types || ''}`.toLowerCase();
+      const score = tokens.reduce((sum, token) => sum + (haystack.includes(token) ? 1 : 0), 0);
+      if (score > bestScore) {
+        best = item;
+        bestScore = score;
+      }
+    });
+
+    return bestScore >= Math.min(2, tokens.length) ? best : null;
   }, [allItems]);
 
   const pushModalHistory = useCallback((depth: number) => {
@@ -121,9 +147,12 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
 
   const openItemByName = useCallback((name: string, mode: 'replace' | 'push' = 'push') => {
     const found = findItemByName(name);
-    if (!found) return;
+    if (!found) {
+      setSearchQuery(name);
+      return;
+    }
     openItem(found, mode);
-  }, [findItemByName, openItem]);
+  }, [findItemByName, openItem, setSearchQuery]);
 
   const closeItemModal = useCallback(() => {
     const depth = modalDepthRef.current;
@@ -196,11 +225,11 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
 
   useEffect(() => {
     if (!pendingItemName) return;
-    const key = normalizeName(pendingItemName);
-    const found = allItems.find(item => normalizeName(item.name) === key);
+    const found = findItemByName(pendingItemName);
     if (found) openItem(found, itemStackRef.current.length > 0 ? 'push' : 'replace');
+    else setSearchQuery(pendingItemName);
     setPendingItemName(null);
-  }, [allItems, openItem, pendingItemName, setPendingItemName]);
+  }, [findItemByName, openItem, pendingItemName, setPendingItemName, setSearchQuery]);
 
   const SECTION_ICONS: Record<string, string> = {
     'To Start': '🥗', 'Tempura': '🍤', 'Bespoke Salads': '🥙',

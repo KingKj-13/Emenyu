@@ -21,9 +21,9 @@
 }
 
 .drawerHeader {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   padding: 18px 20px;
   border-bottom: 1px solid var(--color-line);
@@ -41,9 +41,22 @@
   color: var(--color-cream);
 }
 
-.tabs { display: flex; gap: 4px; }
+.tabs {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar { display: none; }
 
 .tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex-shrink: 0;
   padding: 5px 12px;
   border: 1px solid transparent;
   border-radius: var(--radius-pill);
@@ -62,6 +75,8 @@
 }
 
 .closeBtn {
+  grid-column: 2;
+  grid-row: 1;
   width: 36px; height: 36px;
   display: grid; place-items: center;
   border: 1px solid rgba(255,255,255,0.12);
@@ -181,11 +196,88 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--color-line);
   font-size: 13px;
 }
 
-.historyName { flex: 1; color: var(--color-cream); }
-.historyQty { color: var(--color-sand); }
-.historyPrice { font-weight: 700; color: var(--color-gold); }
+.historyThumb {
+  width: 54px;
+  height: 54px;
+  border-radius: var(--radius-card);
+  object-fit: contain;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+
+.historyMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.historyName {
+  color: var(--color-cream);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.historyNote {
+  color: rgba(201,187,165,0.58);
+  font-size: 11px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.historyQty { color: var(--color-sand); flex-shrink: 0; }
+.historyPrice { font-weight: 700; color: var(--color-gold); flex-shrink: 0; }
+
+.favoriteItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.favoriteMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+}
+
+.favoritePrice {
+  color: var(--color-gold);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.favoriteAdd {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(198,162,75,0.38);
+  border-radius: 50%;
+  background: rgba(198,162,75,0.08);
+  color: var(--color-gold);
+  flex-shrink: 0;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.favoriteAdd:hover {
+  background: rgba(198,162,75,0.16);
+  transform: translateY(-1px);
+}

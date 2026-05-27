@@ -18,7 +18,7 @@ interface Rec {
 }
 
 export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
-  const { addItem } = useCart();
+  const { addItem, setIsOpen } = useCart();
   const { setPendingItemName } = useApp();
   const [recs, setRecs] = useState<Rec[]>([]);
 
@@ -48,7 +48,10 @@ export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
           <button
             key={`${rec.name}-${i}`}
             className={styles.card}
-            onClick={() => setPendingItemName(rec.name)}
+            onClick={() => {
+              setPendingItemName(rec.name);
+              setIsOpen(false);
+            }}
             aria-label={`View ${rec.name}`}
           >
             {rec.img ? (
