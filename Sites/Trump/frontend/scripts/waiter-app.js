@@ -21,6 +21,8 @@ const CFG = {
 const S = {
   waiterName: localStorage.getItem('waiterName') || '',
   selectedTable: null,
+  isViewOnly: false,
+  assignedTables: [],
   currentOrder: [],
   menu: {},
   allItems: [],
@@ -28,7 +30,6 @@ const S = {
   serviceNotes: {},
   archivedTables: JSON.parse(localStorage.getItem('archivedTables') || '[]'),
   selectedCategory: 'all',
-  isRushMode: false,
   socket: null,
   isConnected: false,
   todayStats: { sales: 0, upsells: 0, tables: 0 },
@@ -239,8 +240,7 @@ function setupSocket() {
 
   S.socket.on('connect', () => {
     S.isConnected = true;
-    setPill('connPill', 'Online', ['connecting', 'offline'], 'pill-conn');
-    // Register as waiter (NEW)
+    setConnDot('online');
     if (S.waiterName) {
       S.socket.emit('joinAsWaiter', { name: S.waiterName, restaurantId: CFG.RESTAURANT_ID });
     }
@@ -249,11 +249,11 @@ function setupSocket() {
 
   S.socket.on('disconnect', () => {
     S.isConnected = false;
-    setPill('connPill', 'Offline', ['pill-conn'], 'pill-conn offline');
+    setConnDot('offline');
   });
 
   S.socket.on('reconnecting', () => {
-    setPill('connPill', 'Reconnecting...', ['pill-conn', 'offline'], 'pill-conn connecting');
+    setConnDot('connecting');
   });
 
   S.socket.on('syncCart', (data) => {
@@ -314,6 +314,13 @@ function setupSocket() {
   });
 }
 
+function setConnDot(status) {
+  const el = document.getElementById('sbConn');
+  if (!el) return;
+  el.className = 'sb-dot ' + status;
+  el.title = status === 'online' ? 'Connected' : status === 'offline' ? 'Disconnected' : 'Connecting...';
+}
+
 function setPill(id, text, removeClasses, addClass) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -342,7 +349,7 @@ function saveWaiterName() {
   if (!name) { showToast('Please enter your name', 'error'); return; }
   S.waiterName = escapeHtml(name);
   localStorage.setItem('waiterName', S.waiterName);
-  document.getElementById('waiterPill').textContent = S.waiterName;
+  document.getElementById('sbWaiterBtn').textContent = S.waiterName;
   document.getElementById('waiterModal').classList.remove('open');
   // Register with socket (NEW)
   if (S.socket && S.socket.connected) {
@@ -354,14 +361,6 @@ function saveWaiterName() {
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    RUSH MODE
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-function toggleRush() {
-  S.isRushMode = !S.isRushMode;
-  const btn = document.getElementById('rushBtn');
-  btn.textContent = S.isRushMode ? 'Rush ON' : 'Rush';
-  btn.classList.toggle('active', S.isRushMode);
-  document.body.classList.toggle('rush-mode', S.isRushMode);
-  showToast(S.isRushMode ? 'Rush mode active.' : 'Rush mode off.', S.isRushMode ? 'warning' : 'success');
-}
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    TABLE MANAGEMENT
@@ -388,19 +387,39 @@ async function updateTableStatus(tableId) {
 }
 
 function renderTableGrid() {
-  const grid = document.getElementById('tableGrid');
-  grid.innerHTML = '';
-  for (let i = 1; i <= CFG.TOTAL_TABLES; i++) grid.appendChild(buildTableCard(String(i)));
+  const mySection = document.getElementById('myTablesSection');
+  const myGrid    = document.getElementById('myTableGrid');
+  const allGrid   = document.getElementById('tableGrid');
+  const allLabel  = document.getElementById('allTablesLabel');
+
+  if (myGrid) myGrid.innerHTML = '';
+  if (allGrid) allGrid.innerHTML = '';
+
+  const hasAssigned = S.assignedTables.length > 0;
+  if (mySection) mySection.style.display = hasAssigned ? 'block' : 'none';
+  if (allLabel) allLabel.textContent = hasAssigned ? 'All Tables (View Only)' : 'All Tables';
+
+  for (let i = 1; i <= CFG.TOTAL_TABLES; i++) {
+    const id = String(i);
+    const card = buildTableCard(id);
+    if (hasAssigned && S.assignedTables.includes(id)) {
+      if (myGrid) myGrid.appendChild(card);
+    } else {
+      if (allGrid) allGrid.appendChild(card);
+    }
+  }
 }
 
 function buildTableCard(id) {
   const st       = S.tableStatuses[id] || { status: 'empty', orderCount: 0, total: 0 };
   const isActive = S.selectedTable === id;
-  const ringing  = S.activeBellTables.has(id);
-  const kStatus  = S.tableKitchenStatus[id] || null;
+  const ringing    = S.activeBellTables.has(id);
+  const kStatus    = S.tableKitchenStatus[id] || null;
+  const isAssigned = S.assignedTables.length === 0 || S.assignedTables.includes(id);
+  const isViewOnly = S.assignedTables.length > 0 && !isAssigned;
 
   const card = document.createElement('div');
-  card.className = `table-card${isActive ? ' active' : ''}${st.orderCount > 0 ? ' has-orders' : ''}${ringing ? ' bell-ringing' : ''}`;
+  card.className = `table-card${isActive ? ' active' : ''}${st.orderCount > 0 ? ' has-orders' : ''}${ringing ? ' bell-ringing' : ''}${isAssigned && S.assignedTables.length > 0 ? ' assigned' : ''}${isViewOnly ? ' view-only' : ''}`;
   card.id = `tc-${id}`;
   card.onclick = () => selectTable(id);
   card.innerHTML = `
@@ -422,11 +441,9 @@ function rerenderTableCard(id) {
 function selectTable(id) {
   S.selectedTable = id;
   S.currentOrder = [];
-  document.getElementById('tablePill').textContent = 'Table ' + id;
-  document.getElementById('orderViewTitle').textContent = 'Table ' + id + ' - Order';
-  document.getElementById('orderViewSub').textContent =
-    S.serviceNotes[id] ? 'Note: ' + S.serviceNotes[id].substring(0, 40) + '...' : 'No notes yet';
-  // Clear bell when waiter selects ringing table
+  S.isViewOnly = S.assignedTables.length > 0 && !S.assignedTables.includes(id);
+  const el = document.getElementById('sbTable');
+  if (el) el.textContent = 'Table ' + id;
   if (S.activeBellTables.has(id)) {
     S.activeBellTables.delete(id);
     rerenderTableCard(id);
@@ -435,8 +452,11 @@ function selectTable(id) {
   joinTable(id);
   renderTableGrid();
   renderOrderView();
-  showToast('Managing Table ' + id, 'success');
-  document.querySelector('[data-view="Menu"]').click();
+  const msg = S.isViewOnly ? 'Viewing Table ' + id + ' (read-only)' : 'Managing Table ' + id;
+  showToast(msg, S.isViewOnly ? 'warning' : 'success');
+  // Switch to order view
+  const orderNav = document.querySelector('.nav-item:nth-child(2)');
+  if (orderNav) switchView(orderNav, 'viewOrder');
 }
 
 function filterTables(query) {
@@ -759,7 +779,7 @@ function addToOrder(itemName, qty = 1) {
 function changeQty(itemId, delta) {
   const idx = S.currentOrder.findIndex(i => i.id === itemId);
   if (idx === -1) return;
-  if (S.currentOrder[idx].source === 'guest') return; // guest items are read-only
+  if (S.isViewOnly) { showToast('View only — not your assigned table', 'warning'); return; }
   S.currentOrder[idx].quantity = Math.max(0, (S.currentOrder[idx].quantity || 1) + delta);
   if (S.currentOrder[idx].quantity === 0) S.currentOrder.splice(idx, 1);
   syncCart();
@@ -779,80 +799,71 @@ function syncCart() {
 }
 
 function renderOrderView() {
-  const listEl  = document.getElementById('orderList');
-  const summEl  = document.getElementById('orderSummaryCard');
-  const emptyEl = document.getElementById('orderEmpty');
-  const titleEl = document.getElementById('orderViewTitle');
-  const subEl   = document.getElementById('orderViewSub');
+  const itemsEl  = document.getElementById('orderItems');
+  const summEl   = document.getElementById('orderSummary');
+  const emptyEl  = document.getElementById('orderEmpty');
+  const titleEl  = document.getElementById('orderTitle');
+  const subEl    = document.getElementById('orderSub');
+  const timelineEl   = document.getElementById('timelineSection');
+  const viewOnlyBanner = document.getElementById('viewOnlyBanner');
+  const quickAddSection = document.getElementById('quickAddSection');
 
-  titleEl.textContent = S.selectedTable ? 'Table ' + S.selectedTable + ' - Order' : 'Current Order';
+  titleEl.textContent = S.selectedTable ? 'Table ' + S.selectedTable : 'Select a table';
   const notes = S.selectedTable ? S.serviceNotes[S.selectedTable] : null;
   subEl.textContent = notes
-    ? 'Note: ' + notes.substring(0, 50) + (notes.length > 50 ? '...' : '')
-    : (S.selectedTable ? 'No notes for this table' : 'Select a table first');
+    ? notes.substring(0, 60) + (notes.length > 60 ? '…' : '')
+    : (S.selectedTable ? 'No notes' : 'Tap a table from the Tables tab');
 
-  const timelineEl = document.getElementById('timelineSection');
-  if (timelineEl) timelineEl.style.display = S.selectedTable ? 'block' : 'none';
+  if (viewOnlyBanner)  viewOnlyBanner.style.display   = S.isViewOnly ? 'block' : 'none';
+  if (quickAddSection) quickAddSection.style.opacity   = S.isViewOnly ? '0.45' : '1';
+  if (quickAddSection) quickAddSection.style.pointerEvents = S.isViewOnly ? 'none' : '';
+  if (timelineEl)      timelineEl.style.display        = S.selectedTable ? 'block' : 'none';
+
+  const btnSend = document.getElementById('btnSend');
+  if (btnSend) btnSend.disabled = S.isViewOnly;
 
   if (!S.currentOrder.length) {
-    listEl.innerHTML = '';
-    summEl.style.display = 'none';
-    emptyEl.style.display = 'block';
-    document.getElementById('recStrip').style.display = 'none';
+    if (itemsEl) itemsEl.innerHTML = '';
+    if (summEl)  summEl.style.display = 'none';
+    if (emptyEl) emptyEl.style.display = 'block';
+    const recCard = document.getElementById('recCard');
+    if (recCard) recCard.style.display = 'none';
     updateHistorySection();
     if (S.selectedTable) refreshTimelineIfOpen();
     return;
   }
 
-  emptyEl.style.display = 'none';
-  summEl.style.display = 'block';
+  if (emptyEl) emptyEl.style.display = 'none';
+  if (summEl)  summEl.style.display = 'block';
 
   const total = S.currentOrder.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
-  document.getElementById('orderTotalVal').textContent = formatCurrency(total);
+  const totalEl = document.getElementById('summaryTotal');
+  if (totalEl) totalEl.textContent = formatCurrency(total);
 
-  const guestItems = S.currentOrder.filter(i => i.source === 'guest');
-  const waiterItems = S.currentOrder.filter(i => i.source !== 'guest');
-
-  let html = '';
-  if (guestItems.length) {
-    html += `<div class="order-source-label">Guest Selection</div>`;
-    html += guestItems.map(item => {
-      const qty = item.quantity || item.qty || 1;
+  if (itemsEl) {
+    itemsEl.innerHTML = S.currentOrder.map(item => {
+      const qty      = item.quantity || item.qty || 1;
+      const isGuest  = item.source === 'guest';
+      const itemId   = escapeHtml(item.id || '');
       return `
-        <div class="order-row order-row-guest">
+        <div class="order-row${isGuest ? ' guest-item' : ''}">
           <div class="or-info">
-            <div class="or-name">${escapeHtml(item.name)} <span class="guest-badge">Guest</span></div>
-            <div class="or-price">${formatCurrency(item.price)} each</div>
+            <div class="or-name-line">
+              <span class="or-name">${escapeHtml(item.name)}</span>
+              ${isGuest ? '<span class="guest-lbl">Guest</span>' : ''}
+            </div>
+            <div class="or-unit-price">${formatCurrency(item.price)} each</div>
           </div>
-          <div class="qty-ctrl qty-ctrl-readonly">
+          <div class="or-controls">
+            <button class="qty-btn minus" onclick="changeQty('${itemId}', -1)">−</button>
             <span class="qty-num">${qty}</span>
+            <button class="qty-btn plus"  onclick="changeQty('${itemId}', 1)">+</button>
           </div>
-          <div class="or-total">${formatCurrency((item.price || 0) * qty)}</div>
+          <span class="or-total">${formatCurrency((item.price || 0) * qty)}</span>
         </div>
       `;
     }).join('');
   }
-  if (waiterItems.length) {
-    html += `<div class="order-source-label">Waiter Added</div>`;
-    html += waiterItems.map(item => {
-      const qty = item.quantity || item.qty || 1;
-      return `
-        <div class="order-row">
-          <div class="or-info">
-            <div class="or-name">${escapeHtml(item.name)}</div>
-            <div class="or-price">${formatCurrency(item.price)} each</div>
-          </div>
-          <div class="qty-ctrl">
-            <button class="qty-btn minus" onclick="changeQty('${escapeHtml(item.id)}', -1)">-</button>
-            <span class="qty-num">${qty}</span>
-            <button class="qty-btn plus"  onclick="changeQty('${escapeHtml(item.id)}', 1)">+</button>
-          </div>
-          <div class="or-total">${formatCurrency((item.price || 0) * qty)}</div>
-        </div>
-      `;
-    }).join('');
-  }
-  listEl.innerHTML = html;
 
   updateHistorySection();
   refreshTimelineIfOpen();
@@ -895,72 +906,156 @@ function pairingReasonText(item) {
   return 'A natural pairing that rounds out the table.';
 }
 
+/* ════════════════════════════════════════════════════════
+   QUICK ADD
+════════════════════════════════════════════════════════ */
+function handleQuickAdd(query) {
+  const results = document.getElementById('quickAddResults');
+  const clearBtn = document.getElementById('quickAddClear');
+  if (!results) return;
+  if (clearBtn) clearBtn.style.display = query.trim() ? 'block' : 'none';
+  if (!query.trim()) { results.style.display = 'none'; return; }
+
+  const q = query.toLowerCase();
+  const matches = S.allItems
+    .filter(i => i.name.toLowerCase().includes(q) || (i.description || '').toLowerCase().includes(q))
+    .slice(0, 8);
+
+  if (!matches.length) { results.style.display = 'none'; return; }
+
+  results.innerHTML = matches.map(item => `
+    <div class="quick-result" onclick="quickAddItem('${escapeHtml(item.name)}')">
+      <div class="qr-info">
+        <div class="qr-name">${escapeHtml(item.name)}</div>
+        <div class="qr-cat">${escapeHtml(item.category || '')}</div>
+      </div>
+      <span class="qr-price">${formatCurrency(item.price)}</span>
+      <span class="qr-add">+</span>
+    </div>
+  `).join('');
+  results.style.display = 'block';
+}
+
+function quickAddItem(itemName) {
+  clearQuickAdd();
+  addToOrder(itemName, 1);
+}
+
+function clearQuickAdd() {
+  const input   = document.getElementById('quickAddInput');
+  const results = document.getElementById('quickAddResults');
+  const clearBtn = document.getElementById('quickAddClear');
+  if (input)   input.value = '';
+  if (results) results.style.display = 'none';
+  if (clearBtn) clearBtn.style.display = 'none';
+}
+
+/* ════════════════════════════════════════════════════════
+   CONVERSATIONAL RECOMMENDATION
+════════════════════════════════════════════════════════ */
+const DRINK_CATS = new Set(['wine', 'beer', 'cocktail', 'drink', 'beverage', 'spirit', 'spirits', 'liqueur', 'soft', 'water', 'coffee', 'tea', 'espresso']);
+
+function cartItemIsDrink(item) {
+  const cat = (item.category || '').toLowerCase();
+  const name = (item.name || '').toLowerCase();
+  return DRINK_CATS.has(cat) || [...DRINK_CATS].some(t => name.includes(t));
+}
+
+function buildRecommendationPitch(cart, recs) {
+  const DRINK_TYPES = new Set(['WINE', 'DRINK', 'COCKTAIL', 'BEVERAGE', 'BEER']);
+  const foodInCart  = cart.filter(i => !cartItemIsDrink(i));
+  const drinkInCart = cart.filter(i => cartItemIsDrink(i));
+
+  const wineRec  = recs.find(r => r.categoryType === 'WINE');
+  const drinkRec = recs.find(r => DRINK_TYPES.has(r.categoryType || ''));
+  const foodRec  = recs.find(r => !DRINK_TYPES.has(r.categoryType || ''));
+
+  const mainDish    = foodInCart[0]?.name  || null;
+  const cartDrink   = drinkInCart[0]?.name || null;
+
+  // Guest already has a wine/drink → pivot to food pairing
+  if (cartDrink && foodRec) {
+    const opts = [
+      `Since the table's already enjoying the ${cartDrink}, I'd say the ${foodRec.name} is a natural move — they were made for each other.`,
+      `The ${cartDrink} pairs beautifully with our ${foodRec.name}. Worth mentioning — guests always love that combination.`,
+      `With the ${cartDrink} in the order, the ${foodRec.name} is the perfect companion. It's one of those combinations that just works.`,
+    ];
+    return { pitch: opts[Math.floor(Math.random() * opts.length)], featured: [foodRec, wineRec || drinkRec].filter(Boolean) };
+  }
+
+  // No drink in cart → lead with wine, secondary food
+  if (wineRec && foodRec && mainDish) {
+    const opts = [
+      `My personal favourite with the ${mainDish} is the ${wineRec.name} — bold enough to stand up to it beautifully. The ${foodRec.name} alongside rounds the table out perfectly.`,
+      `For the ${mainDish}, I always reach for the ${wineRec.name}. Guests love it every time. Throw in the ${foodRec.name} as well and you've got a complete experience.`,
+      `The ${wineRec.name} is what I'd have with the ${mainDish} — the pairing is genuinely special. A ${foodRec.name} on the side makes it memorable.`,
+    ];
+    return { pitch: opts[Math.floor(Math.random() * opts.length)], featured: [wineRec, foodRec] };
+  }
+
+  if (wineRec && mainDish) {
+    const opts = [
+      `My personal pick for the ${mainDish} is the ${wineRec.name}. I've never had a table turn it down.`,
+      `The ${wineRec.name} is an exceptional match for the ${mainDish} — confident suggestion here.`,
+      `With the ${mainDish} on the table, I'd reach straight for the ${wineRec.name}.`,
+    ];
+    return { pitch: opts[Math.floor(Math.random() * opts.length)], featured: [wineRec] };
+  }
+
+  if (drinkRec && !wineRec && mainDish) {
+    return { pitch: `The ${drinkRec.name} goes really well with the ${mainDish} — worth mentioning to the table.`, featured: [drinkRec] };
+  }
+
+  if (foodRec) {
+    return { pitch: `A lot of guests add the ${foodRec.name} alongside — it pairs naturally with what's been ordered.`, featured: [foodRec] };
+  }
+
+  return null;
+}
+
 const debouncedLoadRecs = debounce(async () => {
-  const strip = document.getElementById('recStrip');
-  const chips = document.getElementById('recChips');
-  if (!strip || !chips) return;
-  if (!S.currentOrder.length) { strip.style.display = 'none'; return; }
+  const recCard    = document.getElementById('recCard');
+  const recPitch   = document.getElementById('recPitch');
+  const recActions = document.getElementById('recActions');
+  const recSpinner = document.getElementById('recSpinner');
+
+  if (!recCard || !S.currentOrder.length) {
+    if (recCard) recCard.style.display = 'none';
+    return;
+  }
+
+  if (recSpinner) recSpinner.style.display = 'inline-block';
+  recCard.style.display = 'block';
+  if (recPitch) recPitch.textContent = 'Getting suggestion…';
+  if (recActions) recActions.innerHTML = '';
 
   try {
     const data = await fetchWithRetry(`${CFG.API_BASE}/api/recommend`, {
       method: 'POST',
-      body: JSON.stringify({
-        cart: S.currentOrder.map(i => ({ name: i.name, price: i.price }))
-      })
+      body: JSON.stringify({ cart: S.currentOrder.map(i => ({ name: i.name, price: i.price })) })
     });
 
-    if (!Array.isArray(data) || !data.length) { strip.style.display = 'none'; return; }
+    if (!Array.isArray(data) || !data.length) { recCard.style.display = 'none'; return; }
 
-    // Pick the best drink/wine pairing and best food pairing to highlight
-    const drinkRec = data.find(r => r.categoryType === 'WINE' || r.categoryType === 'DRINK');
-    const foodRec  = data.find(r => r.categoryType === 'MAIN' || r.categoryType === 'STARTER' || r.categoryType === 'DESSERT');
-    const featured = [drinkRec, foodRec].filter(Boolean);
-    const rest = data.filter(r => !featured.includes(r)).slice(0, 3);
+    const result = buildRecommendationPitch(S.currentOrder, data);
+    if (!result) { recCard.style.display = 'none'; return; }
 
-    strip.style.display = 'block';
-
-    const featuredHtml = featured.map(r => {
-      const imgSrc = r.img ? resolveAssetPath(r.img) : resolveAssetPath('Images/Tomahawk.jpg');
-      const reason = pairingReasonText(r);
-      const typeLabel = r.categoryType === 'WINE' ? 'Wine' : r.categoryType === 'DRINK' ? 'Drink' : r.categoryType === 'DESSERT' ? 'Dessert' : r.categoryType === 'STARTER' ? 'Starter' : 'Side';
-      return `
-        <div class="rec-pairing-card" onclick="addToOrder('${escapeHtml(r.name)}',1)">
-          <div class="rec-pairing-img-wrap">
-            <img src="${imgSrc}" alt="${escapeHtml(r.name)}" class="rec-pairing-img" onerror="this.style.display='none'">
-          </div>
-          <div class="rec-pairing-body">
-            <span class="rec-pairing-type">${typeLabel}</span>
-            <div class="rec-pairing-name">${escapeHtml(r.name)}</div>
-            <div class="rec-pairing-reason">${escapeHtml(reason)}</div>
-            <div class="rec-pairing-footer">
-              <span class="rec-pairing-price">${formatCurrency(r.price)}</span>
-              <button class="rec-pairing-add">+ Add</button>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    const restHtml = rest.length ? `
-      <div class="rec-also-label">Also suggested</div>
-      <div class="rec-chips">
-        ${rest.map(r => `
-          <div class="rec-chip" onclick="addToOrder('${escapeHtml(r.name)}',1)">
-            <div class="rec-chip-name">${escapeHtml(r.name)}</div>
-            <div class="rec-chip-meta">${formatCurrency(r.price)}</div>
-            <span class="rec-chip-add">+</span>
-          </div>
-        `).join('')}
-      </div>
-    ` : '';
-
-    chips.innerHTML = featuredHtml + restHtml;
+    if (recPitch) recPitch.textContent = result.pitch;
+    if (recActions) {
+      recActions.innerHTML = result.featured.map(r => `
+        <button class="rec-action-btn" onclick="addToOrder('${escapeHtml(r.name)}', 1)">
+          + ${escapeHtml(r.name)} <span class="rec-action-price">${formatCurrency(r.price)}</span>
+        </button>
+      `).join('');
+    }
   } catch (e) {
-    strip.style.display = 'none';
+    recCard.style.display = 'none';
+  } finally {
+    if (recSpinner) recSpinner.style.display = 'none';
   }
-}, 600);
+}, 700);
 
-function loadRecommendations() { debouncedLoadRecs(); }
+function loadRecommendations() { if (!S.isViewOnly) debouncedLoadRecs(); }
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    SEND ORDER
@@ -969,9 +1064,10 @@ async function sendOrder() {
   if (!S.selectedTable) { showToast('No table selected!', 'error'); return; }
   if (!S.currentOrder.length) { showToast('Order is empty!', 'error'); return; }
 
-  const btn = document.getElementById('btnKitchen');
+  if (S.isViewOnly) { showToast('View only — not your assigned table', 'warning'); return; }
+  const btn = document.getElementById('btnSend');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>';
+  btn.innerHTML = '<span class="spinner"></span> Sending...';
   try {
     await fetchWithRetry(`${CFG.API_BASE}/api/waiter/add-items`, {
       method: 'POST',
@@ -999,7 +1095,7 @@ async function sendOrder() {
     showToast('Failed to send. Retrying...', 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<span class="material-icons" style="font-size:18px">Send</span> Send to Kitchen';
+    btn.innerHTML = 'Send to Kitchen';
   }
 }
 
@@ -1171,6 +1267,9 @@ async function loadSessionUser() {
       S.waiterName = data.user.label;
       localStorage.setItem('waiterName', S.waiterName);
     }
+    if (Array.isArray(data.user.assignedTables)) {
+      S.assignedTables = data.user.assignedTables.map(String);
+    }
   } catch (_) {}
 }
 
@@ -1202,7 +1301,10 @@ async function init() {
   notifInit();
   await loadSessionUser();
   if (!S.waiterName) openWaiterModal();
-  else document.getElementById('waiterPill').textContent = S.waiterName;
+  else {
+    const btn = document.getElementById('sbWaiterBtn');
+    if (btn) btn.textContent = S.waiterName;
+  }
   setupLogout();
   setupSocket();
   initTables();

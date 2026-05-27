@@ -188,18 +188,30 @@
       const isSuspended = account.status === 'suspended';
       const row = document.createElement('div');
       row.className = `account-row${isSuspended ? ' is-suspended' : ''}`;
+      const tables = Array.isArray(account.assignedTables) && account.assignedTables.length
+        ? account.assignedTables.join(', ')
+        : '—';
+      const isWaiter = account.role === 'waiter';
       row.innerHTML = `
         <div>
           <strong>${escapeHtml(account.label || account.username)}</strong>
-          <small>${escapeHtml(account.username)} - ${escapeHtml(account.role)} - ${escapeHtml(account.status || 'active')}</small>
+          <small>${escapeHtml(account.username)} · ${escapeHtml(account.role)} · ${escapeHtml(account.status || 'active')}</small>
+          ${isWaiter ? `<small style="color:#c6a24b">Tables: ${escapeHtml(tables)}</small>` : ''}
         </div>
-        <button
-          type="button"
-          class="${isSuspended ? 'account-activate' : 'account-suspend'}"
-          data-account-action="status"
-          data-username="${escapeHtml(account.username)}"
-          data-status="${isSuspended ? 'active' : 'suspended'}"
-        >${isSuspended ? 'Activate' : 'Suspend'}</button>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          ${isWaiter ? `<button type="button" class="account-assign-tables" data-account-action="assign"
+            data-username="${escapeHtml(account.username)}"
+            data-label="${escapeHtml(account.label || account.username)}"
+            data-tables="${escapeHtml(tables === '—' ? '' : tables)}"
+            style="background:rgba(198,162,75,0.12);border:1px solid #c6a24b;color:#c6a24b;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">Assign Tables</button>` : ''}
+          <button
+            type="button"
+            class="${isSuspended ? 'account-activate' : 'account-suspend'}"
+            data-account-action="status"
+            data-username="${escapeHtml(account.username)}"
+            data-status="${isSuspended ? 'active' : 'suspended'}"
+          >${isSuspended ? 'Activate' : 'Suspend'}</button>
+        </div>
       `;
       accountList.appendChild(row);
     });
@@ -1049,11 +1061,46 @@
   if (refreshAccountsBtn) refreshAccountsBtn.addEventListener('click', loadAccounts);
   if (accountList) {
     accountList.addEventListener('click', event => {
-      const button = event.target.closest('[data-account-action="status"]');
-      if (!button) return;
-      updateAccountStatus(button.dataset.username, button.dataset.status);
+      const statusBtn = event.target.closest('[data-account-action="status"]');
+      if (statusBtn) { updateAccountStatus(statusBtn.dataset.username, statusBtn.dataset.status); return; }
+      const assignBtn = event.target.closest('[data-account-action="assign"]');
+      if (assignBtn) { openAssignTablesModal(assignBtn.dataset.username, assignBtn.dataset.label, assignBtn.dataset.tables); }
     });
   }
+
+  // --- ASSIGN TABLES ---
+  let assignTablesTarget = null;
+  function openAssignTablesModal(username, label, currentTables) {
+    assignTablesTarget = username;
+    const modal = document.getElementById('assignTablesModal');
+    const subtitle = document.getElementById('assignTablesSubtitle');
+    const input = document.getElementById('assignTablesInput');
+    if (subtitle) subtitle.textContent = 'Assigning tables to ' + label + ' (' + username + ')';
+    if (input) input.value = currentTables || '';
+    if (modal) modal.style.display = 'flex';
+  }
+  window.closeAssignTablesModal = function() {
+    const modal = document.getElementById('assignTablesModal');
+    if (modal) modal.style.display = 'none';
+    assignTablesTarget = null;
+  };
+  window.saveAssignedTables = async function() {
+    if (!assignTablesTarget) return;
+    const raw = document.getElementById('assignTablesInput').value;
+    const tables = raw.split(/[,\s]+/).map(s => s.trim()).filter(Boolean);
+    try {
+      const res = await fetch(`/Trump/api/auth/accounts/${encodeURIComponent(assignTablesTarget)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignedTables: tables })
+      });
+      if (!res.ok) throw new Error('Failed');
+      closeAssignTablesModal();
+      loadAccounts();
+    } catch (e) {
+      alert('Failed to save assignment. Try again.');
+    }
+  };
 
   // --- ANALYTICS ---
   function fmtCurrency(n) { return 'R ' + parseFloat(n || 0).toFixed(2); }

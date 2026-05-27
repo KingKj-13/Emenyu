@@ -219,6 +219,22 @@
       </div>
     </section>
 
+    <!-- ASSIGN TABLES MODAL -->
+    <div id="assignTablesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9000;align-items:center;justify-content:center;padding:20px">
+      <div style="background:#1a1a2e;border:1px solid #c6a24b;border-radius:16px;padding:28px;width:100%;max-width:420px">
+        <h3 style="font-size:18px;font-weight:800;margin-bottom:6px;color:#e0d8c8">Assign Tables</h3>
+        <p id="assignTablesSubtitle" style="font-size:13px;color:#888;margin-bottom:16px"></p>
+        <label style="font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:7px">Table Numbers (comma-separated)</label>
+        <input id="assignTablesInput" type="text" placeholder="e.g. 1, 2, 5, 12"
+          style="width:100%;padding:11px 14px;background:#111;border:1px solid #333;border-radius:10px;color:#e0d8c8;font-size:15px;margin-bottom:6px">
+        <p style="font-size:11px;color:#666;margin-bottom:20px">Leave blank to remove all table assignments.</p>
+        <div style="display:flex;gap:10px">
+          <button onclick="closeAssignTablesModal()" style="flex:1;padding:13px;background:#222;color:#e0d8c8;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Cancel</button>
+          <button onclick="saveAssignedTables()" style="flex:1;padding:13px;background:#c6a24b;color:#111;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">Save Assignment</button>
+        </div>
+      </div>
+    </div>
+
     <section id="analyticsSection" class="section">
       <h2 class="section-header">Analytics Dashboard</h2>
 

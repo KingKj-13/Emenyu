@@ -55,6 +55,7 @@ function sanitizeAccount(account) {
     role: account.role,
     label: account.label || account.role,
     status: account.status || 'active',
+    assignedTables: Array.isArray(account.assignedTables) ? account.assignedTables : [],
     createdBy: account.createdBy || 'system',
     createdAt: account.createdAt || null,
     updatedAt: account.updatedAt || null,
@@ -333,6 +334,10 @@ class AccountService {
     const now = new Date().toISOString();
     if (typeof patch.label === 'string' && patch.label.trim()) {
       account.label = patch.label.trim();
+    }
+
+    if (Array.isArray(patch.assignedTables)) {
+      account.assignedTables = patch.assignedTables.map(String).filter(Boolean);
     }
 
     if (typeof patch.password === 'string' && patch.password.length > 0) {
