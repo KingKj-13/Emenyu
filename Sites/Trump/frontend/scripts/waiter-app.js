@@ -645,7 +645,8 @@ function addToOrder(itemName, qty = 1) {
       name:     item.name,
       price:    item.price,
       quantity: qty,
-      category: item.category || ''
+      category: item.category || '',
+      source:   'waiter'
     });
   }
 
@@ -660,12 +661,13 @@ function addToOrder(itemName, qty = 1) {
 function changeQty(itemId, delta) {
   const idx = S.currentOrder.findIndex(i => i.id === itemId);
   if (idx === -1) return;
+  if (S.currentOrder[idx].source === 'guest') return; // guest items are read-only
   S.currentOrder[idx].quantity = Math.max(0, (S.currentOrder[idx].quantity || 1) + delta);
   if (S.currentOrder[idx].quantity === 0) S.currentOrder.splice(idx, 1);
   syncCart();
   updateOrderBadge();
   renderOrderView();
-  loadRecommendations(); // NEW
+  loadRecommendations();
 }
 
 function syncCart() {
@@ -706,24 +708,49 @@ function renderOrderView() {
   const total = S.currentOrder.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
   document.getElementById('orderTotalVal').textContent = formatCurrency(total);
 
-  // Keep quantity labels stable even when older carts omit a quantity field.
-  listEl.innerHTML = S.currentOrder.map(item => {
-    const qty = item.quantity || 1;
-    return `
-      <div class="order-row">
-        <div class="or-info">
-          <div class="or-name">${escapeHtml(item.name)}</div>
-          <div class="or-price">${formatCurrency(item.price)} each</div>
+  const guestItems = S.currentOrder.filter(i => i.source === 'guest');
+  const waiterItems = S.currentOrder.filter(i => i.source !== 'guest');
+
+  let html = '';
+  if (guestItems.length) {
+    html += `<div class="order-source-label">Guest Selection</div>`;
+    html += guestItems.map(item => {
+      const qty = item.quantity || item.qty || 1;
+      return `
+        <div class="order-row order-row-guest">
+          <div class="or-info">
+            <div class="or-name">${escapeHtml(item.name)} <span class="guest-badge">Guest</span></div>
+            <div class="or-price">${formatCurrency(item.price)} each</div>
+          </div>
+          <div class="qty-ctrl qty-ctrl-readonly">
+            <span class="qty-num">${qty}</span>
+          </div>
+          <div class="or-total">${formatCurrency((item.price || 0) * qty)}</div>
         </div>
-        <div class="qty-ctrl">
-          <button class="qty-btn minus" onclick="changeQty('${escapeHtml(item.id)}', -1)">-</button>
-          <span class="qty-num">${qty}</span>
-          <button class="qty-btn plus"  onclick="changeQty('${escapeHtml(item.id)}', 1)">+</button>
+      `;
+    }).join('');
+  }
+  if (waiterItems.length) {
+    html += `<div class="order-source-label">Waiter Added</div>`;
+    html += waiterItems.map(item => {
+      const qty = item.quantity || item.qty || 1;
+      return `
+        <div class="order-row">
+          <div class="or-info">
+            <div class="or-name">${escapeHtml(item.name)}</div>
+            <div class="or-price">${formatCurrency(item.price)} each</div>
+          </div>
+          <div class="qty-ctrl">
+            <button class="qty-btn minus" onclick="changeQty('${escapeHtml(item.id)}', -1)">-</button>
+            <span class="qty-num">${qty}</span>
+            <button class="qty-btn plus"  onclick="changeQty('${escapeHtml(item.id)}', 1)">+</button>
+          </div>
+          <div class="or-total">${formatCurrency((item.price || 0) * qty)}</div>
         </div>
-        <div class="or-total">${formatCurrency((item.price || 0) * qty)}</div>
-      </div>
-    `;
-  }).join('');
+      `;
+    }).join('');
+  }
+  listEl.innerHTML = html;
 
   updateHistorySection();
 }
@@ -738,6 +765,33 @@ function updateOrderBadge() {
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    RECOMMENDATIONS  (NEW â€” fixed payload)
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+function pairingReasonText(item) {
+  const type = (item.categoryType || '').toUpperCase();
+  const src = item.source_title || '';
+  const name = (item.name || '').toLowerCase();
+  if (type === 'WINE') {
+    if (/shiraz|merlot|cabernet|pinotage/.test(name)) return 'A bold red — pairs beautifully with grilled meats.';
+    if (/chardonnay|sauvignon|chenin/.test(name)) return 'A crisp white — the perfect seafood companion.';
+    if (/rosé|rose/.test(name)) return 'Elegant rosé — light and versatile at the table.';
+    return 'From the cellar — a confident wine pairing.';
+  }
+  if (type === 'DRINK') {
+    if (/beer|lager|cider/.test(name)) return 'Ice-cold beer — the classic grill companion.';
+    if (/old fashioned|bourbon|whisky/.test(name)) return 'A signature cocktail to elevate the evening.';
+    if (/coffee|espresso/.test(name)) return 'Rich coffee — a perfect way to close the meal.';
+    return 'A great drink to round off this course.';
+  }
+  if (type === 'DESSERT') return 'The perfect sweet note to finish this meal.';
+  if (type === 'STARTER') return 'A light start to open the palate beautifully.';
+  if (/chips|fries/.test(name)) return 'Classic crispy side — goes with almost everything.';
+  if (/garlic bread/.test(name)) return 'Warm garlic bread — perfect to share at the table.';
+  if (/salad/.test(name)) return 'Fresh balance alongside a rich main.';
+  if (/sauce/.test(name)) return 'Drizzle it over — takes the dish to the next level.';
+  if (src === "Chef's Pairing") return "The chef's own recommendation for this dish.";
+  if (src === 'People also ordered') return 'Other guests ordering this always add it too.';
+  return 'A natural pairing that rounds out the table.';
+}
+
 const debouncedLoadRecs = debounce(async () => {
   const strip = document.getElementById('recStrip');
   const chips = document.getElementById('recChips');
@@ -754,14 +808,50 @@ const debouncedLoadRecs = debounce(async () => {
 
     if (!Array.isArray(data) || !data.length) { strip.style.display = 'none'; return; }
 
+    // Pick the best drink/wine pairing and best food pairing to highlight
+    const drinkRec = data.find(r => r.categoryType === 'WINE' || r.categoryType === 'DRINK');
+    const foodRec  = data.find(r => r.categoryType === 'MAIN' || r.categoryType === 'STARTER' || r.categoryType === 'DESSERT');
+    const featured = [drinkRec, foodRec].filter(Boolean);
+    const rest = data.filter(r => !featured.includes(r)).slice(0, 3);
+
     strip.style.display = 'block';
-    chips.innerHTML = data.map((r, idx) => `
-      <div class="rec-chip" onclick="addToOrder('${escapeHtml(r.name)}',1)">
-        <div class="rec-chip-name">${escapeHtml(r.name)}</div>
-        <div class="rec-chip-meta">${formatCurrency(r.price)} - ${escapeHtml(r.source_title || 'Suggested')}</div>
-        <span class="rec-chip-add">+</span>
+
+    const featuredHtml = featured.map(r => {
+      const imgSrc = r.img ? resolveAssetPath(r.img) : resolveAssetPath('Images/Tomahawk.jpg');
+      const reason = pairingReasonText(r);
+      const typeLabel = r.categoryType === 'WINE' ? 'Wine' : r.categoryType === 'DRINK' ? 'Drink' : r.categoryType === 'DESSERT' ? 'Dessert' : r.categoryType === 'STARTER' ? 'Starter' : 'Side';
+      return `
+        <div class="rec-pairing-card" onclick="addToOrder('${escapeHtml(r.name)}',1)">
+          <div class="rec-pairing-img-wrap">
+            <img src="${imgSrc}" alt="${escapeHtml(r.name)}" class="rec-pairing-img" onerror="this.style.display='none'">
+          </div>
+          <div class="rec-pairing-body">
+            <span class="rec-pairing-type">${typeLabel}</span>
+            <div class="rec-pairing-name">${escapeHtml(r.name)}</div>
+            <div class="rec-pairing-reason">${escapeHtml(reason)}</div>
+            <div class="rec-pairing-footer">
+              <span class="rec-pairing-price">${formatCurrency(r.price)}</span>
+              <button class="rec-pairing-add">+ Add</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const restHtml = rest.length ? `
+      <div class="rec-also-label">Also suggested</div>
+      <div class="rec-chips">
+        ${rest.map(r => `
+          <div class="rec-chip" onclick="addToOrder('${escapeHtml(r.name)}',1)">
+            <div class="rec-chip-name">${escapeHtml(r.name)}</div>
+            <div class="rec-chip-meta">${formatCurrency(r.price)}</div>
+            <span class="rec-chip-add">+</span>
+          </div>
+        `).join('')}
       </div>
-    `).join('');
+    ` : '';
+
+    chips.innerHTML = featuredHtml + restHtml;
   } catch (e) {
     strip.style.display = 'none';
   }

@@ -33,6 +33,7 @@ function normalizeItem(item: Partial<CartItem>): CartItem {
     note: item.note || '',
     img: item.img || '',
     description: item.description || '',
+    source: item.source ?? 'guest',
   };
 }
 

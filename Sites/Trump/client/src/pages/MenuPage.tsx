@@ -269,7 +269,8 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   }
 
   function handleChatItemClick(item: ChatSuggestionItem) {
-    handleItemClick(item as unknown as MenuItem);
+    const fullItem = findItemByName(item.name);
+    handleItemClick(fullItem ?? (item as unknown as MenuItem));
   }
 
   function handleAddToCart(item: MenuItem) {
@@ -405,7 +406,7 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
         />
       )}
       <CartDrawer />
-      <ChatPanel />
+      <ChatPanel onItemClick={handleChatItemClick} />
     </AppShell>
   );
 }

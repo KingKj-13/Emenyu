@@ -5,6 +5,7 @@ export interface CartItem {
   note: string;
   img: string;
   description: string;
+  source?: 'guest' | 'waiter';
 }
 
 export interface CartTotals {

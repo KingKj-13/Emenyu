@@ -57,7 +57,7 @@ const QUERY_INTENTS = [
   { key: 'wine', terms: ['wine', 'cabernet', 'merlot', 'pinotage', 'shiraz', 'sauvignon', 'chardonnay', 'rose', 'champagne'] },
   { key: 'cocktail', terms: ['cocktail', 'mocktail', 'margarita', 'martini', 'sour', 'daiquiri', 'gin'] },
   { key: 'dessert', terms: ['dessert', 'sweet', 'cake', 'ice cream', 'malva', 'pudding'] },
-  { key: 'vegetarian', terms: ['vegetarian', 'vegan', 'veg', 'halloumi', 'salad'] },
+  { key: 'vegetarian', terms: ['vegetarian', 'vegan', 'plant-based', 'meat-free'] },
   { key: 'starter', terms: ['starter', 'start', 'small plate', 'appetizer', 'wings', 'snails'] },
   { key: 'burger', terms: ['burger'] },
   { key: 'beer', terms: ['beer', 'lager', 'draught', 'cider'] }
@@ -747,9 +747,7 @@ class AiService {
   }
 
   addPerfectPairings(cartNames, menuContext, addCandidate) {
-    if (cartNames.length === 0) {
-      return;
-    }
+    if (cartNames.length === 0) return;
 
     const cartText = cartNames
       .map(name => menuContext.byName.get(name))
@@ -757,41 +755,61 @@ class AiService {
       .map(item => item.searchText)
       .join(' ');
 
+    // Each rule has typed keyword groups to ensure wine searches WINE, food searches MAIN, etc.
     const pairingRules = [
       {
         when: /tomahawk|wagyu|fillet|ribeye|rump|sirloin|steak|beef/,
         title: 'Perfect steak pairing',
         score: 94,
-        keywords: ['shiraz', 'cabernet', 'pepper sauce', 'malva']
+        typedPairs: [
+          { keywords: ['shiraz', 'cabernet', 'merlot', 'pinotage'], type: 'WINE' },
+          { keywords: ['pepper sauce', 'mushroom sauce', 'garlic butter'], type: 'MAIN' }
+        ]
       },
       {
-        when: /prawn|calamari|salmon|kingklip|hake|seafood|sushi/,
+        when: /prawn|calamari|salmon|kingklip|hake|seafood|squid|mussel/,
         title: 'Perfect seafood pairing',
         score: 92,
-        keywords: ['chardonnay', 'sauvignon', 'lemon', 'panna cotta']
+        typedPairs: [
+          { keywords: ['chardonnay', 'sauvignon', 'chenin'], type: 'WINE' },
+          { keywords: ['garlic bread', 'chips', 'greek salad'], type: 'MAIN' }
+        ]
       },
       {
         when: /burger|ribs|pork|wings/,
         title: 'Perfect grill pairing',
         score: 88,
-        keywords: ['lager', 'beer', 'chips', 'old fashioned']
+        typedPairs: [
+          { keywords: ['lager', 'beer', 'cider'], type: 'DRINK' },
+          { keywords: ['chips', 'onion rings', 'coleslaw'], type: 'MAIN' }
+        ]
       },
       {
-        when: /dessert|malva|cake|ice cream/,
+        when: /lamb|souvlaki|souvlakia|keftethes|bifteki/,
+        title: 'Classic Greek pairing',
+        score: 90,
+        typedPairs: [
+          { keywords: ['shiraz', 'pinotage', 'cabernet'], type: 'WINE' },
+          { keywords: ['tzatziki', 'chips', 'pita'], type: 'MAIN' }
+        ]
+      },
+      {
+        when: /dessert|malva|cake|ice cream|baklava|loukoumades|rizogalo|portokalopita/,
         title: 'Sweet finish pairing',
         score: 84,
-        keywords: ['irish coffee', 'espresso', 'dom pedro', 'whisky']
+        typedPairs: [
+          { keywords: ['irish coffee', 'espresso', 'whisky', 'cognac'], type: 'DRINK' }
+        ]
       }
     ];
 
     pairingRules
       .filter(rule => rule.when.test(cartText))
       .forEach(rule => {
-        rule.keywords
-          .map(keyword => this.pickMenuItem(menuContext, [keyword], null))
-          .filter(Boolean)
-          .slice(0, 2)
-          .forEach(item => addCandidate(item, rule.title, rule.score));
+        rule.typedPairs.forEach(({ keywords, type }) => {
+          const item = this.pickMenuItem(menuContext, keywords, type);
+          if (item) addCandidate(item, rule.title, rule.score);
+        });
       });
   }
 
