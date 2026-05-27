@@ -115,7 +115,11 @@ export function ItemModal({
   const [videoError, setVideoError] = useState(false);
   const [playMedia, setPlayMedia] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
+  const [swipeX, setSwipeX] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const swipeActiveRef = useRef(false);
+  const SWIPE_THRESHOLD = 80;
 
   useEffect(() => {
     if (!open || !item) return;
@@ -145,9 +149,67 @@ export function ItemModal({
     onClose();
   }
 
+  function handleTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+    swipeActiveRef.current = false;
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!touchStartRef.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - touchStartRef.current.x;
+    const dy = t.clientY - touchStartRef.current.y;
+
+    if (!swipeActiveRef.current) {
+      if (Math.abs(dx) < 12) return;
+      if (Math.abs(dx) > Math.abs(dy) * 1.5) {
+        swipeActiveRef.current = true;
+      } else {
+        touchStartRef.current = null;
+        return;
+      }
+    }
+    setSwipeX(dx);
+  }
+
+  function handleTouchEnd() {
+    const finalSwipe = swipeX;
+    setSwipeX(0);
+    touchStartRef.current = null;
+    swipeActiveRef.current = false;
+    if (finalSwipe > SWIPE_THRESHOLD) {
+      handleAdd();
+    } else if (finalSwipe < -SWIPE_THRESHOLD) {
+      if (canGoBack && onBack) onBack();
+      else onClose();
+    }
+  }
+
+  function handleTouchCancel() {
+    setSwipeX(0);
+    touchStartRef.current = null;
+    swipeActiveRef.current = false;
+  }
+
+  const swipeProgress = Math.min(1, Math.abs(swipeX) / SWIPE_THRESHOLD);
+  const isRightSwipe = swipeX > 20;
+  const isLeftSwipe = swipeX < -20;
+
   return (
     <Modal open={open} onClose={onClose} size="lg">
-      <div className={styles.modal}>
+      <div
+        className={styles.modal}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
+        style={{
+          transform: `translateX(${swipeX}px) rotate(${swipeX * 0.04}deg)`,
+          transition: swipeX === 0 ? 'transform 280ms ease' : 'none',
+          transformOrigin: 'bottom center',
+        }}
+      >
         <div className={styles.media}>
           {videoSrc ? (
             <>
@@ -276,6 +338,19 @@ export function ItemModal({
             </button>
           </div>
         </div>
+
+        {isRightSwipe && (
+          <div className={styles.swipeHintRight} style={{ opacity: swipeProgress }}>
+            <ShoppingCart size={36} />
+            <span>Add to Cart</span>
+          </div>
+        )}
+        {isLeftSwipe && (
+          <div className={styles.swipeHintLeft} style={{ opacity: swipeProgress }}>
+            <ChevronLeft size={36} />
+            <span>{canGoBack ? 'Back' : 'Close'}</span>
+          </div>
+        )}
       </div>
     </Modal>
   );

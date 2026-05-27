@@ -1,4 +1,9 @@
-.modal { display: flex; flex-direction: column; }
+.modal {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  will-change: transform;
+}
 
 .media {
   position: relative;
@@ -317,6 +322,37 @@
   box-shadow: none;
   cursor: not-allowed;
   transform: none;
+}
+
+.swipeHintRight,
+.swipeHintLeft {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: none;
+  z-index: 20;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: inherit;
+  backdrop-filter: blur(2px);
+}
+
+.swipeHintRight {
+  background: rgba(22, 163, 74, 0.45);
+  color: #fff;
+  border: 3px solid rgba(34, 197, 94, 0.75);
+}
+
+.swipeHintLeft {
+  background: rgba(185, 28, 28, 0.35);
+  color: #fff;
+  border: 3px solid rgba(239, 68, 68, 0.65);
 }
 
 @media (min-width: 760px) {
