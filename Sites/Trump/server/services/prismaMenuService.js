@@ -128,10 +128,12 @@ function itemToCreateData(item = {}, categoryId, restaurantId, sortOrder) {
   };
 }
 
-function dbItemToJson(item, { includeId = false } = {}) {
+function dbItemToJson(item, { includeId = false, categoryTitle = '', subcategoryTitle = '' } = {}) {
   return {
     ...(includeId ? { dbId: item.id } : {}),
     ...(item.metadata && typeof item.metadata === 'object' ? item.metadata : {}),
+    ...(categoryTitle ? { category: categoryTitle } : {}),
+    ...(subcategoryTitle ? { subcategory: subcategoryTitle } : {}),
     name: item.name,
     description: item.description || '',
     price: Number(item.price) || 0,
@@ -391,7 +393,7 @@ class PrismaMenuService {
         const menu = {};
         (byParent.get(0) || []).sort((left, right) => left.sortOrder - right.sortOrder).forEach(root => {
           const metadata = root.metadata && typeof root.metadata === 'object' ? root.metadata : {};
-          const directItems = root.items.map(dbItemToJson);
+          const directItems = root.items.map(item => dbItemToJson(item, { categoryTitle: root.title }));
           if (metadata.storage === 'array') {
             menu[root.title] = directItems;
             return;
@@ -408,7 +410,7 @@ class PrismaMenuService {
             categoryValue[sub.title] = {
               ...(subMetadata.extra && typeof subMetadata.extra === 'object' ? subMetadata.extra : {}),
               visible: sub.visible,
-              items: sub.items.map(dbItemToJson)
+              items: sub.items.map(item => dbItemToJson(item, { categoryTitle: root.title, subcategoryTitle: sub.title }))
             };
           });
 
@@ -550,8 +552,7 @@ class PrismaMenuService {
           orderBy: { sortOrder: 'asc' }
         });
         return items.map(item => ({
-          ...dbItemToJson(item, { includeId: true }),
-          category: item.category?.title || ''
+          ...dbItemToJson(item, { includeId: true, categoryTitle: item.category?.title || '' })
         }));
       },
       null

@@ -20,10 +20,11 @@ export function LoginPage() {
   }
 
   function roleToPath(role: string, defaultPath?: string): string {
-    if (defaultPath) return defaultPath;
-    if (role === 'waiter') return '/Trump/Waiter';
-    if (role === 'kitchen') return '/Trump/Kitchen';
-    return '/Trump/Admin';
+    const path = defaultPath?.replace(/^\/Trump/i, '') || '';
+    if (path) return path;
+    if (role === 'waiter') return '/Waiter';
+    if (role === 'kitchen') return '/Kitchen';
+    return '/Admin';
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -34,7 +35,7 @@ export function LoginPage() {
       const result = await login({ username, password });
       if (result.ok && result.user) {
         const dest = roleToPath(result.user.role, result.defaultPath);
-        window.location.href = dest;
+        navigate(dest, { replace: true });
       } else {
         setError(result.error || 'Invalid credentials. Please try again.');
       }

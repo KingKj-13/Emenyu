@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X, Send, Sparkles } from 'lucide-react';
 import { api } from '../../services/api';
 import { useApp } from '../../context/AppContext';
+import { resolveAssetPath } from '../../lib/imageResolver';
 import type { ChatSuggestionItem, ChatResponse } from '../../types/menu';
 import styles from './ChatPanel.module.css';
 
@@ -122,7 +123,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
                         >
                           {item.img && (
                             <img
-                              src={item.img.startsWith('/') ? item.img : `/Trump/${item.img}`}
+                              src={resolveAssetPath(item.img)}
                               alt={item.name}
                               className={styles.cardImg}
                               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}

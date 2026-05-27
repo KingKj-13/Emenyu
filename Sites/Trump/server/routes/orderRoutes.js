@@ -12,6 +12,11 @@ function registerOrderRoutes(app, controllers, auth) {
     auth.requirePage(['owner', 'manager', 'waiter']),
     controllers.waiter.serveWaiterPage
   );
+  app.get(
+    ['/Trump/Kitchen', '/Trump/kitchen', '/trump/Kitchen', '/trump/kitchen'],
+    auth.requirePage(['owner', 'manager', 'kitchen']),
+    controllers.order.serveMenuPage
+  );
 
   app.post(['/api/chat', '/Trump/api/chat', '/trump/api/chat'], controllers.ai.chat);
   app.post(['/api/ai-pairing', '/Trump/api/ai-pairing', '/trump/api/ai-pairing'], controllers.ai.aiPairing);

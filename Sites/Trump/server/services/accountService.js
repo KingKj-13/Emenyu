@@ -7,7 +7,7 @@ const { PrismaAuthService } = require('./prismaAuthService');
 const HASH_ITERATIONS = 120000;
 const HASH_KEY_LENGTH = 32;
 const HASH_DIGEST = 'sha256';
-const VALID_ROLES = new Set(['owner', 'manager', 'waiter']);
+const VALID_ROLES = new Set(['owner', 'manager', 'waiter', 'kitchen']);
 
 function normalizeUsername(value) {
   return String(value || '').trim().toLowerCase();
@@ -123,7 +123,25 @@ class AccountService {
 
     (this.config.auth.users || []).forEach(defaultUser => {
       const username = normalizeUsername(defaultUser.username);
-      if (!username || byUsername.has(username)) {
+      if (!username) {
+        return;
+      }
+
+      const existing = byUsername.get(username);
+      const shouldRefreshDemo = defaultUser.demo === true && !defaultUser.passwordFromEnv;
+      if (existing) {
+        if (shouldRefreshDemo || existing.status === 'suspended') {
+          byUsername.set(username, {
+            ...existing,
+            role: defaultUser.role,
+            label: defaultUser.label || existing.label || defaultUser.role,
+            status: 'active',
+            passwordHash: shouldRefreshDemo ? hashPassword(defaultUser.password) : existing.passwordHash,
+            updatedAt: now,
+            suspendedAt: null,
+            sessionInvalidBefore: null
+          });
+        }
         return;
       }
 
@@ -228,11 +246,11 @@ class AccountService {
     }
 
     if (actor.role === 'owner') {
-      return targetRole === 'manager' || targetRole === 'waiter';
+      return targetRole === 'manager' || targetRole === 'waiter' || targetRole === 'kitchen';
     }
 
     if (actor.role === 'manager') {
-      return targetRole === 'waiter';
+      return targetRole === 'waiter' || targetRole === 'kitchen';
     }
 
     return false;

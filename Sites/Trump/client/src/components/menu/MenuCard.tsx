@@ -1,6 +1,7 @@
-import { useState, memo } from 'react';
+import { useEffect, useRef, useState, memo } from 'react';
 import { Heart, Plus, Star, Sparkles, Wine, PlayCircle } from 'lucide-react';
-import { resolveImage, resolveVideo, normalizeYouTubeId } from '../../lib/imageResolver';
+import { resolveImage, resolveVideo, normalizeYouTubeId, isVideoEligible } from '../../lib/imageResolver';
+import { BASE_PATH } from '../../constants/api';
 import { formatPrice } from '../../lib/menuUtils';
 import type { MenuItem } from '../../types/menu';
 import styles from './MenuCard.module.css';
@@ -18,13 +19,47 @@ export const MenuCard = memo(function MenuCard({
   item, isFavorite, onFavoriteToggle, onAddToCart, onClick, onPairingClick
 }: MenuCardProps) {
   const [imgError, setImgError] = useState(false);
-  const imgSrc = imgError ? '/Trump/Images/Tomahawk.jpg' : resolveImage(item);
-  const videoSrc = resolveVideo(item);
-  const hasVideo = Boolean(videoSrc || normalizeYouTubeId(item.youtubeId));
+  const [videoError, setVideoError] = useState(false);
+  const [mediaVisible, setMediaVisible] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const cardRef = useRef<HTMLElement | null>(null);
+  const imgSrc = imgError ? `${BASE_PATH}/Images/Tomahawk.jpg` : resolveImage(item);
+  const videoSrc = videoError ? null : resolveVideo(item);
+  const hasVideo = isVideoEligible(item) && Boolean(videoSrc || normalizeYouTubeId(item.youtubeId));
   const soldOut = item.available === false;
+
+  useEffect(() => {
+    setImgError(false);
+    setVideoError(false);
+  }, [item.name]);
+
+  useEffect(() => {
+    const node = cardRef.current;
+    if (!node || !videoSrc) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setMediaVisible(entry.isIntersecting),
+      { rootMargin: '160px 0px', threshold: 0.15 }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [videoSrc]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (mediaVisible && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      video.play().catch(() => {});
+      return;
+    }
+
+    video.pause();
+  }, [mediaVisible, videoSrc]);
 
   return (
     <article
+      ref={cardRef}
       className={`${styles.card} ${soldOut ? styles.cardSoldOut : ''}`}
       role="button"
       tabIndex={0}
@@ -35,6 +70,7 @@ export const MenuCard = memo(function MenuCard({
       <div className={styles.imageWrap}>
         {videoSrc ? (
           <video
+            ref={videoRef}
             src={videoSrc}
             poster={imgSrc || undefined}
             className={styles.image}
@@ -42,10 +78,10 @@ export const MenuCard = memo(function MenuCard({
             loop
             playsInline
             preload="metadata"
+            onError={() => setVideoError(true)}
             onMouseEnter={event => event.currentTarget.play().catch(() => {})}
             onMouseLeave={event => {
               event.currentTarget.pause();
-              event.currentTarget.currentTime = 0;
             }}
           />
         ) : imgSrc && (

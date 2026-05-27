@@ -53,7 +53,12 @@ export const api = {
   },
 
   authMe(): Promise<AuthUser | null> {
-    return fetchJson<AuthUser | null>(ENDPOINTS.authMe).catch(() => null);
+    return fetchJson<{ user: AuthUser | null } | AuthUser | null>(ENDPOINTS.authMe)
+      .then(result => {
+        if (result && typeof result === 'object' && 'user' in result) return result.user;
+        return result as AuthUser | null;
+      })
+      .catch(() => null);
   },
 
   login(payload: LoginPayload): Promise<LoginResponse> {

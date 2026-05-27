@@ -1,11 +1,13 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, type ReactElement } from 'react';
 import { AppProvider } from './context/AppContext';
 import { CartProvider } from './context/CartContext';
 import { MenuProvider } from './context/MenuContext';
 import { MenuPage } from './pages/MenuPage';
 import { LoginPage } from './pages/LoginPage';
 import { Spinner } from './components/ui/Spinner';
+import { useAuth } from './hooks/useAuth';
+import type { Role } from './types/auth';
 
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
 const WaiterPage = lazy(() => import('./pages/WaiterPage').then(m => ({ default: m.WaiterPage })));
@@ -20,6 +22,19 @@ function LoadingFallback() {
   );
 }
 
+function ProtectedRoute({ roles, children }: { roles: Role[]; children: ReactElement }) {
+  const { user, authLoading } = useAuth();
+
+  if (authLoading) return <LoadingFallback />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!roles.includes(user.role)) {
+    const dest = user.role === 'waiter' ? '/Waiter' : user.role === 'kitchen' ? '/Kitchen' : '/Admin';
+    return <Navigate to={dest} replace />;
+  }
+
+  return children;
+}
+
 export default function App() {
   return (
     <AppProvider>
@@ -27,20 +42,27 @@ export default function App() {
         <MenuProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/Login" element={<LoginPage />} />
             <Route path="/Admin" element={
-              <Suspense fallback={<LoadingFallback />}>
-                <AdminPage />
-              </Suspense>
+              <ProtectedRoute roles={['owner', 'manager']}>
+                <Suspense fallback={<LoadingFallback />}>
+                  <AdminPage />
+                </Suspense>
+              </ProtectedRoute>
             } />
             <Route path="/Waiter" element={
-              <Suspense fallback={<LoadingFallback />}>
-                <WaiterPage />
-              </Suspense>
+              <ProtectedRoute roles={['owner', 'manager', 'waiter']}>
+                <Suspense fallback={<LoadingFallback />}>
+                  <WaiterPage />
+                </Suspense>
+              </ProtectedRoute>
             } />
             <Route path="/Kitchen" element={
-              <Suspense fallback={<LoadingFallback />}>
-                <KitchenPage />
-              </Suspense>
+              <ProtectedRoute roles={['owner', 'manager', 'kitchen']}>
+                <Suspense fallback={<LoadingFallback />}>
+                  <KitchenPage />
+                </Suspense>
+              </ProtectedRoute>
             } />
             <Route path="/reserve" element={
               <Suspense fallback={<LoadingFallback />}>

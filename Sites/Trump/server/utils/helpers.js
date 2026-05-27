@@ -149,6 +149,9 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     publicOrigin
   ].filter(Boolean))];
   const sharedPassword = getSharedPassword(isProduction);
+  const demoAdminPassword = 'admin123';
+  const demoWaiterPassword = 'waiter123';
+  const demoKitchenPassword = 'kitchen123';
 
   const directories = {
     base: baseDir,
@@ -201,21 +204,27 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
         },
         {
           username: env.TRUMP_WAITER_USER || 'waiter',
-          password: env.TRUMP_WAITER_PASS || sharedPassword,
+          password: demoWaiterPassword,
           role: 'waiter',
-          label: 'Waiter'
+          label: 'Waiter',
+          demo: true,
+          passwordFromEnv: false
         },
-        ...(env.TRUMP_KITCHEN_PASS ? [{
+        {
           username: env.TRUMP_KITCHEN_USER || 'kitchen',
-          password: env.TRUMP_KITCHEN_PASS,
+          password: demoKitchenPassword,
           role: 'kitchen',
-          label: 'Kitchen'
-        }] : []),
+          label: 'Kitchen',
+          demo: true,
+          passwordFromEnv: false
+        },
         {
           username: ADMIN_USERNAME,
-          password: env.TRUMP_ADMIN_PASS || env.TRUMP_OWNER_PASS || sharedPassword,
+          password: demoAdminPassword,
           role: 'owner',
-          label: 'Owner'
+          label: 'Admin',
+          demo: true,
+          passwordFromEnv: false
         }
       ]
     },
@@ -409,7 +418,9 @@ function createRoleAuth(config, accountService, logger = null) {
   }
 
   function getRoleHome(role) {
-    return role === 'waiter' ? `${config.publicBasePath}/Waiter` : `${config.publicBasePath}/Admin`;
+    if (role === 'waiter') return `${config.publicBasePath}/Waiter`;
+    if (role === 'kitchen') return `${config.publicBasePath}/Kitchen`;
+    return `${config.publicBasePath}/Admin`;
   }
 
   function deny(req, res, options = {}, user = null) {
@@ -425,7 +436,7 @@ function createRoleAuth(config, accountService, logger = null) {
         return res.redirect(getRoleHome(user.role));
       }
 
-      return res.redirect(`${config.publicBasePath}/Login?next=${encodeURIComponent(req.originalUrl || config.publicBasePath)}`);
+      return res.redirect(`${config.publicBasePath}/login?next=${encodeURIComponent(req.originalUrl || config.publicBasePath)}`);
     }
 
     if (!user) {

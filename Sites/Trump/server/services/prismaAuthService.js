@@ -2,7 +2,7 @@ const path = require('path');
 
 const dotenv = require('dotenv');
 
-const VALID_ROLES = new Set(['owner', 'manager', 'waiter']);
+const VALID_ROLES = new Set(['owner', 'manager', 'waiter', 'kitchen']);
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 const PRISMA_RETRY_MS = 30000;
 

@@ -4,6 +4,7 @@ import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
 import { resolveImage, resolveVideo, resolveYouTubeEmbed } from '../../lib/imageResolver';
+import { BASE_PATH } from '../../constants/api';
 import { formatPrice } from '../../lib/menuUtils';
 import { api } from '../../services/api';
 import type { MenuItem } from '../../types/menu';
@@ -111,6 +112,7 @@ export function ItemModal({
   const [qty, setQty] = useState(1);
   const [note, setNote] = useState('');
   const [imgError, setImgError] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   const [playMedia, setPlayMedia] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -118,6 +120,7 @@ export function ItemModal({
     if (!open || !item) return;
     setPlayMedia(false);
     setImgError(false);
+    setVideoError(false);
     const timer = window.setTimeout(() => setPlayMedia(true), 3000);
     return () => window.clearTimeout(timer);
   }, [open, item?.name]);
@@ -129,9 +132,9 @@ export function ItemModal({
 
   if (!item) return null;
 
-  const imgSrc = imgError ? '/Trump/Images/Tomahawk.jpg' : resolveImage(item);
-  const videoSrc = resolveVideo(item);
-  const youtubeSrc = resolveYouTubeEmbed(item, playMedia);
+  const imgSrc = imgError ? `${BASE_PATH}/Images/Tomahawk.jpg` : resolveImage(item);
+  const videoSrc = videoError ? null : resolveVideo(item);
+  const youtubeSrc = videoError ? null : resolveYouTubeEmbed(item, playMedia);
 
   function handleAdd() {
     onAddToCart(item!, qty, note);
@@ -154,6 +157,7 @@ export function ItemModal({
               playsInline
               controls={playMedia}
               className={styles.video}
+              onError={() => setVideoError(true)}
             />
           ) : youtubeSrc ? (
             <iframe

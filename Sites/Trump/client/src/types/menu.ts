@@ -17,6 +17,8 @@ export interface MenuItem {
   chefPick?: boolean;
   popular?: boolean;
   types?: string;
+  category?: string;
+  subcategory?: string;
 }
 
 export interface MenuSubSection {
