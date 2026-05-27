@@ -32,8 +32,10 @@ const S = {
   socket: null,
   isConnected: false,
   todayStats: { sales: 0, upsells: 0, tables: 0 },
-  notifications: [],          // NEW
-  activeBellTables: new Set() // NEW
+  notifications: [],
+  activeBellTables: new Set(),
+  tableKitchenStatus: {},
+  tableTimelines: {}
 };
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -258,6 +260,7 @@ function setupSocket() {
     if (data.restaurantId !== CFG.RESTAURANT_ID) return;
     if (data.tableId === S.selectedTable) {
       S.currentOrder = data.cart || [];
+      timelineAdd(data.tableId, 'guest_update', 'Guest updated cart');
       renderOrderView();
       updateOrderBadge();
     }
@@ -291,15 +294,23 @@ function setupSocket() {
     showToast(msg, 'error');
   });
 
-  // NEW: waiter registered confirmation
   S.socket.on('waiterRegistered', (data) => {
     showToast(data.message || 'You are now online', 'success');
   });
 
-  // NEW: customer confirmation that waiter is coming
   S.socket.on('waiterOnTheWay', (data) => {
     if (data.restaurantId !== CFG.RESTAURANT_ID) return;
     showToast(data.waiterName + ' is responding to ' + data.tableId, 'success');
+  });
+
+  S.socket.on('kitchenStatusUpdate', (data) => {
+    if (data.restaurantId !== CFG.RESTAURANT_ID) return;
+    S.tableKitchenStatus[data.tableId] = data.status;
+    rerenderTableCard(data.tableId);
+    if (data.status === 'ready') {
+      showToast('Table ' + data.tableId + ' order is ready!', 'success');
+      notifAdd(data.tableId, 'Table ' + data.tableId, 'Order ready — bring to table', false);
+    }
   });
 }
 
@@ -348,6 +359,7 @@ function toggleRush() {
   const btn = document.getElementById('rushBtn');
   btn.textContent = S.isRushMode ? 'Rush ON' : 'Rush';
   btn.classList.toggle('active', S.isRushMode);
+  document.body.classList.toggle('rush-mode', S.isRushMode);
   showToast(S.isRushMode ? 'Rush mode active.' : 'Rush mode off.', S.isRushMode ? 'warning' : 'success');
 }
 
@@ -385,6 +397,7 @@ function buildTableCard(id) {
   const st       = S.tableStatuses[id] || { status: 'empty', orderCount: 0, total: 0 };
   const isActive = S.selectedTable === id;
   const ringing  = S.activeBellTables.has(id);
+  const kStatus  = S.tableKitchenStatus[id] || null;
 
   const card = document.createElement('div');
   card.className = `table-card${isActive ? ' active' : ''}${st.orderCount > 0 ? ' has-orders' : ''}${ringing ? ' bell-ringing' : ''}`;
@@ -395,6 +408,8 @@ function buildTableCard(id) {
     <div class="t-num">${escapeHtml(id)}</div>
     <span class="t-stat ${st.status}">${st.status === 'empty' ? 'Empty' : st.status}</span>
     ${st.orderCount > 0 ? `<span class="t-badge">${st.orderCount}</span>` : ''}
+    ${kStatus === 'cooking' ? '<span class="t-kitchen cooking">Cooking</span>' : ''}
+    ${kStatus === 'ready'   ? '<span class="t-kitchen ready">Ready!</span>'   : ''}
   `;
   return card;
 }
@@ -416,6 +431,7 @@ function selectTable(id) {
     S.activeBellTables.delete(id);
     rerenderTableCard(id);
   }
+  timelineAdd(id, 'opened', 'Opened by ' + (S.waiterName || 'Waiter'));
   joinTable(id);
   renderTableGrid();
   renderOrderView();
@@ -430,6 +446,87 @@ function filterTables(query) {
     if (!card) continue;
     card.classList.toggle('hidden', q !== '' && !String(i).includes(q));
   }
+}
+
+/* ════════════════════════════════════════════════════════
+   TABLE TIMELINE
+════════════════════════════════════════════════════════ */
+function timelineAdd(tableId, action, detail) {
+  if (!tableId) return;
+  if (!S.tableTimelines[tableId]) S.tableTimelines[tableId] = [];
+  const icons = { opened: 'O', item_added: '+', sent_to_kitchen: 'K', guest_update: 'G', archived: 'D' };
+  S.tableTimelines[tableId].unshift({
+    action,
+    detail: detail || '',
+    icon: icons[action] || '•',
+    time: new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
+  });
+  if (S.tableTimelines[tableId].length > 15) S.tableTimelines[tableId].pop();
+}
+
+function renderTimeline(tableId) {
+  const el = document.getElementById('timelineList');
+  if (!el) return;
+  const events = S.tableTimelines[tableId] || [];
+  if (!events.length) { el.innerHTML = '<div class="tl-empty">No activity yet</div>'; return; }
+  el.innerHTML = events.map(e => `
+    <div class="tl-event">
+      <span class="tl-icon tl-${escapeHtml(e.action)}">${escapeHtml(e.icon)}</span>
+      <div class="tl-body">
+        <span class="tl-detail">${escapeHtml(e.detail)}</span>
+        <span class="tl-time">${escapeHtml(e.time)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleTimeline() {
+  const list = document.getElementById('timelineList');
+  const btn  = document.getElementById('timelineToggleBtn');
+  if (!list) return;
+  const isOpen = list.style.display !== 'none';
+  list.style.display = isOpen ? 'none' : 'block';
+  if (btn) btn.textContent = isOpen ? 'Show' : 'Hide';
+  if (!isOpen && S.selectedTable) renderTimeline(S.selectedTable);
+}
+
+function refreshTimelineIfOpen() {
+  const list = document.getElementById('timelineList');
+  if (list && list.style.display !== 'none' && S.selectedTable) renderTimeline(S.selectedTable);
+}
+
+/* ════════════════════════════════════════════════════════
+   SPLIT BILL
+════════════════════════════════════════════════════════ */
+function openSplitModal() {
+  if (!S.selectedTable) { showToast('Select a table first!', 'error'); return; }
+  if (!S.currentOrder.length) { showToast('Order is empty!', 'error'); return; }
+  const total = S.currentOrder.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
+  document.getElementById('splitModalSub').textContent =
+    `Table ${S.selectedTable} — Total: ${formatCurrency(total)}`;
+  document.getElementById('splitN').value = '2';
+  renderSplitResult();
+  document.getElementById('splitModal').classList.add('open');
+}
+
+function closeSplitModal() { document.getElementById('splitModal').classList.remove('open'); }
+
+function adjustSplit(delta) {
+  const input = document.getElementById('splitN');
+  const v = Math.max(2, Math.min(12, (parseInt(input.value) || 2) + delta));
+  input.value = v;
+  renderSplitResult();
+}
+
+function renderSplitResult() {
+  const n = Math.max(2, Math.min(12, parseInt(document.getElementById('splitN').value) || 2));
+  const total = S.currentOrder.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
+  const perPerson = total / n;
+  const rows = Array.from({ length: n }, (_, i) =>
+    `<div class="split-row"><span>Guest ${i + 1}</span><span class="split-amount">${formatCurrency(perPerson)}</span></div>`
+  ).join('');
+  document.getElementById('splitResult').innerHTML =
+    `<div class="split-total-row">${formatCurrency(total)} ÷ ${n} guests</div>${rows}`;
 }
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -650,10 +747,11 @@ function addToOrder(itemName, qty = 1) {
     });
   }
 
+  timelineAdd(S.selectedTable, 'item_added', item.name + (qty > 1 ? ' ×' + qty : ''));
   syncCart();
   updateOrderBadge();
   renderOrderView();
-  loadRecommendations(); // NEW: refresh recs after add
+  loadRecommendations();
   showToast(escapeHtml(item.name) + ' x' + qty + ' added.', 'success');
   closeItemSheet();
 }
@@ -693,12 +791,16 @@ function renderOrderView() {
     ? 'Note: ' + notes.substring(0, 50) + (notes.length > 50 ? '...' : '')
     : (S.selectedTable ? 'No notes for this table' : 'Select a table first');
 
+  const timelineEl = document.getElementById('timelineSection');
+  if (timelineEl) timelineEl.style.display = S.selectedTable ? 'block' : 'none';
+
   if (!S.currentOrder.length) {
     listEl.innerHTML = '';
     summEl.style.display = 'none';
     emptyEl.style.display = 'block';
     document.getElementById('recStrip').style.display = 'none';
     updateHistorySection();
+    if (S.selectedTable) refreshTimelineIfOpen();
     return;
   }
 
@@ -753,6 +855,7 @@ function renderOrderView() {
   listEl.innerHTML = html;
 
   updateHistorySection();
+  refreshTimelineIfOpen();
 }
 
 function updateOrderBadge() {
@@ -884,6 +987,7 @@ async function sendOrder() {
     S.todayStats.sales += total;
     S.todayStats.tables++;
     updateStatsDisplay();
+    timelineAdd(S.selectedTable, 'sent_to_kitchen', 'Order sent — ' + formatCurrency(total));
 
     S.currentOrder = [];
     syncCart();
@@ -921,6 +1025,7 @@ async function archiveTable() {
     });
 
     const total = S.currentOrder.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
+    timelineAdd(S.selectedTable, 'archived', 'Table completed — ' + formatCurrency(total));
     S.archivedTables.unshift({
       tableId: S.selectedTable,
       waiter: S.waiterName,

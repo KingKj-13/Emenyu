@@ -313,7 +313,7 @@ export function resolveImage(item: MenuItem): string {
     if (/^https?:\/\//.test(raw) || raw.startsWith('data:') || raw.startsWith('blob:')) {
       return raw;
     }
-    if (raw.startsWith('/uploads/')) return demoImageFor(item);
+    if (raw.startsWith('/uploads/')) return `${BASE_PATH}${raw}`;
     if (raw.startsWith(`${BASE_PATH}/`)) return raw;
     if (raw.startsWith('/')) return `${BASE_PATH}${raw}`;
     return `${BASE_PATH}/${raw}`;

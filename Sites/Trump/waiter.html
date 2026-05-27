@@ -78,6 +78,7 @@
         <button class="btn-kitchen" id="btnKitchen" onclick="sendOrder()">
           <span class="material-icons" style="font-size:18px">Send</span> Send to Kitchen
         </button>
+        <button class="btn-split" onclick="openSplitModal()">Split</button>
         <button class="btn-archive" onclick="openArchiveModal()">Done</button>
       </div>
     </div>
@@ -89,6 +90,13 @@
     <div class="history-section" id="historySection" style="display:none">
       <div class="history-title">Today's Archived Tables</div>
       <div id="historyList"></div>
+    </div>
+    <div class="timeline-section" id="timelineSection" style="display:none">
+      <div class="timeline-hdr">
+        <span class="timeline-title">Table Activity</span>
+        <button class="timeline-toggle-btn" id="timelineToggleBtn" onclick="toggleTimeline()">Show</button>
+      </div>
+      <div class="timeline-list" id="timelineList" style="display:none"></div>
     </div>
   </div>
 
@@ -184,6 +192,24 @@
     <div class="modal-btns">
       <button class="btn-secondary" onclick="closeNotesModal()">Cancel</button>
       <button class="btn-primary" onclick="saveNotes()">Save Notes</button>
+    </div>
+  </div>
+</div>
+
+<!-- SPLIT BILL MODAL -->
+<div class="modal-overlay" id="splitModal">
+  <div class="modal">
+    <div class="modal-title">Split Bill</div>
+    <div class="modal-sub" id="splitModalSub">Divide the total evenly between guests</div>
+    <label class="form-label">Number of Guests</label>
+    <div class="split-picker">
+      <button class="split-adj" onclick="adjustSplit(-1)">-</button>
+      <input class="form-input split-input" id="splitN" type="number" min="2" max="12" value="2" oninput="renderSplitResult()">
+      <button class="split-adj" onclick="adjustSplit(1)">+</button>
+    </div>
+    <div id="splitResult"></div>
+    <div class="modal-btns" style="margin-top:18px">
+      <button class="btn-secondary" onclick="closeSplitModal()">Close</button>
     </div>
   </div>
 </div>
