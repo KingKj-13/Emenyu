@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { RefreshCw, LogOut, CheckCircle, Plus } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { RefreshCw, LogOut, CheckCircle, Plus, AlertCircle, Bell } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../services/api';
+import { useSocketEvent } from '../hooks/useSocket';
 import { useMenuData } from '../context/MenuContext';
 import { flattenMenu, formatPrice } from '../lib/menuUtils';
 import { resolveImage } from '../lib/imageResolver';
@@ -10,12 +11,13 @@ import { Spinner } from '../components/ui/Spinner';
 import type { MenuItem } from '../types/menu';
 import styles from './WaiterPage.module.css';
 
-const TABLE_IDS = ['table1','table2','table3','table4','table5','table6','table7','table8'];
+const TABLE_IDS = Array.from({ length: 15 }, (_, i) => `table${i + 1}`);
 
 interface TableStatus {
   status: 'active' | 'empty';
   orderCount?: number;
   total?: number;
+  oldestOrderAt?: string;
 }
 
 export function WaiterPage() {
@@ -48,6 +50,11 @@ export function WaiterPage() {
   }
 
   useEffect(() => { loadStatuses(); }, []);
+
+  const handleOrderEvent = useCallback(() => { loadStatuses(); }, []);
+  useSocketEvent('orderPlaced', handleOrderEvent);
+  useSocketEvent('orderUpdated', handleOrderEvent);
+  useSocketEvent<{ orderId: number; kitchenStatus: string }>('kitchenStatusUpdate', handleOrderEvent);
 
   async function handleArchive(tableId: string) {
     if (!confirm(`Archive all orders for ${tableId}?`)) return;
@@ -84,6 +91,7 @@ export function WaiterPage() {
             <p className={styles.pageSubtitle}>{user?.label || user?.username}</p>
           </div>
           <div className={styles.headerActions}>
+            <WaiterNotificationButton />
             <button className={styles.refreshBtn} onClick={loadStatuses} aria-label="Refresh">
               <RefreshCw size={15} />
             </button>
@@ -100,16 +108,28 @@ export function WaiterPage() {
           <div className={styles.tableGrid}>
             {TABLE_IDS.map(id => {
               const status = tableStatuses[id] || { status: 'empty' };
+              const waitingMins = status.oldestOrderAt
+                ? (Date.now() - new Date(status.oldestOrderAt).getTime()) / 60000
+                : 0;
+              const isWaiting = waitingMins > 20;
               return (
                 <div
                   key={id}
-                  className={`${styles.tableCard} ${status.status === 'active' ? styles.tableActive : ''}`}
+                  className={`${styles.tableCard} ${status.status === 'active' ? styles.tableActive : ''} ${isWaiting ? styles.tableWaiting : ''}`}
                 >
                   <div className={styles.tableCardHeader}>
                     <span className={styles.tableId}>{id.replace('table', 'Table ')}</span>
-                    <span className={`${styles.tableStatus} ${status.status === 'active' ? styles.statusActive : styles.statusEmpty}`}>
-                      {status.status === 'active' ? 'Active' : 'Empty'}
-                    </span>
+                    <div className={styles.tableStatusRow}>
+                      {isWaiting && (
+                        <span className={styles.waitingBadge} title={`Waiting ${Math.floor(waitingMins)} min`}>
+                          <AlertCircle size={11} />
+                          {Math.floor(waitingMins)}m
+                        </span>
+                      )}
+                      <span className={`${styles.tableStatus} ${status.status === 'active' ? styles.statusActive : styles.statusEmpty}`}>
+                        {status.status === 'active' ? 'Active' : 'Empty'}
+                      </span>
+                    </div>
                   </div>
 
                   {status.status === 'active' && (
@@ -207,5 +227,53 @@ export function WaiterPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+function WaiterNotificationButton() {
+  const [status, setStatus] = useState<'idle' | 'subscribed' | 'denied' | 'loading'>('idle');
+
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      setStatus('subscribed');
+    } else if ('Notification' in window && Notification.permission === 'denied') {
+      setStatus('denied');
+    }
+  }, []);
+
+  async function handleEnable() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    setStatus('loading');
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') { setStatus('denied'); return; }
+
+      const resp = await fetch('/Trump/api/push/vapid-key').then(r => r.json());
+      const publicKey = resp?.publicKey;
+      if (!publicKey) { setStatus('idle'); return; }
+
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: publicKey
+      });
+
+      await fetch('/Trump/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub.toJSON())
+      });
+      setStatus('subscribed');
+    } catch {
+      setStatus('idle');
+    }
+  }
+
+  if (status === 'subscribed') return <span className={styles.notifActive}><Bell size={13} /></span>;
+  if (status === 'denied') return null;
+  return (
+    <button className={styles.notifBtn} onClick={handleEnable} disabled={status === 'loading'} title="Enable push notifications">
+      <Bell size={14} />
+    </button>
   );
 }

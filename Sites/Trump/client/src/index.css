@@ -1,42 +1,95 @@
 :root {
-  /* Navy-black theme from prototype */
-  --blue-black: #001724;
-  --blue-deep: #021f32;
+  /* ── Midnight navy palette ── */
+  --blue-black: #040e1a;
+  --blue-deep:  #071424;
   --red: #a52b2d;
-  --gold: #c6a24b;
-  --gold-soft: #e4c987;
+  --gold: #c8a555;
+  --gold-soft: #e2c880;
   --paper-edge: #e7ddc9;
   --white: #f7fbff;
   --muted: rgba(247, 251, 255, 0.72);
 
-  /* Existing design system tokens */
-  --color-ink: #001724;
-  --color-coal: #021f32;
-  --color-panel: #062030;
-  --color-panel-soft: #0a2d42;
-  --color-cream: #f7f1e8;
-  --color-sand: #c9bba5;
-  --color-gold: #c6a24b;
-  --color-gold-soft: #e4c987;
-  --color-burgundy: #a52b2d;
-  --color-moss: #71806a;
-  --color-teal: #4d7f82;
-  --color-line: rgba(198, 162, 75, 0.2);
-  --color-overlay: rgba(0, 23, 36, 0.82);
-  --shadow-soft: 0 18px 46px rgba(0, 0, 0, 0.42);
-  --shadow-lift: 0 24px 70px rgba(0, 0, 0, 0.56);
+  /* ── Semantic colour tokens ── */
+  --color-ink:          #040e1a;
+  --color-coal:         #071424;
+  --color-panel:        #081828;
+  --color-panel-soft:   #0d2236;
+  --color-glass:        rgba(8, 24, 40, 0.72);
+  --color-glass-strong: rgba(4, 14, 26, 0.94);
+  --color-cream:        #f7f1e8;
+  --color-sand:         #c9bba5;
+  --color-gold:         #c8a555;
+  --color-gold-soft:    #e2c880;
+  --color-gold-dim:     rgba(200, 165, 85, 0.6);
+  --color-burgundy:     #a52b2d;
+  --color-moss:         #71806a;
+  --color-teal:         #4d7f82;
+  --color-line:         rgba(200, 165, 85, 0.15);
+  --color-overlay:      rgba(4, 14, 26, 0.85);
+
+  /* ── Effects ── */
+  --shadow-soft:  0 18px 46px rgba(0, 0, 0, 0.52);
+  --shadow-lift:  0 24px 70px rgba(0, 0, 0, 0.66);
   --ease-premium: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --radius-card: 6px;
+
+  /* ── Shape ── */
+  --radius-card: 4px;
   --radius-pill: 999px;
+
+  /* ── Spacing ── */
   --space-1: 8px;
   --space-2: 12px;
   --space-3: 16px;
   --space-4: 24px;
   --space-5: 32px;
   --space-6: 40px;
-  --font-heading: Georgia, 'Times New Roman', serif;
-  --font-body: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --header-h: 76px;
+
+  /* ── Typography ── */
+  --font-heading: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-body:    'Manrope', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-label:   'Manrope', Inter, sans-serif;
+
+  /* ── Layout ── */
+  --header-h: 72px;
+
+  --space-0: 4px;
+  --space-7: 56px;
+  --space-8: 72px;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 26px;
+  --leading-tight: 1.15;
+  --leading-normal: 1.5;
+  --leading-loose: 1.68;
+
+  --shadow-xs: 0 4px 12px rgba(0, 0, 0, 0.28);
+  --shadow-sm: 0 10px 28px rgba(0, 0, 0, 0.38);
+  --shadow-modal: 0 32px 90px rgba(0, 0, 0, 0.76);
+
+  --transition-fast: 140ms ease;
+  --transition-med: 220ms var(--ease-premium);
+  --transition-slow: 360ms var(--ease-premium);
+
+  --z-header: 100;
+  --z-tabs: 90;
+  --z-bottom-bar: 200;
+  --z-chat: 210;
+  --z-drawer: 260;
+  --z-modal: 500;
+
+  --content-max: 1200px;
+  --bp-sm: 480px;
+  --bp-md: 760px;
+  --bp-lg: 1024px;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -50,9 +103,9 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 48% 16%, rgba(30, 85, 108, 0.42), transparent 36rem),
-    radial-gradient(circle at 80% 84%, rgba(165, 43, 45, 0.18), transparent 26rem),
-    linear-gradient(135deg, #000c14 0%, var(--blue-black) 48%, var(--blue-deep) 100%);
+    radial-gradient(ellipse at 30% 0%,   rgba(20, 60, 100, 0.22), transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(120, 30, 30, 0.10), transparent 40%),
+    #040e1a;
   color: var(--color-cream);
   font-family: var(--font-body);
   line-height: 1.5;
@@ -75,13 +128,13 @@ input:focus-visible {
 
 a { color: var(--color-gold); text-decoration: none; }
 
-::selection { background: rgba(198, 162, 75, 0.28); }
+::selection { background: rgba(200, 165, 85, 0.28); }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--blue-black); }
-::-webkit-scrollbar-thumb { background: rgba(198, 162, 75, 0.4); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(198, 162, 75, 0.6); }
+::-webkit-scrollbar-thumb { background: rgba(200, 165, 85, 0.38); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(200, 165, 85, 0.58); }
 
 /* Utility classes */
 .visually-hidden {
@@ -92,6 +145,16 @@ a { color: var(--color-gold); text-decoration: none; }
 
 .gold-text { color: var(--color-gold); }
 .muted-text { color: var(--muted); }
+
+/* Label caps — used for uppercase category / section labels */
+.label-caps {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-family: var(--font-label);
+  color: var(--color-gold-dim);
+}
 
 /* Loading skeleton */
 @keyframes shimmer {

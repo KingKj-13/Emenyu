@@ -14,19 +14,7 @@ interface Rec {
   img: string;
   source_title?: string;
   description?: string;
-}
-
-const DRINK_SOURCES = new Set([
-  'Champagne', 'White Wine', 'Red Wine', 'Beers',
-  'Spirits', 'Mocktails & Cold Beverages', 'Cocktails',
-]);
-
-function sortDrinksFirst(data: Rec[]): Rec[] {
-  return [...data].sort((a, b) => {
-    const aD = DRINK_SOURCES.has(a.source_title ?? '');
-    const bD = DRINK_SOURCES.has(b.source_title ?? '');
-    return aD === bD ? 0 : aD ? -1 : 1;
-  });
+  categoryType?: string;
 }
 
 export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
@@ -41,32 +29,8 @@ export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
     let cancelled = false;
 
     api.getRecommendations({ items: cartItems.map(i => ({ name: i.name, price: i.price })) })
-      .then(async (data: unknown) => {
-        if (cancelled) return;
-        const arr = Array.isArray(data) ? (data as Rec[]) : [];
-        const sorted = sortDrinksFirst(arr);
-
-        const hasDrink = sorted.some(r => DRINK_SOURCES.has(r.source_title ?? ''));
-        if (!hasDrink && cartItems.length > 0) {
-          try {
-            const first = cartItems[0];
-            const pairing = await api.aiPairing({ name: first.name, price: first.price, description: first.description });
-            const p = pairing as { pairings?: { name: string; reason: string }[] };
-            if (!cancelled && p?.pairings?.length) {
-              const wine: Rec = {
-                name: p.pairings[0].name,
-                price: 0,
-                img: '',
-                source_title: 'Wine Pairing',
-                description: p.pairings[0].reason,
-              };
-              setRecs([wine, ...sorted]);
-              return;
-            }
-          } catch { /* silently ignore pairing errors */ }
-        }
-
-        if (!cancelled) setRecs(sorted);
+      .then((data: unknown) => {
+        if (!cancelled) setRecs(Array.isArray(data) ? (data as Rec[]) : []);
       })
       .catch(() => {});
 
@@ -83,21 +47,22 @@ export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
         {recs.map((rec, i) => (
           <button
             key={`${rec.name}-${i}`}
-            className={`${styles.card} ${rec.price === 0 ? styles.cardPairing : ''}`}
+            className={styles.card}
             onClick={() => setPendingItemName(rec.name)}
             aria-label={`View ${rec.name}`}
           >
             {rec.img ? (
               <img src={rec.img} alt={rec.name} className={styles.img} loading="lazy" />
-            ) : rec.price === 0 ? (
-              <div className={styles.wineThumb}>🍷</div>
-            ) : null}
+            ) : (
+              <div className={styles.imgPlaceholder} />
+            )}
             <div className={styles.info}>
+              {rec.source_title && (
+                <span className={styles.sourceTag}>{rec.source_title}</span>
+              )}
               <span className={styles.name}>{rec.name}</span>
-              {rec.price > 0 ? (
+              {rec.price > 0 && (
                 <span className={styles.price}>{formatPrice(rec.price)}</span>
-              ) : (
-                <span className={styles.pairingTag}>Wine Pairing</span>
               )}
             </div>
             {rec.price > 0 && (

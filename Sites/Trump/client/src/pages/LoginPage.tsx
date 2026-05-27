@@ -15,8 +15,15 @@ export function LoginPage() {
   const [error, setError] = useState('');
 
   if (user) {
-    const dest = user.role === 'waiter' ? '/Waiter' : '/Admin';
+    const dest = user.role === 'waiter' ? '/Waiter' : user.role === 'kitchen' ? '/Kitchen' : '/Admin';
     return <Navigate to={dest} replace />;
+  }
+
+  function roleToPath(role: string, defaultPath?: string): string {
+    if (defaultPath) return defaultPath;
+    if (role === 'waiter') return '/Trump/Waiter';
+    if (role === 'kitchen') return '/Trump/Kitchen';
+    return '/Trump/Admin';
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -26,7 +33,7 @@ export function LoginPage() {
     try {
       const result = await login({ username, password });
       if (result.ok && result.user) {
-        const dest = result.defaultPath || (result.user.role === 'waiter' ? '/Trump/Waiter' : '/Trump/Admin');
+        const dest = roleToPath(result.user.role, result.defaultPath);
         window.location.href = dest;
       } else {
         setError(result.error || 'Invalid credentials. Please try again.');

@@ -1,0 +1,19 @@
+{
+  "name": "Emenyu Trump",
+  "short_name": "Trumps",
+  "description": "Trump's Restaurant & Bar — staff portal and menu",
+  "theme_color": "#001724",
+  "background_color": "#001724",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/Trump/table1",
+  "scope": "/Trump/",
+  "icons": [
+    {
+      "src": "/Trump/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  z-index: 500;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -12,10 +12,10 @@
 
 .panel {
   position: relative;
-  background: linear-gradient(160deg, #001d2e, #021828);
-  border: 1px solid rgba(198, 162, 75, 0.3);
-  border-radius: 6px;
-  box-shadow: var(--shadow-lift);
+  background: var(--color-glass-strong);
+  border: 1px solid rgba(200, 165, 85, 0.18);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-modal), inset 0 1px 0 rgba(200, 165, 85, 0.08);
   max-height: calc(100vh - 32px);
   overflow-y: auto;
 }
@@ -24,3 +24,17 @@
 .md  { width: min(580px, 100%); }
 .lg  { width: min(780px, 100%); }
 .full { width: 100%; height: calc(100vh - 32px); }
+
+@media (max-width: 560px) {
+  .backdrop {
+    align-items: flex-end;
+    padding: 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .panel {
+    width: 100%;
+    max-height: min(92vh, calc(100vh - 20px - env(safe-area-inset-bottom)));
+    border-radius: var(--radius-lg) var(--radius-lg) var(--radius-sm) var(--radius-sm);
+  }
+}

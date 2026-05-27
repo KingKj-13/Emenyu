@@ -1,15 +1,43 @@
 'use strict';
 const path = require('path');
 const fs = require('fs');
-const { PrismaClient } = require('@prisma/client');
-const sharp = require('sharp');
+
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
+
+function loadPrismaClient() {
+  const candidates = [
+    path.join(PROJECT_ROOT, 'node_modules', '@prisma', 'client'),
+    '@prisma/client'
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      const prismaModule = require(candidate);
+      if (prismaModule?.PrismaClient) return prismaModule.PrismaClient;
+    } catch {
+      // Try the next resolution path.
+    }
+  }
+
+  return null;
+}
+
+function loadSharp() {
+  try {
+    return require('sharp');
+  } catch {
+    return null;
+  }
+}
 
 class MediaEnrichmentService {
   constructor(config) {
     this.uploadDir = path.join(config.directories.uploads, 'menu-media');
     this.pexelsKey = process.env.PEXELS_API_KEY || '';
     this.pixabayKey = process.env.PIXABAY_API_KEY || '';
-    this.db = new PrismaClient();
+    this.sharp = loadSharp();
+    const PrismaClient = loadPrismaClient();
+    this.db = PrismaClient ? new PrismaClient() : null;
     fs.mkdirSync(this.uploadDir, { recursive: true });
   }
 
@@ -41,10 +69,14 @@ class MediaEnrichmentService {
   }
 
   async downloadAndConvert(imageUrl, destPath) {
+    if (!this.sharp) {
+      throw new Error('Image processor unavailable. Install sharp to enable media enrichment.');
+    }
+
     const res = await fetch(imageUrl, { signal: AbortSignal.timeout(20000) });
     if (!res.ok) throw new Error(`Image download failed: ${res.status}`);
     const buffer = Buffer.from(await res.arrayBuffer());
-    await sharp(buffer)
+    await this.sharp(buffer)
       .resize(800, 450, { fit: 'cover', position: 'centre' })
       .webp({ quality: 82 })
       .toFile(destPath);
@@ -76,6 +108,14 @@ class MediaEnrichmentService {
   }
 
   async enrichBatch({ limit = 20, restaurantId = 'trump', retry = false } = {}) {
+    if (!this.db) {
+      return { processed: 0, enriched: 0, error: 'Prisma client unavailable. Run prisma generate to enable media enrichment.' };
+    }
+
+    if (!this.sharp) {
+      return { processed: 0, enriched: 0, error: 'Image processor unavailable. Install sharp to enable media enrichment.' };
+    }
+
     if (!this.pexelsKey && !this.pixabayKey) {
       return { processed: 0, enriched: 0, error: 'No API keys configured. Set PEXELS_API_KEY or PIXABAY_API_KEY.' };
     }
@@ -111,14 +151,25 @@ class MediaEnrichmentService {
   }
 
   async getStatus(restaurantId = 'trump') {
+    if (!this.db) {
+      return {
+        total: 0,
+        hasImage: 0,
+        pending: 0,
+        noApiKeys: !this.pexelsKey && !this.pixabayKey,
+        imageProcessorAvailable: Boolean(this.sharp),
+        databaseAvailable: false
+      };
+    }
+
     const total = await this.db.menuItem.count({ where: { restaurantId } });
     const hasImage = await this.db.menuItem.count({ where: { restaurantId, imagePath: { not: '' } } });
     const noApiKeys = !this.pexelsKey && !this.pixabayKey;
-    return { total, hasImage, pending: total - hasImage, noApiKeys };
+    return { total, hasImage, pending: total - hasImage, noApiKeys, imageProcessorAvailable: Boolean(this.sharp), databaseAvailable: true };
   }
 
   async close() {
-    await this.db.$disconnect().catch(() => {});
+    await this.db?.$disconnect().catch(() => {});
   }
 }
 

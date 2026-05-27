@@ -19,7 +19,7 @@ export function Header() {
         </div>
         <div>
           <p className={styles.brandTitle}>TRUMPS</p>
-          <div className={styles.brandLine} aria-hidden="true" />
+          <p className={styles.brandSubtitle}>PRIME GRILLHOUSE</p>
         </div>
       </div>
 

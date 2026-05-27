@@ -1,6 +1,13 @@
 const path = require('path');
 
 const { normalizeId } = require('../utils/helpers');
+const { PrismaClient } = require('@prisma/client');
+
+let prisma;
+function getPrisma() {
+  if (!prisma) prisma = new PrismaClient();
+  return prisma;
+}
 
 function getItemQuantity(item) {
   return Number(item.quantity || item.qty || 1);
@@ -28,10 +35,22 @@ function createWaiterController({ config, fileService, socketService }) {
       const orderCount = getItemsCount(cart) + getItemsCount(activeOrders);
       const total = getItemsTotal(cart) + getItemsTotal(activeOrders);
 
+      let oldestOrderAt = null;
+      try {
+        const db = getPrisma();
+        const oldest = await db.order.findFirst({
+          where: { tableId: cleanId, restaurantId: config.restaurantId, status: 'active' },
+          orderBy: { timestamp: 'asc' },
+          select: { timestamp: true }
+        });
+        if (oldest) oldestOrderAt = oldest.timestamp.toISOString();
+      } catch {}
+
       res.json({
         status: orderCount > 0 ? 'active' : 'empty',
         orderCount,
-        total
+        total,
+        oldestOrderAt
       });
     },
 
@@ -61,6 +80,22 @@ function createWaiterController({ config, fileService, socketService }) {
       } catch {
         return res.status(500).json({ error: 'Failed to save order' });
       }
+    },
+
+    async getTableCarts(req, res) {
+      const TABLE_COUNT = 15;
+      const tables = Array.from({ length: TABLE_COUNT }, (_, i) => `table${i + 1}`);
+      const results = await Promise.all(
+        tables.map(async tableId => {
+          const state = await socketService.getTableState(tableId);
+          const cart = Array.isArray(state.cart) ? state.cart : [];
+          const overrides = Array.isArray(state.adminOverrides) ? state.adminOverrides : [];
+          const total = cart.reduce((sum, item) =>
+            sum + (Number(item.price) || 0) * (Number(item.quantity || item.qty) || 1), 0);
+          return { tableId, cart, overrides, itemCount: cart.length, total };
+        })
+      );
+      res.json(results);
     },
 
     async archiveTable(req, res) {

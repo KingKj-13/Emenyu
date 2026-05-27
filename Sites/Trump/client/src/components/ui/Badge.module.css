@@ -2,13 +2,14 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  border-radius: var(--radius-pill);
+  border-radius: 2px;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+  font-family: var(--font-label);
 }
 
-.gold { background: rgba(198, 162, 75, 0.18); color: var(--color-gold); border: 1px solid rgba(198, 162, 75, 0.3); }
-.red { background: rgba(165, 43, 45, 0.18); color: #e06060; border: 1px solid rgba(165, 43, 45, 0.3); }
-.muted { background: rgba(255,255,255,0.06); color: var(--muted); border: 1px solid rgba(255,255,255,0.1); }
+.gold { background: transparent; color: var(--color-gold); border: 1px solid rgba(200, 165, 85, 0.5); }
+.red  { background: rgba(165, 43, 45, 0.14); color: #e06060; border: 1px solid rgba(165, 43, 45, 0.28); border-radius: 2px; }
+.muted { background: rgba(255,255,255,0.04); color: var(--color-gold-dim); border: 1px solid rgba(255,255,255,0.08); }

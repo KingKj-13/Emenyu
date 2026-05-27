@@ -16,9 +16,11 @@ const ITEM_BASE_KEYS = new Set([
   'spice',
   'img',
   'video',
+  'youtubeId',
   'imageVisible',
   'videoVisible',
   'visible',
+  'available',
   'chefPick',
   'popular',
   'source_title'
@@ -113,9 +115,11 @@ function itemToCreateData(item = {}, categoryId, restaurantId, sortOrder) {
     spice: String(item.spice || ''),
     imagePath: String(item.img || ''),
     videoPath: String(item.video || ''),
+    youtubeId: String(item.youtubeId || ''),
     imageVisible: item.imageVisible !== false,
     videoVisible: item.videoVisible !== false,
     visible: item.visible !== false,
+    available: item.available !== false,
     chefPick: Boolean(item.chefPick),
     popular: Boolean(item.popular),
     sourceTitle: String(item.source_title || item.sourceTitle || ''),
@@ -124,8 +128,9 @@ function itemToCreateData(item = {}, categoryId, restaurantId, sortOrder) {
   };
 }
 
-function dbItemToJson(item) {
+function dbItemToJson(item, { includeId = false } = {}) {
   return {
+    ...(includeId ? { dbId: item.id } : {}),
     ...(item.metadata && typeof item.metadata === 'object' ? item.metadata : {}),
     name: item.name,
     description: item.description || '',
@@ -135,9 +140,11 @@ function dbItemToJson(item) {
     spice: item.spice || '',
     img: item.imagePath || '',
     video: item.videoPath || '',
+    youtubeId: item.youtubeId || '',
     imageVisible: item.imageVisible,
     videoVisible: item.videoVisible,
     visible: item.visible,
+    available: item.available !== false,
     chefPick: item.chefPick,
     popular: item.popular,
     ...(item.sourceTitle ? { source_title: item.sourceTitle } : {})
@@ -530,6 +537,74 @@ class PrismaMenuService {
         orderBy: { sortOrder: 'asc' }
       }),
       []
+    );
+  }
+
+  async loadAdminItems() {
+    return this.withPrisma(
+      'menu_postgres_admin_items_failed',
+      async prisma => {
+        const items = await prisma.menuItem.findMany({
+          where: { restaurantId: this.restaurantId },
+          include: { category: { select: { title: true, parentId: true } } },
+          orderBy: { sortOrder: 'asc' }
+        });
+        return items.map(item => ({
+          ...dbItemToJson(item, { includeId: true }),
+          category: item.category?.title || ''
+        }));
+      },
+      null
+    );
+  }
+
+  async toggleItemAvailability(id, available) {
+    return this.withPrisma(
+      'menu_postgres_toggle_availability_failed',
+      async prisma => {
+        await prisma.menuItem.update({
+          where: { id: Number(id) },
+          data: { available: Boolean(available) }
+        });
+        return true;
+      },
+      false
+    );
+  }
+
+  async updateItemMedia(id, patch = {}) {
+    const data = {};
+
+    if (Object.prototype.hasOwnProperty.call(patch, 'img')) {
+      data.imagePath = String(patch.img || '');
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'video')) {
+      data.videoPath = String(patch.video || '');
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'youtubeId')) {
+      data.youtubeId = String(patch.youtubeId || '');
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'imageVisible')) {
+      data.imageVisible = patch.imageVisible !== false;
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'videoVisible')) {
+      data.videoVisible = patch.videoVisible !== false;
+    }
+
+    if (Object.keys(data).length === 0) {
+      return null;
+    }
+
+    return this.withPrisma(
+      'menu_postgres_update_media_failed',
+      async prisma => {
+        const item = await prisma.menuItem.update({
+          where: { id: Number(id) },
+          data
+        });
+        return dbItemToJson(item, { includeId: true });
+      },
+      null
     );
   }
 

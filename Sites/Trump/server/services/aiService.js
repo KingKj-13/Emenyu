@@ -540,17 +540,37 @@ class AiService {
 
   pairingReason(pairing, forItem) {
     const cat = (pairing.categoryType || '').toUpperCase();
-    const src = pairing.source_title || '';
+    const pairingName = (pairing.name || '').toLowerCase();
+    const foodName = (forItem?.name || '').toLowerCase();
     if (cat === 'WINE') {
-      const foodName = forItem?.name || 'this dish';
-      if (/steak|beef|rump|fillet|tomahawk|ribeye|wagyu/i.test(foodName)) return 'Full-bodied red — pairs beautifully with grilled beef.';
-      if (/prawn|seafood|salmon|calamari|kingklip/i.test(foodName)) return 'Crisp white — a classic match for seafood.';
-      if (/lamb|pork/i.test(foodName)) return 'Medium-bodied red — complements the richness.';
+      if (/steak|beef|rump|fillet|tomahawk|ribeye|wagyu/.test(foodName)) return 'Full-bodied red — pairs beautifully with grilled beef.';
+      if (/prawn|seafood|salmon|calamari|kingklip/.test(foodName)) return 'Crisp white — a classic match for seafood.';
+      if (/lamb|pork/.test(foodName)) return 'Medium-bodied red — complements the richness.';
+      if (/burger|ribs|chicken/.test(foodName)) return 'Easy-drinking red — great with grilled proteins.';
+      if (/pasta|cream|mushroom/.test(foodName)) return 'Light white or rosé — beautiful with pasta.';
       return 'Recommended wine pairing for this dish.';
     }
-    if (cat === 'DRINK') return 'Great drink to round off this course.';
+    if (cat === 'DRINK') {
+      if (/beer|lager|cider/.test(pairingName)) return 'A cold beer — the classic grill companion.';
+      if (/cocktail|margarita|old fashioned|martini/.test(pairingName)) return 'A signature cocktail to round off the evening.';
+      if (/mocktail|lemonade|iced tea/.test(pairingName)) return 'A refreshing non-alcoholic choice.';
+      return 'Great drink to round off this course.';
+    }
     if (cat === 'DESSERT') return 'Sweet finish to complete the meal.';
-    if (cat === 'STARTER') return 'Light start before your main.';
+    if (cat === 'STARTER') {
+      if (/calamari|prawn|oyster/.test(pairingName)) return 'A perfect light start before the mains.';
+      if (/garlic bread|bruschetta/.test(pairingName)) return 'Share at the table before mains arrive.';
+      return 'Light start before your main.';
+    }
+    if (cat === 'MAIN') {
+      if (/chips|fries/.test(pairingName)) return 'Classic side — goes with almost everything.';
+      if (/onion rings/.test(pairingName)) return 'Crispy side — a crowd favourite.';
+      if (/sauce/.test(pairingName)) return 'Drizzle it over — takes it to the next level.';
+      if (/salad/.test(pairingName)) return 'Fresh balance alongside a rich main.';
+      if (/garlic bread/.test(pairingName)) return 'Mop up every last drop of sauce.';
+      return 'Goes well with this dish.';
+    }
+    const src = pairing.source_title || '';
     if (src === "Chef's Pairing") return "Chef's hand-picked pairing.";
     if (src === 'People also ordered') return 'Other guests ordering this also chose it.';
     if (src === 'Cellar recommendation') return 'From the cellar — highly recommended.';
@@ -592,17 +612,28 @@ class AiService {
     const menuContext = await this.getMenuContext();
     const rawItem = payload.item || payload.selectedItem || payload.name || payload.cart?.[0];
     const item = typeof rawItem === 'string' ? fuzzyFindItem(menuContext, rawItem) : fuzzyFindItem(menuContext, rawItem?.name) || rawItem;
-    const pairings = await this.recommend({ cart: item ? [item] : [], limit: 3 });
+    const recs = await this.recommend({ cart: item ? [item] : [], limit: 6 });
+
+    const enriched = recs.map(pairing => ({
+      name: pairing.name,
+      price: pairing.price,
+      img: pairing.img,
+      categoryType: pairing.categoryType,
+      source_title: pairing.source_title,
+      reason: this.pairingReason(pairing, item)
+    }));
+
+    const foodPairings = enriched.filter(p => !['WINE', 'DRINK'].includes(p.categoryType || ''));
+    const drinkPairings = enriched.filter(p => ['WINE', 'DRINK'].includes(p.categoryType || ''));
 
     return {
-      title: item?.name ? `${item.name} Pairing` : "Chef's Pick",
+      title: item?.name ? `Pairs with ${item.name}` : "Chef's Pick",
       description: item?.description || 'A confident table recommendation from the local menu.',
-      pairings: pairings.map(pairing => ({
-        name: pairing.name,
-        reason: this.pairingReason(pairing, item)
-      })),
-      talkTrack: pairings.length
-        ? `I would pair this with ${pairings[0].name}; it rounds out the table nicely.`
+      foodPairings,
+      drinkPairings,
+      pairings: [...foodPairings, ...drinkPairings],
+      talkTrack: recs.length
+        ? `I would pair this with ${recs[0].name}; it rounds out the table nicely.`
         : "I'd keep this simple and ask the waiter for the freshest pairing tonight."
     };
   }
@@ -656,24 +687,9 @@ class AiService {
 
     this.addPeopleAlsoOrdered(cartNames, menuContext, orderRecords, addCandidate);
     this.addPerfectPairings(cartNames, menuContext, addCandidate);
+    this.addFoodPairings(cartNames, menuContext, addCandidate);
     this.addCourseCompletions(cartNames, menuContext, addCandidate, popularity);
     this.addPopularCandidates(menuContext, popularity, addCandidate);
-
-    // Wine-first: always ensure slot 0 is a wine unless cart already has one
-    const cartHasWine = cart.some(item => {
-      const found = menuContext.byName.get(normalizeName(item.name));
-      return found?.categoryType === 'WINE';
-    });
-    if (!cartHasWine && (menuContext.categorized.WINE || []).length > 0) {
-      const winesByPopularity = [...menuContext.categorized.WINE].sort(
-        (a, b) => (popularity.get(normalizeName(b.name)) || 0) - (popularity.get(normalizeName(a.name)) || 0)
-      );
-      const topWine = winesByPopularity.find(w => !seen.has(normalizeName(w.name)));
-      if (topWine) {
-        candidates.unshift({ item: topWine, source: 'Cellar recommendation', score: 999 });
-        seen.add(normalizeName(topWine.name));
-      }
-    }
 
     if (payload.reason) {
       scoreSearch(menuContext, payload.reason, { exclude: [...seen] })
@@ -774,6 +790,68 @@ class AiService {
         rule.keywords
           .map(keyword => this.pickMenuItem(menuContext, [keyword], null))
           .filter(Boolean)
+          .slice(0, 2)
+          .forEach(item => addCandidate(item, rule.title, rule.score));
+      });
+  }
+
+  addFoodPairings(cartNames, menuContext, addCandidate) {
+    if (cartNames.length === 0) return;
+
+    const cartItems = cartNames.map(name => menuContext.byName.get(name)).filter(Boolean);
+    const cartText = cartItems.map(item => item.searchText).join(' ');
+    const cartTypes = new Set(cartItems.map(item => item.categoryType));
+
+    const foodRules = [
+      {
+        when: /tomahawk|wagyu|fillet|ribeye|rump|sirloin|steak|beef/,
+        title: 'Classic steak side',
+        score: 90,
+        keywords: ['chips', 'fries', 'onion rings', 'mushroom sauce', 'pepper sauce', 'garlic bread']
+      },
+      {
+        when: /prawn|calamari|salmon|kingklip|hake|seafood/,
+        title: 'Goes great with seafood',
+        score: 88,
+        keywords: ['garlic bread', 'chips', 'greek salad', 'tartare']
+      },
+      {
+        when: /burger/,
+        title: 'Classic burger side',
+        score: 86,
+        keywords: ['onion rings', 'chips', 'coleslaw']
+      },
+      {
+        when: /ribs|pork|chops/,
+        title: 'Goes well together',
+        score: 86,
+        keywords: ['chips', 'coleslaw', 'onion rings', 'garlic bread']
+      },
+      {
+        when: /pasta/,
+        title: 'Perfect with pasta',
+        score: 84,
+        keywords: ['garlic bread', 'salad', 'bruschetta']
+      },
+      {
+        when: /chicken/,
+        title: 'Pairs with chicken',
+        score: 84,
+        keywords: ['chips', 'salad', 'garlic bread', 'coleslaw']
+      }
+    ];
+
+    foodRules
+      .filter(rule => rule.when.test(cartText))
+      .forEach(rule => {
+        rule.keywords
+          .map(keyword => this.pickMenuItem(menuContext, [keyword], null))
+          .filter(Boolean)
+          .filter(item => {
+            if (cartNames.includes(normalizeName(item.name))) return false;
+            if (item.categoryType === 'MAIN' && cartTypes.has('MAIN')) return false;
+            return true;
+          })
           .slice(0, 2)
           .forEach(item => addCandidate(item, rule.title, rule.score));
       });

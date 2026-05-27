@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect, Suspense, lazy } from 'react';
+import { useState, useMemo, useEffect, useCallback, Suspense, lazy } from 'react';
 import { useParams } from 'react-router-dom';
+import { useSocketEvent } from '../hooks/useSocket';
 import { AppShell } from '../components/layout/AppShell';
 import { SideDrawer } from '../components/layout/SideDrawer';
 import { CategorySection } from '../components/menu/CategorySection';
@@ -47,6 +48,28 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [pairingItem, setPairingItem] = useState<MenuItem | null>(null);
+  const [orderStatus, setOrderStatus] = useState<string | null>(null);
+  const [ratingOrderId, setRatingOrderId] = useState<number | null>(null);
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
+  const tableId = paramTableId || 'table1';
+
+  useSocketEvent<{ order: { tableId: string; id?: number; kitchenStatus?: string } }>('orderPlaced', useCallback(({ order }) => {
+    if (order.tableId === tableId) setOrderStatus('new');
+  }, [tableId]));
+
+  useSocketEvent<{ orderId: number; kitchenStatus: string; order?: { tableId: string } }>('kitchenStatusUpdate', useCallback(({ orderId, kitchenStatus, order }) => {
+    if (!order || order.tableId === tableId) {
+      setOrderStatus(kitchenStatus);
+      if (kitchenStatus === 'served') {
+        const key = `rated_${orderId}`;
+        if (!sessionStorage.getItem(key)) {
+          setRatingOrderId(orderId);
+          setTimeout(() => setRatingModalOpen(true), 2000);
+        }
+        setTimeout(() => setOrderStatus(null), 4000);
+      }
+    }
+  }, [tableId]));
 
   // Sync table ID from URL param
   if (paramTableId) setTableId(paramTableId);
@@ -235,8 +258,103 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
       <PairingModal item={pairingItem} open={!!pairingItem} onClose={() => setPairingItem(null)} />
 
       <BottomBar />
+      {orderStatus && <OrderStatusBar status={orderStatus} />}
+      {ratingModalOpen && ratingOrderId && (
+        <RatingModal
+          orderId={ratingOrderId}
+          tableId={tableId}
+          onClose={() => {
+            setRatingModalOpen(false);
+            sessionStorage.setItem(`rated_${ratingOrderId}`, '1');
+          }}
+        />
+      )}
       <CartDrawer />
       <ChatPanel />
     </AppShell>
+  );
+}
+
+const STATUS_STEPS: { key: string; label: string; icon: string }[] = [
+  { key: 'new', label: 'Order Received', icon: '✓' },
+  { key: 'preparing', label: 'Being Prepared', icon: '🍳' },
+  { key: 'ready', label: 'Ready for Service', icon: '✅' },
+  { key: 'served', label: 'Enjoy your meal!', icon: '🎉' },
+];
+
+function RatingModal({ orderId, tableId, onClose }: { orderId: number; tableId: string; onClose: () => void }) {
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [comment, setComment] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  async function handleSubmit() {
+    if (rating === 0) return;
+    try {
+      const { api } = await import('../services/api');
+      await api.submitRating({ orderId, tableId, rating, comment });
+    } catch {}
+    setSubmitted(true);
+    setTimeout(onClose, 1800);
+  }
+
+  return (
+    <div className={styles.ratingOverlay} onClick={onClose}>
+      <div className={styles.ratingModal} onClick={e => e.stopPropagation()}>
+        {submitted ? (
+          <div className={styles.ratingThanks}>🎉 Thank you for your feedback!</div>
+        ) : (
+          <>
+            <h3 className={styles.ratingTitle}>How was your experience?</h3>
+            <div className={styles.ratingStars}>
+              {[1,2,3,4,5].map(s => (
+                <button
+                  key={s}
+                  className={`${styles.ratingStar} ${s <= (hover || rating) ? styles.ratingStarActive : ''}`}
+                  onMouseEnter={() => setHover(s)}
+                  onMouseLeave={() => setHover(0)}
+                  onClick={() => setRating(s)}
+                  aria-label={`Rate ${s} star${s !== 1 ? 's' : ''}`}
+                >★</button>
+              ))}
+            </div>
+            <textarea
+              className={styles.ratingComment}
+              placeholder="Optional comment…"
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              rows={2}
+            />
+            <div className={styles.ratingActions}>
+              <button className={styles.ratingSkip} onClick={onClose}>Skip</button>
+              <button className={styles.ratingSubmit} onClick={handleSubmit} disabled={rating === 0}>Submit</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function OrderStatusBar({ status }: { status: string }) {
+  const activeIdx = STATUS_STEPS.findIndex(s => s.key === status);
+  const active = STATUS_STEPS[Math.max(0, activeIdx)];
+  return (
+    <div className={styles.statusBar}>
+      <div className={styles.statusSteps}>
+        {STATUS_STEPS.slice(0, 3).map((step, i) => (
+          <div
+            key={step.key}
+            className={`${styles.statusStep} ${i <= activeIdx ? styles.statusStepDone : ''} ${i === activeIdx ? styles.statusStepActive : ''}`}
+          >
+            <span className={styles.statusIcon}>{step.icon}</span>
+            <span className={styles.statusLabel}>{step.label}</span>
+          </div>
+        ))}
+      </div>
+      {status === 'served' && (
+        <div className={styles.statusServed}>{active.icon} {active.label}</div>
+      )}
+    </div>
   );
 }

@@ -32,6 +32,12 @@ function registerOrderRoutes(app, controllers, auth) {
     controllers.waiter.archiveTable
   );
 
+  app.get(
+    ['/api/admin/tables/carts', '/Trump/api/admin/tables/carts', '/trump/api/admin/tables/carts'],
+    adminAuth,
+    controllers.waiter.getTableCarts
+  );
+
   app.get(['/orders', '/Trump/orders', '/trump/orders'], adminAuth, controllers.order.listOrders);
   app.get(['/history', '/Trump/history', '/trump/history'], adminAuth, controllers.order.listHistory);
   app.post(['/complete', '/Trump/complete', '/trump/complete'], adminAuth, controllers.order.markComplete);

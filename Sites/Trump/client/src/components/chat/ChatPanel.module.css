@@ -1,8 +1,8 @@
 .launcher {
   position: fixed;
-  bottom: 90px;
+  bottom: calc(88px + env(safe-area-inset-bottom));
   right: 20px;
-  z-index: 210;
+  z-index: var(--z-chat);
   width: 52px;
   height: 52px;
   display: grid;
@@ -22,9 +22,9 @@
 
 .panel {
   position: fixed;
-  bottom: 156px;
+  bottom: calc(154px + env(safe-area-inset-bottom));
   right: 20px;
-  z-index: 210;
+  z-index: var(--z-chat);
   width: min(360px, calc(100vw - 32px));
   max-height: 480px;
   display: flex;
@@ -105,6 +105,29 @@
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.08);
   color: var(--color-cream);
+}
+
+@media (max-width: 560px) {
+  .launcher {
+    right: 14px;
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    width: 48px;
+    height: 48px;
+  }
+
+  .panel {
+    right: 10px;
+    left: 10px;
+    bottom: calc(138px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: min(520px, calc(100vh - 188px));
+    border-radius: var(--radius-lg);
+  }
+
+  .message {
+    max-width: 92%;
+    font-size: 12px;
+  }
 }
 
 .typing { display: flex; align-items: center; gap: 5px; }

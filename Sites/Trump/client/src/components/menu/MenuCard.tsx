@@ -1,6 +1,6 @@
 import { useState, memo } from 'react';
-import { Heart, Plus, Star, TrendingUp, Wine } from 'lucide-react';
-import { resolveImage } from '../../lib/imageResolver';
+import { Heart, Plus, Star, TrendingUp, Wine, PlayCircle } from 'lucide-react';
+import { resolveImage, resolveVideo, normalizeYouTubeId } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import type { MenuItem } from '../../types/menu';
 import styles from './MenuCard.module.css';
@@ -19,18 +19,36 @@ export const MenuCard = memo(function MenuCard({
 }: MenuCardProps) {
   const [imgError, setImgError] = useState(false);
   const imgSrc = imgError ? '/Trump/Images/Tomahawk.jpg' : resolveImage(item);
+  const videoSrc = resolveVideo(item);
+  const hasVideo = Boolean(videoSrc || normalizeYouTubeId(item.youtubeId));
+  const soldOut = item.available === false;
 
   return (
     <article
-      className={styles.card}
+      className={`${styles.card} ${soldOut ? styles.cardSoldOut : ''}`}
       role="button"
       tabIndex={0}
-      aria-label={`${item.name}, ${formatPrice(item.price)}`}
+      aria-label={`${item.name}, ${formatPrice(item.price)}${soldOut ? ', sold out' : ''}`}
       onClick={() => onClick(item)}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick(item); }}
     >
       <div className={styles.imageWrap}>
-        {imgSrc && (
+        {videoSrc ? (
+          <video
+            src={videoSrc}
+            poster={imgSrc || undefined}
+            className={styles.image}
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            onMouseEnter={event => event.currentTarget.play().catch(() => {})}
+            onMouseLeave={event => {
+              event.currentTarget.pause();
+              event.currentTarget.currentTime = 0;
+            }}
+          />
+        ) : imgSrc && (
           <img
             src={imgSrc}
             alt={item.name}
@@ -40,12 +58,22 @@ export const MenuCard = memo(function MenuCard({
           />
         )}
         <div className={styles.imageTint} />
-        {item.chefPick && (
+        {hasVideo && (
+          <span className={styles.mediaBadge} aria-label="Video available">
+            <PlayCircle size={11} /> Video
+          </span>
+        )}
+        {soldOut && (
+          <div className={styles.soldOutOverlay}>
+            <span className={styles.soldOutBadge}>Sold Out</span>
+          </div>
+        )}
+        {!soldOut && item.chefPick && (
           <span className={styles.chipChef} aria-label="Chef's pick">
             <Star size={10} /> Chef
           </span>
         )}
-        {item.popular && (
+        {!soldOut && item.popular && (
           <span className={styles.chipPopular} aria-label="Popular item">
             <TrendingUp size={10} /> Popular
           </span>
@@ -58,7 +86,7 @@ export const MenuCard = memo(function MenuCard({
         >
           <Heart size={15} fill={isFavorite ? 'currentColor' : 'none'} />
         </button>
-        {onPairingClick && (
+        {!soldOut && onPairingClick && (
           <button
             className={styles.pairingBtn}
             aria-label={`Wine pairing for ${item.name}`}
@@ -70,7 +98,10 @@ export const MenuCard = memo(function MenuCard({
       </div>
 
       <div className={styles.body}>
-        <h3 className={styles.name}>{item.name}</h3>
+        <h3 className={styles.name}>
+          {item.name}
+          {item.chefPick && <span className={styles.goldDot} aria-hidden="true" />}
+        </h3>
         {item.description && (
           <p className={styles.desc}>{item.description}</p>
         )}
@@ -78,8 +109,9 @@ export const MenuCard = memo(function MenuCard({
           <span className={styles.price}>{formatPrice(item.price)}</span>
           <button
             className={styles.addBtn}
-            aria-label={`Add ${item.name} to cart`}
-            onClick={e => { e.stopPropagation(); onAddToCart(item); }}
+            aria-label={soldOut ? `${item.name} is sold out` : `Add ${item.name} to cart`}
+            onClick={e => { e.stopPropagation(); if (!soldOut) onAddToCart(item); }}
+            disabled={soldOut}
           >
             <Plus size={16} />
           </button>

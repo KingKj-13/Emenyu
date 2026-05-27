@@ -59,9 +59,50 @@ export function resolveImage(item: MenuItem): string {
 export function resolveVideo(item: MenuItem): string | null {
   if (item.videoVisible === false || !item.video?.trim()) return null;
   const raw = item.video.trim();
+  if (/^https?:\/\//.test(raw) || raw.startsWith('data:') || raw.startsWith('blob:')) {
+    return raw;
+  }
   if (raw.startsWith(`${BASE_PATH}/`)) return raw;
   if (raw.startsWith('/')) return `${BASE_PATH}${raw}`;
   return `${BASE_PATH}/${raw}`;
+}
+
+export function normalizeYouTubeId(value?: string): string {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  const direct = raw.match(/^[a-zA-Z0-9_-]{11}$/);
+  if (direct) return raw;
+
+  const patterns = [
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+    /[?&]v=([a-zA-Z0-9_-]{11})/
+  ];
+
+  for (const pattern of patterns) {
+    const match = raw.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+
+  return '';
+}
+
+export function resolveYouTubeEmbed(item: MenuItem, autoplay = false): string | null {
+  if (item.videoVisible === false) return null;
+  const id = normalizeYouTubeId(item.youtubeId);
+  if (!id) return null;
+  const params = new URLSearchParams({
+    rel: '0',
+    modestbranding: '1',
+    playsinline: '1'
+  });
+  if (autoplay) {
+    params.set('autoplay', '1');
+    params.set('mute', '1');
+  }
+  return `https://www.youtube.com/embed/${id}?${params.toString()}`;
 }
 
 export function resolveAssetPath(path: string): string {

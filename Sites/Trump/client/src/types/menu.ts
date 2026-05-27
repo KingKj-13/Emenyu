@@ -1,5 +1,6 @@
 export interface MenuItem {
   id?: string;
+  dbId?: number;
   name: string;
   price: number;
   description?: string;
@@ -8,9 +9,11 @@ export interface MenuItem {
   spice?: string;
   img?: string;
   video?: string;
+  youtubeId?: string;
   imageVisible?: boolean;
   videoVisible?: boolean;
   visible?: boolean;
+  available?: boolean;
   chefPick?: boolean;
   popular?: boolean;
   types?: string;
@@ -48,6 +51,8 @@ export interface ChatSuggestionItem {
   price: number;
   description?: string;
   img?: string;
+  video?: string;
+  youtubeId?: string;
   category?: string;
   subcategory?: string;
   categoryType?: string;

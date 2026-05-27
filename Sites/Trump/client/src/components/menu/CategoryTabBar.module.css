@@ -3,7 +3,7 @@
   top: var(--header-h);
   left: 0;
   right: 0;
-  z-index: 89;
+  z-index: var(--z-tabs);
   background: rgba(0, 12, 20, 0.92);
   border-bottom: 1px solid rgba(198, 162, 75, 0.14);
   backdrop-filter: blur(12px);

@@ -1,0 +1,61 @@
+.page {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 24px 16px;
+  background: linear-gradient(160deg, #001724, #020f1c);
+}
+
+.card {
+  width: 100%; max-width: 540px;
+  background: rgba(6,32,48,0.6);
+  border: 1px solid rgba(198,162,75,0.2);
+  border-radius: 16px; padding: 32px 28px;
+}
+
+.cardHeader { margin-bottom: 24px; }
+.title {
+  margin: 0 0 6px;
+  font-family: var(--font-heading); font-size: 26px; font-weight: 800;
+  color: var(--color-cream);
+}
+.subtitle { margin: 0; font-size: 13px; color: var(--color-sand); }
+
+.form { display: flex; flex-direction: column; gap: 16px; }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-sand); }
+
+.input, .textarea {
+  padding: 10px 13px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; color: var(--color-cream); font-size: 14px;
+  transition: border-color 140ms;
+  width: 100%; box-sizing: border-box;
+}
+.input:focus, .textarea:focus { outline: none; border-color: rgba(198,162,75,0.5); }
+.input option { background: #001724; color: var(--color-cream); }
+.textarea { resize: vertical; }
+
+.row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+@media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+
+.error { margin: 0; padding: 10px 13px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; color: #fca5a5; font-size: 13px; }
+
+.submitBtn {
+  padding: 13px;
+  border: none; border-radius: 8px;
+  background: linear-gradient(145deg, var(--color-gold), #a8812c);
+  color: #000; font-size: 14px; font-weight: 800;
+  cursor: pointer; transition: filter 140ms;
+}
+.submitBtn:hover { filter: brightness(1.1); }
+.submitBtn:disabled { filter: brightness(0.5); cursor: not-allowed; }
+
+.successIcon {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(34,197,94,0.15); border: 2px solid rgba(34,197,94,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; color: #4ade80; margin: 0 auto 20px;
+}
+.successTitle { margin: 0 0 12px; font-family: var(--font-heading); font-size: 22px; font-weight: 800; color: var(--color-cream); text-align: center; }
+.successText { margin: 0 0 8px; font-size: 14px; color: var(--color-sand); text-align: center; line-height: 1.6; }
+.successNote { margin: 0; font-size: 12px; color: rgba(255,255,255,0.35); text-align: center; }

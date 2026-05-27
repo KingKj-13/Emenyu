@@ -9,6 +9,8 @@ import { Spinner } from './components/ui/Spinner';
 
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
 const WaiterPage = lazy(() => import('./pages/WaiterPage').then(m => ({ default: m.WaiterPage })));
+const KitchenPage = lazy(() => import('./pages/KitchenPage').then(m => ({ default: m.KitchenPage })));
+const ReservationPage = lazy(() => import('./pages/ReservationPage').then(m => ({ default: m.ReservationPage })));
 
 function LoadingFallback() {
   return (
@@ -33,6 +35,16 @@ export default function App() {
             <Route path="/Waiter" element={
               <Suspense fallback={<LoadingFallback />}>
                 <WaiterPage />
+              </Suspense>
+            } />
+            <Route path="/Kitchen" element={
+              <Suspense fallback={<LoadingFallback />}>
+                <KitchenPage />
+              </Suspense>
+            } />
+            <Route path="/reserve" element={
+              <Suspense fallback={<LoadingFallback />}>
+                <ReservationPage />
               </Suspense>
             } />
             <Route path="/:tableId/book" element={<MenuPage sectionFilter="book" />} />

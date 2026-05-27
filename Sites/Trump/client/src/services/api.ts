@@ -28,6 +28,14 @@ export const api = {
     return fetchJson<unknown[]>(ENDPOINTS.deals);
   },
 
+  saveDeals(payload: unknown) {
+    return fetchJson<{ ok: boolean }>(ENDPOINTS.deals, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  },
+
   getRecommendations(payload: unknown) {
     return postJson<unknown>(ENDPOINTS.recommend, payload);
   },
@@ -125,5 +133,109 @@ export const api = {
       method: 'POST',
       body: formData,
     });
+  },
+
+  getAdminMenuItems() {
+    return fetchJson<unknown[]>(ENDPOINTS.menuAdminItems);
+  },
+
+  toggleMenuItemAvailability(id: number, available: boolean) {
+    return fetchJson<{ ok: boolean }>(`${ENDPOINTS.menuItemAvailability(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ available }),
+    });
+  },
+
+  updateMenuItemMedia(id: number, payload: {
+    img?: string;
+    video?: string;
+    youtubeId?: string;
+    imageVisible?: boolean;
+    videoVisible?: boolean;
+  }) {
+    return fetchJson<{ ok: boolean; item: unknown }>(ENDPOINTS.menuItemMedia(id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteMenuItem(id: number) {
+    return fetchJson<{ ok: boolean }>(ENDPOINTS.menuItemDelete(id), { method: 'DELETE' });
+  },
+
+  bulkMenuItemAction(action: 'hide' | 'show' | 'delete', ids: number[]) {
+    return postJson<{ ok: boolean; count: number }>(ENDPOINTS.menuItemBulk, { action, ids });
+  },
+
+  getKitchenOrders() {
+    return fetchJson<unknown[]>(ENDPOINTS.kitchenOrders);
+  },
+
+  updateKitchenStatus(id: number, kitchenStatus: string) {
+    return postJson<{ ok: boolean }>(ENDPOINTS.kitchenUpdateStatus(id), { kitchenStatus });
+  },
+
+  getAnalyticsSummary(params: { from?: string; to?: string }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<unknown>(`${ENDPOINTS.analyticsummary}?${q}`);
+  },
+
+  getAnalyticsItems(params: { from?: string; to?: string }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<unknown[]>(`${ENDPOINTS.analyticsItems}?${q}`);
+  },
+
+  getAnalyticsTables(params: { from?: string; to?: string }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<unknown[]>(`${ENDPOINTS.analyticsTables}?${q}`);
+  },
+
+  getAnalyticsHours(params: { from?: string; to?: string }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<unknown[]>(`${ENDPOINTS.analyticsHours}?${q}`);
+  },
+
+  getTableCarts() {
+    return fetchJson<unknown[]>(ENDPOINTS.adminTableCarts);
+  },
+
+  getReservations(date?: string) {
+    const q = date ? `?date=${date}` : '';
+    return fetchJson<unknown[]>(`${ENDPOINTS.reservations}${q}`);
+  },
+
+  createReservation(payload: unknown) {
+    return postJson<unknown>(ENDPOINTS.reservations, payload);
+  },
+
+  updateReservation(id: number, payload: unknown) {
+    return fetchJson<unknown>(`${ENDPOINTS.reservations}/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteReservation(id: number) {
+    return fetchJson<unknown>(`${ENDPOINTS.reservations}/${id}`, { method: 'DELETE' });
+  },
+
+  submitRating(payload: unknown) {
+    return postJson<unknown>(ENDPOINTS.ratings, payload);
+  },
+
+  getRatings(params: { from?: string; to?: string }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<unknown>(`${ENDPOINTS.ratings}?${q}`);
+  },
+
+  getPushVapidKey() {
+    return fetchJson<{ publicKey: string }>(ENDPOINTS.pushVapidKey);
+  },
+
+  subscribePush(subscription: unknown) {
+    return postJson<unknown>(ENDPOINTS.pushSubscribe, subscription);
   },
 };

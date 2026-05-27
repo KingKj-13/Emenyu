@@ -2,6 +2,7 @@ const socketIO = require('socket.io');
 
 const { isAllowedOrigin } = require('../middleware/security');
 const { getCanonicalTableId, getTableAliases, normalizeId } = require('../utils/helpers');
+const pushService = require('./pushService');
 
 class SocketService {
   constructor(config, fileService, logger = null) {
@@ -58,6 +59,10 @@ class SocketService {
 
   getAdminRoom() {
     return `${this.config.restaurantId}:admin`;
+  }
+
+  getKitchenRoom() {
+    return `${this.config.restaurantId}:kitchen`;
   }
 
   // ─── Table state management ───────────────────────────────────────────────────
@@ -217,11 +222,38 @@ class SocketService {
 
   emitOrderPlaced(order) {
     if (this.io) {
-      // Targeted to staff rooms only — customers track their orders via syncHistory.
-      this.io.to(this.getAdminRoom()).to(this.getWaiterRoom()).emit('orderPlaced', {
-        restaurantId: this.config.restaurantId,
-        order
-      });
+      this.io
+        .to(this.getAdminRoom())
+        .to(this.getWaiterRoom())
+        .to(this.getKitchenRoom())
+        .emit('orderPlaced', {
+          restaurantId: this.config.restaurantId,
+          order
+        });
+    }
+    const tableId = order?.table_number || order?.tableId || '';
+    if (tableId) {
+      pushService.notifyNewOrder(this.config.restaurantId, tableId).catch(() => {});
+    }
+  }
+
+  emitKitchenStatusUpdate(orderId, tableId, kitchenStatus, order = null) {
+    if (!this.io) return;
+    const payload = {
+      restaurantId: this.config.restaurantId,
+      orderId,
+      tableId: normalizeId(tableId),
+      kitchenStatus,
+      order
+    };
+    this.io
+      .to(this.getAdminRoom())
+      .to(this.getWaiterRoom())
+      .to(this.getKitchenRoom())
+      .to(this.getTableRooms(tableId))
+      .emit('kitchenStatusUpdate', payload);
+    if (kitchenStatus === 'ready') {
+      pushService.notifyOrderReady(this.config.restaurantId, tableId).catch(() => {});
     }
   }
 
@@ -253,6 +285,10 @@ class SocketService {
 
     socket.on('joinAdmin', payload => {
       this.handleJoinAdmin(socket, payload);
+    });
+
+    socket.on('joinKitchen', payload => {
+      this.handleJoinKitchen(socket, payload);
     });
 
     socket.on('callWaiter', payload => {
@@ -346,6 +382,14 @@ class SocketService {
     });
   }
 
+  handleJoinKitchen(socket, payload = {}) {
+    if (!this.isValidRestaurant(payload.restaurantId)) {
+      return;
+    }
+
+    socket.join(this.getKitchenRoom());
+  }
+
   handleJoinAdmin(socket, payload = {}) {
     if (!this.isValidRestaurant(payload.restaurantId)) {
       return;
@@ -377,6 +421,7 @@ class SocketService {
       message: `${displayTable} is calling you.`,
       timestamp
     });
+    pushService.notifyCallWaiter(this.config.restaurantId, cleanId).catch(() => {});
 
     this.io.to(this.getAdminRoom()).emit('waiterCallAlert', {
       restaurantId: this.config.restaurantId,

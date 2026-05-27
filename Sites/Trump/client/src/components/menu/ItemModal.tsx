@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { X, Heart, Plus, Minus, ShoppingCart, Wine } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Heart, Plus, Minus, ShoppingCart, Sparkles } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
-import { resolveImage, resolveVideo } from '../../lib/imageResolver';
+import { resolveImage, resolveVideo, resolveYouTubeEmbed } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import { api } from '../../services/api';
 import { useApp } from '../../context/AppContext';
@@ -19,54 +19,76 @@ interface ItemModalProps {
   onAddToCart: (item: MenuItem, qty: number, note: string) => void;
 }
 
-interface PairingResult {
-  pairings?: { name: string; reason: string }[];
+interface PairingItem {
+  name: string;
+  reason: string;
+  categoryType?: string;
 }
 
-function DrinkPairings({ item }: { item: MenuItem }) {
-  const [pairings, setPairings] = useState<{ name: string; reason: string }[]>([]);
+interface PairingResult {
+  foodPairings?: PairingItem[];
+  drinkPairings?: PairingItem[];
+  pairings?: PairingItem[];
+}
+
+function ItemPairings({ item }: { item: MenuItem }) {
+  const [foodPairings, setFoodPairings] = useState<PairingItem[]>([]);
+  const [drinkPairings, setDrinkPairings] = useState<PairingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { setPendingItemName } = useApp();
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setPairings([]);
+    setFoodPairings([]);
+    setDrinkPairings([]);
     api.aiPairing({ name: item.name, price: item.price, description: item.description })
       .then((data: unknown) => {
         if (cancelled) return;
         const res = data as PairingResult;
-        if (res?.pairings?.length) setPairings(res.pairings);
+        setFoodPairings(res?.foodPairings ?? []);
+        setDrinkPairings(res?.drinkPairings ?? []);
       })
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [item.name]);
 
-  if (!loading && pairings.length === 0) return null;
+  const hasFood = foodPairings.length > 0;
+  const hasDrink = drinkPairings.length > 0;
+  if (!loading && !hasFood && !hasDrink) return null;
 
   return (
     <div className={styles.pairSection}>
       <div className={styles.pairHeader}>
-        <Wine size={13} className={styles.pairIcon} />
+        <Sparkles size={13} className={styles.pairIcon} />
         <span className={styles.pairLabel}>Pair With</span>
       </div>
       {loading ? (
         <div className={styles.pairLoading}><Spinner size={16} /></div>
       ) : (
-        <div className={styles.pairStrip}>
-          {pairings.map((p, i) => (
-            <button
-              key={i}
-              className={styles.pairChip}
-              onClick={() => setPendingItemName(p.name)}
-              aria-label={`View ${p.name}`}
-            >
-              <span className={styles.pairName}>{p.name}</span>
-              <span className={styles.pairReason}>{p.reason}</span>
-            </button>
-          ))}
-        </div>
+        <>
+          {hasFood && (
+            <div className={styles.pairStrip}>
+              {foodPairings.map((p, i) => (
+                <button key={i} className={styles.pairChip} onClick={() => setPendingItemName(p.name)} aria-label={`View ${p.name}`}>
+                  <span className={styles.pairName}>{p.name}</span>
+                  <span className={styles.pairReason}>{p.reason}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {hasDrink && (
+            <div className={`${styles.pairStrip} ${hasFood ? styles.pairStripSecond : ''}`}>
+              {drinkPairings.map((p, i) => (
+                <button key={i} className={`${styles.pairChip} ${styles.pairChipDrink}`} onClick={() => setPendingItemName(p.name)} aria-label={`View ${p.name}`}>
+                  <span className={styles.pairName}>{p.name}</span>
+                  <span className={styles.pairReason}>{p.reason}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -76,11 +98,27 @@ export function ItemModal({ item, open, onClose, isFavorite, onFavoriteToggle, o
   const [qty, setQty] = useState(1);
   const [note, setNote] = useState('');
   const [imgError, setImgError] = useState(false);
+  const [playMedia, setPlayMedia] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (!open || !item) return;
+    setPlayMedia(false);
+    setImgError(false);
+    const timer = window.setTimeout(() => setPlayMedia(true), 3000);
+    return () => window.clearTimeout(timer);
+  }, [open, item?.name]);
+
+  useEffect(() => {
+    if (!playMedia || !videoRef.current) return;
+    videoRef.current.play().catch(() => {});
+  }, [playMedia]);
 
   if (!item) return null;
 
   const imgSrc = imgError ? '/Trump/Images/Tomahawk.jpg' : resolveImage(item);
   const videoSrc = resolveVideo(item);
+  const youtubeSrc = resolveYouTubeEmbed(item, playMedia);
 
   function handleAdd() {
     onAddToCart(item!, qty, note);
@@ -94,7 +132,24 @@ export function ItemModal({ item, open, onClose, isFavorite, onFavoriteToggle, o
       <div className={styles.modal}>
         <div className={styles.media}>
           {videoSrc ? (
-            <video src={videoSrc} autoPlay muted loop playsInline className={styles.video} />
+            <video
+              ref={videoRef}
+              src={videoSrc}
+              poster={imgSrc || undefined}
+              muted
+              loop
+              playsInline
+              controls={playMedia}
+              className={styles.video}
+            />
+          ) : youtubeSrc ? (
+            <iframe
+              src={youtubeSrc}
+              title={`${item.name} video`}
+              className={styles.youtube}
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+            />
           ) : imgSrc ? (
             <img
               src={imgSrc}
@@ -118,6 +173,12 @@ export function ItemModal({ item, open, onClose, isFavorite, onFavoriteToggle, o
         </div>
 
         <div className={styles.body}>
+          {item.available === false && (
+            <div className={styles.unavailableBanner}>
+              Currently unavailable
+            </div>
+          )}
+
           <div className={styles.chips}>
             {item.chefPick && <Badge variant="gold">Chef's Pick</Badge>}
             {item.popular && <Badge variant="red">Popular</Badge>}
@@ -141,7 +202,7 @@ export function ItemModal({ item, open, onClose, isFavorite, onFavoriteToggle, o
             <p className={styles.calories}>{item.calories}</p>
           )}
 
-          {open && <DrinkPairings item={item} />}
+          {open && <ItemPairings item={item} />}
 
           <div className={styles.actions}>
             <div className={styles.qtyRow}>
@@ -171,9 +232,14 @@ export function ItemModal({ item, open, onClose, isFavorite, onFavoriteToggle, o
               aria-label="Special notes for this item"
             />
 
-            <button className={styles.addBtn} onClick={handleAdd} aria-label={`Add ${qty} ${item.name} to cart`}>
+            <button
+              className={styles.addBtn}
+              onClick={handleAdd}
+              disabled={item.available === false}
+              aria-label={item.available === false ? `${item.name} is currently unavailable` : `Add ${qty} ${item.name} to cart`}
+            >
               <ShoppingCart size={18} />
-              Add {qty > 1 ? `${qty} × ` : ''}{formatPrice(item.price * qty)}
+              {item.available === false ? 'Unavailable' : `Add ${qty > 1 ? `${qty} × ` : ''}${formatPrice(item.price * qty)}`}
             </button>
           </div>
         </div>

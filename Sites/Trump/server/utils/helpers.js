@@ -205,6 +205,12 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
           role: 'waiter',
           label: 'Waiter'
         },
+        ...(env.TRUMP_KITCHEN_PASS ? [{
+          username: env.TRUMP_KITCHEN_USER || 'kitchen',
+          password: env.TRUMP_KITCHEN_PASS,
+          role: 'kitchen',
+          label: 'Kitchen'
+        }] : []),
         {
           username: ADMIN_USERNAME,
           password: env.TRUMP_ADMIN_PASS || env.TRUMP_OWNER_PASS || sharedPassword,

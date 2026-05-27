@@ -1,11 +1,12 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, ShoppingBag } from 'lucide-react';
+import { X, ShoppingBag, Receipt } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 import { CartItemRow } from './CartItem';
 import { CartRecommendations } from './CartRecommendations';
 import { TipSelector } from './TipSelector';
+import { ReceiptView } from './ReceiptView';
 import { formatPrice } from '../../lib/menuUtils';
 import { Spinner } from '../ui/Spinner';
 import { useState } from 'react';
@@ -17,6 +18,7 @@ export function CartDrawer() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [tab, setTab] = useState<'cart' | 'history'>('cart');
+  const [receiptOpen, setReceiptOpen] = useState(false);
 
   async function handleSubmit() {
     if (items.length === 0) return;
@@ -39,6 +41,7 @@ export function CartDrawer() {
   const totals = getTotals();
 
   return (
+    <>
     <AnimatePresence>
       {isOpen && (
         <>
@@ -165,9 +168,25 @@ export function CartDrawer() {
                 </button>
               </div>
             )}
+            {history.length > 0 && !submitted && (
+              <div className={styles.billFooter}>
+                <button className={styles.billBtn} onClick={() => setReceiptOpen(true)}>
+                  <Receipt size={14} />
+                  View Bill
+                </button>
+              </div>
+            )}
           </motion.aside>
         </>
       )}
     </AnimatePresence>
+    {receiptOpen && (
+      <ReceiptView
+        tableId={tableId || 'table1'}
+        items={history}
+        onClose={() => setReceiptOpen(false)}
+      />
+    )}
+    </>
   );
 }

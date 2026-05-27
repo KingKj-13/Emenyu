@@ -136,6 +136,24 @@
 .submitBtn:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(198,162,75,0.4); }
 .submitBtn:disabled { filter: brightness(0.7); cursor: not-allowed; transform: none; }
 
+.billFooter {
+  padding: 8px 20px 12px;
+  flex-shrink: 0;
+}
+
+.billBtn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 9px;
+  border: 1px solid rgba(198,162,75,0.25);
+  border-radius: 8px;
+  background: rgba(198,162,75,0.05);
+  color: var(--color-gold);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.billBtn:hover { background: rgba(198,162,75,0.12); }
+
 .successMsg {
   display: flex;
   flex-direction: column;

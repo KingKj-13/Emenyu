@@ -6,13 +6,23 @@ const path = require('path');
 const dotenv = require('dotenv');
 
 const { createAiController } = require('./controllers/aiController');
+const { createAnalyticsController } = require('./controllers/analyticsController');
 const { createDealController } = require('./controllers/dealController');
+const { createKitchenController } = require('./controllers/kitchenController');
 const { createMenuController } = require('./controllers/menuController');
+const { createPushController } = require('./controllers/pushController');
+const { createRatingController } = require('./controllers/ratingController');
+const { createReservationController } = require('./controllers/reservationController');
 const { createOrderController } = require('./controllers/orderController');
 const { createUploadController } = require('./controllers/uploadController');
 const { createWaiterController } = require('./controllers/waiterController');
+const { registerAnalyticsRoutes } = require('./routes/analyticsRoutes');
 const { registerDealRoutes } = require('./routes/dealRoutes');
+const { registerKitchenRoutes } = require('./routes/kitchenRoutes');
 const { registerMenuRoutes } = require('./routes/menuRoutes');
+const { registerPushRoutes } = require('./routes/pushRoutes');
+const { registerRatingRoutes } = require('./routes/ratingRoutes');
+const { registerReservationRoutes } = require('./routes/reservationRoutes');
 const { registerOrderRoutes } = require('./routes/orderRoutes');
 const { registerUploadRoutes } = require('./routes/uploadRoutes');
 const { configureSecurity } = require('./middleware/security');
@@ -173,9 +183,14 @@ async function startServer() {
 
   const controllers = {
     ai: createAiController({ aiService }),
+    analytics: createAnalyticsController({ config }),
     deal: createDealController({ fileService, socketService }),
-    menu: createMenuController({ fileService, socketService, mediaEnrichmentService }),
+    kitchen: createKitchenController({ config, fileService, socketService }),
+    menu: createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService: fileService.prismaMenu }),
     order: createOrderController({ config, fileService, socketService }),
+    push: createPushController({ config }),
+    rating: createRatingController({ config }),
+    reservation: createReservationController({ config }),
     waiter: createWaiterController({ config, fileService, socketService })
   };
   const uploadController = createUploadController(config);
@@ -230,8 +245,13 @@ async function startServer() {
     auth.updateAccount
   );
 
+  registerAnalyticsRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerMenuRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerDealRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
+  registerKitchenRoutes(app, controllers, auth.requireRoles(['owner', 'manager', 'kitchen']));
+  registerPushRoutes(app, controllers, auth.requireRoles(['owner', 'manager', 'waiter', 'kitchen']));
+  registerRatingRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
+  registerReservationRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerUploadRoutes(app, uploadController, auth.requireRoles(['owner', 'manager']));
   registerOrderRoutes(app, controllers, auth);
 
@@ -277,6 +297,33 @@ async function startServer() {
   } catch {
     // node-cron not available — skip cron
   }
+
+  // Every minute: check if any deal's active window just opened/closed and notify clients
+  let lastDealActiveSnapshot = '';
+  setInterval(async () => {
+    try {
+      const deals = await fileService.loadDeals();
+      if (!Array.isArray(deals)) return;
+      const now = new Date();
+      const day = now.getDay();
+      const mins = now.getHours() * 60 + now.getMinutes();
+      const snapshot = deals.map(d => {
+        if (!d.startsAt && !d.endsAt && !d.activeDays) return '1';
+        const dayOk = !d.activeDays || d.activeDays.length === 0 || d.activeDays.includes(day);
+        if (!dayOk) return '0';
+        if (d.startsAt && d.endsAt) {
+          const [sh, sm] = d.startsAt.split(':').map(Number);
+          const [eh, em] = d.endsAt.split(':').map(Number);
+          return mins >= sh * 60 + (sm || 0) && mins <= eh * 60 + (em || 0) ? '1' : '0';
+        }
+        return '1';
+      }).join('');
+      if (snapshot !== lastDealActiveSnapshot) {
+        lastDealActiveSnapshot = snapshot;
+        socketService.emitDealUpdated();
+      }
+    } catch {}
+  }, 60 * 1000);
 
   return {
     accountService,

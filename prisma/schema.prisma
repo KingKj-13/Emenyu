@@ -61,9 +61,11 @@ model MenuItem {
   spice          String       @default("")
   imagePath      String       @default("")
   videoPath      String       @default("")
+  youtubeId      String       @default("")
   imageVisible   Boolean      @default(true)
   videoVisible   Boolean      @default(true)
   visible        Boolean      @default(true)
+  available      Boolean      @default(true)
   chefPick       Boolean      @default(false)
   popular        Boolean      @default(false)
   sourceTitle    String       @default("")
@@ -75,6 +77,7 @@ model MenuItem {
   @@index([restaurantId, normalizedName])
   @@index([restaurantId, categoryId, sortOrder])
   @@index([visible])
+  @@index([available])
   @@index([chefPick])
   @@index([popular])
 }
@@ -121,17 +124,17 @@ model RestaurantMenuSettings {
 }
 
 model Table {
-  id              Int                @id @default(autoincrement())
-  restaurantId    String             @default("trump")
-  tableId         String
-  displayName     String             @default("")
-  status          String             @default("active")
-  metadata        Json?
-  orders          Order[]
-  cartState       ActiveCartState?
+  id                Int                @id @default(autoincrement())
+  restaurantId      String             @default("trump")
+  tableId           String
+  displayName       String             @default("")
+  status            String             @default("active")
+  metadata          Json?
+  orders            Order[]
+  cartState         ActiveCartState?
   waiterAssignments WaiterAssignment[]
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   @@unique([restaurantId, tableId])
   @@index([restaurantId, status])
@@ -144,6 +147,7 @@ model Order {
   tableId       String
   table         Table                @relation(fields: [restaurantId, tableId], references: [restaurantId, tableId])
   status        String               @default("active")
+  kitchenStatus String               @default("new")
   waiterName    String               @default("")
   notes         String               @default("")
   subtotal      Float                @default(0)
@@ -156,11 +160,13 @@ model Order {
   raw           Json?
   items         OrderItem[]
   statusHistory OrderStatusHistory[]
+  rating        OrderRating?
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
 
   @@index([restaurantId, status, timestamp])
   @@index([restaurantId, tableId, status])
+  @@index([restaurantId, kitchenStatus])
   @@index([timestamp])
   @@unique([restaurantId, sourceKind, filename])
 }
@@ -199,6 +205,20 @@ model OrderStatusHistory {
   @@index([toStatus])
 }
 
+model OrderRating {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("trump")
+  orderId      Int      @unique
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  rating       Int
+  comment      String   @default("")
+  tableId      String
+  createdAt    DateTime @default(now())
+
+  @@index([restaurantId, rating])
+  @@index([restaurantId, createdAt])
+}
+
 model ActiveCartState {
   id             Int      @id @default(autoincrement())
   restaurantId   String   @default("trump")
@@ -231,4 +251,35 @@ model WaiterAssignment {
   @@index([restaurantId, tableId, status])
   @@index([restaurantId, waiterName])
   @@index([socketId])
+}
+
+model Reservation {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("trump")
+  name         String
+  phone        String   @default("")
+  partySize    Int      @default(2)
+  date         DateTime
+  notes        String   @default("")
+  status       String   @default("pending")
+  tableId      String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([restaurantId, date])
+  @@index([restaurantId, status])
+}
+
+model PushSubscription {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("trump")
+  endpoint     String   @unique
+  p256dh       String
+  auth         String
+  userRole     String   @default("waiter")
+  username     String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([restaurantId, userRole])
 }

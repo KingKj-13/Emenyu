@@ -1,17 +1,17 @@
 .header {
   position: fixed;
   inset: 0 0 auto 0;
-  z-index: 100;
+  z-index: var(--z-header);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   min-height: var(--header-h);
   padding: 14px clamp(16px, 4vw, 48px);
-  border-bottom: 1px solid rgba(198, 162, 75, 0.22);
-  background: rgba(0, 15, 24, 0.82);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(200, 165, 85, 0.15);
+  background: rgba(4, 14, 26, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .brand {
@@ -27,17 +27,18 @@
   height: 44px;
   place-items: center;
   flex-shrink: 0;
-  border: 1px solid rgba(198, 162, 75, 0.6);
-  background: #050505;
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.06), 0 8px 20px rgba(0,0,0,0.3);
+  border: 1px solid rgba(200, 165, 85, 0.55);
+  border-radius: 2px;
+  background: #020810;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04), 0 8px 20px rgba(0,0,0,0.4);
   color: var(--color-gold);
 }
 
 .brandTitle {
   margin: 0;
-  font-size: clamp(18px, 3vw, 24px);
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  font-size: clamp(20px, 3vw, 26px);
+  font-weight: 600;
+  letter-spacing: 0.12em;
   line-height: 1;
   font-family: var(--font-heading);
   color: var(--color-cream);
@@ -46,11 +47,15 @@
   white-space: nowrap;
 }
 
-.brandLine {
-  width: min(16rem, 34vw);
-  height: 2px;
-  margin-top: 6px;
-  background: linear-gradient(90deg, var(--red), var(--color-gold), transparent);
+.brandSubtitle {
+  margin: 3px 0 0;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-family: var(--font-label);
+  color: var(--color-gold-dim);
+  line-height: 1;
 }
 
 .nav {
@@ -62,13 +67,14 @@
 
 .tablePill {
   padding: 4px 12px;
-  border: 1px solid rgba(198, 162, 75, 0.4);
+  border: 1px solid rgba(200, 165, 85, 0.35);
   border-radius: var(--radius-pill);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--color-gold);
-  background: rgba(198, 162, 75, 0.08);
+  background: rgba(200, 165, 85, 0.06);
+  font-family: var(--font-label);
 }
 
 .viewToggle,
@@ -76,14 +82,14 @@
 .userButton,
 .menuButton {
   display: grid;
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   place-items: center;
-  border: 1px solid rgba(198, 162, 75, 0.5);
-  border-radius: 3px;
-  background: linear-gradient(145deg, #0a0a0a, var(--blue-black));
+  border: 1px solid rgba(200, 165, 85, 0.3);
+  border-radius: var(--radius-card);
+  background: rgba(4, 14, 26, 0.9);
   color: var(--muted);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.08);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.05);
   transition: border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
   cursor: pointer;
   position: relative;
@@ -94,16 +100,16 @@
 .cartButton:hover,
 .userButton:hover,
 .menuButton:hover {
-  border-color: var(--gold-soft);
+  border-color: rgba(200, 165, 85, 0.6);
   color: var(--white);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.12);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
 .viewToggle.active {
   border-color: var(--color-gold);
   color: var(--color-gold);
-  background: rgba(198, 162, 75, 0.1);
+  background: rgba(200, 165, 85, 0.1);
 }
 
 .cartBadge {
@@ -114,8 +120,8 @@
   height: 16px;
   padding: 0 4px;
   border-radius: var(--radius-pill);
-  background: var(--red);
-  color: #fff;
+  background: var(--color-gold);
+  color: #000;
   font-size: 10px;
   font-weight: 700;
   display: flex;
@@ -126,5 +132,4 @@
 @media (max-width: 480px) {
   .brandMark { display: none; }
   .tablePill { display: none; }
-  .brandLine { width: 28vw; }
 }
