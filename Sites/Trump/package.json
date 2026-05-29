@@ -17,6 +17,7 @@
     "auth:migrate": "node scripts/migrate-auth-to-postgres.js",
     "menu:migrate": "node scripts/migrate-menu-to-postgres.js",
     "orders:migrate": "node scripts/migrate-orders-to-postgres.js",
+    "seed:waiter-demo": "node scripts/seed-waiter-demo.js",
     "prisma:generate": "npx prisma generate --schema ../../prisma/schema.prisma"
   },
   "engines": {

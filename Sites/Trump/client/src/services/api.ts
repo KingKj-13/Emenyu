@@ -243,4 +243,46 @@ export const api = {
   subscribePush(subscription: unknown) {
     return postJson<unknown>(ENDPOINTS.pushSubscribe, subscription);
   },
+
+  // ── Waiter-AI app ──
+  getFloor() {
+    return fetchJson<import('../types/waiter').FloorState>(ENDPOINTS.floor);
+  },
+  getTableIntel(tableId: string, tone?: string) {
+    const q = tone ? `?tone=${encodeURIComponent(tone)}` : '';
+    return fetchJson<import('../types/waiter').TableIntel>(`${ENDPOINTS.tableIntel(tableId)}${q}`);
+  },
+  coach(payload: { tableId?: string; cart?: unknown[]; dishName?: string; tone?: string }) {
+    return postJson<import('../types/waiter').CoachResponse>(ENDPOINTS.coach, payload);
+  },
+  sommelier(payload: { dish?: string; cart?: unknown[]; tone?: string }) {
+    return postJson<import('../types/waiter').SommelierResponse>(ENDPOINTS.sommelier, payload);
+  },
+  ask(payload: { message: string; tableId?: string; cart?: unknown[] }) {
+    return postJson<import('../types/waiter').AskResponse>(ENDPOINTS.ask, payload);
+  },
+  recovery(payload: { tableId: string; delayMinutes?: number; tone?: string }) {
+    return postJson<import('../types/waiter').RecoveryResponse>(ENDPOINTS.recovery, payload);
+  },
+  recordUpsell(payload: { waiterName: string; tableId?: string; suggestedItem: string; accepted: boolean; source?: string; value?: number }) {
+    return postJson<{ ok: boolean }>(ENDPOINTS.upsellEvent, payload);
+  },
+  getWaiterPerformance(params: { waiter?: string; period?: string }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<import('../types/waiter').Performance>(`${ENDPOINTS.waiterPerformance}?${q}`);
+  },
+  getWaiterShiftReport(params: { waiter?: string; period?: string }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<import('../types/waiter').ShiftReport>(`${ENDPOINTS.waiterShiftReport}?${q}`);
+  },
+  getWaiterLeaderboard(params: { waiter?: string; period?: string }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<import('../types/waiter').LeaderboardResponse>(`${ENDPOINTS.waiterLeaderboard}?${q}`);
+  },
+  getGuests() {
+    return fetchJson<import('../types/waiter').Guest[]>(ENDPOINTS.guests);
+  },
+  seatGuest(tableId: string, guestId: number) {
+    return postJson<{ ok: boolean; guestIntel: import('../types/waiter').GuestIntel }>(ENDPOINTS.seatGuest(tableId), { guestId });
+  },
 };

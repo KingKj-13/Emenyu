@@ -24,7 +24,12 @@ function getItemsCount(items) {
 function createWaiterController({ config, fileService, socketService }) {
   return {
     serveWaiterPage(req, res) {
-      res.sendFile(path.join(config.directories.base, 'waiter.html'));
+      // The waiter app is now the React SPA (client/dist). React Router (basename
+      // "/Trump") renders the /Waiter route. The legacy waiter.html is retired.
+      const spaIndex = path.join(config.directories.base, 'client', 'dist', 'index.html');
+      res.sendFile(spaIndex, err => {
+        if (err) res.sendFile(path.join(config.directories.base, 'waiter.html'));
+      });
     },
 
     async getTableStatus(req, res) {

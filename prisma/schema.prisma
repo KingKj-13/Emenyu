@@ -157,6 +157,8 @@ model Order {
   total         Float                @default(0)
   timestamp     DateTime             @default(now())
   sourceKind    String               @default("orders")
+  guestId       Int?
+  guest         Guest?               @relation(fields: [guestId], references: [id])
   raw           Json?
   items         OrderItem[]
   statusHistory OrderStatusHistory[]
@@ -167,6 +169,8 @@ model Order {
   @@index([restaurantId, status, timestamp])
   @@index([restaurantId, tableId, status])
   @@index([restaurantId, kitchenStatus])
+  @@index([restaurantId, waiterName, status])
+  @@index([guestId])
   @@index([timestamp])
   @@unique([restaurantId, sourceKind, filename])
 }
@@ -251,6 +255,46 @@ model WaiterAssignment {
   @@index([restaurantId, tableId, status])
   @@index([restaurantId, waiterName])
   @@index([socketId])
+}
+
+model Guest {
+  id            Int       @id @default(autoincrement())
+  restaurantId  String    @default("trump")
+  name          String
+  phone         String    @default("")
+  email         String    @default("")
+  vip           Boolean   @default(false)
+  loyaltyTier   String    @default("")
+  dietary       String    @default("")
+  allergies     String    @default("")
+  preferences   Json?
+  notes         String    @default("")
+  visitCount    Int       @default(0)
+  lifetimeSpend Float     @default(0)
+  avgSpend      Float     @default(0)
+  lastVisitAt   DateTime?
+  orders        Order[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([restaurantId, vip])
+  @@index([restaurantId, name])
+}
+
+model UpsellEvent {
+  id            Int      @id @default(autoincrement())
+  restaurantId  String   @default("trump")
+  waiterName    String   @default("")
+  tableId       String   @default("")
+  orderId       Int?
+  suggestedItem String   @default("")
+  accepted      Boolean  @default(false)
+  source        String   @default("coach")
+  value         Float    @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([restaurantId, waiterName, createdAt])
+  @@index([restaurantId, accepted])
 }
 
 model Reservation {

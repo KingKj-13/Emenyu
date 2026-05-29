@@ -178,6 +178,14 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     restaurantId: RESTAURANT_ID,
     publicBasePath,
     publicOrigin,
+    tableCount: parseInteger(env.TRUMP_TABLE_COUNT, 30),
+    brandName: env.TRUMP_BRAND_NAME || 'Aurum & Ember',
+    llm: {
+      provider: (env.TRUMP_LLM_PROVIDER || '').trim().toLowerCase(),
+      apiKey: env.TRUMP_LLM_API_KEY || '',
+      model: env.TRUMP_LLM_MODEL || 'claude-opus-4-8',
+      timeoutMs: parseInteger(env.TRUMP_LLM_TIMEOUT_MS, 6000)
+    },
     host: env.TRUMP_HOST || env.HOST || '0.0.0.0',
     port,
     admin: {

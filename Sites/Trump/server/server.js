@@ -16,7 +16,9 @@ const { createReservationController } = require('./controllers/reservationContro
 const { createOrderController } = require('./controllers/orderController');
 const { createUploadController } = require('./controllers/uploadController');
 const { createWaiterController } = require('./controllers/waiterController');
+const { createWaiterApiController } = require('./controllers/waiterApiController');
 const { registerAnalyticsRoutes } = require('./routes/analyticsRoutes');
+const { registerWaiterApiRoutes } = require('./routes/waiterApiRoutes');
 const { registerDealRoutes } = require('./routes/dealRoutes');
 const { registerKitchenRoutes } = require('./routes/kitchenRoutes');
 const { registerMenuRoutes } = require('./routes/menuRoutes');
@@ -28,6 +30,12 @@ const { registerUploadRoutes } = require('./routes/uploadRoutes');
 const { configureSecurity } = require('./middleware/security');
 const { createErrorHandler, createRequestLogger } = require('./middleware/requestLogger');
 const { AiService } = require('./services/aiService');
+const { createNlgService } = require('./services/nlg/nlgService');
+const { createGuestService } = require('./services/guestService');
+const { createOpportunityService } = require('./services/opportunityService');
+const { createWaiterAnalyticsService } = require('./services/waiterAnalyticsService');
+const { createServiceRecoveryService } = require('./services/serviceRecoveryService');
+const { createFloorService } = require('./services/floorService');
 const { AccountService } = require('./services/accountService');
 const { FileService } = require('./services/fileService');
 const { SocketService } = require('./services/socketService');
@@ -181,6 +189,15 @@ async function startServer() {
   const mediaEnrichmentService = new MediaEnrichmentService(config);
   const auth = createRoleAuth(config, accountService, logger);
 
+  // Waiter-AI: deterministic business logic + pluggable wording layer (hybrid).
+  const nlgService = createNlgService({ config, logger });
+  const guestService = createGuestService({ config });
+  const opportunityService = createOpportunityService({ config, aiService });
+  const waiterAnalyticsService = createWaiterAnalyticsService({ config });
+  const serviceRecoveryService = createServiceRecoveryService({ config });
+  const floorService = createFloorService({ config });
+  logger.info('nlg_mode', nlgService.status());
+
   const controllers = {
     ai: createAiController({ aiService }),
     analytics: createAnalyticsController({ config }),
@@ -191,7 +208,19 @@ async function startServer() {
     push: createPushController({ config }),
     rating: createRatingController({ config }),
     reservation: createReservationController({ config }),
-    waiter: createWaiterController({ config, fileService, socketService })
+    waiter: createWaiterController({ config, fileService, socketService }),
+    waiterApi: createWaiterApiController({
+      config,
+      fileService,
+      socketService,
+      aiService,
+      nlgService,
+      guestService,
+      opportunityService,
+      waiterAnalyticsService,
+      serviceRecoveryService,
+      floorService
+    })
   };
   const uploadController = createUploadController(config);
 
@@ -258,6 +287,7 @@ async function startServer() {
   registerRatingRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerReservationRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerUploadRoutes(app, uploadController, auth.requireRoles(['owner', 'manager']));
+  registerWaiterApiRoutes(app, controllers, auth);
   registerOrderRoutes(app, controllers, auth);
 
   // SPA fallback: serve React app for all /Trump/* routes with no file extension
