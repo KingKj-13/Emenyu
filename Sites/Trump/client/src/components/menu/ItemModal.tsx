@@ -70,27 +70,33 @@ function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?:
         <div className={styles.pairLoading}><Spinner size={16} /></div>
       ) : (
         <>
-          {hasFood && (
-            <div className={styles.pairStrip} data-noswipe>
-              {foodPairings.map((p, i) => (
-                <button key={i} className={styles.pairChip} onClick={() => onRequestItem?.(p.name)} aria-label={`View ${p.name}`}>
-                  <span className={styles.pairBadge}>AI Recommend</span>
-                  <span className={styles.pairName}>{p.name}</span>
-                  <span className={styles.pairReason}>{p.reason}</span>
-                </button>
-              ))}
-            </div>
-          )}
           {hasDrink && (
-            <div className={`${styles.pairStrip} ${hasFood ? styles.pairStripSecond : ''}`} data-noswipe>
-              {drinkPairings.map((p, i) => (
-                <button key={i} className={`${styles.pairChip} ${styles.pairChipDrink}`} onClick={() => onRequestItem?.(p.name)} aria-label={`View ${p.name}`}>
-                  <span className={styles.pairBadge}>AI Recommend</span>
-                  <span className={styles.pairName}>{p.name}</span>
-                  <span className={styles.pairReason}>{p.reason}</span>
-                </button>
-              ))}
-            </div>
+            <>
+              <div className={styles.pairGroupLabel}>Drink pairings</div>
+              <div className={styles.pairStrip} data-noswipe>
+                {drinkPairings.map((p, i) => (
+                  <button key={i} className={`${styles.pairChip} ${styles.pairChipDrink}`} onClick={() => onRequestItem?.(p.name)} aria-label={`View ${p.name}`}>
+                    <span className={`${styles.pairBadge} ${styles.pairBadgeDrink}`}>Drink</span>
+                    <span className={styles.pairName}>{p.name}</span>
+                    <span className={styles.pairReason}>{p.reason}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {hasFood && (
+            <>
+              <div className={`${styles.pairGroupLabel} ${hasDrink ? styles.pairGroupLabelSecond : ''}`}>Goes well with</div>
+              <div className={styles.pairStrip} data-noswipe>
+                {foodPairings.map((p, i) => (
+                  <button key={i} className={styles.pairChip} onClick={() => onRequestItem?.(p.name)} aria-label={`View ${p.name}`}>
+                    <span className={styles.pairBadge}>Food</span>
+                    <span className={styles.pairName}>{p.name}</span>
+                    <span className={styles.pairReason}>{p.reason}</span>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </>
       )}

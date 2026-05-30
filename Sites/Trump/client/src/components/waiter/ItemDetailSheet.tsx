@@ -7,6 +7,36 @@ import { dishStory } from '../../lib/dishStories';
 import { money } from '../../lib/waiterFormat';
 import type { CoachResponse } from '../../types/waiter';
 
+type Pair = { name: string; price: number; img?: string; categoryType?: string; reason?: string };
+
+const isDrinkPair = (p: Pair) => ['WINE', 'DRINK'].includes((p.categoryType || '').toUpperCase());
+
+// A short waiter-friendly line for each pairing (alternatives arrive without one).
+function pairNote(p: Pair, dishName: string): string {
+  if (p.reason) return p.reason;
+  const cat = (p.categoryType || '').toUpperCase();
+  const n = (p.name || '').toLowerCase();
+  const dish = (dishName || '').toLowerCase();
+  if (cat === 'WINE') {
+    if (/steak|beef|rump|fillet|tomahawk|ribeye|lamb|chop/.test(dish)) return 'A bold red that stands up to the richness of the cut.';
+    if (/prawn|seafood|salmon|calamari|kingklip|hake|sushi|fish|oyster/.test(dish)) return 'A crisp, bright pour that lifts the seafood.';
+    return 'A cellar pick chosen to complement the dish.';
+  }
+  if (cat === 'DRINK') {
+    if (/beer|lager|cider/.test(n)) return 'An ice-cold pour — the easy grill companion.';
+    if (/cocktail|margarita|mojito|martini|negroni|old fashioned|colada|cosmo/.test(n)) return 'A signature cocktail to set the mood.';
+    if (/coffee|espresso|cognac|whisky|liqueur|digestif/.test(n)) return 'A warm digestif to round off the meal.';
+    return 'A refreshing pour alongside this course.';
+  }
+  if (cat === 'DESSERT') return 'A sweet finish to send the table off happy.';
+  if (cat === 'STARTER') return 'A light bite to open the table before mains.';
+  if (/chips|fries/.test(n)) return 'The classic side — always a yes.';
+  if (/salad/.test(n)) return 'A fresh balance against the mains.';
+  if (/sauce|butter/.test(n)) return 'Drizzle over the top — it lifts the whole plate.';
+  if (/garlic bread|bread/.test(n)) return 'Perfect for mopping up every last drop.';
+  return 'A natural addition to round out the order.';
+}
+
 export function ItemDetailSheet() {
   const { openItem, setOpenItem, addToOrder, showToast, selectedTableId, shift } = useWaiter();
   const [qty, setQty] = useState(1);
@@ -23,7 +53,9 @@ export function ItemDetailSheet() {
 
   if (!openItem) return null;
   const item = openItem;
-  const pairings = coach ? [coach.suggestion, ...(coach.alternatives || [])].filter(Boolean) : [];
+  const pairings = (coach ? [coach.suggestion, ...(coach.alternatives || [])] : []).filter(Boolean) as Pair[];
+  const drinkPairs = pairings.filter(isDrinkPair);
+  const foodPairs = pairings.filter(p => !isDrinkPair(p));
   const story = dishStory(item.name);
 
   const addMain = () => {
@@ -89,16 +121,36 @@ export function ItemDetailSheet() {
               <div className="lbl">Say to the table</div>
               <p className="quote">“{coach.sayToTable}”</p>
             </div>
-            {pairings.map((p, i) => p && (
-              <div key={`${p.name}-${i}`} className="w-pair-row">
-                <div style={{ minWidth: 0 }}>
-                  <div className="pn">{p.name}</div>
-                  {p.reason && <div className="pr">{p.reason}</div>}
-                </div>
-                <span className="price" style={{ fontFamily: 'var(--w-font-display)', color: 'var(--w-gold-bright)' }}>{money(p.price)}</span>
-                <button className="w-pair-add" onClick={() => addPairing(p)}><Plus size={16} /></button>
-              </div>
-            ))}
+            {drinkPairs.length > 0 && (
+              <>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--w-text3)', margin: '4px 0 6px' }}>Drink pairings</div>
+                {drinkPairs.map((p, i) => (
+                  <div key={`d-${p.name}-${i}`} className="w-pair-row">
+                    <div style={{ minWidth: 0 }}>
+                      <div className="pn">{p.name}</div>
+                      <div className="pr">{pairNote(p, item.name)}</div>
+                    </div>
+                    <span className="price" style={{ fontFamily: 'var(--w-font-display)', color: 'var(--w-gold-bright)' }}>{money(p.price)}</span>
+                    <button className="w-pair-add" onClick={() => addPairing(p)}><Plus size={16} /></button>
+                  </div>
+                ))}
+              </>
+            )}
+            {foodPairs.length > 0 && (
+              <>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--w-text3)', margin: '14px 0 6px' }}>Goes well with</div>
+                {foodPairs.map((p, i) => (
+                  <div key={`f-${p.name}-${i}`} className="w-pair-row">
+                    <div style={{ minWidth: 0 }}>
+                      <div className="pn">{p.name}</div>
+                      <div className="pr">{pairNote(p, item.name)}</div>
+                    </div>
+                    <span className="price" style={{ fontFamily: 'var(--w-font-display)', color: 'var(--w-gold-bright)' }}>{money(p.price)}</span>
+                    <button className="w-pair-add" onClick={() => addPairing(p)}><Plus size={16} /></button>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
 

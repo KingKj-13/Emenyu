@@ -481,16 +481,42 @@ class AiService {
   }
 
   pickMenuItem(menuContext, keywords, categoryType) {
+    return this.pickMenuItems(menuContext, keywords, categoryType)[0]
+      || (categoryType ? menuContext.categorized[categoryType] || [] : menuContext.items)[0]
+      || null;
+  }
+
+  // Sorted list of matches (best first) — used so we can vary the choice per dish.
+  pickMenuItems(menuContext, keywords, categoryType) {
     const candidates = categoryType ? menuContext.categorized[categoryType] || [] : menuContext.items;
-    const scored = candidates
+    return candidates
       .map(item => {
         const score = keywords.reduce((sum, keyword, index) => (item.searchText.includes(keyword) ? sum + keywords.length - index : sum), 0);
         return { item, score };
       })
       .filter(entry => entry.score > 0)
-      .sort((left, right) => right.score - left.score);
+      .sort((left, right) => right.score - left.score)
+      .map(entry => entry.item);
+  }
 
-    return scored[0]?.item || candidates[0] || null;
+  hashString(value) {
+    let h = 0;
+    const str = String(value || '');
+    for (let i = 0; i < str.length; i += 1) {
+      h = (h * 31 + str.charCodeAt(i)) >>> 0;
+    }
+    return h;
+  }
+
+  // Pick a match that varies by dish (stable per dish) so the same wine isn't
+  // recommended for every steak — rotates through the strongest matches.
+  pickVariedMenuItem(menuContext, keywords, categoryType, seed) {
+    const matches = this.pickMenuItems(menuContext, keywords, categoryType);
+    if (matches.length === 0) {
+      return (categoryType ? menuContext.categorized[categoryType] || [] : menuContext.items)[0] || null;
+    }
+    const pool = matches.slice(0, Math.min(5, matches.length));
+    return pool[this.hashString(seed) % pool.length];
   }
 
   async buildDealsReply(menuContext) {
@@ -807,7 +833,11 @@ class AiService {
       .filter(rule => rule.when.test(cartText))
       .forEach(rule => {
         rule.typedPairs.forEach(({ keywords, type }) => {
-          const item = this.pickMenuItem(menuContext, keywords, type);
+          // Vary wine/drink picks by dish so the cellar rotates instead of
+          // always pouring the same bottle.
+          const item = (type === 'WINE' || type === 'DRINK')
+            ? this.pickVariedMenuItem(menuContext, keywords, type, cartText)
+            : this.pickMenuItem(menuContext, keywords, type);
           if (item) addCandidate(item, rule.title, rule.score);
         });
       });
@@ -896,8 +926,13 @@ class AiService {
       const options = [...(menuContext.categorized[suggestion.key] || [])].sort(
         (left, right) => (popularity.get(normalizeName(right.name)) || 0) - (popularity.get(normalizeName(left.name)) || 0)
       );
-      if (options[0]) {
-        addCandidate(options[0], suggestion.title, suggestion.score);
+      // Rotate wine/drink completions by cart so it isn't always the same bottle.
+      const pool = options.slice(0, Math.min(5, options.length));
+      const choice = (suggestion.key === 'WINE' || suggestion.key === 'DRINK') && pool.length > 1
+        ? pool[this.hashString(cartNames.join('|')) % pool.length]
+        : options[0];
+      if (choice) {
+        addCandidate(choice, suggestion.title, suggestion.score);
       }
     });
   }

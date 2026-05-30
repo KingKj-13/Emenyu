@@ -207,6 +207,22 @@
 
 .pairStripSecond { margin-top: 8px; }
 
+.pairGroupLabel {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-sand);
+  opacity: 0.75;
+  margin: 0 0 7px;
+}
+.pairGroupLabelSecond { margin-top: 14px; }
+.pairBadgeDrink {
+  color: #b89fd4;
+  border-color: rgba(150, 120, 200, 0.4);
+  background: rgba(150, 120, 200, 0.16);
+}
+
 .pairBadge {
   align-self: flex-start;
   padding: 2px 6px;

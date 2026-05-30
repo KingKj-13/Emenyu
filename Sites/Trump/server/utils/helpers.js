@@ -592,37 +592,25 @@ function normalizeName(raw) {
 function getCategoryType(categoryName) {
   const lower = String(categoryName || '').toLowerCase();
 
-  if (lower.includes('starter') || lower.includes('meze') || lower.includes('tapas') || lower.includes('soup')) {
+  if (/\b(starter|meze|tapas|soup|antipasti)/.test(lower)) {
     return 'STARTER';
   }
 
-  if (lower.includes('dessert') || lower.includes('sweet') || lower.includes('cake') || lower.includes('ice cream')) {
+  if (/\b(dessert|sweet|cake|ice ?cream|baklava|pudding|brownie|gelato)/.test(lower)) {
     return 'DESSERT';
   }
 
-  if (
-    lower.includes('wine') ||
-    lower.includes('cellar') ||
-    lower.includes('sparkling') ||
-    lower.includes('champagne') ||
-    lower.includes('red wine') ||
-    lower.includes('white wine') ||
-    lower.includes('rosé') ||
-    lower.includes('rose wine')
-  ) {
+  // Food guard — runs BEFORE drink/wine so "steak"/"steakhouse" (which contain
+  // the substring "tea") and "burgers" (etc.) are never misread as drinks.
+  if (/\b(steak|burger|beef|lamb|pork|chicken|rib|grill|wagyu|fillet|sirloin|rump|tomahawk|schnitzel|seafood|prawn|calamari|squid|mussel|kingklip|hake|salmon|sole|fish|sushi|sashimi|pasta|wrap|platter|side|wings|biltong|chop|veg|salad|curry|main)/.test(lower)) {
+    return 'MAIN';
+  }
+
+  if (/\b(wine|cellar|sparkling|champagne|sauvignon|chardonnay|merlot|shiraz|pinotage|cabernet|chenin|blend|rosé|rose wine|bubbly)/.test(lower)) {
     return 'WINE';
   }
 
-  if (
-    lower.includes('drink') ||
-    lower.includes('beverage') ||
-    lower.includes('beer') ||
-    lower.includes('coffee') ||
-    lower.includes('tea') ||
-    lower.includes('cocktail') ||
-    lower.includes('spirit') ||
-    lower.includes('liqueur')
-  ) {
+  if (/\b(drink|beverage|beer|lager|cider|coffee|cappuccino|latte|espresso|tea|cocktail|mocktail|spirit|liqueur|whisky|whiskey|\bgin\b|vodka|\brum\b|brandy|cognac|soda|juice|water|smoothie|shake)/.test(lower)) {
     return 'DRINK';
   }
 
