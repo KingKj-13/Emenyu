@@ -357,17 +357,19 @@
 
 @media (min-width: 760px) {
   .modal {
-    max-height: min(760px, calc(100vh - 48px));
+    max-height: min(660px, calc(100vh - 48px));
   }
 
   .media {
-    aspect-ratio: 16 / 8.5;
+    aspect-ratio: 16 / 7.5;
   }
 }
 
 @media (max-width: 560px) {
-  .body { padding: 18px 16px calc(20px + env(safe-area-inset-bottom)); }
-  .media { aspect-ratio: 4 / 3; }
-  .actions { gap: 10px; }
+  .body { padding: 16px 16px calc(18px + env(safe-area-inset-bottom)); }
+  .media { aspect-ratio: 16 / 10; }
+  .actions { gap: 10px; padding-top: 12px; }
   .addBtn { min-height: 48px; }
+  .name { font-size: 20px; }
+  .price { font-size: 20px; margin-bottom: 10px; }
 }

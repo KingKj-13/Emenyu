@@ -4,6 +4,7 @@ import { AppProvider } from './context/AppContext';
 import { CartProvider } from './context/CartContext';
 import { MenuProvider } from './context/MenuContext';
 import { MenuPage } from './pages/MenuPage';
+import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { Spinner } from './components/ui/Spinner';
 import { useAuth } from './hooks/useAuth';
@@ -69,10 +70,11 @@ export default function App() {
                 <ReservationPage />
               </Suspense>
             } />
+            <Route path="/:tableId/menu" element={<MenuPage />} />
             <Route path="/:tableId/book" element={<MenuPage sectionFilter="book" />} />
             <Route path="/:tableId/drinks" element={<MenuPage sectionFilter="drinks" />} />
             <Route path="/:tableId/setmenu" element={<MenuPage sectionFilter="setmenu" />} />
-            <Route path="/:tableId" element={<MenuPage />} />
+            <Route path="/:tableId" element={<LandingPage />} />
             <Route path="/" element={<Navigate to="/table1" replace />} />
             <Route path="*" element={<Navigate to="/table1" replace />} />
           </Routes>

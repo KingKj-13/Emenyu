@@ -3,6 +3,7 @@ import { X, Plus, Star, Sparkles, Minus } from 'lucide-react';
 import { useWaiter } from '../../context/WaiterContext';
 import { api } from '../../services/api';
 import { resolveImage } from '../../lib/imageResolver';
+import { dishStory } from '../../lib/dishStories';
 import { money } from '../../lib/waiterFormat';
 import type { CoachResponse } from '../../types/waiter';
 
@@ -23,6 +24,7 @@ export function ItemDetailSheet() {
   if (!openItem) return null;
   const item = openItem;
   const pairings = coach ? [coach.suggestion, ...(coach.alternatives || [])].filter(Boolean) : [];
+  const story = dishStory(item.name);
 
   const addMain = () => {
     addToOrder(item, qty);
@@ -57,6 +59,23 @@ export function ItemDetailSheet() {
           <span className="price">{money(item.price)}</span>
         </div>
         {item.description && <p className="w-item-desc">{item.description}</p>}
+
+        {story && (
+          <div className="w-sable" style={{ marginTop: 18 }}>
+            <div className="w-sable-head">
+              <span className="w-sable-mark" style={{ background: 'rgba(212,175,55,0.16)' }}>📖</span>
+              <span className="w-sable-title">{story.title}</span>
+              <span className="w-sable-badge">WAITER</span>
+            </div>
+            <p className="w-sable-body" style={{ marginTop: 8 }}>{story.story}</p>
+            {story.tip && (
+              <div className="w-saytable">
+                <div className="lbl">How to serve it</div>
+                <p className="quote">{story.tip}</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {coach && coach.sayToTable && (
           <div className="w-sable" style={{ marginTop: 18 }}>

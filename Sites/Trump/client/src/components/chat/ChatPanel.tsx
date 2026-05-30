@@ -73,7 +73,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
         aria-label={chatOpen ? 'Close concierge chat' : 'Open concierge chat'}
         aria-expanded={chatOpen}
       >
-        {chatOpen ? <X size={20} /> : <Sparkles size={20} />}
+        {chatOpen ? <X size={20} /> : <span className={styles.aiBadge}>AI</span>}
       </button>
 
       <AnimatePresence>

@@ -144,6 +144,21 @@ export const api = {
     return fetchJson<unknown[]>(ENDPOINTS.menuAdminItems);
   },
 
+  getMenuCategories() {
+    return fetchJson<Array<{ id: number; title: string }>>(ENDPOINTS.menuCategories);
+  },
+
+  createMenuItem(payload: {
+    name: string;
+    category: string;
+    price: number;
+    description?: string;
+    available?: boolean;
+    chefPick?: boolean;
+  }) {
+    return postJson<{ ok: boolean; item: unknown }>(ENDPOINTS.menuAdminItems, payload);
+  },
+
   toggleMenuItemAvailability(id: number, available: boolean) {
     return fetchJson<{ ok: boolean }>(`${ENDPOINTS.menuItemAvailability(id)}`, {
       method: 'PATCH',

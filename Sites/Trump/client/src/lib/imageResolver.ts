@@ -69,6 +69,9 @@ const DRINK_IMAGE_MAP: Record<string, string> = {
   'aperol spritz': 'Aperol Spritz (SA sparkling alternative).jpeg',
   'espresso martini': 'Espresso Martini.jpg',
   'long island': 'Long Island Iced Tea.jpg',
+  cocktail: 'Margarita.jpg',
+  cocktails: 'Margarita.jpg',
+  martini: 'Espresso Martini.jpg',
   champagne: 'Simonsig Kaapse Vonkel Brut (Cap Classique).jpg',
   sparkling: 'Simonsig Kaapse Vonkel Brut (Cap Classique).jpg',
   bubbles: 'Simonsig Kaapse Vonkel Brut (Cap Classique).jpg',
@@ -254,13 +257,24 @@ export function isDrinkItem(item: MenuItem): boolean {
   return [...DRINK_TERMS, ...EXTRA_DRINK_TERMS].some(term => hasTerm(text, term));
 }
 
+const COCKTAIL_TERMS = [
+  'cocktail', 'cocktails', 'mojito', 'margarita', 'martini', 'negroni',
+  'cosmopolitan', 'old fashioned', 'whiskey sour', 'aperol spritz', 'long island'
+];
+
+export function isCocktailItem(item: MenuItem): boolean {
+  const text = classificationText(item);
+  return COCKTAIL_TERMS.some(term => hasTerm(text, term));
+}
+
 export function isDessertItem(item: MenuItem): boolean {
   const text = classificationText(item);
   return DESSERT_TERMS.some(term => hasTerm(text, term));
 }
 
 export function isVideoEligible(item: MenuItem): boolean {
-  return !isDrinkItem(item);
+  // Food is always eligible; among drinks, only cocktails get a video.
+  return !isDrinkItem(item) || isCocktailItem(item);
 }
 
 function demoImageFor(item: MenuItem): string {
@@ -280,6 +294,8 @@ function demoImageFor(item: MenuItem): string {
 
 function demoVideoFor(item: MenuItem): string | null {
   if (!isVideoEligible(item)) return null;
+  // Cocktails: no per-drink clips exist, so use the cocktail demo loop.
+  if (isCocktailItem(item)) return `${BASE_PATH}/Video/demo/cocktail.mp4`;
   const text = mediaText(item);
   const compactName = String(item.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
@@ -291,15 +307,19 @@ function demoVideoFor(item: MenuItem): string | null {
   }
 
   if (isDessertItem(item)) return `${BASE_PATH}/Video/demo/dessert.mp4`;
-  if (/(pasta|spaghetti|linguine|bolognese)/.test(text)) return `${BASE_PATH}/Video/demo/pasta.mp4`;
-  if (/(seafood|prawn|shrimp|oyster|mussel|fish|salmon|kingklip|sole|calamari|squid)/.test(text)) {
+  if (/(pasta|spaghetti|linguine|bolognese|alfredo|pesto|noodle)/.test(text)) return `${BASE_PATH}/Video/demo/pasta.mp4`;
+  if (/(sushi|sashimi|maki|nigiri|roll|tempura|crispy rice|edamame|wasabi|poke)/.test(text)) {
     return `${BASE_PATH}/Video/demo/seafood.mp4`;
   }
-  if (/(steak|beef|fillet|sirloin|rump|rib|burger|lamb|pork|chop|grill|tomahawk|venison|game|oxtail)/.test(text)) {
+  if (/(seafood|prawn|shrimp|oyster|mussel|fish|salmon|kingklip|hake|sole|calamari|squid|line ?fish)/.test(text)) {
+    return `${BASE_PATH}/Video/demo/seafood.mp4`;
+  }
+  // Vegetarian / salads / mezze get a real plant-forward clip rather than a seafood demo.
+  if (/(vegetarian|veg |veggie|salad|caprese|halloumi|falafel|mushroom|brinjal|zucchini|avocado|meze|phyllo|spanakopita|tiropita|dolmades|side)/.test(text)) {
+    return `${BASE_PATH}/Video/Veg Meze Platter.mp4`;
+  }
+  if (/(steak|beef|fillet|sirloin|rump|rib|burger|lamb|pork|chop|grill|tomahawk|venison|game|oxtail|biltong|wors|chicken|trinchado)/.test(text)) {
     return `${BASE_PATH}/Video/demo/steak-grill.mp4`;
-  }
-  if (/(starter|meze|tapas|halloumi|falafel|mushroom|vegetarian|side|salad|zucchini|brinjal|croquette|phyllo|spanakopita|tiropita|dolmades)/.test(text)) {
-    return `${BASE_PATH}/Video/demo/seafood.mp4`;
   }
   return `${BASE_PATH}/Video/demo/steak-grill.mp4`;
 }

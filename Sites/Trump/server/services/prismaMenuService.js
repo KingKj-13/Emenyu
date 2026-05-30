@@ -609,6 +609,73 @@ class PrismaMenuService {
     );
   }
 
+  async listCategories() {
+    return this.withPrisma(
+      'menu_postgres_list_categories_failed',
+      async prisma => {
+        const categories = await prisma.menuCategory.findMany({
+          where: { restaurantId: this.restaurantId, parentId: null },
+          orderBy: { sortOrder: 'asc' },
+          select: { id: true, title: true, sortOrder: true }
+        });
+        return categories.map(category => ({ id: category.id, title: category.title }));
+      },
+      []
+    );
+  }
+
+  async createItem(item = {}) {
+    const name = String(item.name || '').trim();
+    const categoryTitle = String(item.category || '').trim();
+    if (!name || !categoryTitle) {
+      return null;
+    }
+
+    return this.withPrisma(
+      'menu_postgres_create_item_failed',
+      async prisma => {
+        let category = await prisma.menuCategory.findFirst({
+          where: { restaurantId: this.restaurantId, parentId: null, title: categoryTitle }
+        });
+
+        if (!category) {
+          const count = await prisma.menuCategory.count({ where: { restaurantId: this.restaurantId } });
+          const slug = slugify(categoryTitle, `category-${count + 1}`);
+          category = await prisma.menuCategory.create({
+            data: {
+              restaurantId: this.restaurantId,
+              title: categoryTitle,
+              slug,
+              path: `${this.restaurantId}/${slug}-${Date.now()}`,
+              sortOrder: count,
+              visible: true,
+              courseType: getCategoryType(categoryTitle),
+              metadata: { storage: 'object' }
+            }
+          });
+        }
+
+        const last = await prisma.menuItem.findFirst({
+          where: { categoryId: category.id },
+          orderBy: { sortOrder: 'desc' },
+          select: { sortOrder: true }
+        });
+
+        const created = await prisma.menuItem.create({
+          data: itemToCreateData(
+            { ...item, category: category.title },
+            category.id,
+            this.restaurantId,
+            (last?.sortOrder ?? 0) + 1
+          )
+        });
+
+        return dbItemToJson(created, { includeId: true, categoryTitle: category.title });
+      },
+      null
+    );
+  }
+
   async migrateFromJson({ menuData = {}, recommendations = [], popular = [] } = {}) {
     const summary = {
       categories: 0,

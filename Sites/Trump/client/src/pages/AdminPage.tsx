@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Plus, X } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../services/api';
@@ -99,6 +99,8 @@ export function AdminPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [modal, setModal] = useState<null | 'item' | 'reservation' | 'deal' | 'account'>(null);
+  const [menuCategoryNames, setMenuCategoryNames] = useState<string[]>([]);
 
   async function loadTab(t: Tab) {
     setTab(t);
@@ -240,56 +242,177 @@ export function AdminPage() {
     setActionLoading(null);
   }
 
-  const TABS: { key: Tab; label: string; icon: typeof ClipboardList }[] = [
-    { key: 'orders', label: 'Orders', icon: ClipboardList },
-    { key: 'history', label: 'History', icon: BookOpen },
-    { key: 'accounts', label: 'Accounts', icon: Users },
-    { key: 'chat', label: 'Chat Logs', icon: MessageSquare },
-    { key: 'menu', label: 'Menu', icon: UtensilsCrossed },
-    { key: 'tables', label: 'Tables', icon: LayoutGrid },
-    { key: 'deals', label: 'Deals', icon: Clock },
-    { key: 'reports', label: 'Reports', icon: BarChart2 },
-    { key: 'qrcodes', label: 'QR Codes', icon: QrCode },
-    { key: 'reservations', label: 'Reservations', icon: CalendarDays },
+  async function openNewItem() {
+    setModal('item');
+    try {
+      const cats = await api.getMenuCategories();
+      setMenuCategoryNames((cats || []).map(c => c.title));
+    } catch { setMenuCategoryNames([]); }
+  }
+
+  async function openNewDeal() {
+    setModal('deal');
+    if (menuItems.length === 0) {
+      try {
+        const data = await api.getAdminMenuItems();
+        setMenuItems((data as AdminMenuItem[]) || []);
+      } catch {}
+    }
+  }
+
+  async function handleCreateItem(payload: { name: string; category: string; price: number; description: string; available: boolean; chefPick: boolean }) {
+    const res = await api.createMenuItem(payload);
+    const created = res?.item as AdminMenuItem | undefined;
+    if (created) setMenuItems(prev => [...prev, created]);
+    setModal(null);
+    if (tab !== 'menu') loadTab('menu');
+  }
+
+  async function handleCreateReservation(payload: { name: string; phone: string; partySize: number; date: string; notes: string }) {
+    await api.createReservation(payload);
+    setModal(null);
+    const onDate = payload.date.slice(0, 10);
+    setReservationDate(onDate);
+    const data = await api.getReservations(onDate);
+    setReservations((data as Reservation[]) || []);
+    if (tab !== 'reservations') setTab('reservations');
+  }
+
+  async function handleCreateDeal(deal: Deal) {
+    const next = [...deals, deal];
+    await api.saveDeals(next);
+    setDeals(next);
+    setModal(null);
+    if (tab !== 'deals') setTab('deals');
+  }
+
+  async function handleCreateAccount(payload: { username: string; password: string; role: string; label: string }) {
+    await api.createAccount(payload);
+    setModal(null);
+    const data = await api.getAccounts();
+    setAccounts(data || []);
+    if (tab !== 'accounts') loadTab('accounts');
+  }
+
+  function exportHistoryCsv() {
+    const rows = [['Table', 'Time', 'Items', 'Total']];
+    history.forEach(o => {
+      rows.push([
+        String(o.tableId || o.table_number || ''),
+        o.timestamp ? new Date(o.timestamp).toLocaleString() : '',
+        String(o.items?.length ?? ''),
+        String(o.total ?? o.subtotal ?? ''),
+      ]);
+    });
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `order-history-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const liveCovers = tableCarts.filter(t => t.itemCount > 0).length;
+
+  const NAV_GROUPS: { label: string; items: { key: Tab; label: string; icon: typeof ClipboardList; badge?: number }[] }[] = [
+    { label: 'SERVICE', items: [
+      { key: 'orders', label: 'Orders', icon: ClipboardList, badge: orders.length || undefined },
+      { key: 'history', label: 'History', icon: BookOpen },
+      { key: 'tables', label: 'Tables', icon: LayoutGrid },
+      { key: 'reservations', label: 'Reservations', icon: CalendarDays },
+    ] },
+    { label: 'MENU & OFFERS', items: [
+      { key: 'menu', label: 'Menu', icon: UtensilsCrossed },
+      { key: 'deals', label: 'Deals', icon: Clock },
+      { key: 'qrcodes', label: 'QR Codes', icon: QrCode },
+    ] },
+    { label: 'INSIGHT', items: [
+      { key: 'reports', label: 'Reports', icon: BarChart2 },
+      { key: 'accounts', label: 'Accounts', icon: Users },
+      { key: 'chat', label: 'Chat Logs', icon: MessageSquare },
+    ] },
   ];
 
+  const refreshAction = (
+    <button className={styles.actionBtn} onClick={() => loadTab(tab)}><RefreshCw size={14} /> Refresh</button>
+  );
+
+  const PAGE_HEADS: Record<Tab, { eyebrow: string; title: string; sub: string; actions?: ReactNode }> = {
+    orders: { eyebrow: 'SERVICE · LIVE', title: 'Live orders', sub: `${orders.length} active ticket${orders.length !== 1 ? 's' : ''}`, actions: <><span className={styles.livePill}><span className={styles.liveDot} /> {liveCovers} live covers</span>{refreshAction}</> },
+    history: { eyebrow: 'COMPLETED', title: 'Order history', sub: `${history.length} settled order${history.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtn} onClick={exportHistoryCsv}><Download size={14} /> Export CSV</button> },
+    tables: { eyebrow: 'LIVE FLOOR', title: 'Tables', sub: `${liveCovers} active cart${liveCovers !== 1 ? 's' : ''} · manager override`, actions: <><span className={styles.livePill}><span className={styles.liveDot} /> Live sync</span>{refreshAction}</> },
+    reservations: { eyebrow: 'BOOKINGS', title: 'Reservations', sub: `${reservations.length} booking${reservations.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('reservation')}><Plus size={14} /> New booking</button> },
+    menu: { eyebrow: 'MENU MANAGEMENT', title: 'The menu', sub: `${menuItems.length} item${menuItems.length !== 1 ? 's' : ''}`, actions: <><button className={styles.actionBtnGold} onClick={openNewItem}><Plus size={14} /> New item</button>{refreshAction}</> },
+    deals: { eyebrow: 'OFFERS', title: 'Deals', sub: 'Bundle dishes into featured set menus', actions: <button className={styles.actionBtnGold} onClick={openNewDeal}><Plus size={14} /> New deal</button> },
+    qrcodes: { eyebrow: 'TABLE QR CODES', title: 'QR codes', sub: 'Each links a guest straight to its table session' },
+    reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top dishes, peak hours & guest ratings' },
+    accounts: { eyebrow: 'STAFF', title: 'Accounts', sub: `${accounts.length} team member${accounts.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('account')}><Plus size={14} /> Add account</button> },
+    chat: { eyebrow: 'AI SOMMELIER', title: 'Chat logs', sub: 'Guest conversations with the AI sommelier' },
+  };
+  const head = PAGE_HEADS[tab];
+  const initials = (user?.label || user?.username || 'AD').slice(0, 2).toUpperCase();
+
   return (
-    <AppShell requireRole={['owner', 'manager']}>
-      <div className={styles.page}>
-        <div className={styles.pageHeader}>
-          <div>
-            <h1 className={styles.pageTitle}>Admin Dashboard</h1>
-            <p className={styles.pageSubtitle}>{user?.label || user?.username} · {user?.role}</p>
-          </div>
-          <NotificationButton />
-          <button className={styles.logoutBtn} onClick={logout} aria-label="Sign out">
-            <LogOut size={16} />
-            Sign Out
-          </button>
+    <AppShell requireRole={['owner', 'manager']} hideHeader>
+      <div className={styles.console}>
+        <div className={styles.topChrome}>
+          <div className={styles.lights}><span /><span /><span /></div>
+          <div className={styles.urlPill}><span className={styles.urlDot} /> emenyu.io/admin · Trump Steakhouse</div>
+          <div className={styles.chromeRight}><NotificationButton /></div>
         </div>
+        <div className={styles.body}>
+          <aside className={styles.sidebar}>
+            <div className={styles.brand}>
+              <div className={styles.brandLogo}>T</div>
+              <div>
+                <div className={styles.brandName}>Trump</div>
+                <div className={styles.brandSub}>{(user?.role || 'manager').toUpperCase()} CONSOLE</div>
+              </div>
+            </div>
+            <nav className={styles.nav}>
+              {NAV_GROUPS.map(group => (
+                <div key={group.label} className={styles.navGroup}>
+                  <div className={styles.navGroupLabel}>{group.label}</div>
+                  {group.items.map(({ key, label, icon: Icon, badge }) => (
+                    <button
+                      key={key}
+                      className={`${styles.navItem} ${tab === key ? styles.navItemActive : ''}`}
+                      onClick={() => loadTab(key)}
+                      aria-selected={tab === key}
+                    >
+                      <Icon size={16} />
+                      <span className={styles.navItemLabel}>{label}</span>
+                      {badge ? <span className={styles.navBadge}>{badge}</span> : null}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </nav>
+            <div className={styles.userFooter}>
+              <div className={styles.userAvatar}>{initials}</div>
+              <div className={styles.userMeta}>
+                <div className={styles.userName}>{user?.label || user?.username}</div>
+                <div className={styles.userRole}>{user?.role}</div>
+              </div>
+              <button className={styles.logoutIcon} onClick={logout} aria-label="Sign out"><LogOut size={16} /></button>
+            </div>
+          </aside>
 
-        <div className={styles.tabBar}>
-          {TABS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              className={`${styles.tabBtn} ${tab === key ? styles.tabActive : ''}`}
-              onClick={() => loadTab(key)}
-              aria-selected={tab === key}
-            >
-              <Icon size={16} />
-              {label}
-            </button>
-          ))}
-          <button className={styles.refreshBtn} onClick={() => loadTab(tab)} aria-label="Refresh">
-            <RefreshCw size={15} />
-          </button>
-        </div>
-
-        <div className={styles.tabContent}>
-          {loading ? (
-            <div className={styles.loadingState}><Spinner size={36} /></div>
-          ) : (
-            <>
+          <main className={styles.main}>
+            <div className={styles.pageHead}>
+              <div>
+                <div className={styles.eyebrow}>{head.eyebrow}</div>
+                <h1 className={styles.pageTitleNew}>{head.title}</h1>
+                <div className={styles.pageSub}>{head.sub}</div>
+              </div>
+              {head.actions && <div className={styles.pageActions}>{head.actions}</div>}
+            </div>
+            <div className={styles.pageBody}>
+              {loading ? (
+                <div className={styles.loadingState}><Spinner size={36} /></div>
+              ) : (
+                <>
               {tab === 'orders' && (
                 <OrderList
                   orders={orders}
@@ -394,10 +517,16 @@ export function AdminPage() {
                   }}
                 />
               )}
-            </>
-          )}
+                </>
+              )}
+            </div>
+          </main>
         </div>
       </div>
+      {modal === 'item' && <NewItemModal categories={menuCategoryNames} onClose={() => setModal(null)} onSubmit={handleCreateItem} />}
+      {modal === 'reservation' && <NewReservationModal defaultDate={reservationDate} onClose={() => setModal(null)} onSubmit={handleCreateReservation} />}
+      {modal === 'deal' && <NewDealModal menuItems={menuItems} onClose={() => setModal(null)} onSubmit={handleCreateDeal} />}
+      {modal === 'account' && <NewAccountModal currentRole={user?.role} onClose={() => setModal(null)} onSubmit={handleCreateAccount} />}
     </AppShell>
   );
 }
@@ -1222,6 +1351,278 @@ function DealsPanel({ deals, onSave }: { deals: Deal[]; onSave: (d: Deal[]) => v
         </button>
       )}
     </div>
+  );
+}
+
+function Modal({ title, subtitle, onClose, children, footer, wide = false }: {
+  title: string;
+  subtitle?: string;
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+  wide?: boolean;
+}) {
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={`${styles.modalCard} ${wide ? styles.modalWide : ''}`} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHead}>
+          <div>
+            <h3 className={styles.modalTitle}>{title}</h3>
+            {subtitle && <p className={styles.modalSubtitle}>{subtitle}</p>}
+          </div>
+          <button className={styles.modalClose} onClick={onClose} aria-label="Close"><X size={16} /></button>
+        </div>
+        <div className={styles.modalBody}>{children}</div>
+        {footer && <div className={styles.modalFooter}>{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+function NewItemModal({ categories, onClose, onSubmit }: {
+  categories: string[];
+  onClose: () => void;
+  onSubmit: (payload: { name: string; category: string; price: number; description: string; available: boolean; chefPick: boolean }) => Promise<void>;
+}) {
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const [price, setPrice] = useState('');
+  const [description, setDescription] = useState('');
+  const [available, setAvailable] = useState(true);
+  const [chefPick, setChefPick] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit() {
+    if (!name.trim() || !category.trim()) { setError('Name and category are required.'); return; }
+    setBusy(true); setError('');
+    try {
+      await onSubmit({ name: name.trim(), category: category.trim(), price: Number(price) || 0, description: description.trim(), available, chefPick });
+    } catch { setError('Could not create the item.'); setBusy(false); }
+  }
+
+  return (
+    <Modal
+      title="New menu item"
+      subtitle="Add a dish to the live menu"
+      onClose={onClose}
+      footer={<>
+        <button className={styles.modalCancel} onClick={onClose} disabled={busy}>Cancel</button>
+        <button className={styles.modalSubmit} onClick={submit} disabled={busy}>{busy ? <Spinner size={13} /> : 'Create item'}</button>
+      </>}
+    >
+      <label className={styles.formLabel}>Name
+        <input className={styles.formInput} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Dry-Aged Tomahawk" autoFocus />
+      </label>
+      <label className={styles.formLabel}>Category
+        <input className={styles.formInput} list="admin-cat-list" value={category} onChange={e => setCategory(e.target.value)} placeholder="Pick or type a category" />
+        <datalist id="admin-cat-list">{categories.map(c => <option key={c} value={c} />)}</datalist>
+      </label>
+      <label className={styles.formLabel}>Price (R)
+        <input className={styles.formInput} type="number" min={0} value={price} onChange={e => setPrice(e.target.value)} placeholder="0" />
+      </label>
+      <label className={styles.formLabel}>Description
+        <textarea className={styles.formTextarea} value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Optional" />
+      </label>
+      <div className={styles.formToggles}>
+        <label className={styles.formCheck}><input type="checkbox" checked={available} onChange={e => setAvailable(e.target.checked)} /> Available now</label>
+        <label className={styles.formCheck}><input type="checkbox" checked={chefPick} onChange={e => setChefPick(e.target.checked)} /> Chef's pick</label>
+      </div>
+      {error && <p className={styles.formError}>{error}</p>}
+    </Modal>
+  );
+}
+
+function NewReservationModal({ defaultDate, onClose, onSubmit }: {
+  defaultDate: string;
+  onClose: () => void;
+  onSubmit: (payload: { name: string; phone: string; partySize: number; date: string; notes: string }) => Promise<void>;
+}) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [partySize, setPartySize] = useState('2');
+  const [date, setDate] = useState(defaultDate);
+  const [time, setTime] = useState('19:00');
+  const [notes, setNotes] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit() {
+    if (!name.trim() || !date) { setError('Name and date are required.'); return; }
+    setBusy(true); setError('');
+    try {
+      const iso = new Date(`${date}T${time || '19:00'}`).toISOString();
+      await onSubmit({ name: name.trim(), phone: phone.trim(), partySize: Number(partySize) || 2, date: iso, notes: notes.trim() });
+    } catch { setError('Could not create the booking.'); setBusy(false); }
+  }
+
+  return (
+    <Modal
+      title="New booking"
+      subtitle="Add a reservation"
+      onClose={onClose}
+      footer={<>
+        <button className={styles.modalCancel} onClick={onClose} disabled={busy}>Cancel</button>
+        <button className={styles.modalSubmit} onClick={submit} disabled={busy}>{busy ? <Spinner size={13} /> : 'Create booking'}</button>
+      </>}
+    >
+      <label className={styles.formLabel}>Guest name
+        <input className={styles.formInput} value={name} onChange={e => setName(e.target.value)} placeholder="Full name" autoFocus />
+      </label>
+      <label className={styles.formLabel}>Phone
+        <input className={styles.formInput} value={phone} onChange={e => setPhone(e.target.value)} placeholder="Optional" />
+      </label>
+      <div className={styles.formGrid3}>
+        <label className={styles.formLabel}>Party
+          <input className={styles.formInput} type="number" min={1} value={partySize} onChange={e => setPartySize(e.target.value)} />
+        </label>
+        <label className={styles.formLabel}>Date
+          <input className={styles.formInput} type="date" value={date} onChange={e => setDate(e.target.value)} />
+        </label>
+        <label className={styles.formLabel}>Time
+          <input className={styles.formInput} type="time" value={time} onChange={e => setTime(e.target.value)} />
+        </label>
+      </div>
+      <label className={styles.formLabel}>Notes
+        <textarea className={styles.formTextarea} value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Allergies, occasion, seating…" />
+      </label>
+      {error && <p className={styles.formError}>{error}</p>}
+    </Modal>
+  );
+}
+
+function NewDealModal({ menuItems, onClose, onSubmit }: {
+  menuItems: AdminMenuItem[];
+  onClose: () => void;
+  onSubmit: (deal: Deal) => Promise<void>;
+}) {
+  const [title, setTitle] = useState('');
+  const [search, setSearch] = useState('');
+  const [picked, setPicked] = useState<AdminMenuItem[]>([]);
+  const [price, setPrice] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const regular = picked.reduce((s, i) => s + (i.price || 0), 0);
+  const results = search.trim()
+    ? menuItems.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) && !picked.some(p => p.dbId === i.dbId)).slice(0, 6)
+    : [];
+
+  async function submit() {
+    if (picked.length === 0) { setError('Add at least one dish.'); return; }
+    setBusy(true); setError('');
+    try {
+      await onSubmit({
+        title: title.trim() || 'Featured set menu',
+        items: picked.map(i => ({ name: i.name, price: i.price, img: i.img })),
+        price: Number(price) || regular,
+        activeDays: [0, 1, 2, 3, 4, 5, 6],
+      });
+    } catch { setError('Could not save the deal.'); setBusy(false); }
+  }
+
+  return (
+    <Modal
+      title="New deal"
+      subtitle="Bundle dishes into a featured set menu"
+      onClose={onClose}
+      wide
+      footer={<>
+        <button className={styles.modalCancel} onClick={onClose} disabled={busy}>Cancel</button>
+        <button className={styles.modalSubmit} onClick={submit} disabled={busy}>{busy ? <Spinner size={13} /> : 'Publish deal'}</button>
+      </>}
+    >
+      <label className={styles.formLabel}>Deal name
+        <input className={styles.formInput} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. The Hearth · Table d'Hôte" autoFocus />
+      </label>
+      <label className={styles.formLabel}>Add dishes
+        <input className={styles.formInput} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search the menu…" />
+      </label>
+      {results.length > 0 && (
+        <div className={styles.dealResults}>
+          {results.map(i => (
+            <button key={i.dbId} className={styles.dealResult} onClick={() => { setPicked(p => [...p, i]); setSearch(''); }}>
+              <span>{i.name}</span><span className={styles.dealResultPrice}>{formatPrice(i.price)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {picked.length > 0 && (
+        <div className={styles.dealPicked}>
+          {picked.map((i, idx) => (
+            <div key={i.dbId} className={styles.dealPickedRow}>
+              <span className={styles.dealPickedIdx}>{idx + 1}</span>
+              <span className={styles.dealPickedName}>{i.name}</span>
+              <span className={styles.dealPickedPrice}>{formatPrice(i.price)}</span>
+              <button className={styles.dealPickedRemove} onClick={() => setPicked(p => p.filter(x => x.dbId !== i.dbId))} aria-label="Remove"><X size={13} /></button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className={styles.formGrid2}>
+        <label className={styles.formLabel}>Bundle price (R)
+          <input className={styles.formInput} type="number" min={0} value={price} onChange={e => setPrice(e.target.value)} placeholder={String(regular || 0)} />
+        </label>
+        <div className={styles.dealRegular}>
+          <span>Regular total</span>
+          <strong>{formatPrice(regular)}</strong>
+        </div>
+      </div>
+      {error && <p className={styles.formError}>{error}</p>}
+    </Modal>
+  );
+}
+
+function NewAccountModal({ currentRole, onClose, onSubmit }: {
+  currentRole?: string;
+  onClose: () => void;
+  onSubmit: (payload: { username: string; password: string; role: string; label: string }) => Promise<void>;
+}) {
+  const roleOptions = currentRole === 'owner' ? ['manager', 'waiter', 'kitchen'] : ['waiter', 'kitchen'];
+  const [username, setUsername] = useState('');
+  const [label, setLabel] = useState('');
+  const [role, setRole] = useState(roleOptions[0]);
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit() {
+    if (!/^[a-z0-9._-]{3,32}$/.test(username.trim().toLowerCase())) { setError('Username must be 3-32 chars: letters, numbers, dot, dash, underscore.'); return; }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+    setBusy(true); setError('');
+    try {
+      await onSubmit({ username: username.trim().toLowerCase(), password, role, label: label.trim() || username.trim() });
+    } catch (e) { setError((e as Error)?.message || 'Could not create the account.'); setBusy(false); }
+  }
+
+  return (
+    <Modal
+      title="Add staff account"
+      subtitle="Create a login for a team member"
+      onClose={onClose}
+      footer={<>
+        <button className={styles.modalCancel} onClick={onClose} disabled={busy}>Cancel</button>
+        <button className={styles.modalSubmit} onClick={submit} disabled={busy}>{busy ? <Spinner size={13} /> : 'Create account'}</button>
+      </>}
+    >
+      <label className={styles.formLabel}>Username
+        <input className={styles.formInput} value={username} onChange={e => setUsername(e.target.value)} placeholder="lowercase, no spaces" autoFocus />
+      </label>
+      <label className={styles.formLabel}>Display name
+        <input className={styles.formInput} value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. Sarah M." />
+      </label>
+      <div className={styles.formGrid2}>
+        <label className={styles.formLabel}>Role
+          <select className={styles.formInput} value={role} onChange={e => setRole(e.target.value)}>
+            {roleOptions.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </label>
+        <label className={styles.formLabel}>Password
+          <input className={styles.formInput} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="min 6 characters" />
+        </label>
+      </div>
+      {error && <p className={styles.formError}>{error}</p>}
+    </Modal>
   );
 }
 

@@ -34,7 +34,7 @@
 
   .panel {
     width: 100%;
-    max-height: min(92vh, calc(100vh - 20px - env(safe-area-inset-bottom)));
+    max-height: min(85vh, calc(100vh - 20px - env(safe-area-inset-bottom)));
     border-radius: var(--radius-lg) var(--radius-lg) var(--radius-sm) var(--radius-sm);
   }
 }

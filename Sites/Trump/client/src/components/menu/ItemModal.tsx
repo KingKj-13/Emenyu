@@ -71,7 +71,7 @@ function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?:
       ) : (
         <>
           {hasFood && (
-            <div className={styles.pairStrip}>
+            <div className={styles.pairStrip} data-noswipe>
               {foodPairings.map((p, i) => (
                 <button key={i} className={styles.pairChip} onClick={() => onRequestItem?.(p.name)} aria-label={`View ${p.name}`}>
                   <span className={styles.pairBadge}>AI Recommend</span>
@@ -82,7 +82,7 @@ function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?:
             </div>
           )}
           {hasDrink && (
-            <div className={`${styles.pairStrip} ${hasFood ? styles.pairStripSecond : ''}`}>
+            <div className={`${styles.pairStrip} ${hasFood ? styles.pairStripSecond : ''}`} data-noswipe>
               {drinkPairings.map((p, i) => (
                 <button key={i} className={`${styles.pairChip} ${styles.pairChipDrink}`} onClick={() => onRequestItem?.(p.name)} aria-label={`View ${p.name}`}>
                   <span className={styles.pairBadge}>AI Recommend</span>
@@ -119,6 +119,7 @@ export function ItemModal({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipeActiveRef = useRef(false);
+  const noSwipeRef = useRef(false);
   const SWIPE_THRESHOLD = 80;
 
   useEffect(() => {
@@ -150,13 +151,20 @@ export function ItemModal({
   }
 
   function handleTouchStart(e: React.TouchEvent) {
+    // Don't hijack horizontal swipes that begin inside the recommendation strip
+    // (or any opted-out region) — let them scroll/select on their own.
+    noSwipeRef.current = !!(e.target as HTMLElement).closest('[data-noswipe]');
+    if (noSwipeRef.current) {
+      touchStartRef.current = null;
+      return;
+    }
     const t = e.touches[0];
     touchStartRef.current = { x: t.clientX, y: t.clientY };
     swipeActiveRef.current = false;
   }
 
   function handleTouchMove(e: React.TouchEvent) {
-    if (!touchStartRef.current) return;
+    if (noSwipeRef.current || !touchStartRef.current) return;
     const t = e.touches[0];
     const dx = t.clientX - touchStartRef.current.x;
     const dy = t.clientY - touchStartRef.current.y;
@@ -320,6 +328,7 @@ export function ItemModal({
 
             <textarea
               className={styles.noteInput}
+              data-noswipe
               placeholder="Special requests or dietary notes…"
               value={note}
               onChange={e => setNote(e.target.value)}

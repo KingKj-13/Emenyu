@@ -48,7 +48,7 @@ export function SideDrawer({
           <div className={styles.quickGrid}>
             <button
               className={styles.quickTile}
-              onClick={() => { close(); navigate(`/${tableId}`); }}
+              onClick={() => { close(); navigate(`/${tableId}/menu`); }}
             >
               <UtensilsCrossed size={22} />
               <span>Food Menu</span>

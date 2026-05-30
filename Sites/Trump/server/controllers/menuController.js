@@ -47,6 +47,29 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
       res.json(items);
     },
 
+    async getCategories(req, res) {
+      const service = prismaMenuService || fileService?.prismaMenu;
+      if (!service?.listCategories) return res.status(503).json({ error: 'Not available' });
+      const categories = await service.listCategories();
+      res.json(categories || []);
+    },
+
+    async createItem(req, res) {
+      const service = prismaMenuService || fileService?.prismaMenu;
+      if (!service?.createItem) return res.status(503).json({ error: 'Not available' });
+
+      const { name, category } = req.body || {};
+      if (!String(name || '').trim() || !String(category || '').trim()) {
+        return res.status(400).json({ error: 'name and category are required' });
+      }
+
+      const item = await service.createItem(req.body || {});
+      if (!item) return res.status(500).json({ error: 'Failed to create item' });
+
+      socketService.emitMenuUpdated();
+      res.status(201).json({ ok: true, item });
+    },
+
     async toggleAvailability(req, res) {
       const { id } = req.params;
       const available = req.body?.available !== false;

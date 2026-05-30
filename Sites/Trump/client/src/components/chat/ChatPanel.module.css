@@ -20,6 +20,16 @@
   box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 0 20px rgba(198,162,75,0.15);
 }
 
+.aiBadge {
+  font-family: var(--font-heading, Georgia, serif);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  color: var(--color-gold);
+  text-shadow: 0 0 12px rgba(198, 162, 75, 0.35);
+}
+
 .panel {
   position: fixed;
   bottom: calc(154px + env(safe-area-inset-bottom));

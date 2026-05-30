@@ -23,6 +23,7 @@ export const ENDPOINTS = {
   waiterAddItems: `${API_PREFIX}/api/waiter/add-items`,
   waiterArchiveTable: `${API_PREFIX}/api/waiter/archive-table`,
   menuAdminItems: `${API_PREFIX}/api/menu/items`,
+  menuCategories: `${API_PREFIX}/api/menu/categories`,
   menuItemAvailability: (id: number) => `${API_PREFIX}/api/menu/items/${id}/availability`,
   menuItemMedia: (id: number) => `${API_PREFIX}/api/menu/items/${id}/media`,
   menuItemDelete: (id: number) => `${API_PREFIX}/api/menu/items/${id}`,

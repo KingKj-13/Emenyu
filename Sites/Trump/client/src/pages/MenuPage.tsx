@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSocketEvent } from '../hooks/useSocket';
 import { AppShell } from '../components/layout/AppShell';
 import { SideDrawer } from '../components/layout/SideDrawer';
 import { CategorySection } from '../components/menu/CategorySection';
+import { RecommendedOrders } from '../components/menu/RecommendedOrders';
 import { ItemModal } from '../components/menu/ItemModal';
 import { PairingModal } from '../components/menu/PairingModal';
 import { CategoryTabBar } from '../components/menu/CategoryTabBar';
@@ -39,6 +40,8 @@ const SETMENU_TITLES = new Set([
 export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   const { tableId: paramTableId } = useParams<{ tableId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const focusSection = searchParams.get('section');
   const { setTableId, pendingItemName, setPendingItemName } = useApp();
   const { menuData, loading, error } = useMenu();
   const { addItem } = useCart();
@@ -90,6 +93,24 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   }, [menuData, activeFilters, searchQuery, sectionFilter]);
 
   const allItems = useMemo(() => flattenMenu(menuData), [menuData]);
+
+  const scrolledSectionRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (loading || !focusSection || sections.length === 0) return;
+    if (scrolledSectionRef.current === focusSection) return;
+    const want = focusSection.toLowerCase();
+    // Match the rendered section by exact slug, then fall back to a fuzzy title match
+    // so a tile's section name never silently fails to scroll.
+    const match =
+      sections.find(s => s.title.toLowerCase() === want) ||
+      sections.find(s => s.title.toLowerCase().includes(want) || want.includes(s.title.toLowerCase()));
+    if (!match) return;
+    const el = document.getElementById(`section-${match.title.toLowerCase().replace(/\s+/g, '-')}`);
+    if (el) {
+      scrolledSectionRef.current = focusSection;
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+    }
+  }, [loading, focusSection, sections]);
 
   const findItemByName = useCallback((name: string) => {
     const key = normalizeName(name);
@@ -202,21 +223,8 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
         return;
       }
 
-      if (sectionFilter) {
-        navigate(`/${tableId}`, { replace: true });
-        return;
-      }
-
-      const shouldExit = window.confirm('Do you want to exit?');
-      if (shouldExit) {
-        window.location.href = 'https://www.google.com';
-      } else {
-        window.history.pushState(
-          { ...(window.history.state || {}), emenyuGuard: true },
-          '',
-          window.location.href
-        );
-      }
+      // All menu views now sit beneath the landing chooser — back returns there.
+      navigate(`/${tableId}`, { replace: true });
     }
 
     window.addEventListener('popstate', handlePopState);
@@ -363,17 +371,29 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
             <button className={styles.clearBtn} onClick={clearFilters}>Clear filters</button>
           </div>
         ) : (
-          sections.map(section => (
-            <CategorySection
-              key={section.title}
-              section={section}
-              favorites={favorites}
-              onFavoriteToggle={toggleFavorite}
-              onAddToCart={handleAddToCart}
-              onItemClick={handleItemClick}
-              onPairingClick={setPairingItem}
-            />
-          ))
+          <>
+            {!sectionFilter && !searchQuery && activeFilters.size === 0 && (
+              <RecommendedOrders
+                resolveItem={findItemByName}
+                onOpenItem={(name) => openItemByName(name, 'replace')}
+                onAddOrder={(names) => names.forEach(n => {
+                  const found = findItemByName(n);
+                  if (found) handleAddToCart(found);
+                })}
+              />
+            )}
+            {sections.map(section => (
+              <CategorySection
+                key={section.title}
+                section={section}
+                favorites={favorites}
+                onFavoriteToggle={toggleFavorite}
+                onAddToCart={handleAddToCart}
+                onItemClick={handleItemClick}
+                onPairingClick={setPairingItem}
+              />
+            ))}
+          </>
         )}
       </div>
 
