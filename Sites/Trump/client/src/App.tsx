@@ -3,6 +3,7 @@ import { Suspense, lazy, type ReactElement } from 'react';
 import { AppProvider } from './context/AppContext';
 import { CartProvider } from './context/CartContext';
 import { MenuProvider } from './context/MenuContext';
+import { FavoritesProvider } from './context/FavoritesContext';
 import { MenuPage } from './pages/MenuPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
@@ -40,6 +41,7 @@ export default function App() {
   return (
     <AppProvider>
       <CartProvider>
+        <FavoritesProvider>
         <MenuProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -79,6 +81,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/table1" replace />} />
           </Routes>
         </MenuProvider>
+        </FavoritesProvider>
       </CartProvider>
     </AppProvider>
   );
