@@ -208,17 +208,20 @@ export function ItemModal({
     <Modal open={open} onClose={onClose} size="lg">
       <div
         className={styles.modal}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchCancel}
         style={{
           transform: `translateX(${swipeX}px) rotate(${swipeX * 0.04}deg)`,
           transition: swipeX === 0 ? 'transform 280ms ease' : 'none',
           transformOrigin: 'bottom center',
         }}
       >
-        <div className={styles.media}>
+        <div
+          className={styles.media}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
+          style={{ touchAction: 'pan-y' }}
+        >
           {videoSrc ? (
             <>
               <video

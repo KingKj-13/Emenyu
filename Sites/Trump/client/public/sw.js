@@ -1,4 +1,4 @@
-const CACHE = 'emenyu-trump-v1';
+const CACHE = 'emenyu-trump-v2';
 const API_PATTERNS = ['/api/', '/Trump/api/', '/socket.io/'];
 
 function isApiRequest(url) {
