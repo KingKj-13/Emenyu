@@ -1,6 +1,7 @@
-import { LayoutGrid, ShoppingCart, UtensilsCrossed, Sparkles, Activity, Bell } from 'lucide-react';
+import { LayoutGrid, ShoppingCart, UtensilsCrossed, Sparkles, Activity, Bell, LogOut } from 'lucide-react';
 import '../styles/waiter-theme.css';
 import { WaiterProvider, useWaiter } from '../context/WaiterContext';
+import { useAuth } from '../hooks/useAuth';
 import { BRAND_NAME } from '../constants/waiter';
 import type { WaiterTab } from '../types/waiter';
 
@@ -27,6 +28,7 @@ const NAV: { tab: WaiterTab; label: string; Icon: typeof LayoutGrid }[] = [
 
 function TopBar() {
   const { shift, liveAlertCount, openOverlay } = useWaiter();
+  const { logout } = useAuth();
   return (
     <div className="w-topbar">
       <div className="w-topbar-id">
@@ -36,10 +38,19 @@ function TopBar() {
           <div className="w-topbar-name">{shift.name || BRAND_NAME}</div>
         </div>
       </div>
-      <button className="w-bell" onClick={() => openOverlay('alerts')} aria-label="Floor alerts">
-        <Bell size={20} />
-        {liveAlertCount > 0 && <span className="w-bell-badge">{liveAlertCount}</span>}
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button className="w-bell" onClick={() => openOverlay('alerts')} aria-label="Floor alerts">
+          <Bell size={20} />
+          {liveAlertCount > 0 && <span className="w-bell-badge">{liveAlertCount}</span>}
+        </button>
+        <button
+          className="w-bell"
+          onClick={() => { if (confirm('Sign out of the waiter app?')) logout(); }}
+          aria-label="Sign out"
+        >
+          <LogOut size={19} />
+        </button>
+      </div>
     </div>
   );
 }
