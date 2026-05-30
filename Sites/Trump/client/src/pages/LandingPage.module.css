@@ -1,159 +1,33 @@
-.page {
+.screen {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   min-height: 100vh;
   min-height: 100dvh;
-  background:
-    radial-gradient(900px 420px at 50% -8%, rgba(200, 165, 85, 0.10), transparent 60%),
-    linear-gradient(180deg, #0a0a0c 0%, #05080d 100%);
-  color: var(--color-cream);
-  padding: 28px 12px 24px;
+  background: #000;
   display: flex;
-  flex-direction: column;
-}
-
-/* ── Hero ── */
-.hero {
-  text-align: center;
-  margin-bottom: 18px;
-  animation: rise 0.45s ease both;
-}
-.brandRow {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-.brandName {
-  font-family: var(--font-heading, Georgia, serif);
-  font-size: clamp(28px, 9vw, 40px);
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  background: linear-gradient(180deg, var(--color-gold-soft), var(--color-gold));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.tagline {
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  color: var(--color-sand);
-  margin: 6px 0 12px;
-}
-.tablePill {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--color-line);
-  background: rgba(255, 255, 255, 0.03);
-  font-size: 11.5px;
-  letter-spacing: 0.03em;
-}
-.dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--color-moss);
-  box-shadow: 0 0 8px var(--color-moss);
-}
-
-/* ── Mosaic grid ── */
-.mosaic {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-auto-rows: 116px;
-  grid-auto-flow: dense;
-  gap: 8px;
-  max-width: 640px;
-  width: 100%;
-  margin: 0 auto;
-}
-
-@media (min-width: 560px) {
-  .mosaic {
-    grid-template-columns: repeat(4, 1fr);
-    grid-auto-rows: 132px;
-    gap: 10px;
-  }
-}
-
-.tile {
-  position: relative;
-  border: none;
-  border-radius: 14px;
-  overflow: hidden;
+  align-items: flex-end;
+  justify-content: center;
   cursor: pointer;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  color: #fff;
-  padding: 0;
-  display: block;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-  animation: rise 0.5s ease both;
-}
-.tile:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5); }
-.tile:active { transform: translateY(0); }
-
-.normal { grid-column: span 1; }
-.wide { grid-column: span 2; }
-.tall { grid-row: span 2; }
-
-.scrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.15) 45%, rgba(5, 8, 13, 0.88) 100%);
-  transition: background 0.18s ease;
-}
-.tile:hover .scrim {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.2) 40%, rgba(5, 8, 13, 0.9) 100%);
+  border: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.tileText {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 11px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  text-align: left;
-}
-.tileLabel {
-  font-family: var(--font-heading, Georgia, serif);
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
-}
-.wide .tileLabel { font-size: 19px; }
-.tileSub {
-  font-size: 10.5px;
-  letter-spacing: 0.04em;
-  color: rgba(247, 241, 232, 0.82);
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
-}
-
-/* gold hairline accent on the active edge */
-.tile::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+.hint {
+  margin-bottom: calc(48px + env(safe-area-inset-bottom));
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
   opacity: 0;
-  transition: opacity 0.18s ease;
+  transition: opacity 1s ease;
 }
-.tile:hover::after { opacity: 1; }
 
-.footer {
-  margin-top: 18px;
-  text-align: center;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  color: var(--color-sand);
-  opacity: 0.6;
-}
-.footerBrand { color: var(--color-gold-soft); }
+.show { animation: pulse 2.6s ease-in-out infinite; }
 
-@keyframes rise {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.75; }
 }
