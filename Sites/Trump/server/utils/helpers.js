@@ -149,9 +149,9 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     publicOrigin
   ].filter(Boolean))];
   const sharedPassword = getSharedPassword(isProduction);
-  const demoAdminPassword = 'admin123';
-  const demoWaiterPassword = 'waiter123';
-  const demoKitchenPassword = 'kitchen123';
+  const demoAdminPassword = env.TRUMP_DEMO_PASSWORD || '123456789';
+  const demoWaiterPassword = env.TRUMP_DEMO_PASSWORD || '123456789';
+  const demoKitchenPassword = env.TRUMP_DEMO_PASSWORD || '123456789';
 
   const directories = {
     base: baseDir,
