@@ -85,16 +85,16 @@ export function FloorScreen() {
       </div>
 
       <div className="w-section-label">
-        <span className="w-eyebrow">All Tables</span><span className="line" /><span className="w-eyebrow-dim">View only</span>
+        <span className="w-eyebrow">All Tables</span><span className="line" /><span className="w-eyebrow-dim">Tap to open</span>
       </div>
       <div className="w-table-grid">
         {otherTables.map(t => (
-          <div key={t.tableId} className={`w-table-card view-only s-${t.status}`}>
+          <button key={t.tableId} className={`w-table-card view-only s-${t.status}`} style={{ textAlign: 'left' }} onClick={() => selectTable(t.tableId)}>
             {t.status === 'calling' && <span className="calldot" />}
             <div className="num" style={{ fontSize: 24 }}>{t.number}</div>
             <span className="pill">{STATUS_LABEL[t.status]}</span>
             {t.spend > 0 && <div className="spend" style={{ fontSize: 15, marginTop: 4 }}>{money(t.spend)}</div>}
-          </div>
+          </button>
         ))}
       </div>
     </div>
