@@ -1,33 +1,242 @@
-.screen {
+.page {
   position: fixed;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: #000;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(40, 30, 20, 0.30), transparent 60%),
+    #0a0a0b;
   display: flex;
-  align-items: flex-end;
   justify-content: center;
-  cursor: pointer;
-  border: none;
-  outline: none;
-  -webkit-tap-highlight-color: transparent;
 }
 
-.hint {
-  margin-bottom: calc(48px + env(safe-area-inset-bottom));
-  font-size: 13px;
-  letter-spacing: 0.22em;
+.inner {
+  width: 100%;
+  max-width: 460px;
+  padding: calc(34px + env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));
+}
+
+/* ───────── Header ───────── */
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 26px;
+}
+
+.monogram {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 1px solid var(--color-gold-dim);
+  color: var(--color-gold);
+  font-family: var(--font-heading);
+  font-size: 26px;
+  line-height: 1;
+  padding-bottom: 2px;
+  margin-bottom: 16px;
+}
+
+.eyebrow {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.34em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
-  opacity: 0;
-  transition: opacity 1s ease;
+  color: var(--color-gold);
+  opacity: 0.85;
 }
 
-.show { animation: pulse 2.6s ease-in-out infinite; }
+.brand {
+  margin: 6px 0 0;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: clamp(52px, 17vw, 66px);
+  line-height: 0.98;
+  letter-spacing: 0.01em;
+  color: var(--color-gold-soft);
+  text-shadow: 0 2px 30px rgba(200, 165, 85, 0.18);
+}
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 0.75; }
+.brandSub {
+  margin-top: 6px;
+  font-family: var(--font-heading);
+  font-size: clamp(15px, 4.6vw, 17px);
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  padding-left: 0.32em; /* optically centre the letter-spaced caps */
+  white-space: nowrap;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 22px;
+  padding: 10px 20px;
+  border: 1px solid rgba(200, 165, 85, 0.32);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.02);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-sand);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-gold);
+  box-shadow: 0 0 8px var(--color-gold);
+}
+
+/* ───────── Tile grid ───────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.tile {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 184px;
+  padding: 20px;
+  text-align: left;
+  border: 1px solid rgba(231, 221, 201, 0.08);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #141416 0%, #0c0c0e 100%);
+  color: #fff;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  transition: transform var(--transition-med), border-color var(--transition-med), box-shadow var(--transition-med);
+}
+
+.hero {
+  grid-column: 1 / -1;
+  min-height: 268px;
+}
+
+.glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(125% 95% at 50% 22%, var(--glow), transparent 68%);
+}
+
+.hero .glow {
+  background: radial-gradient(120% 100% at 50% 120%, var(--glow), transparent 70%);
+}
+
+.icon {
+  position: relative;
+  width: 27px;
+  height: 27px;
+  margin-bottom: auto;
+  color: var(--color-gold);
+}
+.icon svg { width: 100%; height: 100%; display: block; }
+
+.tileText {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tileLabel {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 27px;
+  line-height: 1.04;
+  letter-spacing: 0.005em;
+  color: #fff;
+}
+
+.hero .tileLabel { font-size: 38px; }
+
+.tileSub {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.tile:hover { transform: translateY(-2px); border-color: rgba(200, 165, 85, 0.28); box-shadow: 0 22px 54px rgba(0, 0, 0, 0.55); }
+.tile:active { transform: translateY(0); }
+
+/* ───────── Full-menu CTA ───────── */
+.cta {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 22px 22px;
+  text-align: left;
+  border: 1px solid rgba(200, 165, 85, 0.40);
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 180% at 100% 50%, rgba(200, 165, 85, 0.14), transparent 60%),
+    linear-gradient(180deg, #14110a 0%, #0c0b08 100%);
+  transition: transform var(--transition-med), border-color var(--transition-med);
+}
+.cta:hover { transform: translateY(-2px); border-color: rgba(200, 165, 85, 0.62); }
+.cta:active { transform: translateY(0); }
+
+.ctaText { display: flex; flex-direction: column; gap: 4px; }
+
+.ctaTitle {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 25px;
+  color: #fff;
+}
+
+.ctaSub {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.ctaArrow {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(160deg, var(--color-gold-soft), var(--color-gold));
+  color: #1a1206;
+  box-shadow: 0 6px 18px rgba(200, 165, 85, 0.35);
+}
+.ctaArrow svg { width: 22px; height: 22px; }
+
+/* ───────── Footer ───────── */
+.footer {
+  margin: 28px 0 0;
+  text-align: center;
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.30em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.30);
+}
+
+@media (max-width: 360px) {
+  .tile { min-height: 160px; padding: 16px; }
+  .tileLabel { font-size: 24px; }
 }
