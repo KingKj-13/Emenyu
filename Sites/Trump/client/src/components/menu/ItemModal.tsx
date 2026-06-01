@@ -4,9 +4,6 @@ import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
 import { resolveImage, resolveVideo, resolveYouTubeEmbed } from '../../lib/imageResolver';
-import { isShowcaseItem, matchShowcaseSlug } from '../../lib/demoMedia';
-import { story } from '../../config/trumpDemoConfig';
-import { FeaturedExperience } from './FeaturedExperience';
 import { BASE_PATH } from '../../constants/api';
 import { formatPrice } from '../../lib/menuUtils';
 import { api } from '../../services/api';
@@ -305,11 +302,7 @@ export function ItemModal({
           <h2 className={styles.name}>{item.name}</h2>
           <p className={styles.price}>{formatPrice(item.price)}</p>
 
-          {(() => {
-            const slug = matchShowcaseSlug(item);
-            const desc = slug ? story(slug) : item.description;
-            return desc ? <p className={styles.description}>{desc}</p> : null;
-          })()}
+          {item.description ? <p className={styles.description}>{item.description}</p> : null}
 
           {item.allergens && (
             <p className={styles.allergens}>
@@ -321,9 +314,7 @@ export function ItemModal({
             <p className={styles.calories}>{item.calories}</p>
           )}
 
-          {open && (isShowcaseItem(item)
-            ? <FeaturedExperience item={item} onRequestItem={onRequestItem} onOpenItem={onOpenItem} onAddSuggestion={onAddSuggestion} />
-            : <ItemPairings item={item} onRequestItem={onRequestItem} />)}
+          {open && <ItemPairings item={item} onRequestItem={onRequestItem} />}
 
           <div className={styles.actions}>
             <div className={styles.qtyRow}>

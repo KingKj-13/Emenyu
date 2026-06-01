@@ -1,5 +1,4 @@
 const { getCategoryType, normalizeId, normalizeName } = require('../utils/helpers');
-const demo = require('../config/trumpDemo');
 
 const SPECIAL_WORDS = [
   'birthday',
@@ -307,131 +306,10 @@ function itemQuantity(item = {}) {
 }
 
 class AiService {
-  constructor(config, fileService, socketService, demoMediaService) {
+  constructor(config, fileService, socketService) {
     this.config = config;
     this.fileService = fileService;
     this.socketService = socketService;
-    this.demoMediaService = demoMediaService || null;
-    this._recRotation = 0;
-  }
-
-  // ── Demo showcase curation ────────────────────────────────────────────────
-
-  /** Demo media filenames for a slug (uses live manifest, falls back to slug.ext). */
-  showcaseMedia(slug) {
-    const manifest = this.demoMediaService ? this.demoMediaService.getManifest() : null;
-    const entry = manifest && manifest.items.find(i => i.slug === slug);
-    if (entry) {
-      return {
-        img: entry.image ? `media/trump/${entry.image}` : '',
-        video: entry.video ? `media/trump/${entry.video}` : '',
-        priority: entry.priority,
-      };
-    }
-    return { img: `media/trump/${slug}.jpg`, video: `media/trump/${slug}.mp4`, priority: 1 };
-  }
-
-  /**
-   * When DEMO_MODE is on and the queried dish is a showcase item, returns the
-   * full curated journey (drink/starter/main/dessert/wine) as natural pairings.
-   * Returns null otherwise so normal logic runs.
-   */
-  buildShowcasePairing(name) {
-    if (!demo.DEMO_MODE) return null;
-    const slug = demo.matchShowcaseSlug(name);
-    if (!slug) return null;
-
-    const journey = demo.journeyForSlug(slug);
-    const anchor = demo.showcaseBySlug(slug);
-    const entries = ['drink', 'starter', 'main', 'dessert', 'wine']
-      .map(course => ({ course, slug: journey[course] }))
-      .filter(entry => entry.slug && entry.slug !== slug)
-      .map(entry => {
-        const sc = demo.showcaseBySlug(entry.slug);
-        return {
-          name: sc ? sc.name : entry.slug,
-          reason: demo.waiterLine(entry.slug) || demo.COURSE_REASON[entry.course],
-          categoryType: demo.COURSE_TO_TYPE[entry.course],
-          price: sc ? sc.price : 0,
-          img: this.showcaseMedia(entry.slug).img,
-        };
-      });
-
-    const drinkPairings = entries.filter(p => p.categoryType === 'DRINK' || p.categoryType === 'WINE');
-    const foodPairings = entries.filter(p => !['DRINK', 'WINE'].includes(p.categoryType));
-
-    return {
-      title: anchor ? `Pairs with ${anchor.name}` : "Chef's Pick",
-      description: anchor ? anchor.blurb : '',
-      foodPairings,
-      drinkPairings,
-      pairings: [...foodPairings, ...drinkPairings],
-      talkTrack: journey.narrative
-    };
-  }
-
-  buildShowcaseCandidate(slug) {
-    const sc = demo.showcaseBySlug(slug);
-    if (!sc) return null;
-    const media = this.showcaseMedia(slug);
-    const match = fuzzyFindItem(this._menuContextForShowcase, sc.name);
-    const base = match || {
-      name: sc.name,
-      price: sc.price,
-      description: demo.story(slug),
-      category: '',
-      subcategory: '',
-      categoryType: demo.COURSE_TO_TYPE[sc.course],
-      searchText: `${sc.name} ${sc.blurb}`.toLowerCase()
-    };
-    return { ...base, img: media.img || base.img, video: media.video || base.video, story: demo.story(slug) };
-  }
-
-  /**
-   * Adds showcase items as top-priority candidates, but VARIED by context so the
-   * hero changes per journey/cart instead of always defaulting to the Tomahawk.
-   */
-  addShowcaseCandidates(menuContext, addCandidate, opts = {}) {
-    if (!demo.DEMO_MODE) return;
-    this._menuContextForShowcase = menuContext;
-    const cart = opts.cart || [];
-    const cartText = cart.map(c => String(c.name || '')).join(' ');
-    // Prefer the journey of any showcase item already in the cart (most precise),
-    // then free-text keywords from the reason or cart names.
-    let key = demo.detectJourneyKey(opts.reason || '');
-    if (!key) {
-      for (const c of cart) {
-        const slug = demo.matchShowcaseSlug(c.name);
-        if (slug) { key = demo.journeyForSlug(slug).key; break; }
-      }
-    }
-    if (!key) key = demo.detectJourneyKey(cartText);
-
-    let slugs;
-    if (key) {
-      const j = demo.journeyByKey(key);
-      slugs = [j.main, j.starter, j.wine, j.dessert, j.drink];
-    } else {
-      // No clear context: rotate the lead hero so it is NOT always the Tomahawk.
-      const heroes = ['king-queen-platter', 'seafood-pasta', 'tomahawk', 'caprese-avocado-salad'];
-      const hero = heroes[this._recRotation % heroes.length];
-      this._recRotation = (this._recRotation + 1) % heroes.length;
-      const hj = demo.journeyForSlug(hero);
-      slugs = [hero, hj.starter, hj.wine, hj.dessert];
-    }
-
-    const seenSlug = new Set();
-    let idx = 0;
-    slugs.forEach(slug => {
-      if (!slug || seenSlug.has(slug)) return;
-      seenSlug.add(slug);
-      const item = this.buildShowcaseCandidate(slug);
-      if (!item) return;
-      // Descending, well above other sources (≤120) so the showcase leads, but
-      // ordered by the journey rather than a fixed catalogue position.
-      addCandidate(item, "Chef's showcase", 180 - idx * 4);
-      idx += 1;
-    });
   }
 
   async getMenuContext() {
@@ -449,10 +327,7 @@ class AiService {
 
     let responseData;
 
-    const detectedEvent = demo.DEMO_MODE ? demo.detectEvent(message) : null;
-    if (detectedEvent) {
-      responseData = await this.buildEventReply(menuContext, detectedEvent, lower, requestBody);
-    } else if (!message) {
+    if (!message) {
       responseData = {
         reply: 'Ask me for steaks, sushi, seafood, wines, cocktails, desserts, popular dishes, or a pairing.',
         suggestions: (await this.getPopularItems(menuContext, 4)).map(item => publicItem(item, 'Popular tonight'))
@@ -577,53 +452,6 @@ class AiService {
     return false;
   }
 
-  // ── Special-occasion handling ─────────────────────────────────────────────
-  showcaseSuggestion(slug, sourceTitle) {
-    const sc = demo.showcaseBySlug(slug);
-    if (!sc) return null;
-    const media = this.showcaseMedia(slug);
-    return {
-      name: sc.name,
-      price: sc.price,
-      description: demo.story(slug),
-      story: demo.story(slug),
-      img: media.img,
-      video: media.video,
-      categoryType: demo.COURSE_TO_TYPE[sc.course],
-      source_title: sourceTitle || 'For your celebration'
-    };
-  }
-
-  async buildEventReply(menuContext, event, lower, payload) {
-    const tableId = normalizeId(payload.tableId || payload.table_number || payload.table || 'unknown');
-    const key = demo.detectJourneyKey(lower) || (event.type === 'birthday' || event.type === 'celebration' ? 'steak-lover' : 'seafood-lover');
-    const journey = demo.journeyByKey(key) || demo.journeyByKey('seafood-lover');
-
-    // Suggestion cards must match the spoken meal: starter → main → wine →
-    // complimentary dessert. (No standalone cocktail when we're pouring wine.)
-    const slugs = [journey.starter, journey.main, journey.wine, 'chocolate-lava-cake'];
-    const seen = new Set();
-    const suggestions = slugs
-      .filter(s => s && !seen.has(s) && seen.add(s))
-      .map(s => this.showcaseSuggestion(s, 'For your celebration'))
-      .filter(Boolean);
-
-    // Notify the floor in real time so the waiter can act on the occasion.
-    if (this.socketService && typeof this.socketService.emitGuestEvent === 'function') {
-      this.socketService.emitGuestEvent({ tableId, event });
-    }
-
-    const starter = demo.showcaseBySlug(journey.starter);
-    const main = demo.showcaseBySlug(journey.main);
-    const wine = demo.showcaseBySlug(journey.wine);
-    const reply = `${event.emoji} Wonderful — congratulations on your ${event.label.toLowerCase()}! `
-      + `May I suggest beginning with our ${starter.name}, followed by the ${main.name}, with a glass of ${wine.name} — `
-      + `and we'd love to finish with a complimentary Chocolate Lava Cake. I've let your waiter know to take special care of your table tonight.`;
-
-    return { reply, suggestions, event: { type: event.type, label: event.label, emoji: event.emoji } };
-  }
-
-  // ── Waiter cart recommendations ───────────────────────────────────────────
   cartRecReason(rec, cart) {
     const ct = (rec.categoryType || '').toUpperCase();
     const main = (cart || []).find(c => /platter|pasta|steak|tomahawk|fillet|rump|prawn|salad|seafood/i.test(c.name || ''));
@@ -635,8 +463,6 @@ class AiService {
   }
 
   cartRecScript(rec) {
-    const slug = demo.matchShowcaseSlug(rec.name);
-    if (slug && demo.WAITER_LINES[slug]) return demo.WAITER_LINES[slug];
     const ct = (rec.categoryType || '').toUpperCase();
     if (ct === 'WINE') return `Our ${rec.name} pairs beautifully with your selection — may I pour a glass?`;
     if (ct === 'DESSERT') return `A lot of guests finish with our ${rec.name}. Would you like one for the table to share?`;
@@ -646,7 +472,6 @@ class AiService {
 
   async cartRecommendations(payload = {}) {
     const cart = this.readCart(payload);
-    const eventType = payload.event || payload.eventType || null;
     const recs = await this.recommend({ cart, limit: 8, reason: payload.reason });
     const cartNames = new Set(cart.map(c => normalizeName(c.name)));
 
@@ -664,17 +489,7 @@ class AiService {
         script: this.cartRecScript(r)
       }));
 
-    let eventRec = null;
-    const meta = eventType && demo.EVENT_META[eventType];
-    if (meta) {
-      eventRec = {
-        name: 'Chocolate Lava Cake',
-        reason: `Complimentary gesture for the ${meta.label.toLowerCase()} — drives loyalty & reviews`,
-        upsell: 0,
-        complimentary: true,
-        script: meta.script
-      };
-    }
+    const eventRec = null;
 
     const potentialUplift = recommendations.reduce((sum, r) => sum + r.upsell, 0);
     return { recommendations, eventRec, potentialUplift };
@@ -954,12 +769,6 @@ class AiService {
 
   async aiPairing(payload = {}) {
     const rawItem = payload.item || payload.selectedItem || payload.name || payload.cart?.[0];
-    const queryName = typeof rawItem === 'string' ? rawItem : rawItem?.name;
-
-    // Demo mode: a showcase dish returns its full curated journey verbatim.
-    const showcase = this.buildShowcasePairing(queryName);
-    if (showcase) return showcase;
-
     const menuContext = await this.getMenuContext();
     const item = typeof rawItem === 'string' ? fuzzyFindItem(menuContext, rawItem) : fuzzyFindItem(menuContext, rawItem?.name) || rawItem;
     const recs = await this.recommend({ cart: item ? [item] : [], limit: 6 });
@@ -1013,10 +822,6 @@ class AiService {
       candidates.push({ item, source, score });
       seen.add(key);
     };
-
-    // Demo mode: claim the top slots with media-rich showcase items first,
-    // varied by cart/reason so the hero is not always the Tomahawk.
-    this.addShowcaseCandidates(menuContext, addCandidate, { cart, reason: payload.reason });
 
     for (const group of adminGroups) {
       if (!Array.isArray(group.items)) {

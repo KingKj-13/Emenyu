@@ -51,7 +51,6 @@ export const ENDPOINTS = {
   waiterPerformance: `${API_PREFIX}/api/waiter/me/performance`,
   waiterShiftReport: `${API_PREFIX}/api/waiter/me/shift-report`,
   waiterLeaderboard: `${API_PREFIX}/api/waiter/leaderboard`,
-  demoMedia: `${API_PREFIX}/api/demo-media`,
   guests: `${API_PREFIX}/api/guests`,
   guest: (id: number) => `${API_PREFIX}/api/guests/${id}`,
   seatGuest: (tableId: string) => `${API_PREFIX}/api/waiter/table/${tableId}/seat-guest`,

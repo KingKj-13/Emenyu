@@ -259,10 +259,6 @@ export const api = {
     return postJson<unknown>(ENDPOINTS.pushSubscribe, subscription);
   },
 
-  getDemoMedia() {
-    return fetchJson<import('../lib/demoMedia').DemoManifest>(ENDPOINTS.demoMedia);
-  },
-
   // ── Waiter-AI app ──
   getFloor() {
     return fetchJson<import('../types/waiter').FloorState>(ENDPOINTS.floor);

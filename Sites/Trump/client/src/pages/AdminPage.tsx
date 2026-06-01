@@ -6,10 +6,9 @@ import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
 import { api } from '../services/api';
 import { Spinner } from '../components/ui/Spinner';
 import { formatPrice } from '../lib/menuUtils';
-import type { DemoManifest as ShowcaseManifest } from '../lib/demoMedia';
 import styles from './AdminPage.module.css';
 
-type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'trumpmedia';
+type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals';
 
 interface Order {
   filename: string;
@@ -82,7 +81,6 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   useHomeBackGuard();
   const { user, logout } = useAuth();
   const [tab, setTab] = useState<Tab>(initialTab || 'orders');
-  const [showcaseManifest, setShowcaseManifest] = useState<ShowcaseManifest | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [history, setHistory] = useState<Order[]>([]);
   const [accounts, setAccounts] = useState<unknown[]>([]);
@@ -137,9 +135,6 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
       } else if (t === 'deals') {
         const data = await api.getDeals();
         setDeals((data as Deal[]) || []);
-      } else if (t === 'trumpmedia') {
-        const data = await api.getDemoMedia();
-        setShowcaseManifest(data);
       }
     } catch (err) {
       console.error(err);
@@ -333,7 +328,6 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
       { key: 'menu', label: 'Menu', icon: UtensilsCrossed },
       { key: 'deals', label: 'Deals', icon: Clock },
       { key: 'qrcodes', label: 'QR Codes', icon: QrCode },
-      { key: 'trumpmedia', label: 'Showcase Media', icon: Film },
     ] },
     { label: 'INSIGHT', items: [
       { key: 'reports', label: 'Reports', icon: BarChart2 },
@@ -357,7 +351,6 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top dishes, peak hours & guest ratings' },
     accounts: { eyebrow: 'STAFF', title: 'Accounts', sub: `${accounts.length} team member${accounts.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('account')}><Plus size={14} /> Add account</button> },
     chat: { eyebrow: 'AI SOMMELIER', title: 'Chat logs', sub: 'Guest conversations with the AI sommelier' },
-    trumpmedia: { eyebrow: 'SHOWCASE ASSETS', title: 'Showcase media', sub: 'Auto-detected showcase images & videos', actions: refreshAction },
   };
   const head = PAGE_HEADS[tab];
   const initials = (user?.label || user?.username || 'AD').slice(0, 2).toUpperCase();
@@ -512,7 +505,6 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
                   }}
                 />
               )}
-              {tab === 'trumpmedia' && <MediaPanel manifest={showcaseManifest} />}
               {tab === 'reports' && (
                 <ReportsPanel
                   range={reportRange}
@@ -625,71 +617,6 @@ function AccountsList({ accounts }: { accounts: unknown[] }) {
           </span>
         </div>
       ))}
-    </div>
-  );
-}
-
-function MediaPanel({ manifest }: { manifest: ShowcaseManifest | null }) {
-  if (!manifest) return <div className={styles.emptyState}><Spinner size={28} /><p>Loading showcase media…</p></div>;
-
-  const { folder, servedFrom, supportedFormats, counts, items, extras } = manifest;
-  const url = (file: string) => `${servedFrom}/${file}`;
-  const statusLabel = (it: ShowcaseManifest['items'][number]) =>
-    it.hasImage && it.hasVideo ? 'Image + Video' : it.hasImage ? 'Image only' : it.hasVideo ? 'Video only' : 'Missing';
-
-  return (
-    <div className={styles.dmPanel}>
-      <div className={styles.dmInfo}>
-        <div className={styles.dmInfoRow}><span className={styles.dmInfoLabel}>Upload folder</span><code className={styles.dmInfoValue}>{folder}</code></div>
-        <div className={styles.dmInfoRow}><span className={styles.dmInfoLabel}>Served at</span><code className={styles.dmInfoValue}>{servedFrom}/</code></div>
-        <div className={styles.dmInfoRow}><span className={styles.dmInfoLabel}>Formats</span><span className={styles.dmInfoValue}>{[...supportedFormats.image, ...supportedFormats.video].join('  ·  ')}</span></div>
-      </div>
-
-      <div className={styles.summaryCards}>
-        <div className={styles.summaryCard}><div className={styles.summaryValue}>{counts.images}</div><div className={styles.summaryLabel}>Images</div></div>
-        <div className={styles.summaryCard}><div className={styles.summaryValue}>{counts.videos}</div><div className={styles.summaryLabel}>Videos</div></div>
-        <div className={styles.summaryCard}><div className={styles.summaryValue}>{counts.complete}</div><div className={styles.summaryLabel}>Complete</div></div>
-        <div className={styles.summaryCard}><div className={styles.summaryValue}>{counts.partial}</div><div className={styles.summaryLabel}>Partial</div></div>
-        <div className={styles.summaryCard}><div className={styles.summaryValue}>{counts.missing}</div><div className={styles.summaryLabel}>Missing</div></div>
-      </div>
-
-      <div className={styles.dmGrid}>
-        {items.map(it => (
-          <div key={it.slug} className={`${styles.dmCard} ${!it.hasImage && !it.hasVideo ? styles.dmCardMissing : ''}`}>
-            <div className={styles.dmPreview}>
-              {it.hasImage && it.image ? (
-                <img src={url(it.image)} alt={it.name} className={styles.dmPreviewMedia} loading="lazy" />
-              ) : it.hasVideo && it.video ? (
-                <video src={url(it.video)} className={styles.dmPreviewMedia} muted playsInline preload="metadata" />
-              ) : (
-                <div className={styles.dmPreviewEmpty}><ImageIcon size={22} /><span>No media</span></div>
-              )}
-              <div className={styles.dmBadges}>
-                {it.hasImage && <span className={styles.dmBadge}><ImageIcon size={10} /> IMG</span>}
-                {it.hasVideo && <span className={styles.dmBadge}><Film size={10} /> VID</span>}
-              </div>
-            </div>
-            <div className={styles.dmCardBody}>
-              <div className={styles.dmCardName}>{it.name}</div>
-              <div className={styles.dmCardMeta}>
-                <span className={styles.dmCourse}>{it.course}</span>
-                <span className={`${styles.dmStatus} ${it.hasImage && it.hasVideo ? styles.dmStatusOk : (!it.hasImage && !it.hasVideo ? styles.dmStatusMissing : styles.dmStatusPartial)}`}>
-                  {statusLabel(it)}
-                </span>
-              </div>
-              <code className={styles.dmFiles}>{it.image || `${it.slug}.{jpg|png|webp}`}{it.video ? `  ·  ${it.video}` : '  ·  (no video)'}</code>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {extras && extras.length > 0 && (
-        <div className={styles.dmExtras}>
-          <h3 className={styles.reportSectionTitle}>Unmapped files</h3>
-          <p className={styles.dmExtrasHint}>These files don’t match a showcase slug. Rename them to a slug to activate them.</p>
-          {extras.map(x => <code key={x.base} className={styles.dmFiles}>{[x.image, x.video].filter(Boolean).join('  ·  ')}</code>)}
-        </div>
-      )}
     </div>
   );
 }

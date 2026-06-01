@@ -190,7 +190,7 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     publicBasePath,
     publicOrigin,
     tableCount: parseInteger(env.TRUMP_TABLE_COUNT, 30),
-    brandName: env.TRUMP_BRAND_NAME || 'Aurum & Ember',
+    brandName: env.TRUMP_BRAND_NAME || 'Trump',
     llm: {
       provider: (env.TRUMP_LLM_PROVIDER || '').trim().toLowerCase(),
       apiKey: env.TRUMP_LLM_API_KEY || '',

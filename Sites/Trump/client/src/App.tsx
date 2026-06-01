@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Suspense, lazy, useEffect, type ReactElement } from 'react';
-import { loadDemoManifest as loadShowcaseManifest, prefetchShowcaseImages } from './lib/demoMedia';
+import { Suspense, lazy, type ReactElement } from 'react';
 import { AppProvider } from './context/AppContext';
 import { CartProvider } from './context/CartContext';
 import { MenuProvider } from './context/MenuContext';
@@ -39,10 +38,6 @@ function ProtectedRoute({ roles, children }: { roles: Role[]; children: ReactEle
 }
 
 export default function App() {
-  // Warm the auto-detected showcase media manifest so assets resolve accurately
-  // app-wide (no-op if the endpoint is unavailable).
-  useEffect(() => { loadShowcaseManifest().finally(prefetchShowcaseImages); }, []);
-
   return (
     <AppProvider>
       <CartProvider>
@@ -55,13 +50,6 @@ export default function App() {
               <ProtectedRoute roles={['owner', 'manager']}>
                 <Suspense fallback={<LoadingFallback />}>
                   <AdminPage />
-                </Suspense>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/trump-media" element={
-              <ProtectedRoute roles={['owner', 'manager']}>
-                <Suspense fallback={<LoadingFallback />}>
-                  <AdminPage initialTab="trumpmedia" />
                 </Suspense>
               </ProtectedRoute>
             } />
