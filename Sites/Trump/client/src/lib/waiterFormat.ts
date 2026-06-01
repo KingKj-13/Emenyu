@@ -1,15 +1,17 @@
-// Currency formatting for the waiter app — South African Rand, space thousands
-// separator (e.g. R48 250, R595), matching the design.
+// Currency formatting for the waiter app — South African Rand. Uses a
+// NON-BREAKING space (U+00A0) as the thousands separator so amounts like
+// "R1 450" never wrap onto two lines in tight layouts.
+const SEP = String.fromCharCode(160);
+
 export function money(value: number | null | undefined): string {
   const n = Math.round(Number(value) || 0);
-  return 'R' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return 'R' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, SEP);
 }
 
 export function moneyExact(value: number | null | undefined): string {
   const n = Number(value) || 0;
   const whole = Math.floor(n);
-  const formatted = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return 'R' + formatted;
+  return 'R' + String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, SEP);
 }
 
 export function pct(value: number | null | undefined): string {

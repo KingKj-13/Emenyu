@@ -1,6 +1,7 @@
 import { useEffect, type CSSProperties, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
 import { BASE_PATH } from '../constants/api';
 import styles from './LandingPage.module.css';
 
@@ -76,14 +77,19 @@ const HERO: Category = {
   glow: 'rgba(150, 72, 38, 0.20)', icon: I.steak, to: t => sec(t, 'Trumps Premium Steaks'),
 };
 
+const DRINKS_HERO: Category = {
+  key: 'drinks', label: 'Drinks', sub: 'Wine, cocktails and all beverages',
+  glow: 'rgba(56, 102, 148, 0.28)', icon: I.drinks, to: t => `/${t}/drinks`,
+};
+
 const CATEGORIES: Category[] = [
-  { key: 'sushi', label: 'Sushi & Sashimi', sub: 'From the sea', glow: 'rgba(58, 112, 152, 0.34)', icon: I.sushi, to: t => sec(t, 'Sushi') },
-  { key: 'starters', label: 'Starters', sub: 'To begin', glow: 'rgba(74, 122, 78, 0.30)', icon: I.starters, to: t => sec(t, 'Starters') },
-  { key: 'butchery', label: 'Butchery', sub: 'Cuts to take home', glow: 'rgba(158, 58, 46, 0.34)', icon: I.butchery, external: true, to: () => `${BASE_PATH}/frontend/pages/butchery.html` },
   { key: 'wine', label: 'Wine', sub: 'The cellar', glow: 'rgba(122, 64, 130, 0.32)', icon: I.wine, to: t => drink(t, 'Red Wine') },
-  { key: 'setmenu', label: 'Set Menu', sub: 'Curated combos', glow: 'rgba(128, 118, 52, 0.32)', icon: I.setmenu, to: t => `/${t}/setmenu` },
   { key: 'cocktails', label: 'Cocktails', sub: 'Signature pours', glow: 'rgba(162, 102, 42, 0.32)', icon: I.cocktails, to: t => drink(t, 'Cocktails') },
-  { key: 'drinks', label: 'Drinks', sub: 'All beverages', glow: 'rgba(56, 102, 148, 0.32)', icon: I.drinks, to: t => `/${t}/drinks` },
+  { key: 'setmenu', label: 'Set Menu', sub: 'Curated combos', glow: 'rgba(128, 118, 52, 0.32)', icon: I.setmenu, to: t => `/${t}/setmenu` },
+  { key: 'mains', label: 'Mains', sub: 'Steaks, seafood and grill', glow: 'rgba(150, 72, 38, 0.30)', icon: I.steak, to: t => sec(t, 'Trumps Premium Steaks') },
+  { key: 'starters', label: 'Starters', sub: 'To begin', glow: 'rgba(74, 122, 78, 0.30)', icon: I.starters, to: t => sec(t, 'Starters') },
+  { key: 'sushi', label: 'Sushi & Sashimi', sub: 'From the sea', glow: 'rgba(58, 112, 152, 0.34)', icon: I.sushi, to: t => sec(t, 'Sushi') },
+  { key: 'butchery', label: 'Butchery', sub: 'Cuts to take home', glow: 'rgba(158, 58, 46, 0.34)', icon: I.butchery, external: true, to: () => `${BASE_PATH}/frontend/pages/butchery.html` },
 ];
 
 export function LandingPage() {
@@ -92,6 +98,7 @@ export function LandingPage() {
   const { setTableId } = useApp();
   const tableId = paramTableId || 'table1';
   const tableLabel = tableId.replace(/^table/i, 'Table ');
+  useHomeBackGuard({ isHome: true });
 
   useEffect(() => {
     if (paramTableId) setTableId(paramTableId);
@@ -117,12 +124,24 @@ export function LandingPage() {
           </div>
         </header>
 
+        <button className={styles.cta} onClick={() => navigate(`/${tableId}/menu`)}>
+          <span className={styles.ctaText}>
+            <span className={styles.ctaTitle}>Browse the Full Menu</span>
+            <span className={styles.ctaSub}>Every dish, pour and pairing</span>
+          </span>
+          <span className={styles.ctaArrow} aria-hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14" /><path d="M13 6l6 6-6 6" />
+            </svg>
+          </span>
+        </button>
+
         <div className={styles.grid}>
-          <button className={`${styles.tile} ${styles.hero}`} style={{ '--glow': HERO.glow } as CSSProperties} onClick={() => go(HERO)}>
+          <button className={`${styles.tile} ${styles.hero}`} style={{ '--glow': DRINKS_HERO.glow } as CSSProperties} onClick={() => go(DRINKS_HERO)}>
             <span className={styles.glow} aria-hidden />
             <span className={styles.tileText}>
-              <span className={styles.tileLabel}>{HERO.label}</span>
-              <span className={styles.tileSub}>{HERO.sub}</span>
+              <span className={styles.tileLabel}>{DRINKS_HERO.label}</span>
+              <span className={styles.tileSub}>{DRINKS_HERO.sub}</span>
             </span>
           </button>
 
@@ -137,18 +156,6 @@ export function LandingPage() {
             </button>
           ))}
         </div>
-
-        <button className={styles.cta} onClick={() => navigate(`/${tableId}/menu`)}>
-          <span className={styles.ctaText}>
-            <span className={styles.ctaTitle}>Browse the Full Menu</span>
-            <span className={styles.ctaSub}>Every dish, pour and pairing</span>
-          </span>
-          <span className={styles.ctaArrow} aria-hidden>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12h14" /><path d="M13 6l6 6-6 6" />
-            </svg>
-          </span>
-        </button>
 
         <p className={styles.footer}>Powered by Emenyu</p>
       </div>

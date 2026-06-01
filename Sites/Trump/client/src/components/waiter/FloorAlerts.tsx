@@ -1,10 +1,11 @@
-import { X, Bell, Check, Users } from 'lucide-react';
+import { X, Bell, Check, Users, Gift } from 'lucide-react';
 import { useWaiter } from '../../context/WaiterContext';
 import type { WaiterAlert } from '../../types/waiter';
 
 function AlertIcon({ kind }: { kind: WaiterAlert['kind'] }) {
   if (kind === 'manager') return <Users size={17} />;
   if (kind === 'ready') return <Check size={17} color="var(--w-blue)" />;
+  if (kind === 'event') return <Gift size={17} color="var(--w-gold)" />;
   return <Bell size={17} color="var(--w-gold)" />;
 }
 
@@ -34,6 +35,11 @@ export function FloorAlerts() {
                 <span className="w-alert-time">{a.time}</span>
               </div>
               <p className="w-alert-msg">{a.message}</p>
+              {a.kind === 'event' && a.script && (
+                <p className="w-alert-msg" style={{ marginTop: 6, fontStyle: 'italic', color: 'var(--w-gold)' }}>
+                  “{a.script}”
+                </p>
+              )}
               {a.state === 'responded' ? (
                 <span className="w-alert-responded"><Check size={15} /> Responded</span>
               ) : (

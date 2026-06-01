@@ -40,6 +40,7 @@ const { AccountService } = require('./services/accountService');
 const { FileService } = require('./services/fileService');
 const { SocketService } = require('./services/socketService');
 const { MediaEnrichmentService } = require('./services/mediaEnrichmentService');
+const { DemoMediaService } = require('./services/demoMediaService');
 const { createLogger } = require('./utils/logger');
 const { createConfig, createRoleAuth } = require('./utils/helpers');
 
@@ -59,6 +60,11 @@ function createStaticOptions(config) {
     etag: true,
     lastModified: true,
     setHeaders(res, filePath) {
+      if (/[\\/]sw\.js$/i.test(filePath)) {
+        res.setHeader('Cache-Control', 'no-store');
+        return;
+      }
+
       if (/\.html$/i.test(filePath)) {
         res.setHeader('Cache-Control', 'no-store');
         return;
@@ -185,7 +191,8 @@ async function startServer() {
   const socketService = new SocketService(config, fileService, logger);
   socketService.initialize(server);
 
-  const aiService = new AiService(config, fileService, socketService);
+  const demoMediaService = new DemoMediaService();
+  const aiService = new AiService(config, fileService, socketService, demoMediaService);
   const mediaEnrichmentService = new MediaEnrichmentService(config);
   const auth = createRoleAuth(config, accountService, logger);
 
@@ -250,6 +257,17 @@ async function startServer() {
     auth.requirePage(['owner']),
     (req, res) => res.sendFile(path.join(config.directories.base, 'owner.html'))
   );
+
+  // Demo media manifest — auto-detected from /client/(dist|public)/media/trump.
+  // Public so the guest UI can resolve showcase assets before any auth.
+  app.get(['/api/demo-media', '/Trump/api/demo-media', '/trump/api/demo-media'], (req, res) => {
+    try {
+      res.json(demoMediaService.getManifest());
+    } catch (error) {
+      logger.warn('demo_media_manifest_failed', { error });
+      res.status(500).json({ error: 'manifest_failed' });
+    }
+  });
 
   const staticOptions = createStaticOptions(config);
   const clientDist = path.join(__dirname, '../client/dist');

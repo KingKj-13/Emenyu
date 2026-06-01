@@ -2,7 +2,33 @@
 import type { MenuItem } from './menu';
 
 export type WaiterRole = 'Head Waiter' | 'Server' | 'Runner';
-export type WaiterTab = 'floor' | 'order' | 'menu' | 'coach' | 'today';
+export type WaiterTab = 'floor' | 'order' | 'menu' | 'coach' | 'today' | 'cartrec';
+
+export interface GuestEvent {
+  type: string;
+  label: string;
+  emoji: string;
+  action?: string;
+  script?: string;
+}
+
+export interface CartRec {
+  name: string;
+  price: number;
+  img?: string;
+  categoryType?: string;
+  story?: string;
+  reason: string;
+  upsell: number;
+  script: string;
+  complimentary?: boolean;
+}
+
+export interface CartRecResponse {
+  recommendations: CartRec[];
+  eventRec: CartRec | null;
+  potentialUplift: number;
+}
 export type LeaderboardPeriod = 'today' | 'week' | 'month';
 
 export type TableStatusKind = 'empty' | 'seated' | 'cooking' | 'ready' | 'calling';
@@ -202,10 +228,13 @@ export type SpeechTone = 'casual' | 'professional' | 'luxury' | 'short' | 'upsel
 
 export interface WaiterAlert {
   id: string;
-  kind: 'bell' | 'ready' | 'manager';
+  kind: 'bell' | 'ready' | 'manager' | 'event';
   tableId?: string;
   title: string;
   message: string;
   time: string;
   state: 'live' | 'responded' | 'dismissed';
+  emoji?: string;
+  action?: string;
+  script?: string;
 }

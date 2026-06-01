@@ -4,8 +4,10 @@ import { api } from '../../services/api';
 import { useCart } from '../../hooks/useCart';
 import { useApp } from '../../context/AppContext';
 import { useDebounce } from '../../hooks/useDebounce';
+import { resolveAssetPath, resolveImage } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import type { CartItem } from '../../types/cart';
+import type { MenuItem } from '../../types/menu';
 import styles from './CartRecommendations.module.css';
 
 interface Rec {
@@ -15,6 +17,18 @@ interface Rec {
   source_title?: string;
   description?: string;
   categoryType?: string;
+}
+
+const FALLBACK_IMAGE = resolveAssetPath('Images/Tomahawk.jpg');
+
+function recommendationImage(rec: Rec): string {
+  return resolveImage({
+    name: rec.name,
+    price: rec.price,
+    description: rec.description || '',
+    img: rec.img,
+    category: rec.categoryType || '',
+  } as MenuItem);
 }
 
 export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
@@ -44,45 +58,62 @@ export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
     <div className={styles.wrap}>
       <p className={styles.label}>You might also like</p>
       <div className={styles.strip}>
-        {recs.map((rec, i) => (
-          <button
-            key={`${rec.name}-${i}`}
-            className={styles.card}
-            onClick={() => {
-              setPendingItemName(rec.name);
-              setIsOpen(false);
-            }}
-            aria-label={`View ${rec.name}`}
-          >
-            {rec.img ? (
-              <img src={rec.img} alt={rec.name} className={styles.img} loading="lazy" />
-            ) : (
-              <div className={styles.imgPlaceholder} />
-            )}
-            <div className={styles.info}>
-              {rec.source_title && (
-                <span className={styles.sourceTag}>{rec.source_title}</span>
+        {recs.map((rec, i) => {
+          const imgSrc = recommendationImage(rec);
+          return (
+            <button
+              key={`${rec.name}-${i}`}
+              className={styles.card}
+              onClick={() => {
+                setPendingItemName(rec.name);
+                setIsOpen(false);
+              }}
+              aria-label={`View ${rec.name}`}
+            >
+              {imgSrc ? (
+                <img
+                  src={imgSrc}
+                  alt={rec.name}
+                  className={styles.img}
+                  loading="lazy"
+                  onError={e => {
+                    const img = e.currentTarget;
+                    if (img.dataset.fallback === '1') {
+                      img.style.display = 'none';
+                      return;
+                    }
+                    img.dataset.fallback = '1';
+                    img.src = FALLBACK_IMAGE;
+                  }}
+                />
+              ) : (
+                <div className={styles.imgPlaceholder} />
               )}
-              <span className={styles.name}>{rec.name}</span>
-              {rec.price > 0 && (
-                <span className={styles.price}>{formatPrice(rec.price)}</span>
-              )}
-            </div>
-            {rec.price > 0 && (
-              <div
-                className={styles.addBtn}
-                role="button"
-                aria-label={`Add ${rec.name} to cart`}
-                onClick={e => {
-                  e.stopPropagation();
-                  addItem({ name: rec.name, price: rec.price, img: rec.img, description: rec.description || '' });
-                }}
-              >
-                <Plus size={12} />
+              <div className={styles.info}>
+                {rec.source_title && (
+                  <span className={styles.sourceTag}>{rec.source_title}</span>
+                )}
+                <span className={styles.name}>{rec.name}</span>
+                {rec.price > 0 && (
+                  <span className={styles.price}>{formatPrice(rec.price)}</span>
+                )}
               </div>
-            )}
-          </button>
-        ))}
+              {rec.price > 0 && (
+                <div
+                  className={styles.addBtn}
+                  role="button"
+                  aria-label={`Add ${rec.name} to cart`}
+                  onClick={e => {
+                    e.stopPropagation();
+                    addItem({ name: rec.name, price: rec.price, img: imgSrc, description: rec.description || '' });
+                  }}
+                >
+                  <Plus size={12} />
+                </div>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

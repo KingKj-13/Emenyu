@@ -7,13 +7,16 @@ import { useApp } from '../../context/AppContext';
 import type { MenuItem } from '../../types/menu';
 import styles from './PairingModal.module.css';
 
-interface Pairing { name: string; reason: string; }
+interface Pairing { name: string; reason: string; categoryType?: string; }
 
 interface PairingResult {
   title?: string;
   pairings: Pairing[];
+  drinkPairings?: Pairing[];
   talkTrack?: string;
 }
+
+const DRINK_TYPES = new Set(['WINE', 'DRINK']);
 
 interface PairingModalProps {
   item: MenuItem | null;
@@ -66,9 +69,16 @@ export function PairingModal({ item, open, onClose }: PairingModalProps) {
             <p className={styles.error}>{error}</p>
           ) : result ? (
             <>
-              {result.pairings?.length > 0 && (
+              {(() => {
+                // This is the "Wine & Drink Pairing" modal — show drinks/wine only,
+                // never food. Prefer the typed drinkPairings; otherwise filter.
+                const drinks = (result.drinkPairings && result.drinkPairings.length)
+                  ? result.drinkPairings
+                  : (result.pairings || []).filter(p => DRINK_TYPES.has((p.categoryType || '').toUpperCase()));
+                const list = drinks.length ? drinks : (result.pairings || []);
+                return list.length > 0 && (
                 <div className={styles.pairings}>
-                  {result.pairings.map((p, i) => (
+                  {list.map((p, i) => (
                     <button
                       key={i}
                       className={`${styles.pairingCard} ${styles.pairingCardClickable}`}
@@ -80,7 +90,8 @@ export function PairingModal({ item, open, onClose }: PairingModalProps) {
                     </button>
                   ))}
                 </div>
-              )}
+                );
+              })()}
               {result.talkTrack && (
                 <p className={styles.talkTrack}>{result.talkTrack}</p>
               )}

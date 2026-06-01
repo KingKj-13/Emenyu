@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Send, Sparkles } from 'lucide-react';
+import { X, Send, Sparkles, Bell } from 'lucide-react';
 import { api } from '../../services/api';
+import { getSocket } from '../../services/socket';
+import { RESTAURANT_ID } from '../../constants/api';
 import { useApp } from '../../context/AppContext';
 import { resolveAssetPath } from '../../lib/imageResolver';
 import type { ChatSuggestionItem, ChatResponse } from '../../types/menu';
@@ -26,10 +28,17 @@ const SUGGESTED_PROMPTS = [
 ];
 
 export function ChatPanel({ onItemClick }: ChatPanelProps) {
-  const { chatOpen, setChatOpen } = useApp();
+  const { chatOpen, setChatOpen, tableId } = useApp();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [waiterCalled, setWaiterCalled] = useState(false);
+
+  function callWaiter() {
+    getSocket().emit('callWaiter', { restaurantId: RESTAURANT_ID, tableId });
+    setWaiterCalled(true);
+    window.setTimeout(() => setWaiterCalled(false), 2600);
+  }
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -52,7 +61,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
     setLoading(true);
     try {
       const history = messages.map(m => ({ role: m.role, content: m.content }));
-      const res = await api.chat({ message: content, history }) as ChatResponse;
+      const res = await api.chat({ message: content, history, tableId }) as ChatResponse;
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: res.reply || 'Sorry, I had trouble responding.',
@@ -67,6 +76,13 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
 
   return (
     <>
+      {!chatOpen && (
+        <button className={styles.callBell} onClick={callWaiter} aria-label="Call your waiter">
+          <Bell size={20} />
+        </button>
+      )}
+      {waiterCalled && <div className={styles.calledPill} role="status">Waiter notified ✓</div>}
+
       <button
         className={styles.launcher}
         onClick={() => setChatOpen(!chatOpen)}
@@ -90,13 +106,13 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
           >
             <div className={styles.panelHeader}>
               <Sparkles size={16} />
-              <span>Trumps Concierge</span>
+              <span>Trump AI</span>
             </div>
 
             <div className={styles.messages} aria-live="polite" aria-atomic="false">
               {messages.length === 0 && (
                 <div className={styles.welcome}>
-                  <p>Hello! I'm your personal dining concierge. How can I help you tonight?</p>
+                  <p>Hello! I'm Trump AI — your personal dining assistant. How can I help you tonight?</p>
                   <div className={styles.suggestions}>
                     {SUGGESTED_PROMPTS.map((p, i) => (
                       <button key={i} className={styles.suggestion} onClick={() => sendMessage(p)}>

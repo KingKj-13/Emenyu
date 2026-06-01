@@ -1,5 +1,6 @@
 import { BASE_PATH } from '../constants/api';
 import type { MenuItem } from '../types/menu';
+import { resolveDemoImage, resolveDemoVideo } from './demoMedia';
 
 const KEYWORD_MAP: Record<string, string> = {
   tomahawk: 'Tomahawk.jpg',
@@ -326,6 +327,10 @@ function demoVideoFor(item: MenuItem): string | null {
 
 export function resolveImage(item: MenuItem): string {
   if (item.imageVisible === false) return '';
+  // Demo showcase media takes precedence so the most impressive dishes always
+  // present their dedicated photography.
+  const demoImg = resolveDemoImage(item);
+  if (demoImg) return demoImg;
   if (isDrinkItem(item)) return demoImageFor(item);
 
   const raw = item.img;
@@ -349,7 +354,12 @@ export function resolveImage(item: MenuItem): string {
 }
 
 export function resolveVideo(item: MenuItem): string | null {
-  if (item.videoVisible === false || !isVideoEligible(item)) return null;
+  if (item.videoVisible === false) return null;
+  // Showcase clips bypass the normal eligibility gate (e.g. wine & cocktails)
+  // because we ship dedicated, high-quality video for each showcase item.
+  const demoVid = resolveDemoVideo(item);
+  if (demoVid) return demoVid;
+  if (!isVideoEligible(item)) return null;
   if (!item.video?.trim()) return demoVideoFor(item);
   const raw = item.video.trim();
   if (/^https?:\/\//.test(raw) || raw.startsWith('data:') || raw.startsWith('blob:') || raw.startsWith('/uploads/')) return demoVideoFor(item);

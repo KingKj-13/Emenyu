@@ -21,6 +21,8 @@ import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { useApp } from '../context/AppContext';
 import { buildMenuSections, flattenMenu, normalizeName } from '../lib/menuUtils';
 import { resolveImage } from '../lib/imageResolver';
+import { matchShowcaseSlug } from '../lib/demoMedia';
+import { showcaseBySlug, type ShowcaseItem } from '../config/trumpDemoConfig';
 import { FOOD_CHAPTERS } from '../constants/chapters';
 import type { MenuItem } from '../types/menu';
 import styles from './MenuPage.module.css';
@@ -36,6 +38,27 @@ const DRINKS_TITLES = new Set([
 const SETMENU_TITLES = new Set([
   'Signature Combos', 'Signature Platters', 'Set Menu', 'Set Menus',
 ]);
+
+function showcaseToMenuItem(sc: ShowcaseItem): MenuItem {
+  return {
+    name: sc.name,
+    price: sc.price,
+    description: sc.blurb,
+    category: sc.course,
+    chefPick: true,
+  };
+}
+
+function canonicalShowcaseItem(name: string): MenuItem | null {
+  const slug = matchShowcaseSlug(name);
+  const sc = slug ? showcaseBySlug(slug) : null;
+  if (!sc) return null;
+
+  const key = normalizeName(name);
+  const canonicalKey = normalizeName(sc.name);
+  const directMatcher = sc.matchers.some(matcher => key === matcher);
+  return key === canonicalKey || directMatcher ? showcaseToMenuItem(sc) : null;
+}
 
 export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   const { tableId: paramTableId } = useParams<{ tableId: string }>();
@@ -116,6 +139,9 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
     const key = normalizeName(name);
     const exact = allItems.find(item => normalizeName(item.name) === key);
     if (exact) return exact;
+
+    const showcase = canonicalShowcaseItem(name);
+    if (showcase) return showcase;
 
     const partial = allItems.find(item => {
       const itemKey = normalizeName(item.name);
@@ -331,6 +357,8 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
           onFavoriteToggle={toggleFavorite}
           onAddToCart={handleAddToCartWithDetails}
           onRequestItem={(name) => openItemByName(name, 'push')}
+          onOpenItem={(it) => openItem(it, 'push')}
+          onAddSuggestion={handleAddToCart}
           canGoBack={itemStack.length > 1}
           onBack={goBackItem}
         />
@@ -338,6 +366,7 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
         <BottomBar />
         <CartDrawer />
         <ChatPanel onItemClick={handleChatItemClick} />
+        <AddedToast />
       </AppShell>
     );
   }
@@ -407,6 +436,8 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
         onFavoriteToggle={toggleFavorite}
         onAddToCart={handleAddToCartWithDetails}
         onRequestItem={(name) => openItemByName(name, 'push')}
+        onOpenItem={(it) => openItem(it, 'push')}
+        onAddSuggestion={handleAddToCart}
         canGoBack={itemStack.length > 1}
         onBack={goBackItem}
       />
@@ -427,7 +458,26 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
       )}
       <CartDrawer />
       <ChatPanel onItemClick={handleChatItemClick} />
+        <AddedToast />
     </AppShell>
+  );
+}
+
+function AddedToast() {
+  const { justAdded } = useCart();
+  const [visible, setVisible] = useState(false);
+  const [label, setLabel] = useState('');
+  useEffect(() => {
+    if (!justAdded) return;
+    setLabel(justAdded.name);
+    setVisible(true);
+    const id = window.setTimeout(() => setVisible(false), 1800);
+    return () => window.clearTimeout(id);
+  }, [justAdded?.t]);
+  return (
+    <div className={`${styles.addedToast} ${visible ? styles.addedToastShow : ''}`} role="status" aria-live="polite">
+      <span className={styles.addedCheck} aria-hidden>✓</span> Added to cart · {label}
+    </div>
   );
 }
 

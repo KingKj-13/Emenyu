@@ -5,12 +5,12 @@ import { useCart } from '../../hooks/useCart';
 import styles from './Header.module.css';
 
 export function Header() {
-  const { tableLabel, bookMode, setBookMode, user, setDrawerOpen } = useApp();
+  const { tableId, tableLabel, bookMode, setBookMode, user, setDrawerOpen } = useApp();
   const { count, setIsOpen } = useCart();
 
   return (
     <header className={styles.header} role="banner">
-      <div className={styles.brand} aria-label="Trumps Prime Grillhouse">
+      <Link to={`/${tableId}`} className={styles.brand} aria-label="Trumps Prime Grillhouse — back to start">
         <div className={styles.brandMark} aria-hidden="true">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 19V5h16v14" />
@@ -21,7 +21,7 @@ export function Header() {
           <p className={styles.brandTitle}>TRUMPS</p>
           <p className={styles.brandSubtitle}>PRIME GRILLHOUSE</p>
         </div>
-      </div>
+      </Link>
 
       <nav className={styles.nav} aria-label="Main navigation">
         {tableLabel && (

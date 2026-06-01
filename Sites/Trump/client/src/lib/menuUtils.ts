@@ -1,7 +1,19 @@
 import type { MenuData, MenuSection, MenuItem, Chapter } from '../types/menu';
+import { DEMO_MODE, showcaseMenuRank } from '../config/trumpDemoConfig';
+import { matchShowcaseSlug } from './demoMedia';
 
 export function normalizeName(raw: string): string {
   return String(raw || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// Demo: float media-rich showcase items to the top of their section, in the
+// curated order, while keeping every other item's relative order (stable).
+function orderForDemo(items: MenuItem[]): MenuItem[] {
+  if (!DEMO_MODE || items.length < 2) return items;
+  return items
+    .map((item, i) => ({ item, i, rank: showcaseMenuRank(matchShowcaseSlug(item)) }))
+    .sort((a, b) => (a.rank - b.rank) || (a.i - b.i))
+    .map(x => x.item);
 }
 
 function matchesSearch(item: MenuItem, query: string): boolean {
@@ -47,7 +59,7 @@ export function buildMenuSections(
 
     if (Array.isArray(categoryValue)) {
       const items = visibleItems(categoryValue as MenuItem[], activeFilters, searchQuery);
-      if (items.length > 0) sections.push({ title: categoryTitle, items, subSections: [] });
+      if (items.length > 0) sections.push({ title: categoryTitle, items: orderForDemo(items), subSections: [] });
       return;
     }
 
@@ -64,11 +76,11 @@ export function buildMenuSections(
       const sv = subValue as { visible?: boolean; items?: MenuItem[] };
       if (sv.visible === false) return;
       const items = visibleItems(sv.items || [], activeFilters, searchQuery);
-      if (items.length > 0) subSections.push({ title: subTitle, items });
+      if (items.length > 0) subSections.push({ title: subTitle, items: orderForDemo(items) });
     });
 
     if (directItems.length > 0 || subSections.length > 0) {
-      sections.push({ title: categoryTitle, items: directItems, subSections });
+      sections.push({ title: categoryTitle, items: orderForDemo(directItems), subSections });
     }
   });
 

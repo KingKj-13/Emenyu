@@ -21,6 +21,7 @@ function registerOrderRoutes(app, controllers, auth) {
   app.post(['/api/chat', '/Trump/api/chat', '/trump/api/chat'], controllers.ai.chat);
   app.post(['/api/ai-pairing', '/Trump/api/ai-pairing', '/trump/api/ai-pairing'], controllers.ai.aiPairing);
   app.post(['/api/recommend', '/Trump/api/recommend', '/trump/api/recommend'], controllers.ai.recommend);
+  app.post(['/api/waiter/cart-recommendations', '/Trump/api/waiter/cart-recommendations', '/trump/api/waiter/cart-recommendations'], waiterAuth, controllers.ai.cartRecommendations);
   app.get(['/api/chat-history', '/Trump/api/chat-history', '/trump/api/chat-history'], adminAuth, controllers.ai.getChatHistory);
 
   app.post(['/submit_order', '/Trump/submit_order', '/trump/submit_order'], controllers.order.submitOrder);

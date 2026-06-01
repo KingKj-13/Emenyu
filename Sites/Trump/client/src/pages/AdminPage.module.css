@@ -1183,3 +1183,112 @@
   font-size: 12px;
   color: #4ade80;
 }
+
+/* ───────── Showcase Media panel ───────── */
+.dmPanel { display: flex; flex-direction: column; gap: 18px; }
+
+.dmInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid rgba(200, 165, 85, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.dmInfoRow { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.dmInfoLabel {
+  flex: 0 0 110px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+.dmInfoValue {
+  font-size: 12.5px;
+  color: var(--color-sand);
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.dmGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.dmCard {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+}
+.dmCardMissing { border-color: rgba(239, 68, 68, 0.45); }
+
+.dmPreview { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #000; }
+.dmPreviewMedia { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dmPreviewEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 11px;
+}
+
+.dmBadges { position: absolute; top: 7px; left: 7px; display: flex; gap: 5px; }
+.dmBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #1a1206;
+  background: rgba(226, 200, 128, 0.92);
+  border-radius: 999px;
+}
+
+.dmCardBody { display: flex; flex-direction: column; gap: 6px; padding: 10px 11px 12px; }
+.dmCardName {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.1;
+}
+.dmCardMeta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dmCourse {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-sand);
+}
+.dmStatus { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; }
+.dmStatusOk { color: #4ade80; background: rgba(34, 197, 94, 0.12); }
+.dmStatusPartial { color: #c6a24b; background: rgba(198, 162, 75, 0.15); }
+.dmStatusMissing { color: #fca5a5; background: rgba(239, 68, 68, 0.12); }
+
+.dmFiles {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.42);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+}
+
+.dmExtras {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+.dmExtrasHint { font-size: 12px; color: rgba(255, 255, 255, 0.5); margin: 0 0 4px; }

@@ -272,6 +272,20 @@ class SocketService {
     }
   }
 
+  // Real-time special-occasion alert for staff (waiter + admin/owner consoles).
+  emitGuestEvent(payload = {}) {
+    if (!this.io) return;
+    this.io
+      .to(this.getAdminRoom())
+      .to(this.getWaiterRoom())
+      .emit('guestEvent', {
+        restaurantId: this.config.restaurantId,
+        tableId: normalizeId(payload.tableId || 'unknown'),
+        event: payload.event || null,
+        at: Date.now()
+      });
+  }
+
   // ─── Connection handler ───────────────────────────────────────────────────────
 
   async handleConnection(socket) {
@@ -494,7 +508,13 @@ class SocketService {
       return;
     }
 
-    await this.replaceTableCart(payload.tableId, payload.cart, { emit: true });
+    // Never let a transient cart-write error become an unhandled rejection that
+    // crashes the whole server — log and continue serving.
+    try {
+      await this.replaceTableCart(payload.tableId, payload.cart, { emit: true });
+    } catch (error) {
+      this.logger?.warn?.('socket_update_cart_failed', { tableId: payload.tableId, error });
+    }
   }
 
   async handleUpdateAdminOverrides(payload = {}) {

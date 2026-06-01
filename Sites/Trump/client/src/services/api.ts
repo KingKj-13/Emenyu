@@ -259,6 +259,10 @@ export const api = {
     return postJson<unknown>(ENDPOINTS.pushSubscribe, subscription);
   },
 
+  getDemoMedia() {
+    return fetchJson<import('../lib/demoMedia').DemoManifest>(ENDPOINTS.demoMedia);
+  },
+
   // ── Waiter-AI app ──
   getFloor() {
     return fetchJson<import('../types/waiter').FloorState>(ENDPOINTS.floor);
@@ -269,6 +273,9 @@ export const api = {
   },
   coach(payload: { tableId?: string; cart?: unknown[]; dishName?: string; tone?: string }) {
     return postJson<import('../types/waiter').CoachResponse>(ENDPOINTS.coach, payload);
+  },
+  cartRecommendations(payload: { cart?: unknown[]; event?: string | null; reason?: string }) {
+    return postJson<import('../types/waiter').CartRecResponse>(ENDPOINTS.cartRecommendations, payload);
   },
   sommelier(payload: { dish?: string; cart?: unknown[]; tone?: string }) {
     return postJson<import('../types/waiter').SommelierResponse>(ENDPOINTS.sommelier, payload);

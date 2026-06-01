@@ -4,6 +4,9 @@ import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
 import { resolveImage, resolveVideo, resolveYouTubeEmbed } from '../../lib/imageResolver';
+import { isShowcaseItem, matchShowcaseSlug } from '../../lib/demoMedia';
+import { story } from '../../config/trumpDemoConfig';
+import { FeaturedExperience } from './FeaturedExperience';
 import { BASE_PATH } from '../../constants/api';
 import { formatPrice } from '../../lib/menuUtils';
 import { api } from '../../services/api';
@@ -18,6 +21,8 @@ interface ItemModalProps {
   onFavoriteToggle: (name: string) => void;
   onAddToCart: (item: MenuItem, qty: number, note: string) => void;
   onRequestItem?: (name: string) => void;
+  onOpenItem?: (item: MenuItem) => void;
+  onAddSuggestion?: (item: MenuItem) => void;
   canGoBack?: boolean;
   onBack?: () => void;
 }
@@ -112,6 +117,8 @@ export function ItemModal({
   onFavoriteToggle,
   onAddToCart,
   onRequestItem,
+  onOpenItem,
+  onAddSuggestion,
   canGoBack = false,
   onBack,
 }: ItemModalProps) {
@@ -214,20 +221,18 @@ export function ItemModal({
     <Modal open={open} onClose={onClose} size="lg">
       <div
         className={styles.modal}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
         style={{
           transform: `translateX(${swipeX}px) rotate(${swipeX * 0.04}deg)`,
           transition: swipeX === 0 ? 'transform 280ms ease' : 'none',
           transformOrigin: 'bottom center',
+          touchAction: 'pan-y',
         }}
       >
-        <div
-          className={styles.media}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchCancel}
-          style={{ touchAction: 'pan-y' }}
-        >
+        <div className={styles.media}>
           {videoSrc ? (
             <>
               <video
@@ -300,9 +305,11 @@ export function ItemModal({
           <h2 className={styles.name}>{item.name}</h2>
           <p className={styles.price}>{formatPrice(item.price)}</p>
 
-          {item.description && (
-            <p className={styles.description}>{item.description}</p>
-          )}
+          {(() => {
+            const slug = matchShowcaseSlug(item);
+            const desc = slug ? story(slug) : item.description;
+            return desc ? <p className={styles.description}>{desc}</p> : null;
+          })()}
 
           {item.allergens && (
             <p className={styles.allergens}>
@@ -314,7 +321,9 @@ export function ItemModal({
             <p className={styles.calories}>{item.calories}</p>
           )}
 
-          {open && <ItemPairings item={item} onRequestItem={onRequestItem} />}
+          {open && (isShowcaseItem(item)
+            ? <FeaturedExperience item={item} onRequestItem={onRequestItem} onOpenItem={onOpenItem} onAddSuggestion={onAddSuggestion} />
+            : <ItemPairings item={item} onRequestItem={onRequestItem} />)}
 
           <div className={styles.actions}>
             <div className={styles.qtyRow}>

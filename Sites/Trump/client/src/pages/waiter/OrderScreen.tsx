@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Minus, Flag, Sparkles, Send, Trash2 } from 'lucide-react';
+import { Plus, Minus, Flag, Sparkles, Send, Trash2, CheckCircle } from 'lucide-react';
 import { useWaiter } from '../../context/WaiterContext';
 import { useSocketEvent } from '../../hooks/useSocket';
 import { api } from '../../services/api';
@@ -8,9 +8,27 @@ import type { TableIntel } from '../../types/waiter';
 
 export function OrderScreen() {
   const {
-    selectedTableId, order, seedGuestLines, addToOrder, changeQty, removeLine, orderTotal,
-    sendToKitchen, sending, notes, openOverlay, setTab, showToast, shift
+    selectedTableId, order, addToOrder, changeQty, removeLine, orderTotal,
+    sendToKitchen, sending, notes, openOverlay, setTab, showToast, shift, clearOrder,
+    placedItems, events
   } = useWaiter();
+  const [closing, setClosing] = useState(false);
+
+  async function completeAndResetTable() {
+    if (!selectedTableId) return;
+    if (!confirm('Complete all orders and reset this table for the next guests?')) return;
+    setClosing(true);
+    try {
+      await api.waiterArchiveTable({ tableId: selectedTableId });
+      clearOrder();
+      showToast('Table completed & reset');
+      setTab('floor');
+    } catch {
+      showToast('Could not reset table — try again');
+    } finally {
+      setClosing(false);
+    }
+  }
 
   const addSuggestion = useCallback((item: { name: string; price: number; categoryType?: string }) => {
     addToOrder(item);
@@ -28,13 +46,7 @@ export function OrderScreen() {
 
   useEffect(() => { setIntel(null); loadIntel(); }, [loadIntel]);
   useSocketEvent('orderPlaced', loadIntel);
-
-  // Pull the guest's live cart into the order builder as GUEST-tagged lines.
-  useSocketEvent<{ tableId?: string; cart?: { name?: string; price?: number; qty?: number; quantity?: number }[] }>('syncCart', p => {
-    if (selectedTableId && p?.tableId === selectedTableId && Array.isArray(p.cart)) {
-      seedGuestLines(selectedTableId, p.cart);
-    }
-  });
+  // Guest live-cart sync is handled globally in WaiterContext (works on any tab).
 
   if (!selectedTableId) {
     return (
@@ -53,6 +65,7 @@ export function OrderScreen() {
   const note = notes[selectedTableId];
   const guest = intel?.guestIntel;
   const opp = intel?.opportunity;
+  const event = events[selectedTableId];
 
   return (
     <div className="w-screen">
@@ -64,6 +77,13 @@ export function OrderScreen() {
         </div>
         <span className="w-status-tag">{(info?.status || 'seated').toUpperCase()}</span>
       </div>
+
+      {event && (
+        <div className="w-notes-banner" style={{ borderColor: 'rgba(200,165,85,0.55)' }}>
+          <span style={{ fontSize: 18 }}>{event.emoji}</span>
+          <span><b>{event.label}</b> — {event.action || 'Offer a complimentary Chocolate Lava Cake'}</span>
+        </div>
+      )}
 
       {(note?.text || guest?.allergies || guest?.notes) && (
         <div className="w-notes-banner">
@@ -80,6 +100,24 @@ export function OrderScreen() {
       <button className="w-quickadd" onClick={() => setTab('menu')}>
         <Plus size={18} color="var(--w-gold)" /> Quick add an item…
       </button>
+
+      {placedItems.length > 0 && (
+        <>
+          <div className="w-section-label">
+            <span className="w-eyebrow">Already Ordered</span><span className="line" /><span className="w-eyebrow-dim">{placedItems.length} items</span>
+          </div>
+          {placedItems.map((line, i) => (
+            <div key={`placed-${line.name}-${i}`} className="w-line" style={{ opacity: 0.9 }}>
+              <div style={{ minWidth: 0 }}>
+                <div className="name">{line.name}<span className="w-guest-tag" style={{ marginLeft: 8, background: 'rgba(95,207,138,0.15)', color: '#5fcf8a' }}>SENT</span></div>
+                <div className="each">{money(line.price)} each</div>
+              </div>
+              <b style={{ color: 'var(--w-text2)', minWidth: 28, textAlign: 'center' }}>×{line.quantity}</b>
+              <span className="price">{money(line.price * line.quantity)}</span>
+            </div>
+          ))}
+        </>
+      )}
 
       <div className="w-section-label">
         <span className="w-eyebrow">Current Order</span><span className="line" /><span className="w-eyebrow-dim">{order.length} items</span>
@@ -158,6 +196,14 @@ export function OrderScreen() {
         <button className="w-btn-ghost" style={{ flex: 1 }} onClick={() => openOverlay('split')}>Split bill</button>
         <button className="w-btn-ghost" style={{ flex: 1 }} onClick={() => openOverlay('recovery')}>Service recovery</button>
       </div>
+      <button
+        className="w-btn-ghost"
+        style={{ marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderColor: 'rgba(95,207,138,0.5)', color: '#5fcf8a' }}
+        onClick={completeAndResetTable}
+        disabled={closing}
+      >
+        <CheckCircle size={16} /> {closing ? 'Closing table…' : 'Complete & reset table'}
+      </button>
     </div>
   );
 }

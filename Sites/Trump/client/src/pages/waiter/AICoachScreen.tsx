@@ -38,19 +38,19 @@ export function AICoachScreen() {
   return (
     <div className="w-screen">
       <p className="w-eyebrow">AI Coach</p>
-      <h1 className="w-display" style={{ fontSize: 34, marginTop: 4 }}>Your hospitality co-pilot</h1>
+      <h1 className="w-display" style={{ fontSize: 34, marginTop: 4 }}>Your hospitality intelligence</h1>
 
       {/* Voice */}
       <div className="w-card" style={{ marginTop: 18, textAlign: 'center' }}>
         <button className="w-mic" onClick={() => openOverlay('voice')} aria-label="Ask by voice"><Mic size={28} /></button>
-        <p style={{ marginTop: 12, color: 'var(--w-text2)' }}>Ask anything — “What wine matches the Tomahawk?”</p>
+        <p style={{ marginTop: 12, color: 'var(--w-text2)' }}>Ask aloud — “Which wine complements the King &amp; Queen Platter?”</p>
       </div>
 
       {/* Best recommendation / table coach */}
-      <div className="w-section-label"><span className="w-eyebrow">Best Recommendation</span><span className="line" /></div>
+      <div className="w-section-label"><span className="w-eyebrow">Recommended for this table</span><span className="line" /></div>
       {!selectedTableId && (
         <div className="w-empty">
-          <p>Select a table to get a live table pitch.</p>
+          <p>Select a table for a tailored recommendation.</p>
           <button className="w-btn-ghost" style={{ marginTop: 14 }} onClick={() => setTab('floor')}>Go to floor</button>
         </div>
       )}
@@ -59,7 +59,7 @@ export function AICoachScreen() {
         <div className="w-sable">
           <div className="w-sable-head">
             <span className="w-sable-mark"><Sparkles size={17} /></span>
-            <span className="w-sable-title">Suggested Opportunity</span>
+            <span className="w-sable-title">Sable · Table Pitch</span>
             <span className="w-sable-badge">AI</span>
           </div>
           {coach.suggestion ? (
@@ -88,7 +88,7 @@ export function AICoachScreen() {
               </button>
             </>
           ) : (
-            <p className="w-sable-body" style={{ marginTop: 12 }}>{coach.whyItWorks || 'The table looks well matched — offer dessert when they slow down.'}</p>
+            <p className="w-sable-body" style={{ marginTop: 12 }}>{coach.whyItWorks || 'This table is well matched — suggest dessert as the pace slows.'}</p>
           )}
         </div>
       )}

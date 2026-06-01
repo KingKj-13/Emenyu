@@ -1,13 +1,15 @@
-import { LayoutGrid, ShoppingCart, UtensilsCrossed, Sparkles, Activity, Bell, LogOut } from 'lucide-react';
+import { LayoutGrid, ShoppingCart, UtensilsCrossed, Sparkles, Activity, Bell, LogOut, TrendingUp } from 'lucide-react';
 import '../styles/waiter-theme.css';
 import { WaiterProvider, useWaiter } from '../context/WaiterContext';
 import { useAuth } from '../hooks/useAuth';
+import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
 import { BRAND_NAME } from '../constants/waiter';
 import type { WaiterTab } from '../types/waiter';
 
 import { StartShiftScreen } from './waiter/StartShiftScreen';
 import { FloorScreen } from './waiter/FloorScreen';
 import { OrderScreen } from './waiter/OrderScreen';
+import { CartRecScreen } from './waiter/CartRecScreen';
 import { MenuScreen } from './waiter/MenuScreen';
 import { AICoachScreen } from './waiter/AICoachScreen';
 import { TodayScreen } from './waiter/TodayScreen';
@@ -21,6 +23,7 @@ import { VoiceAssistant } from '../components/waiter/VoiceAssistant';
 const NAV: { tab: WaiterTab; label: string; Icon: typeof LayoutGrid }[] = [
   { tab: 'floor', label: 'Floor', Icon: LayoutGrid },
   { tab: 'order', label: 'Order', Icon: ShoppingCart },
+  { tab: 'cartrec', label: 'Cart Recs', Icon: TrendingUp },
   { tab: 'menu', label: 'Menu', Icon: UtensilsCrossed },
   { tab: 'coach', label: 'AI Coach', Icon: Sparkles },
   { tab: 'today', label: 'Today', Icon: Activity }
@@ -76,6 +79,7 @@ function Screen() {
   switch (tab) {
     case 'floor': return <FloorScreen />;
     case 'order': return <OrderScreen />;
+    case 'cartrec': return <CartRecScreen />;
     case 'menu': return <MenuScreen />;
     case 'coach': return <AICoachScreen />;
     case 'today': return <TodayScreen />;
@@ -126,6 +130,7 @@ function WaiterShell() {
 }
 
 export function WaiterPage() {
+  useHomeBackGuard();
   return (
     <div className="waiter-app">
       <WaiterProvider>

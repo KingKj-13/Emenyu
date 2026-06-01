@@ -7,7 +7,7 @@ import { api } from '../services/api';
 import { RESTAURANT_ID } from '../constants/api';
 import { clockTime } from '../lib/waiterFormat';
 import type { MenuItem } from '../types/menu';
-import type { WaiterTab, WaiterRole, OrderLine, ServiceNotes, WaiterAlert } from '../types/waiter';
+import type { WaiterTab, WaiterRole, OrderLine, ServiceNotes, WaiterAlert, GuestEvent } from '../types/waiter';
 
 export type OverlayKind = 'notes' | 'split' | 'recovery' | 'alerts' | 'voice';
 
@@ -55,18 +55,21 @@ interface WaiterContextValue {
   respondAlert: (id: string) => void;
   dismissAlert: (id: string) => void;
 
+  events: Record<string, GuestEvent>;
+  placedItems: { name: string; price: number; quantity: number }[];
+
   toast: string | null;
   showToast: (msg: string) => void;
 }
 
 const WaiterContext = createContext<WaiterContextValue>(null!);
 
-const DEFAULT_SECTION = [5, 7, 12, 18, 21, 24];
+const DEFAULT_SECTION = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export function WaiterProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const socketRef = useRef(getSocket());
-  const seededTableRef = useRef<string | null>(null);
+  const selectedTableRef = useRef<string | null>(null);
 
   const [shift, setShift] = useState<Shift>({
     started: false,
@@ -82,6 +85,8 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
   const [notes, setNotes] = useState<Record<string, ServiceNotes>>({});
   const [overlay, setOverlay] = useState<OverlayKind | null>(null);
   const [alerts, setAlerts] = useState<WaiterAlert[]>([]);
+  const [events, setEvents] = useState<Record<string, GuestEvent>>({});
+  const [placedItems, setPlacedItems] = useState<{ name: string; price: number; quantity: number }[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
@@ -106,24 +111,29 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
 
   const selectTable = useCallback((tableId: string) => {
     setSelectedTableId(tableId);
+    selectedTableRef.current = tableId;
     setOrder([]);
-    seededTableRef.current = null;
+    setPlacedItems([]);
     setTab('order');
     const socket = socketRef.current;
     socket.emit('joinTable', { restaurantId: RESTAURANT_ID, tableId });
     socket.emit('fetchHistory', { restaurantId: RESTAURANT_ID, tableId });
   }, []);
+  useEffect(() => { selectedTableRef.current = selectedTableId; }, [selectedTableId]);
+  const shiftRef = useRef(shift);
+  useEffect(() => { shiftRef.current = shift; }, [shift]);
 
-  // Merge the guest's live cart (from syncCart) into the order as GUEST-tagged lines, once per table.
-  const seedGuestLines = useCallback((tableId: string, lines: { name?: string; price?: number; quantity?: number; qty?: number }[]) => {
-    if (seededTableRef.current === tableId) return;
-    seededTableRef.current = tableId;
+  // Replace the GUEST-tagged lines with the guest's current live cart on EVERY
+  // sync (waiter-added lines are preserved) — so the waiter sees guest changes
+  // in real time without reloading.
+  const seedGuestLines = useCallback((_tableId: string, lines: { name?: string; price?: number; quantity?: number; qty?: number }[]) => {
     setOrder(prev => {
-      const existing = new Set(prev.map(l => l.name));
+      const waiterLines = prev.filter(l => l.source !== 'guest');
+      const waiterNames = new Set(waiterLines.map(l => l.name));
       const guestLines: OrderLine[] = (lines || [])
-        .filter(l => l.name && !existing.has(l.name))
+        .filter(l => l.name && !waiterNames.has(l.name))
         .map(l => ({ name: String(l.name), price: Number(l.price) || 0, quantity: Number(l.quantity ?? l.qty) || 1, source: 'guest' as const }));
-      return [...guestLines, ...prev];
+      return [...guestLines, ...waiterLines];
     });
   }, []);
 
@@ -196,6 +206,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     const onBell = (p: { tableId?: string; displayTable?: string }) => {
       const label = p.displayTable || (p.tableId ? p.tableId.replace('table', 'Table ') : 'A table');
       pushAlert({ kind: 'bell', tableId: p.tableId, title: label, message: `${label} just rang the service bell` });
+      showToast(`🔔 ${label} is calling you`);
     };
     const onManager = (p: { message?: string }) => {
       pushAlert({ kind: 'manager', title: 'Manager', message: p.message || 'Manager called you to the front' });
@@ -205,15 +216,73 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
       const label = p.displayTable || (p.tableId ? p.tableId.replace('table', 'Table ') : 'A table');
       pushAlert({ kind: 'ready', tableId: p.tableId, title: label, message: `Order ready — bring to ${label.toLowerCase()}` });
     };
+    const onGuestEvent = (p: { tableId?: string; event?: GuestEvent | null }) => {
+      if (!p?.event) return;
+      const label = p.tableId ? p.tableId.replace('table', 'Table ') : 'A table';
+      setEvents(prev => ({ ...prev, [String(p.tableId)]: p.event as GuestEvent }));
+      pushAlert({
+        kind: 'event',
+        tableId: p.tableId,
+        title: `${p.event.emoji} ${p.event.label} · ${label}`,
+        message: p.event.action || `${p.event.label} detected at ${label}`,
+        emoji: p.event.emoji,
+        action: p.event.action,
+        script: p.event.script
+      });
+      // Prominent real-time nudge so the waiter sees it immediately.
+      showToast(`${p.event.emoji} ${label} — offer a complimentary Chocolate Lava Cake`);
+    };
+    const sameTable = (a?: string | null, b?: string | null) =>
+      String(a || '').toLowerCase().replace(/[^a-z0-9]/g, '') === String(b || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const onSyncCart = (p: { tableId?: string; cart?: { name?: string; price?: number; quantity?: number; qty?: number }[] }) => {
+      if (!p || !Array.isArray(p.cart)) return;
+      if (!sameTable(p.tableId, selectedTableRef.current)) return;
+      seedGuestLines(String(p.tableId), p.cart);
+    };
+    const onSyncHistory = (p: { tableId?: string; history?: { name?: string; price?: number; quantity?: number; qty?: number }[] }) => {
+      if (!p || !sameTable(p.tableId, selectedTableRef.current) || !Array.isArray(p.history)) return;
+      setPlacedItems(
+        p.history
+          .filter(h => h && h.name)
+          .map(h => ({ name: String(h.name), price: Number(h.price) || 0, quantity: Number(h.quantity ?? h.qty) || 1 }))
+      );
+    };
+    const onOrderPlaced = () => {
+      const tid = selectedTableRef.current;
+      if (tid) socket.emit('fetchHistory', { restaurantId: RESTAURANT_ID, tableId: tid });
+    };
+    // On (re)connect — e.g. after a server restart — re-join the waiter/admin
+    // rooms and the selected table so notifications and cart sync keep working.
+    const onConnect = () => {
+      if (shiftRef.current.started) {
+        socket.emit('joinAsWaiter', { restaurantId: RESTAURANT_ID, name: shiftRef.current.name });
+        socket.emit('joinAdmin', { restaurantId: RESTAURANT_ID });
+      }
+      const tid = selectedTableRef.current;
+      if (tid) {
+        socket.emit('joinTable', { restaurantId: RESTAURANT_ID, tableId: tid });
+        socket.emit('fetchHistory', { restaurantId: RESTAURANT_ID, tableId: tid });
+      }
+    };
+    socket.on('connect', onConnect);
     socket.on('incomingWaiterCall', onBell);
     socket.on('managerCallWaiter', onManager);
     socket.on('kitchenStatusUpdate', onKitchen);
+    socket.on('guestEvent', onGuestEvent);
+    socket.on('syncCart', onSyncCart);
+    socket.on('syncHistory', onSyncHistory);
+    socket.on('orderPlaced', onOrderPlaced);
     return () => {
+      socket.off('connect', onConnect);
       socket.off('incomingWaiterCall', onBell);
       socket.off('managerCallWaiter', onManager);
       socket.off('kitchenStatusUpdate', onKitchen);
+      socket.off('guestEvent', onGuestEvent);
+      socket.off('syncCart', onSyncCart);
+      socket.off('syncHistory', onSyncHistory);
+      socket.off('orderPlaced', onOrderPlaced);
     };
-  }, []);
+  }, [seedGuestLines, showToast]);
 
   const liveAlertCount = alerts.filter(a => a.state === 'live').length;
 
@@ -227,6 +296,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
       overlay, openOverlay: setOverlay, closeOverlay: () => setOverlay(null),
       notes, setTableNotes,
       alerts, liveAlertCount, respondAlert, dismissAlert,
+      events, placedItems,
       toast, showToast
     }}>
       {children}

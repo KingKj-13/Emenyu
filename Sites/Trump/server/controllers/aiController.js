@@ -15,6 +15,11 @@ function createAiController({ aiService }) {
       res.json(data);
     },
 
+    async cartRecommendations(req, res) {
+      const data = await aiService.cartRecommendations(req.body);
+      res.json(data);
+    },
+
     async getChatHistory(req, res) {
       const history = await aiService.getChatHistory();
       res.json(history);

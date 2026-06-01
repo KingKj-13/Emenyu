@@ -1,4 +1,5 @@
 const { getCategoryType, normalizeId, normalizeName } = require('../utils/helpers');
+const demo = require('../config/trumpDemo');
 
 const SPECIAL_WORDS = [
   'birthday',
@@ -63,6 +64,29 @@ const QUERY_INTENTS = [
   { key: 'beer', terms: ['beer', 'lager', 'draught', 'cider'] }
 ];
 
+// When a guest excludes a category, expand it to the concrete menu terms to filter.
+const NEGATION_SYNONYMS = {
+  seafood: ['seafood', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'fish', 'salmon', 'kingklip', 'hake', 'sole', 'sushi', 'sashimi', 'linefish', 'crayfish', 'lobster'],
+  fish: ['fish', 'salmon', 'kingklip', 'hake', 'sole', 'linefish', 'sushi', 'sashimi'],
+  prawn: ['prawn', 'prawns'],
+  prawns: ['prawn', 'prawns'],
+  meat: ['beef', 'steak', 'rump', 'fillet', 'ribeye', 'tomahawk', 'sirloin', 'lamb', 'pork', 'chicken', 'ribs', 'wors', 'boerewors', 'game', 'venison', 'oxtail', 'biltong'],
+  steak: ['steak', 'rump', 'fillet', 'ribeye', 'tomahawk', 'sirloin', 'beef'],
+  beef: ['beef', 'steak', 'rump', 'fillet', 'ribeye', 'tomahawk', 'sirloin'],
+  pork: ['pork', 'bacon', 'ribs'],
+  chicken: ['chicken'],
+  lamb: ['lamb'],
+  dairy: ['cheese', 'halloumi', 'cream', 'milk', 'mozzarella', 'feta'],
+  cheese: ['cheese', 'halloumi', 'mozzarella', 'feta'],
+  nuts: ['nut', 'nuts', 'almond', 'peanut', 'cashew'],
+  gluten: ['bread', 'pasta', 'crumbed', 'tempura', 'batter', 'noodle'],
+  carbs: ['pasta', 'chips', 'fries', 'rice', 'bread', 'noodle'],
+  spicy: ['peri', 'chilli', 'chili', 'spicy', 'sriracha', 'firecracker'],
+  alcohol: ['wine', 'beer', 'cocktail', 'whisky', 'whiskey', 'vodka', 'gin', 'rum', 'tequila', 'margarita', 'cabernet', 'shiraz', 'merlot', 'champagne', 'sauvignon', 'liqueur', 'spirit']
+};
+
+const NEGATION_STOP = new Set(['the', 'a', 'an', 'any', 'some', 'more', 'too', 'please', 'thanks', 'food', 'dish', 'thing', 'stuff', 'it', 'that', 'this']);
+
 const IMAGE_BANK = [
   { terms: ['tomahawk', 't-bone', 'ribeye'], image: 'Images/Tomahawk.jpg' },
   { terms: ['fillet'], image: 'Images/Beef fillet.jpg' },
@@ -113,6 +137,7 @@ function publicItem(item = {}, sourceTitle = '') {
     category: item.category || '',
     subcategory: item.subcategory || '',
     categoryType: item.categoryType || 'MAIN',
+    story: item.story || '',
     source_title: sourceTitle || item.source_title || ''
   };
 }
@@ -257,8 +282,13 @@ function scoreSearch(menuContext, message, options = {}) {
         score += 12;
       }
 
-      if (lower.includes('light') && /salad|fish|sushi|seafood|vegetarian/i.test(item.searchText)) {
-        score += 8;
+      if (/\b(light|lighter|healthy|fresh|delicate)\b/.test(lower)) {
+        if (/salad|vegetarian|veg |sushi|sashimi|carpaccio|tartare|ceviche|bruschetta|halloumi|edamame|gazpacho|greek salad|starter/i.test(item.searchText)) {
+          score += 14;
+        }
+        if (/steak|rump|fillet|ribeye|wagyu|tomahawk|sirloin|beef|lamb|pork|ribs|ostrich|chicken|duck|oxtail|platter|burger|pasta|fried|crumbed|tempura|creamy|wors|chips|cake|pizza/i.test(item.searchText)) {
+          score -= 14;
+        }
       }
 
       if (lower.includes('spicy') && /peri|chilli|sriracha|spicy|firecracker/i.test(item.searchText)) {
@@ -277,10 +307,131 @@ function itemQuantity(item = {}) {
 }
 
 class AiService {
-  constructor(config, fileService, socketService) {
+  constructor(config, fileService, socketService, demoMediaService) {
     this.config = config;
     this.fileService = fileService;
     this.socketService = socketService;
+    this.demoMediaService = demoMediaService || null;
+    this._recRotation = 0;
+  }
+
+  // ── Demo showcase curation ────────────────────────────────────────────────
+
+  /** Demo media filenames for a slug (uses live manifest, falls back to slug.ext). */
+  showcaseMedia(slug) {
+    const manifest = this.demoMediaService ? this.demoMediaService.getManifest() : null;
+    const entry = manifest && manifest.items.find(i => i.slug === slug);
+    if (entry) {
+      return {
+        img: entry.image ? `media/trump/${entry.image}` : '',
+        video: entry.video ? `media/trump/${entry.video}` : '',
+        priority: entry.priority,
+      };
+    }
+    return { img: `media/trump/${slug}.jpg`, video: `media/trump/${slug}.mp4`, priority: 1 };
+  }
+
+  /**
+   * When DEMO_MODE is on and the queried dish is a showcase item, returns the
+   * full curated journey (drink/starter/main/dessert/wine) as natural pairings.
+   * Returns null otherwise so normal logic runs.
+   */
+  buildShowcasePairing(name) {
+    if (!demo.DEMO_MODE) return null;
+    const slug = demo.matchShowcaseSlug(name);
+    if (!slug) return null;
+
+    const journey = demo.journeyForSlug(slug);
+    const anchor = demo.showcaseBySlug(slug);
+    const entries = ['drink', 'starter', 'main', 'dessert', 'wine']
+      .map(course => ({ course, slug: journey[course] }))
+      .filter(entry => entry.slug && entry.slug !== slug)
+      .map(entry => {
+        const sc = demo.showcaseBySlug(entry.slug);
+        return {
+          name: sc ? sc.name : entry.slug,
+          reason: demo.waiterLine(entry.slug) || demo.COURSE_REASON[entry.course],
+          categoryType: demo.COURSE_TO_TYPE[entry.course],
+          price: sc ? sc.price : 0,
+          img: this.showcaseMedia(entry.slug).img,
+        };
+      });
+
+    const drinkPairings = entries.filter(p => p.categoryType === 'DRINK' || p.categoryType === 'WINE');
+    const foodPairings = entries.filter(p => !['DRINK', 'WINE'].includes(p.categoryType));
+
+    return {
+      title: anchor ? `Pairs with ${anchor.name}` : "Chef's Pick",
+      description: anchor ? anchor.blurb : '',
+      foodPairings,
+      drinkPairings,
+      pairings: [...foodPairings, ...drinkPairings],
+      talkTrack: journey.narrative
+    };
+  }
+
+  buildShowcaseCandidate(slug) {
+    const sc = demo.showcaseBySlug(slug);
+    if (!sc) return null;
+    const media = this.showcaseMedia(slug);
+    const match = fuzzyFindItem(this._menuContextForShowcase, sc.name);
+    const base = match || {
+      name: sc.name,
+      price: sc.price,
+      description: demo.story(slug),
+      category: '',
+      subcategory: '',
+      categoryType: demo.COURSE_TO_TYPE[sc.course],
+      searchText: `${sc.name} ${sc.blurb}`.toLowerCase()
+    };
+    return { ...base, img: media.img || base.img, video: media.video || base.video, story: demo.story(slug) };
+  }
+
+  /**
+   * Adds showcase items as top-priority candidates, but VARIED by context so the
+   * hero changes per journey/cart instead of always defaulting to the Tomahawk.
+   */
+  addShowcaseCandidates(menuContext, addCandidate, opts = {}) {
+    if (!demo.DEMO_MODE) return;
+    this._menuContextForShowcase = menuContext;
+    const cart = opts.cart || [];
+    const cartText = cart.map(c => String(c.name || '')).join(' ');
+    // Prefer the journey of any showcase item already in the cart (most precise),
+    // then free-text keywords from the reason or cart names.
+    let key = demo.detectJourneyKey(opts.reason || '');
+    if (!key) {
+      for (const c of cart) {
+        const slug = demo.matchShowcaseSlug(c.name);
+        if (slug) { key = demo.journeyForSlug(slug).key; break; }
+      }
+    }
+    if (!key) key = demo.detectJourneyKey(cartText);
+
+    let slugs;
+    if (key) {
+      const j = demo.journeyByKey(key);
+      slugs = [j.main, j.starter, j.wine, j.dessert, j.drink];
+    } else {
+      // No clear context: rotate the lead hero so it is NOT always the Tomahawk.
+      const heroes = ['king-queen-platter', 'seafood-pasta', 'tomahawk', 'caprese-avocado-salad'];
+      const hero = heroes[this._recRotation % heroes.length];
+      this._recRotation = (this._recRotation + 1) % heroes.length;
+      const hj = demo.journeyForSlug(hero);
+      slugs = [hero, hj.starter, hj.wine, hj.dessert];
+    }
+
+    const seenSlug = new Set();
+    let idx = 0;
+    slugs.forEach(slug => {
+      if (!slug || seenSlug.has(slug)) return;
+      seenSlug.add(slug);
+      const item = this.buildShowcaseCandidate(slug);
+      if (!item) return;
+      // Descending, well above other sources (≤120) so the showcase leads, but
+      // ordered by the journey rather than a fixed catalogue position.
+      addCandidate(item, "Chef's showcase", 180 - idx * 4);
+      idx += 1;
+    });
   }
 
   async getMenuContext() {
@@ -298,7 +449,10 @@ class AiService {
 
     let responseData;
 
-    if (!message) {
+    const detectedEvent = demo.DEMO_MODE ? demo.detectEvent(message) : null;
+    if (detectedEvent) {
+      responseData = await this.buildEventReply(menuContext, detectedEvent, lower, requestBody);
+    } else if (!message) {
       responseData = {
         reply: 'Ask me for steaks, sushi, seafood, wines, cocktails, desserts, popular dishes, or a pairing.',
         suggestions: (await this.getPopularItems(menuContext, 4)).map(item => publicItem(item, 'Popular tonight'))
@@ -358,8 +512,172 @@ class AiService {
       }
     }
 
+    // Honour exclusions ("no seafood", "without cheese", "avoid pork") across
+    // every reply branch — strip blocked items and backfill if needed.
+    const blocked = this.computeBlockedTerms(lower);
+    if (blocked.size > 0 && Array.isArray(responseData.suggestions)) {
+      const kept = responseData.suggestions.filter(s => !this.matchesBlocked(s, blocked));
+      if (kept.length !== responseData.suggestions.length) {
+        let finalList = kept;
+        if (finalList.length === 0) {
+          const popular = await this.getPopularItems(menuContext, 12);
+          finalList = popular
+            .filter(item => !this.matchesBlocked(item, blocked))
+            .slice(0, 4)
+            .map(item => publicItem(item, 'A lighter choice'));
+        }
+        responseData = {
+          reply: finalList.length
+            ? this.buildSuggestionReply(finalList, 'Of course — how about')
+            : 'Let me check with the kitchen on what fits best — the waiter can tailor something for you.',
+          suggestions: finalList
+        };
+      }
+    }
+
     await this.appendChatLog(requestBody, responseData);
     return responseData;
+  }
+
+  // ── Exclusion ("no X") handling ───────────────────────────────────────────
+  computeBlockedTerms(lower) {
+    const blocked = new Set();
+    const patterns = [
+      /\bno\s+more\s+([a-z]+)/g,
+      /\bno\s+([a-z]+)/g,
+      /\bwithout\s+([a-z]+)/g,
+      /\bdo\s?n'?t\s+want\s+(?:any\s+)?([a-z]+)/g,
+      /\bdon'?t\s+like\s+([a-z]+)/g,
+      /\bavoid\s+([a-z]+)/g,
+      /\bhold\s+the\s+([a-z]+)/g,
+      /\bskip\s+(?:the\s+)?([a-z]+)/g,
+      /\bnot?\s+(?:a\s+|any\s+)?fan\s+of\s+([a-z]+)/g,
+      /\ballergic\s+to\s+([a-z]+)/g
+    ];
+    for (const re of patterns) {
+      let match;
+      while ((match = re.exec(lower)) !== null) {
+        let word = match[1];
+        if (!word || NEGATION_STOP.has(word)) continue;
+        if (word.endsWith('s') && NEGATION_SYNONYMS[word.slice(0, -1)]) word = word.slice(0, -1);
+        const expanded = NEGATION_SYNONYMS[word] || [word];
+        expanded.forEach(term => blocked.add(term));
+      }
+    }
+    return blocked;
+  }
+
+  matchesBlocked(suggestion, blocked) {
+    const hay = (suggestion.searchText
+      || [suggestion.name, suggestion.description, suggestion.category, suggestion.subcategory, suggestion.categoryType]
+        .filter(Boolean).join(' ')).toLowerCase();
+    for (const term of blocked) {
+      if (hay.includes(term)) return true;
+    }
+    return false;
+  }
+
+  // ── Special-occasion handling ─────────────────────────────────────────────
+  showcaseSuggestion(slug, sourceTitle) {
+    const sc = demo.showcaseBySlug(slug);
+    if (!sc) return null;
+    const media = this.showcaseMedia(slug);
+    return {
+      name: sc.name,
+      price: sc.price,
+      description: demo.story(slug),
+      story: demo.story(slug),
+      img: media.img,
+      video: media.video,
+      categoryType: demo.COURSE_TO_TYPE[sc.course],
+      source_title: sourceTitle || 'For your celebration'
+    };
+  }
+
+  async buildEventReply(menuContext, event, lower, payload) {
+    const tableId = normalizeId(payload.tableId || payload.table_number || payload.table || 'unknown');
+    const key = demo.detectJourneyKey(lower) || (event.type === 'birthday' || event.type === 'celebration' ? 'steak-lover' : 'seafood-lover');
+    const journey = demo.journeyByKey(key) || demo.journeyByKey('seafood-lover');
+
+    // Suggestion cards must match the spoken meal: starter → main → wine →
+    // complimentary dessert. (No standalone cocktail when we're pouring wine.)
+    const slugs = [journey.starter, journey.main, journey.wine, 'chocolate-lava-cake'];
+    const seen = new Set();
+    const suggestions = slugs
+      .filter(s => s && !seen.has(s) && seen.add(s))
+      .map(s => this.showcaseSuggestion(s, 'For your celebration'))
+      .filter(Boolean);
+
+    // Notify the floor in real time so the waiter can act on the occasion.
+    if (this.socketService && typeof this.socketService.emitGuestEvent === 'function') {
+      this.socketService.emitGuestEvent({ tableId, event });
+    }
+
+    const starter = demo.showcaseBySlug(journey.starter);
+    const main = demo.showcaseBySlug(journey.main);
+    const wine = demo.showcaseBySlug(journey.wine);
+    const reply = `${event.emoji} Wonderful — congratulations on your ${event.label.toLowerCase()}! `
+      + `May I suggest beginning with our ${starter.name}, followed by the ${main.name}, with a glass of ${wine.name} — `
+      + `and we'd love to finish with a complimentary Chocolate Lava Cake. I've let your waiter know to take special care of your table tonight.`;
+
+    return { reply, suggestions, event: { type: event.type, label: event.label, emoji: event.emoji } };
+  }
+
+  // ── Waiter cart recommendations ───────────────────────────────────────────
+  cartRecReason(rec, cart) {
+    const ct = (rec.categoryType || '').toUpperCase();
+    const main = (cart || []).find(c => /platter|pasta|steak|tomahawk|fillet|rump|prawn|salad|seafood/i.test(c.name || ''));
+    if (ct === 'WINE') return `Pairs beautifully with ${main ? main.name : 'this table’s mains'}`;
+    if (ct === 'DESSERT') return 'A popular way to finish — strong dessert attach rate';
+    if (ct === 'DRINK') return 'A signature pour to lift the average check';
+    if (ct === 'STARTER') return 'A light, high-margin start before the mains';
+    return 'Frequently added by similar tables';
+  }
+
+  cartRecScript(rec) {
+    const slug = demo.matchShowcaseSlug(rec.name);
+    if (slug && demo.WAITER_LINES[slug]) return demo.WAITER_LINES[slug];
+    const ct = (rec.categoryType || '').toUpperCase();
+    if (ct === 'WINE') return `Our ${rec.name} pairs beautifully with your selection — may I pour a glass?`;
+    if (ct === 'DESSERT') return `A lot of guests finish with our ${rec.name}. Would you like one for the table to share?`;
+    if (ct === 'DRINK') return `Can I start you with our ${rec.name}?`;
+    return `Many guests enjoy our ${rec.name} alongside — shall I add one?`;
+  }
+
+  async cartRecommendations(payload = {}) {
+    const cart = this.readCart(payload);
+    const eventType = payload.event || payload.eventType || null;
+    const recs = await this.recommend({ cart, limit: 8, reason: payload.reason });
+    const cartNames = new Set(cart.map(c => normalizeName(c.name)));
+
+    const recommendations = recs
+      .filter(r => !cartNames.has(normalizeName(r.name)))
+      .slice(0, 4)
+      .map(r => ({
+        name: r.name,
+        price: r.price,
+        img: r.img,
+        categoryType: r.categoryType,
+        story: r.story || '',
+        reason: this.cartRecReason(r, cart),
+        upsell: Math.round(Number(r.price) || 0),
+        script: this.cartRecScript(r)
+      }));
+
+    let eventRec = null;
+    const meta = eventType && demo.EVENT_META[eventType];
+    if (meta) {
+      eventRec = {
+        name: 'Chocolate Lava Cake',
+        reason: `Complimentary gesture for the ${meta.label.toLowerCase()} — drives loyalty & reviews`,
+        upsell: 0,
+        complimentary: true,
+        script: meta.script
+      };
+    }
+
+    const potentialUplift = recommendations.reduce((sum, r) => sum + r.upsell, 0);
+    return { recommendations, eventRec, potentialUplift };
   }
 
   isRecommendationQuestion(lower) {
@@ -635,8 +953,14 @@ class AiService {
   }
 
   async aiPairing(payload = {}) {
-    const menuContext = await this.getMenuContext();
     const rawItem = payload.item || payload.selectedItem || payload.name || payload.cart?.[0];
+    const queryName = typeof rawItem === 'string' ? rawItem : rawItem?.name;
+
+    // Demo mode: a showcase dish returns its full curated journey verbatim.
+    const showcase = this.buildShowcasePairing(queryName);
+    if (showcase) return showcase;
+
+    const menuContext = await this.getMenuContext();
     const item = typeof rawItem === 'string' ? fuzzyFindItem(menuContext, rawItem) : fuzzyFindItem(menuContext, rawItem?.name) || rawItem;
     const recs = await this.recommend({ cart: item ? [item] : [], limit: 6 });
 
@@ -689,6 +1013,10 @@ class AiService {
       candidates.push({ item, source, score });
       seen.add(key);
     };
+
+    // Demo mode: claim the top slots with media-rich showcase items first,
+    // varied by cart/reason so the hero is not always the Tomahawk.
+    this.addShowcaseCandidates(menuContext, addCandidate, { cart, reason: payload.reason });
 
     for (const group of adminGroups) {
       if (!Array.isArray(group.items)) {

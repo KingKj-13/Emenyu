@@ -7,7 +7,7 @@ import { money } from '../../lib/waiterFormat';
 import type { FloorState, FloorTable, TableStatusKind } from '../../types/waiter';
 
 const STATUS_LABEL: Record<TableStatusKind, string> = {
-  empty: 'Empty', seated: 'Seated', cooking: 'Cooking', ready: 'Ready', calling: 'Calling'
+  empty: 'Empty', seated: 'Seated', cooking: 'Ordered', ready: 'Ready', calling: 'Calling'
 };
 
 export function FloorScreen() {
@@ -58,7 +58,7 @@ export function FloorScreen() {
       <div className="w-counter-row">
         <div className="w-counter seated"><b>{counts.seated}</b><span>Seated</span></div>
         <div className="w-counter calling"><b>{counts.calling}</b><span>Calling</span></div>
-        <div className="w-counter cooking"><b>{counts.cooking}</b><span>Cooking</span></div>
+        <div className="w-counter cooking"><b>{counts.cooking}</b><span>Ordered</span></div>
         <div className="w-counter ready"><b>{counts.ready}</b><span>Ready</span></div>
       </div>
 
