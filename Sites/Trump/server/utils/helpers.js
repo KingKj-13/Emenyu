@@ -128,6 +128,20 @@ function validateProductionConfig(config, env) {
     missing.push('TRUMP_ADMIN_PASS or TRUMP_OWNER_PASS or TRUMP_DEFAULT_PASSWORD');
   }
 
+  if (!env.TRUMP_KITCHEN_PASS && !env.TRUMP_DEFAULT_PASSWORD) {
+    missing.push('TRUMP_KITCHEN_PASS or TRUMP_DEFAULT_PASSWORD');
+  }
+
+  // Fail closed if any seeded account would use an empty or known-weak/demo password.
+  const WEAK_SEED_PASSWORDS = new Set(['123456789', '123456', 'password', 'admin', 'changeme', LOCAL_ONLY_DEFAULT_PASSWORD]);
+  (config.auth.users || []).forEach(user => {
+    if (!user.password) {
+      missing.push(`a strong password for the "${user.username}" account`);
+    } else if (WEAK_SEED_PASSWORDS.has(String(user.password))) {
+      weak.push(`account "${user.username}" must not use a known-weak/demo password`);
+    }
+  });
+
   if (missing.length > 0 || weak.length > 0) {
     throw new Error(
       `[config] Refusing to start production without required secure configuration. Missing: ${[
@@ -149,9 +163,6 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     publicOrigin
   ].filter(Boolean))];
   const sharedPassword = getSharedPassword(isProduction);
-  const demoAdminPassword = env.TRUMP_DEMO_PASSWORD || '123456789';
-  const demoWaiterPassword = env.TRUMP_DEMO_PASSWORD || '123456789';
-  const demoKitchenPassword = env.TRUMP_DEMO_PASSWORD || '123456789';
 
   const directories = {
     base: baseDir,
@@ -212,27 +223,21 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
         },
         {
           username: env.TRUMP_WAITER_USER || 'waiter',
-          password: demoWaiterPassword,
+          password: env.TRUMP_WAITER_PASS || sharedPassword,
           role: 'waiter',
-          label: 'Waiter',
-          demo: true,
-          passwordFromEnv: false
+          label: 'Waiter'
         },
         {
           username: env.TRUMP_KITCHEN_USER || 'kitchen',
-          password: demoKitchenPassword,
+          password: env.TRUMP_KITCHEN_PASS || sharedPassword,
           role: 'kitchen',
-          label: 'Kitchen',
-          demo: true,
-          passwordFromEnv: false
+          label: 'Kitchen'
         },
         {
           username: ADMIN_USERNAME,
-          password: demoAdminPassword,
+          password: env.TRUMP_ADMIN_PASS || env.TRUMP_OWNER_PASS || sharedPassword,
           role: 'owner',
-          label: 'Admin',
-          demo: true,
-          passwordFromEnv: false
+          label: 'Admin'
         }
       ]
     },
@@ -318,11 +323,11 @@ async function readBasicUser(req, config, accountService) {
   const username = separator >= 0 ? decoded.slice(0, separator) : decoded;
   const password = separator >= 0 ? decoded.slice(separator + 1) : '';
 
-  if (accountService) {
-    return accountService.verifyCredentials(username, password);
+  if (!accountService) {
+    return null;
   }
 
-  return config.auth.users.find(user => user.username === username && user.password === password) || null;
+  return accountService.verifyCredentials(username, password);
 }
 
 function createRoleAuth(config, accountService, logger = null) {
@@ -483,7 +488,7 @@ function createRoleAuth(config, accountService, logger = null) {
 
       const user = accountService
         ? await accountService.verifyCredentials(username, password)
-        : config.auth.users.find(candidate => candidate.username === username && candidate.password === password);
+        : null;
       if (!user) {
         logger?.warn('auth_login_failed', { username });
         return res.status(401).json({ error: 'Invalid credentials' });
