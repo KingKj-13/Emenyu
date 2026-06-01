@@ -1,32 +1,19 @@
-// NLG service — selects the wording provider and guarantees a result.
-// Template provider is the source of truth and always runs first; the optional LLM
-// only enhances it. If the LLM is unconfigured or fails, the template text is returned.
-// This is the single seam through which a future local/cloud LLM plugs in.
+// NLG service — local, deterministic wording layer. The template provider is the
+// single source of truth and runs entirely offline. There is no external LLM:
+// Trump produces all hospitality copy locally with zero outbound calls.
 const { TemplateNlgProvider } = require('./templateNlgProvider');
-const { LlmNlgProvider } = require('./llmNlgProvider');
 const { KINDS, TONES } = require('./nlgProvider');
 
-function createNlgService({ config, logger } = {}) {
+function createNlgService({ logger } = {}) {
   const template = new TemplateNlgProvider();
-  const llm = new LlmNlgProvider(config?.llm || {}, logger);
 
-  // Phrase a single line. Always returns a non-empty string when the template can produce one.
+  // Phrase a single line. Always returns the template's string (or '' on failure).
   async function phrase({ kind, tone, data } = {}) {
-    let draft = '';
     try {
-      draft = await template.phrase({ kind, tone, data });
+      return await template.phrase({ kind, tone, data });
     } catch (error) {
       logger?.warn?.('nlg_template_failure', { kind, error: error?.message });
-      draft = '';
-    }
-
-    if (!llm.available) return draft;
-
-    try {
-      const enhanced = await llm.phrase({ kind, tone, data, seed: draft });
-      return enhanced || draft;
-    } catch {
-      return draft;
+      return '';
     }
   }
 
@@ -39,9 +26,10 @@ function createNlgService({ config, logger } = {}) {
 
   function status() {
     return {
-      llmConfigured: Boolean(config?.llm?.provider && config?.llm?.apiKey),
-      llmAvailable: llm.available,
-      provider: llm.available ? llm.name : template.name
+      provider: template.name,
+      // Retained for backward compatibility with existing clients; always false.
+      llmConfigured: false,
+      llmAvailable: false
     };
   }
 
