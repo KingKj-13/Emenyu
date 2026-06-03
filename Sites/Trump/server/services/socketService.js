@@ -4,11 +4,17 @@ const { isAllowedOrigin } = require('../middleware/security');
 const { getCanonicalTableId, getTableAliases, normalizeId } = require('../utils/helpers');
 const pushService = require('./pushService');
 
+const STAFF_ROLES = ['owner', 'manager', 'waiter', 'kitchen'];
+const TABLE_CONTROL_ROLES = ['owner', 'manager', 'waiter'];
+const ADMIN_ROLES = ['owner', 'manager'];
+const KITCHEN_ROLES = ['owner', 'manager', 'kitchen'];
+
 class SocketService {
-  constructor(config, fileService, logger = null) {
+  constructor(config, fileService, logger = null, { auth = null } = {}) {
     this.config = config;
     this.fileService = fileService;
     this.logger = logger;
+    this.auth = auth;
     this.io = null;
     this.tableMemory = {};
     this.connectedWaiters = {};
@@ -32,15 +38,73 @@ class SocketService {
       }
     });
 
+    // Handshake authentication. The connection is always allowed (guests scan a
+    // QR code without logging in), but we attach the authenticated staff identity
+    // from the signed session cookie when present. Per-event handlers then enforce
+    // role/table authorization. The cookie rides the same-origin handshake
+    // automatically (HttpOnly, SameSite=Lax).
+    this.io.use(async (socket, next) => {
+      socket.data.user = null;
+      socket.data.tables = new Set();
+
+      try {
+        if (this.auth?.authenticateCookieHeader) {
+          const user = await this.auth.authenticateCookieHeader(socket.handshake?.headers?.cookie || '');
+          if (user) {
+            socket.data.user = user;
+          }
+        } else {
+          this.logger?.warn('socket_auth_unconfigured', { socketId: socket.id });
+        }
+      } catch (error) {
+        this.logger?.warn('socket_auth_error', { socketId: socket.id, error: error?.message });
+      }
+
+      return next();
+    });
+
     this.io.on('connection', socket => {
       this.logger?.debug('socket_connected', {
         socketId: socket.id,
+        role: this.socketRole(socket) || 'guest',
         ip: socket.handshake?.address
       });
       this.handleConnection(socket);
     });
 
     return this.io;
+  }
+
+  // ─── Authorization helpers ────────────────────────────────────────────────────
+
+  socketRole(socket) {
+    return socket?.data?.user?.role || null;
+  }
+
+  socketHasRole(socket, roles) {
+    const role = this.socketRole(socket);
+    return Boolean(role && roles.includes(role));
+  }
+
+  // Staff (waiter/manager/owner) may act on any table; a guest may act only on a
+  // table room it explicitly joined during this session (set on joinTable).
+  socketCanControlTable(socket, tableId) {
+    if (this.socketHasRole(socket, TABLE_CONTROL_ROLES)) {
+      return true;
+    }
+
+    const canonical = getCanonicalTableId(tableId);
+    return Boolean(socket?.data?.tables?.has(canonical));
+  }
+
+  denySocket(socket, event, payload = {}) {
+    this.logger?.warn('socket_event_denied', {
+      event,
+      socketId: socket.id,
+      role: this.socketRole(socket) || 'guest',
+      tableId: payload && payload.tableId ? normalizeId(payload.tableId) : undefined
+    });
+    socket.emit('authError', { event, message: 'Not authorized for this action.' });
   }
 
   // ─── Room helpers ────────────────────────────────────────────────────────────
@@ -306,7 +370,7 @@ class SocketService {
     });
 
     socket.on('callWaiter', payload => {
-      this.handleCallWaiter(payload);
+      this.handleCallWaiter(socket, payload);
     });
 
     socket.on('waiterResponding', async payload => {
@@ -318,11 +382,11 @@ class SocketService {
     });
 
     socket.on('updateCart', async payload => {
-      await this.handleUpdateCart(payload);
+      await this.handleUpdateCart(socket, payload);
     });
 
     socket.on('updateAdminOverrides', async payload => {
-      await this.handleUpdateAdminOverrides(payload);
+      await this.handleUpdateAdminOverrides(socket, payload);
     });
 
     socket.on('adminResetTable', async payload => {
@@ -359,6 +423,9 @@ class SocketService {
 
     const cleanId = normalizeId(payload.tableId);
     socket.join(this.getTableRooms(cleanId));
+    // Remember this table so the guest may control only this cart (see
+    // socketCanControlTable). Staff are not constrained by this set.
+    socket.data.tables.add(getCanonicalTableId(cleanId));
     const state = await this.getTableState(cleanId);
     this.emitCartToSocket(socket, cleanId, state.cart);
     await this.emitHistoryToSocket(socket, cleanId);
@@ -370,7 +437,14 @@ class SocketService {
       return;
     }
 
-    const name = String(payload.name || 'Unnamed Waiter').trim();
+    if (!this.socketHasRole(socket, TABLE_CONTROL_ROLES)) {
+      return this.denySocket(socket, 'joinAsWaiter', payload);
+    }
+
+    // Identity is taken from the authenticated session, not the client payload,
+    // so a waiter cannot register under an arbitrary or spoofed name.
+    const user = socket.data.user;
+    const name = String(user?.label || user?.username || 'Waiter').trim();
 
     // Release any stale socket for a waiter with the same name reconnecting.
     const previousSocketId = this.findWaiterSocketByName(name);
@@ -401,6 +475,10 @@ class SocketService {
       return;
     }
 
+    if (!this.socketHasRole(socket, KITCHEN_ROLES)) {
+      return this.denySocket(socket, 'joinKitchen', payload);
+    }
+
     socket.join(this.getKitchenRoom());
   }
 
@@ -409,16 +487,25 @@ class SocketService {
       return;
     }
 
+    if (!this.socketHasRole(socket, ADMIN_ROLES)) {
+      return this.denySocket(socket, 'joinAdmin', payload);
+    }
+
     socket.join(this.getAdminRoom());
   }
 
-  handleCallWaiter(payload = {}) {
+  handleCallWaiter(socket, payload = {}) {
     if (!this.isValidRestaurant(payload.restaurantId) || !this.io) {
       return;
     }
 
     if (!this.isValidTableId(payload.tableId)) {
       return;
+    }
+
+    // Only the guest seated at this table (joined room) or staff may ring.
+    if (!this.socketCanControlTable(socket, payload.tableId)) {
+      return this.denySocket(socket, 'callWaiter', payload);
     }
 
     const cleanId = normalizeId(payload.tableId);
@@ -450,6 +537,10 @@ class SocketService {
   async handleWaiterResponding(socket, payload = {}) {
     if (!this.isValidRestaurant(payload.restaurantId) || !this.io) {
       return;
+    }
+
+    if (!this.socketHasRole(socket, TABLE_CONTROL_ROLES)) {
+      return this.denySocket(socket, 'waiterResponding', payload);
     }
 
     if (!this.isValidTableId(payload.tableId)) {
@@ -496,16 +587,26 @@ class SocketService {
       return;
     }
 
+    if (!this.socketCanControlTable(socket, payload.tableId)) {
+      return this.denySocket(socket, 'fetchHistory', payload);
+    }
+
     await this.emitHistoryToSocket(socket, payload.tableId);
   }
 
-  async handleUpdateCart(payload = {}) {
+  async handleUpdateCart(socket, payload = {}) {
     if (!this.isValidRestaurant(payload.restaurantId)) {
       return;
     }
 
     if (!this.isValidTableId(payload.tableId)) {
       return;
+    }
+
+    // A guest may only write to the cart of the table it joined; staff may write
+    // to any table. This is the core fix for unauthenticated cart tampering.
+    if (!this.socketCanControlTable(socket, payload.tableId)) {
+      return this.denySocket(socket, 'updateCart', payload);
     }
 
     // Never let a transient cart-write error become an unhandled rejection that
@@ -517,9 +618,13 @@ class SocketService {
     }
   }
 
-  async handleUpdateAdminOverrides(payload = {}) {
+  async handleUpdateAdminOverrides(socket, payload = {}) {
     if (!this.isValidRestaurant(payload.restaurantId)) {
       return;
+    }
+
+    if (!this.socketHasRole(socket, ADMIN_ROLES)) {
+      return this.denySocket(socket, 'updateAdminOverrides', payload);
     }
 
     if (!this.isValidTableId(payload.tableId)) {
@@ -532,6 +637,10 @@ class SocketService {
   async handleAdminResetTable(socket, payload = {}) {
     if (!this.isValidRestaurant(payload.restaurantId) || !this.io) {
       return;
+    }
+
+    if (!this.socketHasRole(socket, ADMIN_ROLES)) {
+      return this.denySocket(socket, 'adminResetTable', payload);
     }
 
     if (!this.isValidTableId(payload.tableId)) {
@@ -549,7 +658,7 @@ class SocketService {
     this.logger?.info('socket_admin_reset_table', {
       tableId: cleanId,
       preserveAdminOverrides: preserveOverrides,
-      actor: payload.actor || 'admin'
+      actor: socket.data.user?.username || 'admin'
     });
   }
 

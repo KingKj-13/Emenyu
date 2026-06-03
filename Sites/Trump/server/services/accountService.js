@@ -405,5 +405,7 @@ class AccountService {
 
 module.exports = {
   AccountService,
-  normalizeUsername
+  normalizeUsername,
+  hashPassword,
+  verifyPasswordHash
 };

@@ -30,6 +30,7 @@ const { registerUploadRoutes } = require('./routes/uploadRoutes');
 const { configureSecurity } = require('./middleware/security');
 const { createErrorHandler, createRequestLogger } = require('./middleware/requestLogger');
 const { AiService } = require('./services/aiService');
+const { createOrderValidationService } = require('./services/orderValidationService');
 const { createNlgService } = require('./services/nlg/nlgService');
 const { createGuestService } = require('./services/guestService');
 const { createOpportunityService } = require('./services/opportunityService');
@@ -187,12 +188,13 @@ async function startServer() {
 
   const app = express();
   const server = http.createServer(app);
-  const socketService = new SocketService(config, fileService, logger);
+  const auth = createRoleAuth(config, accountService, logger);
+  const socketService = new SocketService(config, fileService, logger, { auth });
   socketService.initialize(server);
 
   const aiService = new AiService(config, fileService, socketService);
   const mediaEnrichmentService = new MediaEnrichmentService(config);
-  const auth = createRoleAuth(config, accountService, logger);
+  const orderValidationService = createOrderValidationService({ config, fileService, logger });
 
   // Waiter-AI: deterministic business logic + pluggable wording layer (hybrid).
   const nlgService = createNlgService({ config, logger });
@@ -209,11 +211,11 @@ async function startServer() {
     deal: createDealController({ fileService, socketService }),
     kitchen: createKitchenController({ config, fileService, socketService }),
     menu: createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService: fileService.prismaMenu }),
-    order: createOrderController({ config, fileService, socketService }),
+    order: createOrderController({ config, fileService, socketService, orderValidationService }),
     push: createPushController({ config }),
     rating: createRatingController({ config }),
     reservation: createReservationController({ config }),
-    waiter: createWaiterController({ config, fileService, socketService }),
+    waiter: createWaiterController({ config, fileService, socketService, orderValidationService }),
     waiterApi: createWaiterApiController({
       config,
       fileService,

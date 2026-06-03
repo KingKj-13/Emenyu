@@ -1,5 +1,7 @@
 const path = require('path');
 
+const { isWeakPassword } = require('./weakPasswords');
+
 const RESTAURANT_ID = process.env.TRUMP_RESTAURANT_ID || 'trump';
 const PUBLIC_BASE_PATH = process.env.TRUMP_PUBLIC_BASE_PATH || '/Trump';
 const ADMIN_USERNAME = 'admin';
@@ -7,6 +9,11 @@ const LOCAL_ONLY_DEFAULT_PASSWORD = 'local-only-change-me';
 
 function parseInteger(value, fallback) {
   const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function parseFloatOr(value, fallback) {
+  const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
@@ -78,8 +85,22 @@ function validateProductionConfig(config, env) {
     issues.push('TRUMP_UPLOAD_EXTENSIONS must include at least one extension');
   }
 
-  if (config.security.rateLimitWindowMs <= 0 || config.security.generalRateLimitMax <= 0 || config.security.authRateLimitMax <= 0) {
+  if (
+    config.security.rateLimitWindowMs <= 0 ||
+    config.security.generalRateLimitMax <= 0 ||
+    config.security.authRateLimitMax <= 0 ||
+    config.security.publicWriteRateLimitMax <= 0 ||
+    config.security.chatRateLimitMax <= 0
+  ) {
     issues.push('rate limit values must be greater than zero');
+  }
+
+  if (config.order.vatRate < 0 || config.order.serviceRate < 0 || config.order.maxTipMultiple < 0) {
+    issues.push('TRUMP_VAT_RATE, TRUMP_SERVICE_RATE, and TRUMP_ORDER_MAX_TIP_MULTIPLE must be zero or greater');
+  }
+
+  if (config.order.maxItemQty <= 0 || config.order.maxLines <= 0 || config.order.maxTotalQty <= 0) {
+    issues.push('order quantity limits (TRUMP_ORDER_MAX_*) must be greater than zero');
   }
 
   if (issues.length > 0) {
@@ -132,12 +153,13 @@ function validateProductionConfig(config, env) {
     missing.push('TRUMP_KITCHEN_PASS or TRUMP_DEFAULT_PASSWORD');
   }
 
-  // Fail closed if any seeded account would use an empty or known-weak/demo password.
-  const WEAK_SEED_PASSWORDS = new Set(['123456789', '123456', 'password', 'admin', 'changeme', LOCAL_ONLY_DEFAULT_PASSWORD]);
+  // Fail closed if any seeded account would use an empty or known-weak/demo
+  // password. The denylist is centralized in utils/weakPasswords.js and shared
+  // with the credential audit script.
   (config.auth.users || []).forEach(user => {
     if (!user.password) {
       missing.push(`a strong password for the "${user.username}" account`);
-    } else if (WEAK_SEED_PASSWORDS.has(String(user.password))) {
+    } else if (isWeakPassword(user.password)) {
       weak.push(`account "${user.username}" must not use a known-weak/demo password`);
     }
   });
@@ -246,14 +268,29 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     security: {
       allowedOrigins,
       authRateLimitMax: parseInteger(env.TRUMP_AUTH_RATE_LIMIT_MAX, 20),
+      publicWriteRateLimitMax: parseInteger(env.TRUMP_PUBLIC_WRITE_RATE_LIMIT_MAX, isProduction ? 60 : 1000),
+      chatRateLimitMax: parseInteger(env.TRUMP_CHAT_RATE_LIMIT_MAX, isProduction ? 120 : 1000),
       compressionThresholdBytes: parseInteger(env.TRUMP_COMPRESSION_THRESHOLD_BYTES, 1024),
       corsCredentials: true,
+      csp: {
+        enabled: parseBoolean(env.TRUMP_CSP_ENABLED, true),
+        reportOnly: parseBoolean(env.TRUMP_CSP_REPORT_ONLY, false)
+      },
       forceHttps: parseBoolean(env.TRUMP_FORCE_HTTPS, false),
       generalRateLimitMax: parseInteger(env.TRUMP_RATE_LIMIT_MAX, isProduction ? 600 : 2000),
       hsts: isProduction && parseBoolean(env.TRUMP_HSTS_ENABLED, true),
       rateLimitWindowMs: parseInteger(env.TRUMP_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
       secureCookies: isProduction || parseBoolean(env.TRUMP_SECURE_COOKIES, false),
       trustProxy: parseBoolean(env.TRUMP_TRUST_PROXY, isProduction)
+    },
+    order: {
+      vatRate: parseFloatOr(env.TRUMP_VAT_RATE, 0.15),
+      serviceRate: parseFloatOr(env.TRUMP_SERVICE_RATE, 0.05),
+      maxItemQty: parseInteger(env.TRUMP_ORDER_MAX_ITEM_QTY, 50),
+      maxLines: parseInteger(env.TRUMP_ORDER_MAX_LINES, 100),
+      maxTotalQty: parseInteger(env.TRUMP_ORDER_MAX_TOTAL_QTY, 300),
+      maxTipMultiple: parseFloatOr(env.TRUMP_ORDER_MAX_TIP_MULTIPLE, 2),
+      rejectOnPriceMismatch: parseBoolean(env.TRUMP_ORDER_REJECT_ON_PRICE_MISMATCH, false)
     },
     staticAssets: {
       cacheSeconds: parseInteger(env.TRUMP_STATIC_CACHE_SECONDS, isProduction ? 7 * 24 * 60 * 60 : 0)
@@ -275,9 +312,8 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
   return config;
 }
 
-function parseCookies(req) {
-  const header = req.headers.cookie || '';
-  return header.split(';').reduce((cookies, pair) => {
+function parseCookieHeader(header) {
+  return String(header || '').split(';').reduce((cookies, pair) => {
     const index = pair.indexOf('=');
     if (index === -1) {
       return cookies;
@@ -295,6 +331,10 @@ function parseCookies(req) {
 
     return cookies;
   }, {});
+}
+
+function parseCookies(req) {
+  return parseCookieHeader(req.headers.cookie || '');
 }
 
 function roleAllows(user, roles) {
@@ -472,6 +512,15 @@ function createRoleAuth(config, accountService, logger = null) {
       return requireRoles(roles, { page: true });
     },
     getRequestUser,
+    // Verify a raw session token (same HMAC + active-user check as REST auth).
+    // Returns the sanitized active user, or null. Used by the Socket.IO handshake.
+    getUserFromToken: readToken,
+    // Verify a session from a raw Cookie header string (Socket.IO handshake).
+    async authenticateCookieHeader(cookieHeader) {
+      const cookies = parseCookieHeader(cookieHeader);
+      const token = cookies[cookieName];
+      return token ? readToken(token) : null;
+    },
     async login(req, res) {
       const { username, password } = req.body || {};
       const existing = accountService ? await accountService.findAccount(username) : null;
