@@ -1,6 +1,7 @@
 const path = require('path');
 
 const { isWeakPassword } = require('./weakPasswords');
+const categoryClassifier = require('../services/categoryClassifier');
 
 const RESTAURANT_ID = process.env.TRUMP_RESTAURANT_ID || 'trump';
 const PUBLIC_BASE_PATH = process.env.TRUMP_PUBLIC_BASE_PATH || '/Trump';
@@ -291,6 +292,15 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
       maxTotalQty: parseInteger(env.TRUMP_ORDER_MAX_TOTAL_QTY, 300),
       maxTipMultiple: parseFloatOr(env.TRUMP_ORDER_MAX_TIP_MULTIPLE, 2),
       rejectOnPriceMismatch: parseBoolean(env.TRUMP_ORDER_REJECT_ON_PRICE_MISMATCH, false)
+    },
+    reco: {
+      maxBeverages: parseInteger(env.TRUMP_RECO_MAX_BEVERAGES, 1),
+      enforceStage: parseBoolean(env.TRUMP_RECO_ENFORCE_STAGE, true),
+      rotation: {
+        scope: env.TRUMP_RECO_ROTATION_SCOPE || 'session',
+        bucket: env.TRUMP_RECO_ROTATION_BUCKET || 'day',
+        pool: parseInteger(env.TRUMP_RECO_ROTATION_POOL, 5)
+      }
     },
     staticAssets: {
       cacheSeconds: parseInteger(env.TRUMP_STATIC_CACHE_SECONDS, isProduction ? 7 * 24 * 60 * 60 : 0)
@@ -637,32 +647,10 @@ function normalizeName(raw) {
   return raw.toString().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+// Delegates to the single authoritative classifier (server/services/categoryClassifier.js).
+// Kept as a thin wrapper so the many existing importers of getCategoryType are unchanged.
 function getCategoryType(categoryName) {
-  const lower = String(categoryName || '').toLowerCase();
-
-  if (/\b(starter|meze|tapas|soup|antipasti)/.test(lower)) {
-    return 'STARTER';
-  }
-
-  if (/\b(dessert|sweet|cake|ice ?cream|baklava|pudding|brownie|gelato)/.test(lower)) {
-    return 'DESSERT';
-  }
-
-  // Food guard — runs BEFORE drink/wine so "steak"/"steakhouse" (which contain
-  // the substring "tea") and "burgers" (etc.) are never misread as drinks.
-  if (/\b(steak|burger|beef|lamb|pork|chicken|rib|grill|wagyu|fillet|sirloin|rump|tomahawk|schnitzel|seafood|prawn|calamari|squid|mussel|kingklip|hake|salmon|sole|fish|sushi|sashimi|pasta|wrap|platter|side|wings|biltong|chop|veg|salad|curry|main)/.test(lower)) {
-    return 'MAIN';
-  }
-
-  if (/\b(wine|cellar|sparkling|champagne|sauvignon|chardonnay|merlot|shiraz|pinotage|cabernet|chenin|blend|rosé|rose wine|bubbly)/.test(lower)) {
-    return 'WINE';
-  }
-
-  if (/\b(drink|beverage|beer|lager|cider|coffee|cappuccino|latte|espresso|tea|cocktail|mocktail|spirit|liqueur|whisky|whiskey|\bgin\b|vodka|\brum\b|brandy|cognac|soda|juice|water|smoothie|shake)/.test(lower)) {
-    return 'DRINK';
-  }
-
-  return 'MAIN';
+  return categoryClassifier.categoryType(categoryName);
 }
 
 function safeFileName(raw) {

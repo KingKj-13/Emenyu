@@ -1,4 +1,9 @@
 const { getCategoryType, normalizeId, normalizeName } = require('../utils/helpers');
+const classifier = require('./categoryClassifier');
+const { createRotationService } = require('./rotationService');
+const { createRecommendationRules } = require('./recommendationRules');
+const chatbotNlu = require('./chatbotNlu');
+const { createKnowledgeService } = require('./knowledgeService');
 
 const SPECIAL_WORDS = [
   'birthday',
@@ -306,10 +311,14 @@ function itemQuantity(item = {}) {
 }
 
 class AiService {
-  constructor(config, fileService, socketService) {
+  constructor(config, fileService, socketService, { logger = null } = {}) {
     this.config = config;
     this.fileService = fileService;
     this.socketService = socketService;
+    // Phase 3: deterministic rotation + category-safety layers consumed by recommend().
+    this.rotation = createRotationService({ config, logger });
+    this.rules = createRecommendationRules({ config, logger });
+    this.knowledge = createKnowledgeService({ config, fileService, logger });
   }
 
   async getMenuContext() {
@@ -323,7 +332,14 @@ class AiService {
     };
     const message = String(requestBody.message || '').trim();
     const menuContext = await this.getMenuContext();
-    const lower = message.toLowerCase();
+    // Phase 3: normalize slang/typos and resolve synonyms before routing, so
+    // "whats good", "wats gud", "stake", "vegitarian" reach the right intent.
+    const nlu = chatbotNlu.normalize(message);
+    const lower = nlu.normalized || message.toLowerCase();
+    const knowledgeIntent = this.knowledge.detectIntent(lower);
+    const knowledgeAnswer = knowledgeIntent && knowledgeIntent !== 'special'
+      ? await this.knowledge.answer(knowledgeIntent, lower, menuContext)
+      : null;
 
     let responseData;
 
@@ -334,17 +350,24 @@ class AiService {
       };
     } else if (lower.includes('deal') || lower.includes('special')) {
       responseData = await this.buildDealsReply(menuContext);
+    } else if (knowledgeAnswer) {
+      responseData = {
+        reply: knowledgeAnswer.reply,
+        suggestions: (knowledgeAnswer.suggestions || []).map(item => publicItem(item, 'From our kitchen'))
+      };
     } else if (this.isCategoryQuestion(lower)) {
       responseData = this.buildCategoryReply(menuContext);
     } else if (lower.includes('pair') || lower.includes('go with') || lower.includes('with this')) {
       responseData = await this.buildPairingReply(menuContext, lower, payload);
     } else if (this.isComboQuestion(lower)) {
       responseData = await this.buildComboReply(menuContext, lower, payload);
-    } else if (this.isRecommendationQuestion(lower)) {
+    } else if (this.isRecommendationQuestion(lower) || chatbotNlu.isRecommendationIntent(lower)) {
       const suggestions = await this.recommend({
         cart: Array.isArray(payload.cart) ? payload.cart : [],
         limit: 4,
-        reason: message
+        reason: nlu.tokens.join(' '),
+        tableId: requestBody.tableId,
+        deviceId: payload.deviceId
       });
       responseData = {
         reply: this.buildSuggestionReply(
@@ -360,7 +383,7 @@ class AiService {
     } else if (lower.includes('allerg') || lower.includes('gluten') || lower.includes('vegetarian') || lower.includes('vegan')) {
       responseData = this.buildDietaryReply(menuContext, lower);
     } else {
-      const mentioned = findMentionedItem(menuContext, message);
+      const mentioned = findMentionedItem(menuContext, lower);
       if (mentioned) {
         const pairings = await this.recommend({ cart: [mentioned], limit: 3 });
         responseData = {
@@ -370,7 +393,7 @@ class AiService {
           suggestions: [publicItem(mentioned, 'Selected item'), ...pairings].slice(0, 4)
         };
       } else {
-        const matches = scoreSearch(menuContext, message).slice(0, 4);
+        const matches = scoreSearch(menuContext, lower).slice(0, 4);
         if (matches.length > 0) {
           responseData = {
             reply: this.buildSuggestionReply(matches.map(item => publicItem(item, 'Menu match')), 'The closest matches I found are'),
@@ -802,6 +825,7 @@ class AiService {
     const recommendationLimit = Math.min(8, Math.max(3, Number(payload.limit) || cart.length || 4));
     const menuContext = await this.getMenuContext();
     const adminGroups = await this.fileService.loadRecommendations();
+    const chefRecs = await this.fileService.loadChefRecommendations();
     const orderRecords = await this.getOrderRecords();
     const popularity = await this.getPopularityScores(menuContext, orderRecords);
 
@@ -809,7 +833,7 @@ class AiService {
     const seen = new Set(cartNames);
     const candidates = [];
 
-    const addCandidate = (item, source, score) => {
+    const addCandidate = (item, source, score, extra = {}) => {
       if (!item?.name) {
         return;
       }
@@ -819,10 +843,33 @@ class AiService {
         return;
       }
 
-      candidates.push({ item, source, score });
+      candidates.push({ item, source, score, ...extra });
       seen.add(key);
     };
 
+    // 1) CHEF-FIRST. Per-item chef recommendations win outright (score band
+    //    1000 + priority, far above any algorithmic source). When several chef recs
+    //    share a rotationGroup, the rotation engine varies which one leads per guest.
+    if (Array.isArray(chefRecs) && chefRecs.length && cartNames.length) {
+      chefRecs
+        .filter(rec => cartNames.includes(normalizeName(rec.sourceName)) && rec.targetAvailable !== false)
+        .forEach(rec => {
+          const target = fuzzyFindItem(menuContext, rec.targetName);
+          if (!target) {
+            return;
+          }
+          addCandidate(target, rec.reason || "Chef's pairing", 1000 + (Number(rec.priority) || 0), {
+            chef: true,
+            recType: rec.recType,
+            beverageKind: rec.beverageKind,
+            priority: Number(rec.priority) || 100,
+            rotationGroup: rec.rotationGroup || `chef:${normalizeName(rec.sourceName)}:${rec.recType}`,
+            reason: rec.reason || ''
+          });
+        });
+    }
+
+    // 2) Legacy admin recommendation groups (kept as a mid-tier fallback below chef).
     for (const group of adminGroups) {
       if (!Array.isArray(group.items)) {
         continue;
@@ -844,6 +891,7 @@ class AiService {
       });
     }
 
+    // 3) Algorithmic fallback sources — only fill what chef curation did not cover.
     this.addPeopleAlsoOrdered(cartNames, menuContext, orderRecords, addCandidate);
     this.addPerfectPairings(cartNames, menuContext, addCandidate);
     this.addFoodPairings(cartNames, menuContext, addCandidate);
@@ -856,10 +904,33 @@ class AiService {
         .forEach(item => addCandidate(item, 'Recommended for you', 82));
     }
 
-    return candidates
-      .sort((left, right) => right.score - left.score)
-      .slice(0, recommendationLimit)
-      .map(candidate => publicItem(candidate.item, candidate.source));
+    // 4) Rotation (variety, priority-weighted, deterministic) → category safety.
+    //    Resolve cart items to their authoritative menu classification first, since
+    //    raw cart items carry only a name (e.g. "MOËT & CHANDON BRUT" is only WINE
+    //    once resolved against its category) — the safety rules depend on this.
+    const enrichedCart = cart.map(c => {
+      const match = fuzzyFindItem(menuContext, c.name);
+      const ct = match?.categoryType || classifier.categoryType(c.name);
+      return {
+        name: c.name,
+        categoryType: ct,
+        beverageKind: ct === 'WINE' ? 'WINE' : ct === 'DRINK' ? classifier.beverageKind(match || c.name) : 'NONE'
+      };
+    });
+    const { ordered } = this.rotation.rotate(candidates, payload);
+    const { kept } = this.rules.applyCategorySafety(ordered, enrichedCart);
+
+    return kept.slice(0, recommendationLimit).map(candidate => {
+      const pub = publicItem(candidate.item, candidate.source);
+      pub.beverageKind = candidate.beverageKind && candidate.beverageKind !== 'NONE'
+        ? candidate.beverageKind
+        : (pub.categoryType === 'WINE' ? 'WINE' : pub.categoryType === 'DRINK' ? classifier.beverageKind(candidate.item) : 'NONE');
+      if (candidate.reason) {
+        pub.reason = candidate.reason;
+      }
+      pub.chef = candidate.chef === true;
+      return pub;
+    });
   }
 
   readCart(payload = {}) {

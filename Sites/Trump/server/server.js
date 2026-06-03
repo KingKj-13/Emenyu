@@ -192,7 +192,7 @@ async function startServer() {
   const socketService = new SocketService(config, fileService, logger, { auth });
   socketService.initialize(server);
 
-  const aiService = new AiService(config, fileService, socketService);
+  const aiService = new AiService(config, fileService, socketService, { logger });
   const mediaEnrichmentService = new MediaEnrichmentService(config);
   const orderValidationService = createOrderValidationService({ config, fileService, logger });
 

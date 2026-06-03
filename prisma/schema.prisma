@@ -114,6 +114,33 @@ model Recommendation {
   @@index([restaurantId, active, sortOrder])
 }
 
+// Phase 3: per-item, chef-controlled recommendations. Source/target reference
+// MenuItem.id (scalar, FK-constrained in SQL). recType + beverageKind drive the
+// category-safety layer; priority/active/season/rotationGroup drive ordering and
+// rotation; reason is the chef's one-line note shown on the recommendation card.
+model MenuItemRecommendation {
+  id            Int       @id @default(autoincrement())
+  restaurantId  String    @default("trump")
+  sourceItemId  Int
+  targetItemId  Int
+  recType       String                              // DISH | SIDE | DESSERT | BEVERAGE
+  beverageKind  String    @default("NONE")          // WINE | COCKTAIL | BEER | SOFT | HOT | NONE
+  priority      Int       @default(100)
+  active        Boolean   @default(true)
+  season        String    @default("ALL_YEAR")      // ALL_YEAR | SUMMER | WINTER | SPRING | AUTUMN | FESTIVE
+  startsAt      DateTime?
+  endsAt        DateTime?
+  rotationGroup String    @default("")
+  reason        String    @default("")
+  createdBy     String    @default("system")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([restaurantId, sourceItemId, targetItemId, recType], map: "MenuItemRecommendation_uniq")
+  @@index([restaurantId, sourceItemId, active], map: "MenuItemRecommendation_src_idx")
+  @@index([restaurantId, rotationGroup], map: "MenuItemRecommendation_rot_idx")
+}
+
 model RestaurantMenuSettings {
   id           Int      @id @default(autoincrement())
   restaurantId String   @unique @default("trump")

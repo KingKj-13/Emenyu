@@ -123,6 +123,10 @@ class FileService {
     return (await this.prismaMenu.loadRecommendations()) || [];
   }
 
+  async loadChefRecommendations() {
+    return (await this.prismaMenu.loadChefRecommendations()) || [];
+  }
+
   async loadPopular() {
     return (await this.prismaMenu.loadPopular()) || [];
   }

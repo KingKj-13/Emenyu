@@ -2,6 +2,7 @@ const path = require('path');
 
 const dotenv = require('dotenv');
 const { getCategoryType } = require('../utils/helpers');
+const classifier = require('./categoryClassifier');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 const PRISMA_RETRY_MS = 30000;
@@ -129,7 +130,7 @@ function itemToCreateData(item = {}, categoryId, restaurantId, sortOrder) {
 }
 
 function dbItemToJson(item, { includeId = false, categoryTitle = '', subcategoryTitle = '' } = {}) {
-  return {
+  const json = {
     ...(includeId ? { dbId: item.id } : {}),
     ...(item.metadata && typeof item.metadata === 'object' ? item.metadata : {}),
     ...(categoryTitle ? { category: categoryTitle } : {}),
@@ -151,6 +152,16 @@ function dbItemToJson(item, { includeId = false, categoryTitle = '', subcategory
     popular: item.popular,
     ...(item.sourceTitle ? { source_title: item.sourceTitle } : {})
   };
+
+  // Stamp the authoritative server-side classification so the client does not
+  // re-derive it (single source of truth — Phase 3, Task 3).
+  const ctx = { name: json.name, category: categoryTitle, subcategory: subcategoryTitle, types: json.types };
+  json.categoryType = classifier.categoryType(ctx);
+  json.beverageKind = json.categoryType === 'WINE'
+    ? 'WINE'
+    : json.categoryType === 'DRINK' ? classifier.beverageKind(ctx) : 'NONE';
+
+  return json;
 }
 
 function flattenMenu(menuData = {}) {
@@ -539,6 +550,119 @@ class PrismaMenuService {
         orderBy: { sortOrder: 'asc' }
       }),
       []
+    );
+  }
+
+  // Phase 3: chef-controlled per-item recommendations. Resolves source/target ids
+  // to menu-item names (so the name-keyed recommendation engine can consume them)
+  // and filters to active + in-season rows. Returns [] when the table is empty or
+  // unavailable, so the engine cleanly falls back to algorithmic recommendations.
+  async loadChefRecommendations() {
+    return this.withPrisma(
+      'menu_postgres_chef_recs_failed',
+      async prisma => {
+        const recs = await prisma.menuItemRecommendation.findMany({
+          where: { restaurantId: this.restaurantId, active: true },
+          orderBy: [{ priority: 'desc' }, { id: 'asc' }]
+        });
+        if (recs.length === 0) {
+          return [];
+        }
+
+        const items = await prisma.menuItem.findMany({
+          where: { restaurantId: this.restaurantId },
+          select: { id: true, name: true, price: true, available: true, visible: true, imagePath: true }
+        });
+        const byId = new Map(items.map(item => [item.id, item]));
+        const now = Date.now();
+
+        return recs
+          .filter(rec => {
+            const startsOk = !rec.startsAt || new Date(rec.startsAt).getTime() <= now;
+            const endsOk = !rec.endsAt || new Date(rec.endsAt).getTime() >= now;
+            return startsOk && endsOk;
+          })
+          .map(rec => {
+            const source = byId.get(rec.sourceItemId);
+            const target = byId.get(rec.targetItemId);
+            if (!source || !target) {
+              return null;
+            }
+            return {
+              sourceName: source.name,
+              targetName: target.name,
+              targetPrice: Number(target.price) || 0,
+              targetImg: target.imagePath || '',
+              targetAvailable: target.available !== false && target.visible !== false,
+              recType: rec.recType,
+              beverageKind: rec.beverageKind || 'NONE',
+              priority: Number(rec.priority) || 0,
+              rotationGroup: rec.rotationGroup || '',
+              reason: rec.reason || '',
+              season: rec.season || 'ALL_YEAR'
+            };
+          })
+          .filter(Boolean);
+      },
+      []
+    );
+  }
+
+  // ── Chef recommendation management (owner controls — Phase 3, Task 8) ──────────
+  async listChefRecommendationsAdmin() {
+    return this.withPrisma(
+      'menu_postgres_chef_recs_admin_failed',
+      async prisma => {
+        const [recs, items] = await Promise.all([
+          prisma.menuItemRecommendation.findMany({
+            where: { restaurantId: this.restaurantId },
+            orderBy: [{ sourceItemId: 'asc' }, { priority: 'desc' }, { id: 'asc' }]
+          }),
+          prisma.menuItem.findMany({ where: { restaurantId: this.restaurantId }, select: { id: true, name: true } })
+        ]);
+        const byId = new Map(items.map(i => [i.id, i.name]));
+        return recs.map(r => ({
+          id: r.id,
+          sourceItemId: r.sourceItemId,
+          sourceName: byId.get(r.sourceItemId) || `#${r.sourceItemId}`,
+          targetItemId: r.targetItemId,
+          targetName: byId.get(r.targetItemId) || `#${r.targetItemId}`,
+          recType: r.recType,
+          beverageKind: r.beverageKind,
+          priority: r.priority,
+          active: r.active,
+          season: r.season,
+          startsAt: r.startsAt,
+          endsAt: r.endsAt,
+          rotationGroup: r.rotationGroup,
+          reason: r.reason
+        }));
+      },
+      []
+    );
+  }
+
+  async createChefRecommendation(data = {}) {
+    return this.withPrisma(
+      'menu_postgres_chef_rec_create_failed',
+      async prisma => prisma.menuItemRecommendation.create({ data: { restaurantId: this.restaurantId, ...data } }),
+      null
+    );
+  }
+
+  async updateChefRecommendation(id, patch = {}) {
+    return this.withPrisma(
+      'menu_postgres_chef_rec_update_failed',
+      async prisma => prisma.menuItemRecommendation.update({ where: { id: Number(id) }, data: patch }),
+      null
+    );
+  }
+
+  async deleteChefRecommendation(id) {
+    return this.withPrisma(
+      'menu_postgres_chef_rec_delete_failed',
+      async prisma => { await prisma.menuItemRecommendation.delete({ where: { id: Number(id) } }); return true; },
+      false
     );
   }
 

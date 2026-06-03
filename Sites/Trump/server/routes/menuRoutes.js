@@ -26,6 +26,14 @@ function registerMenuRoutes(app, controllers, adminAuth) {
   app.get(mediaPaths('media-status'), adminAuth, controllers.menu.getMediaStatus);
   app.post(mediaPaths('media-enrich'), adminAuth, controllers.menu.triggerMediaEnrich);
   app.post(mediaPaths('media-retry'), adminAuth, controllers.menu.retryMediaEnrich);
+
+  // Chef recommendation management (owner controls — Phase 3, Task 8)
+  const chefRecPaths = ['/api/menu/chef-recs', '/Trump/api/menu/chef-recs', '/trump/api/menu/chef-recs'];
+  const chefRecItemPaths = ['/api/menu/chef-recs/:id', '/Trump/api/menu/chef-recs/:id', '/trump/api/menu/chef-recs/:id'];
+  app.get(chefRecPaths, adminAuth, controllers.menu.getChefRecommendations);
+  app.post(chefRecPaths, adminAuth, controllers.menu.createChefRecommendation);
+  app.patch(chefRecItemPaths, adminAuth, controllers.menu.updateChefRecommendation);
+  app.delete(chefRecItemPaths, adminAuth, controllers.menu.deleteChefRecommendation);
 }
 
 module.exports = {

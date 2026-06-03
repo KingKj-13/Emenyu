@@ -1,0 +1,27 @@
+{
+  "timezone": "Africa/Johannesburg",
+  "hours": [
+    { "day": 0, "open": "11:00", "close": "22:00" },
+    { "day": 1, "open": "11:00", "close": "22:00" },
+    { "day": 2, "open": "11:00", "close": "22:00" },
+    { "day": 3, "open": "11:00", "close": "22:00" },
+    { "day": 4, "open": "11:00", "close": "23:00" },
+    { "day": 5, "open": "11:00", "close": "23:00" },
+    { "day": 6, "open": "11:00", "close": "23:00" }
+  ],
+  "contact": { "phone": "", "email": "", "address": "" },
+  "policies": {
+    "corkage": "We charge a corkage fee for wine brought in — please ask your waiter for tonight's rate.",
+    "children": "Children are very welcome — we have a kids' menu and high chairs available.",
+    "dress": "The dress code is smart casual.",
+    "parking": "Secure parking is available adjacent to the restaurant.",
+    "wifi": "Yes — complimentary guest Wi‑Fi is available. Ask your waiter for the password.",
+    "smoking": "Smoking is permitted in the designated outdoor area only.",
+    "reservations": "We accept reservations and walk-ins. You can book a table through the app or ask your waiter."
+  },
+  "faqs": [
+    { "q": "do you take bookings", "aliases": ["booking", "reservation", "reservations", "book a table"], "a": "Yes, we accept reservations — book through the app or ask your waiter." },
+    { "q": "are you halal", "aliases": ["halal"], "a": "Some dishes can be prepared to preference — please ask your waiter and we'll confirm with the kitchen." },
+    { "q": "do you cater for large groups", "aliases": ["group", "groups", "function", "party booking"], "a": "Yes, we cater for groups and functions — speak to your waiter or the manager to arrange it." }
+  ]
+}
