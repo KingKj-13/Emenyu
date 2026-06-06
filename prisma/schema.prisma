@@ -353,6 +353,43 @@ model RecommendationEvent {
   @@index([restaurantId, source])
 }
 
+// Phase 5: database-backed recommended-order bundles — the menu "Not sure what to
+// order?" personas. Replaces the hardcoded client constant (kept only as an offline
+// fallback). A bundle groups items by a course label; multiple items may share a course.
+model RecommendationBundle {
+  id            Int                        @id @default(autoincrement())
+  restaurantId  String                     @default("trump")
+  slug          String                     @default("")   // stable id used by the client
+  persona       String
+  description   String                     @default("")
+  icon          String                     @default("")
+  accent        String                     @default("")
+  active        Boolean                    @default(true)
+  priority      Int                        @default(100)
+  rotationGroup String                     @default("")
+  sortOrder     Int                        @default(0)
+  items         RecommendationBundleItem[]
+  createdBy     String                     @default("system")
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+
+  @@index([restaurantId, active, priority])
+  @@index([restaurantId, rotationGroup])
+}
+
+model RecommendationBundleItem {
+  id        Int                  @id @default(autoincrement())
+  bundleId  Int
+  bundle    RecommendationBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  course    String               @default("")   // Drink | Starter | Main | Dessert | …
+  itemName  String
+  itemId    Int?
+  price     Float                @default(0)
+  sortOrder Int                  @default(0)
+
+  @@index([bundleId, sortOrder])
+}
+
 model Reservation {
   id           Int      @id @default(autoincrement())
   restaurantId String   @default("trump")

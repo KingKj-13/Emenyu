@@ -6,10 +6,10 @@ import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
 import { api } from '../services/api';
 import { Spinner } from '../components/ui/Spinner';
 import { formatPrice } from '../lib/menuUtils';
-import type { ChefRec, ChefRecInput, ChefRecType, ChefBeverageKind, RecommendationAnalytics, RecoTally } from '../types/menu';
+import type { ChefRec, ChefRecInput, ChefRecType, ChefBeverageKind, RecommendationAnalytics, RecoTally, RecoInsightsResult, RecoInsight, BundleAdmin, BundleInput, BundleItemInput } from '../types/menu';
 import styles from './AdminPage.module.css';
 
-type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics';
+type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles';
 
 interface Order {
   filename: string;
@@ -102,7 +102,9 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [chefRecs, setChefRecs] = useState<ChefRec[]>([]);
   const [recoAnalytics, setRecoAnalytics] = useState<RecommendationAnalytics | null>(null);
+  const [recoInsights, setRecoInsights] = useState<RecoInsightsResult | null>(null);
   const [recoFilters, setRecoFilters] = useState<{ range: ReportRange; category: string; source: string; rotationGroup: string; mode: string }>({ range: '7d', category: '', source: '', rotationGroup: '', mode: '' });
+  const [bundles, setBundles] = useState<BundleAdmin[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'item' | 'reservation' | 'deal' | 'account'>(null);
@@ -146,6 +148,9 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
       } else if (t === 'recoanalytics') {
         await loadRecoAnalytics(recoFilters);
         return;
+      } else if (t === 'bundles') {
+        const data = await api.getBundlesAdmin();
+        setBundles((data as BundleAdmin[]) || []);
       }
     } catch (err) {
       console.error(err);
@@ -158,16 +163,21 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     setLoading(true);
     const { from, to } = getDateRange(filters.range);
     try {
-      const data = await api.getRecommendationAnalytics({
-        from, to,
-        category: filters.category || undefined,
-        source: filters.source || undefined,
-        rotationGroup: filters.rotationGroup || undefined,
-        mode: filters.mode || undefined
-      });
+      const [data, ins] = await Promise.all([
+        api.getRecommendationAnalytics({
+          from, to,
+          category: filters.category || undefined,
+          source: filters.source || undefined,
+          rotationGroup: filters.rotationGroup || undefined,
+          mode: filters.mode || undefined
+        }),
+        api.getRecommendationInsights({ from, to, mode: filters.mode || undefined })
+      ]);
       setRecoAnalytics(data);
+      setRecoInsights(ins);
     } catch {
       setRecoAnalytics(null);
+      setRecoInsights(null);
     }
     setLoading(false);
   }
@@ -271,6 +281,26 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const handleDeleteChefRec = useCallback(async (id: number) => {
     if (!confirm('Delete this chef recommendation?')) return;
     try { await api.deleteChefRec(id); setChefRecs(prev => prev.filter(r => r.id !== id)); } catch { /* ignore */ }
+  }, []);
+
+  // ── Recommended-order bundles (Phase 5, Task 1) ──
+  const reloadBundles = useCallback(async () => {
+    try { setBundles((await api.getBundlesAdmin() as BundleAdmin[]) || []); } catch { /* ignore */ }
+  }, []);
+
+  const handleCreateBundle = useCallback(async (input: BundleInput): Promise<string | null> => {
+    try { await api.createBundle(input); await reloadBundles(); return null; }
+    catch { return 'Could not create the bundle — the database may be unavailable.'; }
+  }, [reloadBundles]);
+
+  const handleUpdateBundle = useCallback(async (id: number, patch: Partial<BundleInput>) => {
+    setBundles(prev => prev.map(b => b.id === id ? { ...b, ...patch } as BundleAdmin : b));
+    try { await api.updateBundle(id, patch); } catch { reloadBundles(); }
+  }, [reloadBundles]);
+
+  const handleDeleteBundle = useCallback(async (id: number) => {
+    if (!confirm('Delete this bundle?')) return;
+    try { await api.deleteBundle(id); setBundles(prev => prev.filter(b => b.id !== id)); } catch { /* ignore */ }
   }, []);
 
   useEffect(() => { loadTab(initialTab || 'orders'); }, []);
@@ -378,6 +408,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     { label: 'MENU & OFFERS', items: [
       { key: 'menu', label: 'Menu', icon: UtensilsCrossed },
       { key: 'chefrecs', label: 'Chef Recs', icon: Sparkles },
+      { key: 'bundles', label: 'Bundles', icon: LayoutGrid },
       { key: 'deals', label: 'Deals', icon: Clock },
       { key: 'qrcodes', label: 'QR Codes', icon: QrCode },
     ] },
@@ -401,6 +432,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     menu: { eyebrow: 'MENU MANAGEMENT', title: 'The menu', sub: `${menuItems.length} item${menuItems.length !== 1 ? 's' : ''}`, actions: <><button className={styles.actionBtnGold} onClick={openNewItem}><Plus size={14} /> New item</button>{refreshAction}</> },
     chefrecs: { eyebrow: 'CHEF CURATION', title: 'Chef recommendations', sub: `${chefRecs.length} pairing${chefRecs.length !== 1 ? 's' : ''} · always shown ahead of automatic suggestions`, actions: refreshAction },
     recoanalytics: { eyebrow: 'ANALYTICS', title: 'Recommendation performance', sub: `${recoAnalytics?.eventCount ?? 0} events · impression → click → accept → order`, actions: refreshAction },
+    bundles: { eyebrow: 'CURATED MENUS', title: 'Recommended orders', sub: `${bundles.length} persona bundle${bundles.length !== 1 ? 's' : ''} · the menu "Not sure what to order?" strip`, actions: refreshAction },
     deals: { eyebrow: 'OFFERS', title: 'Deals', sub: 'Bundle dishes into featured set menus', actions: <button className={styles.actionBtnGold} onClick={openNewDeal}><Plus size={14} /> New deal</button> },
     qrcodes: { eyebrow: 'TABLE QR CODES', title: 'QR codes', sub: 'Each links a guest straight to its table session' },
     reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top dishes, peak hours & guest ratings' },
@@ -586,8 +618,17 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
               {tab === 'recoanalytics' && (
                 <RecoAnalyticsPanel
                   data={recoAnalytics}
+                  insights={recoInsights}
                   filters={recoFilters}
                   onFilterChange={next => { setRecoFilters(next); loadRecoAnalytics(next); }}
+                />
+              )}
+              {tab === 'bundles' && (
+                <BundlesPanel
+                  bundles={bundles}
+                  onCreate={handleCreateBundle}
+                  onUpdate={handleUpdateBundle}
+                  onDelete={handleDeleteBundle}
                 />
               )}
                 </>
@@ -1583,8 +1624,32 @@ function RecoBoard({ title, rows, metric }: { title: string; rows: RecoTally[]; 
   );
 }
 
-function RecoAnalyticsPanel({ data, filters, onFilterChange }: {
+const SEVERITY_COLOR: Record<string, string> = { high: '#fca5a5', medium: '#e6c06b', low: '#9aa6b2' };
+
+function RecoActionItems({ insights }: { insights: RecoInsight[] }) {
+  if (!insights || insights.length === 0) return null;
+  return (
+    <div className={styles.reportSection} style={{ marginBottom: 18 }}>
+      <h3 className={styles.reportSectionTitle}>Action items ({insights.length})</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {insights.slice(0, 12).map((ins, i) => (
+          <div key={i} style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(198,162,75,0.14))', borderLeft: `3px solid ${SEVERITY_COLOR[ins.severity] || '#9aa6b2'}`, borderRadius: 8, padding: '10px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: SEVERITY_COLOR[ins.severity] || '#9aa6b2' }}>{ins.severity}</span>
+              <strong style={{ color: 'var(--color-cream, #f3ead6)', fontSize: 13 }}>{ins.title}</strong>
+            </div>
+            <div style={{ color: 'var(--color-sand, #b8a88a)', fontSize: 12, marginTop: 3 }}>{ins.detail}</div>
+            <div style={{ color: 'var(--color-gold, #c6a24b)', fontSize: 12, marginTop: 4 }}>→ {ins.action}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RecoAnalyticsPanel({ data, insights, filters, onFilterChange }: {
   data: RecommendationAnalytics | null;
+  insights: RecoInsightsResult | null;
   filters: RecoFilters;
   onFilterChange: (next: RecoFilters) => void;
 }) {
@@ -1620,6 +1685,8 @@ function RecoAnalyticsPanel({ data, filters, onFilterChange }: {
         </select>
       </div>
 
+      <RecoActionItems insights={insights?.insights || []} />
+
       {!totals || totals.impressions === 0 ? (
         <div className={styles.emptyState}>
           <TrendingUp size={40} className={styles.emptyIcon} />
@@ -1634,19 +1701,146 @@ function RecoAnalyticsPanel({ data, filters, onFilterChange }: {
             <RecoKpi value={pctLabel(totals.acceptanceRate)} label="Acceptance rate" />
             <RecoKpi value={pctLabel(totals.dismissalRate)} label="Dismissal rate" />
             <RecoKpi value={String(totals.ordered)} label="Orders generated" />
-            <RecoKpi value={formatPrice(totals.revenue)} label="Revenue attributed" />
+            <RecoKpi value={formatPrice(totals.revenue)} label="Revenue attributed" sub={`${formatPrice(totals.revenuePerImpression || 0)} / impression`} />
           </div>
 
           <div className={styles.reportsGrid}>
             <RecoBoard title="Most shown" rows={data!.topShown} metric={r => `${r.impressions}×`} />
             <RecoBoard title="Most clicked" rows={data!.topClicked} metric={r => `${r.clicks} clicks`} />
             <RecoBoard title="Highest conversion" rows={data!.topConverting} metric={r => pctLabel(r.acceptanceRate)} />
+            <RecoBoard title="Underperforming (shown, rarely taken)" rows={data!.underperforming || []} metric={r => pctLabel(r.acceptanceRate)} />
             <RecoBoard title="Revenue attributed" rows={(data!.topRevenue || []).filter(r => r.revenue > 0)} metric={r => formatPrice(r.revenue)} />
           </div>
 
           <RecoBoard title="By source" rows={data!.bySource} metric={r => `${pctLabel(r.acceptanceRate)} acc.`} />
+          <RecoBoard title="By bundle (persona)" rows={data!.byBundle || []} metric={r => `${pctLabel(r.acceptanceRate)} acc.`} />
           <RecoBoard title="By rotation group" rows={data!.byRotationGroup} metric={r => `${pctLabel(r.acceptanceRate)} acc.`} />
         </>
+      )}
+    </div>
+  );
+}
+
+// ── Recommended-order bundle management (Phase 5, Task 1) ──
+const BUNDLE_COURSES = ['Drink', 'Starter', 'Main', 'Dessert', 'Side', 'Extra'];
+const iconBtn: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', borderRadius: 8, cursor: 'pointer' };
+
+function BundleItemsEditor({ items, onChange }: { items: BundleItemInput[]; onChange: (items: BundleItemInput[]) => void }) {
+  const update = (i: number, patch: Partial<BundleItemInput>) => onChange(items.map((it, idx) => idx === i ? { ...it, ...patch } : it));
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {items.map((it, i) => (
+        <div key={i} style={{ display: 'grid', gridTemplateColumns: '120px 1fr 90px 36px', gap: 6 }}>
+          <select style={chefField} value={it.course} onChange={e => update(i, { course: e.target.value })}>
+            {BUNDLE_COURSES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <input style={chefField} placeholder="Item name" value={it.itemName} onChange={e => update(i, { itemName: e.target.value })} />
+          <input style={chefField} type="number" placeholder="Price" value={it.price} onChange={e => update(i, { price: Number(e.target.value) || 0 })} />
+          <button style={iconBtn} aria-label="Remove course" onClick={() => onChange(items.filter((_, idx) => idx !== i))}><Trash2 size={12} /></button>
+        </div>
+      ))}
+      <button className={styles.actionBtn} style={{ alignSelf: 'flex-start' }} onClick={() => onChange([...items, { course: 'Main', itemName: '', price: 0 }])}>
+        <Plus size={13} /> Add course
+      </button>
+    </div>
+  );
+}
+
+function BundleRow({ bundle, onUpdate, onDelete }: {
+  bundle: BundleAdmin;
+  onUpdate: (id: number, patch: Partial<BundleInput>) => void;
+  onDelete: (id: number) => void;
+}) {
+  const [items, setItems] = useState<BundleItemInput[]>(bundle.items || []);
+  const [priority, setPriority] = useState(bundle.priority);
+  const [rotationGroup, setRotationGroup] = useState(bundle.rotationGroup || '');
+  const dirty = JSON.stringify(items) !== JSON.stringify(bundle.items || []);
+
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(198,162,75,0.14))', borderRadius: 10, padding: '12px 14px', marginBottom: 12, opacity: bundle.active ? 1 : 0.55 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+        <strong style={{ color: 'var(--color-cream, #f3ead6)' }}>{bundle.icon} {bundle.persona}</strong>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--color-cream, #f3ead6)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={bundle.active} onChange={e => onUpdate(bundle.id, { active: e.target.checked })} />
+            {bundle.active ? 'Active' : 'Disabled'}
+          </label>
+          <button style={iconBtn} aria-label="Delete bundle" onClick={() => onDelete(bundle.id)}><Trash2 size={12} /> Delete</button>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+        <div><label style={chefLabel}>Priority</label><input style={{ ...chefField, width: 90 }} type="number" value={priority} onChange={e => setPriority(Number(e.target.value) || 0)} onBlur={() => { if (priority !== bundle.priority) onUpdate(bundle.id, { priority }); }} /></div>
+        <div><label style={chefLabel}>Rotation group</label><input style={{ ...chefField, width: 160 }} value={rotationGroup} onChange={e => setRotationGroup(e.target.value)} onBlur={() => { if (rotationGroup !== (bundle.rotationGroup || '')) onUpdate(bundle.id, { rotationGroup }); }} /></div>
+      </div>
+      <BundleItemsEditor items={items} onChange={setItems} />
+      {dirty && (
+        <button className={styles.actionBtnGold} style={{ marginTop: 10 }} onClick={() => onUpdate(bundle.id, { items: items.filter(it => it.itemName.trim()) })}>Save courses</button>
+      )}
+    </div>
+  );
+}
+
+function BundlesPanel({ bundles, onCreate, onUpdate, onDelete }: {
+  bundles: BundleAdmin[];
+  onCreate: (input: BundleInput) => Promise<string | null>;
+  onUpdate: (id: number, patch: Partial<BundleInput>) => void;
+  onDelete: (id: number) => void;
+}) {
+  const [persona, setPersona] = useState('');
+  const [description, setDescription] = useState('');
+  const [icon, setIcon] = useState('🍽️');
+  const [accent, setAccent] = useState('#a8812c');
+  const [priority, setPriority] = useState(100);
+  const [rotationGroup, setRotationGroup] = useState('');
+  const [items, setItems] = useState<BundleItemInput[]>([{ course: 'Drink', itemName: '', price: 0 }, { course: 'Main', itemName: '', price: 0 }]);
+  const [status, setStatus] = useState<{ msg: string; error: boolean } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    if (!persona.trim()) { setStatus({ msg: 'Persona name is required.', error: true }); return; }
+    const cleanItems = items.filter(it => it.itemName.trim());
+    if (cleanItems.length === 0) { setStatus({ msg: 'Add at least one item.', error: true }); return; }
+    setSaving(true);
+    const err = await onCreate({ persona: persona.trim(), description, icon, accent, priority, rotationGroup, items: cleanItems });
+    setSaving(false);
+    if (err) { setStatus({ msg: err, error: true }); return; }
+    setStatus({ msg: 'Bundle created.', error: false });
+    setPersona(''); setDescription(''); setRotationGroup('');
+    setItems([{ course: 'Drink', itemName: '', price: 0 }, { course: 'Main', itemName: '', price: 0 }]);
+  }
+
+  return (
+    <div>
+      <p style={{ color: 'var(--color-sand, #b8a88a)', fontSize: 13, lineHeight: 1.55, maxWidth: 720, marginBottom: 18 }}>
+        Persona bundles power the guest menu's <strong>"Not sure what to order?"</strong> strip. Each is a curated full
+        meal (drink, starter, main, dessert). Disable one to hide it; priority orders the strip. The guest app falls back
+        to a built-in set only if the database is unavailable.
+      </p>
+
+      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-line, rgba(198,162,75,0.18))', borderRadius: 12, padding: 18, marginBottom: 24 }}>
+        <h3 style={{ margin: '0 0 14px', fontSize: 15, color: 'var(--color-cream, #f3ead6)' }}>Add bundle</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+          <div><label style={chefLabel}>Persona</label><input style={chefField} placeholder="The Steak Lover" value={persona} onChange={e => setPersona(e.target.value)} /></div>
+          <div><label style={chefLabel}>Icon</label><input style={chefField} value={icon} onChange={e => setIcon(e.target.value)} /></div>
+          <div><label style={chefLabel}>Accent (hex)</label><input style={chefField} value={accent} onChange={e => setAccent(e.target.value)} /></div>
+          <div><label style={chefLabel}>Priority</label><input style={chefField} type="number" value={priority} onChange={e => setPriority(Number(e.target.value) || 0)} /></div>
+          <div><label style={chefLabel}>Rotation group</label><input style={chefField} value={rotationGroup} onChange={e => setRotationGroup(e.target.value)} /></div>
+        </div>
+        <div style={{ marginTop: 12 }}><label style={chefLabel}>Description</label><input style={chefField} placeholder="Flame-grilled, dry-aged, unapologetic." value={description} onChange={e => setDescription(e.target.value)} /></div>
+        <div style={{ marginTop: 12 }}><label style={chefLabel}>Courses & items</label><BundleItemsEditor items={items} onChange={setItems} /></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 14 }}>
+          <button className={styles.actionBtnGold} onClick={submit} disabled={saving}>{saving ? <Spinner size={13} /> : <Plus size={14} />} Add bundle</button>
+          {status && <span style={{ fontSize: 13, color: status.error ? '#fca5a5' : '#5fcf8a' }}>{status.msg}</span>}
+        </div>
+      </div>
+
+      {bundles.length === 0 ? (
+        <div className={styles.emptyState}>
+          <LayoutGrid size={40} className={styles.emptyIcon} />
+          <p>No bundles in the database. The guest menu is using the built-in fallback set — add bundles here (or run <code>npm run bundles:seed -- --apply</code>) to manage them.</p>
+        </div>
+      ) : (
+        bundles.map(b => <BundleRow key={b.id} bundle={b} onUpdate={onUpdate} onDelete={onDelete} />)
       )}
     </div>
   );

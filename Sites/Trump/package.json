@@ -21,6 +21,10 @@
     "reco:validate": "node scripts/phase3-validate.js",
     "reco:health": "node scripts/reco-health.js",
     "reco:health:test": "node scripts/reco-health.js --selftest",
+    "reco:verify:live": "node scripts/reco-verify-live.js",
+    "reco:validate:phase5": "node scripts/phase5-validate.js",
+    "reco:bench": "node scripts/reco-bench.js",
+    "bundles:seed": "node scripts/seed-bundles.js",
     "menu:migrate": "node scripts/migrate-menu-to-postgres.js",
     "orders:migrate": "node scripts/migrate-orders-to-postgres.js",
     "prisma:generate": "npx prisma generate --schema ../../prisma/schema.prisma"

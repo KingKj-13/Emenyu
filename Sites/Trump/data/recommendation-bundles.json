@@ -1,0 +1,212 @@
+[
+  {
+    "id": 1,
+    "slug": "sushi",
+    "persona": "The Sushi Lover",
+    "icon": "🍱",
+    "description": "Fresh, delicate and made to share.",
+    "accent": "#4d7f82",
+    "active": true,
+    "priority": 100,
+    "sortOrder": 0,
+    "rotationGroup": "",
+    "items": [
+      {
+        "course": "Drink",
+        "itemName": "COSMOPOLITAN",
+        "itemId": null,
+        "price": 145,
+        "sortOrder": 0
+      },
+      {
+        "course": "Starter",
+        "itemName": "CRISPY RICE",
+        "itemId": null,
+        "price": 195,
+        "sortOrder": 1
+      },
+      {
+        "course": "Main",
+        "itemName": "CALIFORNIA ROLL - SALMON (8pc)",
+        "itemId": null,
+        "price": 189,
+        "sortOrder": 2
+      },
+      {
+        "course": "Dessert",
+        "itemName": "DUO OF ICE CREAM",
+        "itemId": null,
+        "price": 99,
+        "sortOrder": 3
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "slug": "steak",
+    "persona": "The Steak Lover",
+    "icon": "🥩",
+    "description": "Flame-grilled, dry-aged, unapologetic.",
+    "accent": "#a52b2d",
+    "active": true,
+    "priority": 100,
+    "sortOrder": 1,
+    "rotationGroup": "",
+    "items": [
+      {
+        "course": "Drink",
+        "itemName": "TRUMPS",
+        "itemId": null,
+        "price": 225,
+        "sortOrder": 0
+      },
+      {
+        "course": "Starter",
+        "itemName": "BEEF BILTONG",
+        "itemId": null,
+        "price": 155,
+        "sortOrder": 1
+      },
+      {
+        "course": "Main",
+        "itemName": "RIBEYE 380g",
+        "itemId": null,
+        "price": 369,
+        "sortOrder": 2
+      },
+      {
+        "course": "Dessert",
+        "itemName": "DEATH BY CHOCOLATE CAKE",
+        "itemId": null,
+        "price": 119,
+        "sortOrder": 3
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "slug": "fish",
+    "persona": "The Fish Lover",
+    "icon": "🐟",
+    "description": "From the coast, line to plate.",
+    "accent": "#3a6e8f",
+    "active": true,
+    "priority": 100,
+    "sortOrder": 2,
+    "rotationGroup": "",
+    "items": [
+      {
+        "course": "Drink",
+        "itemName": "MOJITO",
+        "itemId": null,
+        "price": 145,
+        "sortOrder": 0
+      },
+      {
+        "course": "Starter",
+        "itemName": "FALKLANDS CALAMARI",
+        "itemId": null,
+        "price": 285,
+        "sortOrder": 1
+      },
+      {
+        "course": "Main",
+        "itemName": "KINGKLIP FILLET",
+        "itemId": null,
+        "price": 365,
+        "sortOrder": 2
+      },
+      {
+        "course": "Dessert",
+        "itemName": "CAPE MALVA PUDDING",
+        "itemId": null,
+        "price": 115,
+        "sortOrder": 3
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "slug": "veg",
+    "persona": "The Vegetarian",
+    "icon": "🥦",
+    "description": "Garden-forward and full of colour.",
+    "accent": "#5c7a4f",
+    "active": true,
+    "priority": 100,
+    "sortOrder": 3,
+    "rotationGroup": "",
+    "items": [
+      {
+        "course": "Drink",
+        "itemName": "MARGARITA",
+        "itemId": null,
+        "price": 145,
+        "sortOrder": 0
+      },
+      {
+        "course": "Starter",
+        "itemName": "CAPRESE & AVOCADO SALAD",
+        "itemId": null,
+        "price": 149,
+        "sortOrder": 1
+      },
+      {
+        "course": "Main",
+        "itemName": "VEG PLATTER",
+        "itemId": null,
+        "price": 255,
+        "sortOrder": 2
+      },
+      {
+        "course": "Dessert",
+        "itemName": "TRIO OF ICE CREAM",
+        "itemId": null,
+        "price": 119,
+        "sortOrder": 3
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "slug": "pasta",
+    "persona": "The Pasta Lover",
+    "icon": "🍝",
+    "description": "Comfort, twirled to perfection.",
+    "accent": "#b5651d",
+    "active": true,
+    "priority": 100,
+    "sortOrder": 4,
+    "rotationGroup": "",
+    "items": [
+      {
+        "course": "Drink",
+        "itemName": "PINA COLADA",
+        "itemId": null,
+        "price": 145,
+        "sortOrder": 0
+      },
+      {
+        "course": "Starter",
+        "itemName": "CHICKEN TRINCHADO",
+        "itemId": null,
+        "price": 125,
+        "sortOrder": 1
+      },
+      {
+        "course": "Main",
+        "itemName": "BEEF FILLET PASTA",
+        "itemId": null,
+        "price": 289,
+        "sortOrder": 2
+      },
+      {
+        "course": "Dessert",
+        "itemName": "RED VELVET CAKE",
+        "itemId": null,
+        "price": 115,
+        "sortOrder": 3
+      }
+    ]
+  }
+]

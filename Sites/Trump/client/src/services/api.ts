@@ -1,5 +1,6 @@
 import { ENDPOINTS } from '../constants/api';
-import type { MenuData, ChefRec, ChefRecInput, RecommendationAnalytics } from '../types/menu';
+import type { MenuData, ChefRec, ChefRecInput, RecommendationAnalytics, RecoInsightsResult, BundleAdmin, BundleInput } from '../types/menu';
+import type { PersonaOrder } from '../constants/recommendedOrders';
 import type { LoginPayload, LoginResponse, AuthUser } from '../types/auth';
 import type { OrderPayload } from '../types/cart';
 
@@ -206,12 +207,44 @@ export const api = {
     return fetchJson<{ ok: boolean }>(ENDPOINTS.chefRec(id), { method: 'DELETE' });
   },
 
+  // Recommended-order bundles (Phase 5)
+  getBundles() {
+    return fetchJson<PersonaOrder[]>(ENDPOINTS.bundles);
+  },
+
+  getBundlesAdmin() {
+    return fetchJson<BundleAdmin[]>(ENDPOINTS.bundlesAdmin);
+  },
+
+  createBundle(payload: BundleInput) {
+    return postJson<{ ok: boolean; bundle: BundleAdmin }>(ENDPOINTS.bundles, payload);
+  },
+
+  updateBundle(id: number, patch: Partial<BundleInput>) {
+    return fetchJson<{ ok: boolean; bundle: BundleAdmin }>(ENDPOINTS.bundle(id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+  },
+
+  deleteBundle(id: number) {
+    return fetchJson<{ ok: boolean }>(ENDPOINTS.bundle(id), { method: 'DELETE' });
+  },
+
   // Recommendation analytics dashboard (Phase 4, owner|manager)
   getRecommendationAnalytics(params: { from?: string; to?: string; category?: string; source?: string; rotationGroup?: string; mode?: string } = {}) {
     const qs = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v != null && v !== '') as [string, string][]
     ).toString();
     return fetchJson<RecommendationAnalytics>(`${ENDPOINTS.analyticsRecommendations}${qs ? `?${qs}` : ''}`);
+  },
+
+  getRecommendationInsights(params: { from?: string; to?: string; mode?: string } = {}) {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== '') as [string, string][]
+    ).toString();
+    return fetchJson<RecoInsightsResult>(`${ENDPOINTS.analyticsRecommendationsInsights}${qs ? `?${qs}` : ''}`);
   },
 
   bulkMenuItemAction(action: 'hide' | 'show' | 'delete', ids: number[]) {

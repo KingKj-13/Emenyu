@@ -8,6 +8,7 @@ const dotenv = require('dotenv');
 const { createAiController } = require('./controllers/aiController');
 const { createAnalyticsController } = require('./controllers/analyticsController');
 const { createRecommendationAnalyticsController } = require('./controllers/recommendationAnalyticsController');
+const { createRecommendationBundleController } = require('./controllers/recommendationBundleController');
 const { createDealController } = require('./controllers/dealController');
 const { createKitchenController } = require('./controllers/kitchenController');
 const { createMenuController } = require('./controllers/menuController');
@@ -20,6 +21,7 @@ const { createWaiterController } = require('./controllers/waiterController');
 const { createWaiterApiController } = require('./controllers/waiterApiController');
 const { registerAnalyticsRoutes } = require('./routes/analyticsRoutes');
 const { registerRecommendationAnalyticsRoutes } = require('./routes/recommendationAnalyticsRoutes');
+const { registerRecommendationBundleRoutes } = require('./routes/recommendationBundleRoutes');
 const { registerWaiterApiRoutes } = require('./routes/waiterApiRoutes');
 const { registerDealRoutes } = require('./routes/dealRoutes');
 const { registerKitchenRoutes } = require('./routes/kitchenRoutes');
@@ -44,6 +46,7 @@ const { FileService } = require('./services/fileService');
 const { SocketService } = require('./services/socketService');
 const { MediaEnrichmentService } = require('./services/mediaEnrichmentService');
 const { RecommendationEventService } = require('./services/recommendationEventService');
+const { RecommendationBundleService } = require('./services/recommendationBundleService');
 const { createLogger } = require('./utils/logger');
 const { createConfig, createRoleAuth } = require('./utils/helpers');
 
@@ -198,6 +201,7 @@ async function startServer() {
   const aiService = new AiService(config, fileService, socketService, { logger });
   const mediaEnrichmentService = new MediaEnrichmentService(config);
   const recommendationEventService = new RecommendationEventService({ config, logger });
+  const recommendationBundleService = new RecommendationBundleService({ config, logger });
   const orderValidationService = createOrderValidationService({ config, fileService, logger });
 
   // Waiter-AI: deterministic business logic + pluggable wording layer (hybrid).
@@ -212,7 +216,8 @@ async function startServer() {
   const controllers = {
     ai: createAiController({ aiService }),
     analytics: createAnalyticsController({ config }),
-    recommendationAnalytics: createRecommendationAnalyticsController({ recommendationEventService }),
+    recommendationAnalytics: createRecommendationAnalyticsController({ recommendationEventService, prismaMenuService: fileService.prismaMenu }),
+    recommendationBundle: createRecommendationBundleController({ recommendationBundleService, socketService }),
     deal: createDealController({ fileService, socketService }),
     kitchen: createKitchenController({ config, fileService, socketService }),
     menu: createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService: fileService.prismaMenu }),
@@ -293,6 +298,7 @@ async function startServer() {
 
   registerAnalyticsRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerRecommendationAnalyticsRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
+  registerRecommendationBundleRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerMenuRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerDealRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerKitchenRoutes(app, controllers, auth.requireRoles(['owner', 'manager', 'kitchen']));

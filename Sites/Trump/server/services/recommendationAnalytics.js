@@ -93,7 +93,9 @@ function withRates(tally) {
     clickRate: rate(tally.clicks, tally.impressions),
     acceptanceRate: rate(tally.accepted, tally.impressions),
     dismissalRate: rate(tally.dismissed, tally.impressions),
-    conversionRate: rate(tally.ordered, tally.impressions)
+    conversionRate: rate(tally.ordered, tally.impressions),
+    // Phase 5: revenue efficiency — accepted revenue per impression.
+    revenuePerImpression: Number((tally.impressions > 0 ? (tally.revenue || 0) / tally.impressions : 0).toFixed(2))
   };
 }
 
@@ -107,6 +109,7 @@ function aggregate(events = [], filters = {}, { minImpressions = 5, topN = 10 } 
   const byItem = new Map();
   const bySource = new Map();
   const byGroup = new Map();
+  const byBundle = new Map();
 
   for (const ev of filtered) {
     bump(totals, ev);
@@ -123,19 +126,32 @@ function aggregate(events = [], filters = {}, { minImpressions = 5, topN = 10 } 
       if (!byGroup.has(ev.rotationGroup)) byGroup.set(ev.rotationGroup, emptyTally({ rotationGroup: ev.rotationGroup }));
       bump(byGroup.get(ev.rotationGroup), ev);
     }
+
+    // Phase 5: bundle-level attribution. Bundle events carry source "bundle" and the
+    // persona in originatingName.
+    if (ev.source === 'bundle' && ev.originatingName) {
+      if (!byBundle.has(ev.originatingName)) byBundle.set(ev.originatingName, emptyTally({ name: ev.originatingName, source: 'bundle' }));
+      bump(byBundle.get(ev.originatingName), ev);
+    }
   }
 
   const items = [...byItem.values()].map(withRates);
   const desc = key => (a, b) => b[key] - a[key];
+  const asc = key => (a, b) => a[key] - b[key];
+  const seen = items.filter(i => i.impressions >= minImpressions);
 
   return {
     totals: withRates(totals),
     topShown: [...items].sort(desc('impressions')).slice(0, topN),
     topClicked: [...items].sort(desc('clicks')).slice(0, topN),
-    topConverting: items.filter(i => i.impressions >= minImpressions).sort(desc('acceptanceRate')).slice(0, topN),
+    topConverting: [...seen].sort(desc('acceptanceRate')).slice(0, topN),
+    // Phase 5: underperformers — enough exposure, lowest acceptance (drives the
+    // optimization "dead recommendation" insights).
+    underperforming: [...seen].sort(asc('acceptanceRate')).slice(0, topN),
     topRevenue: [...items].sort(desc('revenue')).slice(0, topN),
     bySource: [...bySource.values()].map(withRates).sort(desc('impressions')),
     byRotationGroup: [...byGroup.values()].map(withRates).sort(desc('impressions')),
+    byBundle: [...byBundle.values()].map(withRates).sort(desc('impressions')),
     items,
     eventCount: filtered.length
   };

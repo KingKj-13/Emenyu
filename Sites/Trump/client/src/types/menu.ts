@@ -74,6 +74,44 @@ export interface RecoTally {
   acceptanceRate: number;
   dismissalRate: number;
   conversionRate: number;
+  revenuePerImpression?: number;
+}
+
+// Recommended-order bundles (Phase 5). The public shape matches the existing
+// PersonaOrder used by RecommendedOrders; admin shape adds the editable fields.
+export interface BundleItemInput {
+  course: string;
+  itemName: string;
+  price: number;
+  itemId?: number | null;
+  sortOrder?: number;
+}
+
+export interface BundleAdmin {
+  id: number;
+  slug: string;
+  persona: string;
+  description: string;
+  icon: string;
+  accent: string;
+  active: boolean;
+  priority: number;
+  rotationGroup: string;
+  sortOrder: number;
+  items: BundleItemInput[];
+}
+
+export interface BundleInput {
+  persona: string;
+  description?: string;
+  icon?: string;
+  accent?: string;
+  active?: boolean;
+  priority?: number;
+  rotationGroup?: string;
+  sortOrder?: number;
+  slug?: string;
+  items?: BundleItemInput[];
 }
 
 export interface RecommendationAnalytics {
@@ -81,11 +119,32 @@ export interface RecommendationAnalytics {
   topShown: RecoTally[];
   topClicked: RecoTally[];
   topConverting: RecoTally[];
+  underperforming?: RecoTally[];
   topRevenue: RecoTally[];
   bySource: RecoTally[];
   byRotationGroup: RecoTally[];
+  byBundle?: RecoTally[];
   items: RecoTally[];
   eventCount: number;
+}
+
+export interface RecoInsight {
+  severity: 'high' | 'medium' | 'low';
+  type: string;
+  title: string;
+  detail: string;
+  action: string;
+  name?: string;
+  recId?: number;
+  rotationGroup?: string;
+  impressions?: number;
+  acceptanceRate?: number;
+}
+
+export interface RecoInsightsResult {
+  count: number;
+  counts: Record<string, number>;
+  insights: RecoInsight[];
 }
 
 export interface MenuSubSection {
