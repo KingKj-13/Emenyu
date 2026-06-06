@@ -324,6 +324,35 @@ model UpsellEvent {
   @@index([restaurantId, accepted])
 }
 
+// Phase 4: recommendation lifecycle analytics. One row per event
+// (impression | click | accepted | dismissed | ordered). The recommendation
+// engine is name-keyed, so recommendedName is the reliable join key and the
+// *ItemId columns are best-effort. Rows are aggregated in-memory over a date
+// window (see services/recommendationAnalytics.js) — fine for a single venue's
+// volume and keeps the dashboard math identical to the JSON-fallback path.
+model RecommendationEvent {
+  id                Int      @id @default(autoincrement())
+  restaurantId      String   @default("trump")
+  eventType         String                              // impression | click | accepted | dismissed | ordered
+  source            String   @default("")               // surface or engine source_title (cart, chat, pairing, coach, "Chef's pairing", …)
+  recType           String   @default("")               // DISH | SIDE | DESSERT | BEVERAGE | categoryType
+  recommendedItemId Int?
+  recommendedName   String   @default("")
+  originatingItemId Int?
+  originatingName   String   @default("")
+  rotationGroup     String   @default("")
+  sessionId         String   @default("")
+  mode              String   @default("customer")        // customer | waiter
+  chef              Boolean  @default(false)
+  value             Float    @default(0)                 // item price — revenue attribution on accepted/ordered
+  createdAt         DateTime @default(now())
+
+  @@index([restaurantId, eventType, createdAt])
+  @@index([restaurantId, recommendedName])
+  @@index([restaurantId, rotationGroup])
+  @@index([restaurantId, source])
+}
+
 model Reservation {
   id           Int      @id @default(autoincrement())
   restaurantId String   @default("trump")

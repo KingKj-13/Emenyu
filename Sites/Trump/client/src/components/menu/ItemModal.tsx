@@ -9,6 +9,7 @@ import { formatPrice } from '../../lib/menuUtils';
 import { api } from '../../services/api';
 import type { MenuItem } from '../../types/menu';
 import { RecommendationCard, type RecommendationItem } from '../reco/RecommendationCard';
+import { trackImpressions, trackClick, markShown, flushDismissed, type RecoContext } from '../../lib/recoAnalytics';
 import styles from './ItemModal.module.css';
 
 interface ItemModalProps {
@@ -46,6 +47,8 @@ function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?:
   const [foodPairings, setFoodPairings] = useState<PairingItem[]>([]);
   const [drinkPairings, setDrinkPairings] = useState<PairingItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const pairCtx: RecoContext = { mode: 'customer', source: 'pairing', originatingName: item.name };
+  const surfaceKey = `pairing:${item.name}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -56,12 +59,21 @@ function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?:
       .then((data: unknown) => {
         if (cancelled) return;
         const res = data as PairingResult;
-        setFoodPairings(res?.foodPairings ?? []);
-        setDrinkPairings(res?.drinkPairings ?? []);
+        const drink = res?.drinkPairings ?? [];
+        const food = res?.foodPairings ?? [];
+        setFoodPairings(food);
+        setDrinkPairings(drink);
+        const shown = [...drink, ...food] as RecommendationItem[];
+        if (shown.length) {
+          trackImpressions(shown, pairCtx);
+          markShown(surfaceKey, shown, pairCtx);
+        }
       })
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    // Record pairings shown but never opened as a dismissal when the strip unmounts.
+    return () => { cancelled = true; flushDismissed(surfaceKey); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.name]);
 
   const hasFood = foodPairings.length > 0;
@@ -88,7 +100,7 @@ function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?:
                     variant="compact"
                     showReason
                     item={p as RecommendationItem}
-                    onOpen={() => onRequestItem?.(p.name)}
+                    onOpen={() => { trackClick(p as RecommendationItem, pairCtx); onRequestItem?.(p.name); }}
                   />
                 ))}
               </div>
@@ -104,7 +116,7 @@ function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?:
                     variant="compact"
                     showReason
                     item={p as RecommendationItem}
-                    onOpen={() => onRequestItem?.(p.name)}
+                    onOpen={() => { trackClick(p as RecommendationItem, pairCtx); onRequestItem?.(p.name); }}
                   />
                 ))}
               </div>

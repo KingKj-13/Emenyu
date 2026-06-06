@@ -12,6 +12,7 @@ import { TipSelector } from './TipSelector';
 import { ReceiptView } from './ReceiptView';
 import { flattenMenu, formatPrice, normalizeName } from '../../lib/menuUtils';
 import { resolveImage } from '../../lib/imageResolver';
+import { trackOrdered } from '../../lib/recoAnalytics';
 import { Spinner } from '../ui/Spinner';
 import type { MenuItem } from '../../types/menu';
 import styles from './CartDrawer.module.css';
@@ -79,6 +80,8 @@ export function CartDrawer() {
         })),
         table_number: tableId,
       });
+      // Phase 4: attribute "ordered" events to any recommendations accepted this session.
+      trackOrdered(orderedItems.map(i => i.name));
       setHistory([...currentOrder, ...orderedItems]);
       clear();
       setTab('current');

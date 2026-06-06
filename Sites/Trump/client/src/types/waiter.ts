@@ -22,6 +22,10 @@ export interface CartRec {
   upsell: number;
   script: string;
   complimentary?: boolean;
+  // Phase 4 analytics attribution.
+  source_title?: string;
+  rotationGroup?: string;
+  chef?: boolean;
 }
 
 export interface CartRecResponse {

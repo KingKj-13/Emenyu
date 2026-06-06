@@ -6,8 +6,11 @@ import { getSocket } from '../../services/socket';
 import { RESTAURANT_ID } from '../../constants/api';
 import { useApp } from '../../context/AppContext';
 import { RecommendationCard, type RecommendationItem } from '../reco/RecommendationCard';
+import { trackImpressions, trackClick } from '../../lib/recoAnalytics';
 import type { ChatSuggestionItem, ChatResponse } from '../../types/menu';
 import styles from './ChatPanel.module.css';
+
+const CHAT_RECO_CTX = { mode: 'customer', source: 'chat' } as const;
 
 interface Message {
   role: 'user' | 'assistant';
@@ -67,6 +70,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
         content: res.reply || 'Sorry, I had trouble responding.',
         suggestions: res.suggestions || []
       }]);
+      if (res.suggestions?.length) trackImpressions(res.suggestions, CHAT_RECO_CTX);
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'I\'m having a moment — please try again shortly.' }]);
     } finally {
@@ -135,7 +139,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
                           key={j}
                           variant="compact"
                           item={item as RecommendationItem}
-                          onOpen={() => onItemClick?.(item)}
+                          onOpen={() => { trackClick(item as RecommendationItem, CHAT_RECO_CTX); onItemClick?.(item); }}
                         />
                       ))}
                     </div>

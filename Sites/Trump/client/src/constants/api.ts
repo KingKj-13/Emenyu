@@ -36,6 +36,8 @@ export const ENDPOINTS = {
   analyticsItems: `${API_PREFIX}/api/analytics/items`,
   analyticsTables: `${API_PREFIX}/api/analytics/tables`,
   analyticsHours: `${API_PREFIX}/api/analytics/hours`,
+  analyticsRecommendations: `${API_PREFIX}/api/analytics/recommendations`,
+  recoEvents: `${API_PREFIX}/api/reco/events`,
   adminTableCarts: `${API_PREFIX}/api/admin/tables/carts`,
   reservations: `${API_PREFIX}/api/reservations`,
   ratings: `${API_PREFIX}/api/ratings`,

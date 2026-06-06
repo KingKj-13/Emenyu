@@ -367,7 +367,8 @@ class AiService {
         limit: 4,
         reason: nlu.tokens.join(' '),
         tableId: requestBody.tableId,
-        deviceId: payload.deviceId
+        deviceId: payload.deviceId,
+        menuContext
       });
       responseData = {
         reply: this.buildSuggestionReply(
@@ -385,7 +386,7 @@ class AiService {
     } else {
       const mentioned = findMentionedItem(menuContext, lower);
       if (mentioned) {
-        const pairings = await this.recommend({ cart: [mentioned], limit: 3 });
+        const pairings = await this.recommend({ cart: [mentioned], limit: 3, menuContext });
         responseData = {
           reply: `${mentioned.name} is ${mentioned.description || 'one of the grillhouse selections'}. It is ${this.formatPrice(
             mentioned.price
@@ -509,7 +510,11 @@ class AiService {
         story: r.story || '',
         reason: this.cartRecReason(r, cart),
         upsell: Math.round(Number(r.price) || 0),
-        script: this.cartRecScript(r)
+        script: this.cartRecScript(r),
+        // Phase 4 analytics attribution.
+        source_title: r.source_title || '',
+        rotationGroup: r.rotationGroup || '',
+        chef: r.chef === true
       }));
 
     const eventRec = null;
@@ -601,7 +606,7 @@ class AiService {
     }
 
     if (cart.length > 0) {
-      const recs = await this.recommend({ cart, limit: 3 });
+      const recs = await this.recommend({ cart, limit: 3, menuContext });
       recs.forEach(item => add(item));
     }
 
@@ -619,7 +624,8 @@ class AiService {
     const suggestions = await this.recommend({
       cart: cartItems,
       limit: 4,
-      reason: payload.message || lower
+      reason: payload.message || lower,
+      menuContext
     });
 
     if (suggestions.length > 0) {
@@ -763,7 +769,8 @@ class AiService {
     const wineSuggestions = await this.recommend({
       cart: Array.isArray(payload.cart) ? payload.cart : [],
       limit: 6,
-      reason: payload.message || lower
+      reason: payload.message || lower,
+      menuContext
     });
     const wineOnly = wineSuggestions.filter(s => s.categoryType === 'WINE').slice(0, 4);
 
@@ -794,7 +801,7 @@ class AiService {
     const rawItem = payload.item || payload.selectedItem || payload.name || payload.cart?.[0];
     const menuContext = await this.getMenuContext();
     const item = typeof rawItem === 'string' ? fuzzyFindItem(menuContext, rawItem) : fuzzyFindItem(menuContext, rawItem?.name) || rawItem;
-    const recs = await this.recommend({ cart: item ? [item] : [], limit: 6 });
+    const recs = await this.recommend({ cart: item ? [item] : [], limit: 6, menuContext });
 
     const enriched = recs.map(pairing => ({
       name: pairing.name,
@@ -825,7 +832,9 @@ class AiService {
   async recommend(payload = {}) {
     const cart = this.readCart(payload);
     const recommendationLimit = Math.min(8, Math.max(3, Number(payload.limit) || cart.length || 4));
-    const menuContext = await this.getMenuContext();
+    // Perf (Phase 4, Task 5): reuse a caller-supplied menu context so a single
+    // chat()/aiPairing() request doesn't load + rebuild the whole menu twice.
+    const menuContext = payload.menuContext || await this.getMenuContext();
     const adminGroups = await this.fileService.loadRecommendations();
     const chefRecs = await this.fileService.loadChefRecommendations();
     const orderRecords = await this.getOrderRecords();
@@ -931,6 +940,9 @@ class AiService {
         pub.reason = candidate.reason;
       }
       pub.chef = candidate.chef === true;
+      // Phase 4: carry the rotation group through so analytics can attribute
+      // impressions/clicks to the group the engine drew from.
+      pub.rotationGroup = candidate.rotationGroup || '';
       return pub;
     });
   }

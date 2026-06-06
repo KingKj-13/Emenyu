@@ -209,9 +209,10 @@ function configureSecurity(app, config, logger) {
   );
 
   // The customer chatbot can be chattier than a one-off order, so it gets its
-  // own (more generous) POST limit.
+  // own (more generous) POST limit. Recommendation analytics ingest (Phase 4) is
+  // fire-and-forget and batched, so it shares this generous bucket.
   app.use(
-    aliasApiPaths(config, 'chat'),
+    [...aliasApiPaths(config, 'chat'), ...aliasApiPaths(config, 'reco/events')],
     rateLimit({
       windowMs: config.security.rateLimitWindowMs,
       limit: config.security.chatRateLimitMax,

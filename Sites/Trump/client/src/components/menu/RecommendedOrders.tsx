@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Plus, ShoppingCart, ChevronRight } from 'lucide-react';
+import { Plus, ShoppingCart } from 'lucide-react';
 import { RECOMMENDED_ORDERS, type PersonaOrder } from '../../constants/recommendedOrders';
-import { resolveImage } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
+import { RecommendationCard } from '../reco/RecommendationCard';
 import type { MenuItem } from '../../types/menu';
 import styles from './RecommendedOrders.module.css';
 
@@ -32,27 +32,27 @@ function OrderCard({ order, resolveItem, onOpenItem, onAddOrder }: Props & { ord
         </div>
       </div>
 
+      {/* Each course reuses the shared RecommendationCard (detailed variant) so the
+          bundle shares the one card visual language; the bundle keeps its own
+          persona header + add-all footer. The course label rides in as the card's
+          source tag. (Phase 4, Task 3.) */}
       <div className={styles.courses}>
         {order.courses.map(course => {
           const item = resolveItem(course.name);
-          const img = item ? resolveImage(item) : '';
-          const label = item?.name || course.name;
           return (
-            <button
+            <RecommendationCard
               key={course.course}
-              className={styles.course}
-              onClick={() => onOpenItem(course.name)}
-              aria-label={`View ${label}`}
-            >
-              {img ? <img src={img} alt={label} className={styles.courseImg} loading="lazy" />
-                : <span className={styles.courseImgPh} />}
-              <span className={styles.courseInfo}>
-                <span className={styles.courseTag}>{course.course}</span>
-                <span className={styles.courseName}>{label}</span>
-              </span>
-              <span className={styles.coursePrice}>{formatPrice(course.price)}</span>
-              <ChevronRight size={14} className={styles.chev} />
-            </button>
+              variant="detailed"
+              item={{
+                name: item?.name || course.name,
+                price: course.price,
+                img: item?.img,
+                description: item?.description,
+                categoryType: item?.categoryType,
+                source_title: course.course
+              }}
+              onOpen={() => onOpenItem(course.name)}
+            />
           );
         })}
       </div>

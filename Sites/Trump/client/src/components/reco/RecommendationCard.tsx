@@ -18,6 +18,8 @@ export interface RecommendationItem {
   source_title?: string;
   reason?: string;
   chef?: boolean;
+  rotationGroup?: string;
+  dbId?: number;
 }
 
 interface Props {

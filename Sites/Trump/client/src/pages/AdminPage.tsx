@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback, type ReactNode, type CSSProperties } from 'react';
-import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Plus, X, Sparkles } from 'lucide-react';
+import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Plus, X, Sparkles, TrendingUp } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../hooks/useAuth';
 import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
 import { api } from '../services/api';
 import { Spinner } from '../components/ui/Spinner';
 import { formatPrice } from '../lib/menuUtils';
-import type { ChefRec, ChefRecInput, ChefRecType, ChefBeverageKind } from '../types/menu';
+import type { ChefRec, ChefRecInput, ChefRecType, ChefBeverageKind, RecommendationAnalytics, RecoTally } from '../types/menu';
 import styles from './AdminPage.module.css';
 
-type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs';
+type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics';
 
 interface Order {
   filename: string;
@@ -101,6 +101,8 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const [tableCarts, setTableCarts] = useState<TableCartEntry[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [chefRecs, setChefRecs] = useState<ChefRec[]>([]);
+  const [recoAnalytics, setRecoAnalytics] = useState<RecommendationAnalytics | null>(null);
+  const [recoFilters, setRecoFilters] = useState<{ range: ReportRange; category: string; source: string; rotationGroup: string; mode: string }>({ range: '7d', category: '', source: '', rotationGroup: '', mode: '' });
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'item' | 'reservation' | 'deal' | 'account'>(null);
@@ -141,12 +143,33 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
         const [recs, items] = await Promise.all([api.getChefRecs(), api.getAdminMenuItems()]);
         setChefRecs((recs as ChefRec[]) || []);
         setMenuItems((items as AdminMenuItem[]) || []);
+      } else if (t === 'recoanalytics') {
+        await loadRecoAnalytics(recoFilters);
+        return;
       }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadRecoAnalytics(filters: typeof recoFilters) {
+    setLoading(true);
+    const { from, to } = getDateRange(filters.range);
+    try {
+      const data = await api.getRecommendationAnalytics({
+        from, to,
+        category: filters.category || undefined,
+        source: filters.source || undefined,
+        rotationGroup: filters.rotationGroup || undefined,
+        mode: filters.mode || undefined
+      });
+      setRecoAnalytics(data);
+    } catch {
+      setRecoAnalytics(null);
+    }
+    setLoading(false);
   }
 
   function getDateRange(range: ReportRange): { from?: string; to?: string } {
@@ -360,6 +383,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     ] },
     { label: 'INSIGHT', items: [
       { key: 'reports', label: 'Reports', icon: BarChart2 },
+      { key: 'recoanalytics', label: 'Reco Analytics', icon: TrendingUp },
       { key: 'accounts', label: 'Accounts', icon: Users },
       { key: 'chat', label: 'Chat Logs', icon: MessageSquare },
     ] },
@@ -376,6 +400,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     reservations: { eyebrow: 'BOOKINGS', title: 'Reservations', sub: `${reservations.length} booking${reservations.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('reservation')}><Plus size={14} /> New booking</button> },
     menu: { eyebrow: 'MENU MANAGEMENT', title: 'The menu', sub: `${menuItems.length} item${menuItems.length !== 1 ? 's' : ''}`, actions: <><button className={styles.actionBtnGold} onClick={openNewItem}><Plus size={14} /> New item</button>{refreshAction}</> },
     chefrecs: { eyebrow: 'CHEF CURATION', title: 'Chef recommendations', sub: `${chefRecs.length} pairing${chefRecs.length !== 1 ? 's' : ''} · always shown ahead of automatic suggestions`, actions: refreshAction },
+    recoanalytics: { eyebrow: 'ANALYTICS', title: 'Recommendation performance', sub: `${recoAnalytics?.eventCount ?? 0} events · impression → click → accept → order`, actions: refreshAction },
     deals: { eyebrow: 'OFFERS', title: 'Deals', sub: 'Bundle dishes into featured set menus', actions: <button className={styles.actionBtnGold} onClick={openNewDeal}><Plus size={14} /> New deal</button> },
     qrcodes: { eyebrow: 'TABLE QR CODES', title: 'QR codes', sub: 'Each links a guest straight to its table session' },
     reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top dishes, peak hours & guest ratings' },
@@ -556,6 +581,13 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
                   onCreate={handleCreateChefRec}
                   onUpdate={handleUpdateChefRec}
                   onDelete={handleDeleteChefRec}
+                />
+              )}
+              {tab === 'recoanalytics' && (
+                <RecoAnalyticsPanel
+                  data={recoAnalytics}
+                  filters={recoFilters}
+                  onFilterChange={next => { setRecoFilters(next); loadRecoAnalytics(next); }}
                 />
               )}
                 </>
@@ -1509,6 +1541,113 @@ function ChefRecRow({ rec, onUpdate, onDelete }: {
         <input style={chefField} type="number" value={priority}
           onChange={e => setPriority(Number(e.target.value))} onBlur={() => { if (priority !== rec.priority) onUpdate(rec.id, { priority }); }} />
       </div>
+    </div>
+  );
+}
+
+// ── Recommendation analytics dashboard (Phase 4, Task 2) ──
+const RECO_RANGES: { key: ReportRange; label: string }[] = [
+  { key: 'today', label: 'Today' }, { key: '7d', label: '7 Days' }, { key: '30d', label: '30 Days' }, { key: 'all', label: 'All' }
+];
+const RECO_CATEGORIES = ['', 'DISH', 'SIDE', 'DESSERT', 'BEVERAGE', 'STARTER', 'MAIN', 'WINE', 'DRINK'];
+const pctLabel = (r: number) => `${((Number(r) || 0) * 100).toFixed(1)}%`;
+
+type RecoFilters = { range: ReportRange; category: string; source: string; rotationGroup: string; mode: string };
+
+function RecoKpi({ value, label, sub }: { value: string; label: string; sub?: string }) {
+  return (
+    <div className={styles.summaryCard}>
+      <div className={styles.summaryValue}>{value}</div>
+      <div className={styles.summaryLabel}>{label}</div>
+      {sub ? <div className={styles.summaryLabel} style={{ opacity: 0.65 }}>{sub}</div> : null}
+    </div>
+  );
+}
+
+function RecoBoard({ title, rows, metric }: { title: string; rows: RecoTally[]; metric: (r: RecoTally) => string }) {
+  if (!rows || rows.length === 0) return null;
+  return (
+    <div className={styles.reportSection}>
+      <h3 className={styles.reportSectionTitle}>{title}</h3>
+      <div className={styles.topItemsList}>
+        {rows.map((r, i) => (
+          <div key={`${r.name || r.source || r.rotationGroup || 'row'}-${i}`} className={styles.topItemRow}>
+            <span className={styles.topItemRank}>#{i + 1}</span>
+            <span className={styles.topItemName}>{r.name || r.source || r.rotationGroup || '—'}{r.chef ? ' ⭐' : ''}</span>
+            <span className={styles.topItemQty}>{r.impressions} shown</span>
+            <span className={styles.topItemRev}>{metric(r)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RecoAnalyticsPanel({ data, filters, onFilterChange }: {
+  data: RecommendationAnalytics | null;
+  filters: RecoFilters;
+  onFilterChange: (next: RecoFilters) => void;
+}) {
+  const totals = data?.totals;
+  const set = (patch: Partial<RecoFilters>) => onFilterChange({ ...filters, ...patch });
+  const sources = (data?.bySource || []).map(s => s.source).filter(Boolean) as string[];
+  const groups = (data?.byRotationGroup || []).map(g => g.rotationGroup).filter(Boolean) as string[];
+
+  return (
+    <div className={styles.reportsPanel}>
+      <div className={styles.rangeBar}>
+        {RECO_RANGES.map(r => (
+          <button key={r.key} className={`${styles.rangeBtn} ${filters.range === r.key ? styles.rangeBtnActive : ''}`} onClick={() => set({ range: r.key })}>{r.label}</button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '0 0 18px' }}>
+        <select style={{ ...chefField, width: 'auto' }} value={filters.mode} onChange={e => set({ mode: e.target.value })}>
+          <option value="">All modes</option>
+          <option value="customer">Customer</option>
+          <option value="waiter">Waiter</option>
+        </select>
+        <select style={{ ...chefField, width: 'auto' }} value={filters.category} onChange={e => set({ category: e.target.value })}>
+          {RECO_CATEGORIES.map(c => <option key={c} value={c}>{c ? titleCase(c) : 'All categories'}</option>)}
+        </select>
+        <select style={{ ...chefField, width: 'auto' }} value={filters.source} onChange={e => set({ source: e.target.value })}>
+          <option value="">All sources</option>
+          {sources.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select style={{ ...chefField, width: 'auto' }} value={filters.rotationGroup} onChange={e => set({ rotationGroup: e.target.value })}>
+          <option value="">All rotation groups</option>
+          {groups.map(g => <option key={g} value={g}>{g}</option>)}
+        </select>
+      </div>
+
+      {!totals || totals.impressions === 0 ? (
+        <div className={styles.emptyState}>
+          <TrendingUp size={40} className={styles.emptyIcon} />
+          <p>No recommendation events for this filter yet. Events stream in as guests and waiters see, click and accept recommendations.</p>
+        </div>
+      ) : (
+        <>
+          <div className={styles.summaryCards}>
+            <RecoKpi value={String(totals.impressions)} label="Impressions" />
+            <RecoKpi value={String(totals.clicks)} label="Clicks" sub={`${pctLabel(totals.clickRate)} CTR`} />
+            <RecoKpi value={String(totals.accepted)} label="Accepted" />
+            <RecoKpi value={pctLabel(totals.acceptanceRate)} label="Acceptance rate" />
+            <RecoKpi value={pctLabel(totals.dismissalRate)} label="Dismissal rate" />
+            <RecoKpi value={String(totals.ordered)} label="Orders generated" />
+            <RecoKpi value={formatPrice(totals.revenue)} label="Revenue attributed" />
+          </div>
+
+          <div className={styles.reportsGrid}>
+            <RecoBoard title="Most shown" rows={data!.topShown} metric={r => `${r.impressions}×`} />
+            <RecoBoard title="Most clicked" rows={data!.topClicked} metric={r => `${r.clicks} clicks`} />
+            <RecoBoard title="Highest conversion" rows={data!.topConverting} metric={r => pctLabel(r.acceptanceRate)} />
+            <RecoBoard title="Revenue attributed" rows={(data!.topRevenue || []).filter(r => r.revenue > 0)} metric={r => formatPrice(r.revenue)} />
+          </div>
+
+          <RecoBoard title="By source" rows={data!.bySource} metric={r => `${pctLabel(r.acceptanceRate)} acc.`} />
+          <RecoBoard title="By rotation group" rows={data!.byRotationGroup} metric={r => `${pctLabel(r.acceptanceRate)} acc.`} />
+        </>
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { ENDPOINTS } from '../constants/api';
-import type { MenuData, ChefRec, ChefRecInput } from '../types/menu';
+import type { MenuData, ChefRec, ChefRecInput, RecommendationAnalytics } from '../types/menu';
 import type { LoginPayload, LoginResponse, AuthUser } from '../types/auth';
 import type { OrderPayload } from '../types/cart';
 
@@ -204,6 +204,14 @@ export const api = {
 
   deleteChefRec(id: number) {
     return fetchJson<{ ok: boolean }>(ENDPOINTS.chefRec(id), { method: 'DELETE' });
+  },
+
+  // Recommendation analytics dashboard (Phase 4, owner|manager)
+  getRecommendationAnalytics(params: { from?: string; to?: string; category?: string; source?: string; rotationGroup?: string; mode?: string } = {}) {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== '') as [string, string][]
+    ).toString();
+    return fetchJson<RecommendationAnalytics>(`${ENDPOINTS.analyticsRecommendations}${qs ? `?${qs}` : ''}`);
   },
 
   bulkMenuItemAction(action: 'hide' | 'show' | 'delete', ids: number[]) {

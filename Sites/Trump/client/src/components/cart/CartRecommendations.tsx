@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext';
 import { useDebounce } from '../../hooks/useDebounce';
 import { resolveImage } from '../../lib/imageResolver';
 import { RecommendationCard, type RecommendationItem } from '../reco/RecommendationCard';
+import { trackImpressions, trackClick, trackAccepted, type RecoContext } from '../../lib/recoAnalytics';
 import type { CartItem } from '../../types/cart';
 import type { MenuItem } from '../../types/menu';
 import styles from './CartRecommendations.module.css';
@@ -37,7 +38,10 @@ export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
 
     api.getRecommendations({ items: cartItems.map(i => ({ name: i.name, price: i.price })) })
       .then((data: unknown) => {
-        if (!cancelled) setRecs(Array.isArray(data) ? (data as Rec[]) : []);
+        if (cancelled) return;
+        const next = Array.isArray(data) ? (data as Rec[]) : [];
+        setRecs(next);
+        if (next.length) trackImpressions(next, recoCtx(cartItems));
       })
       .catch(() => {});
 
@@ -46,6 +50,8 @@ export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
   }, [debouncedKey]);
 
   if (recs.length === 0) return null;
+
+  const ctx = recoCtx(cartItems);
 
   return (
     <div className={styles.wrap}>
@@ -56,11 +62,15 @@ export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
             key={`${rec.name}-${i}`}
             variant="compact"
             item={rec}
-            onOpen={() => { setPendingItemName(rec.name); setIsOpen(false); }}
-            onAdd={() => addItem({ name: rec.name, price: rec.price, img: recommendationImage(rec), description: rec.description || '' })}
+            onOpen={() => { trackClick(rec, ctx); setPendingItemName(rec.name); setIsOpen(false); }}
+            onAdd={() => { trackAccepted(rec, ctx); addItem({ name: rec.name, price: rec.price, img: recommendationImage(rec), description: rec.description || '' }); }}
           />
         ))}
       </div>
     </div>
   );
+}
+
+function recoCtx(cartItems: CartItem[]): RecoContext {
+  return { mode: 'customer', source: 'cart', originatingName: cartItems[cartItems.length - 1]?.name };
 }

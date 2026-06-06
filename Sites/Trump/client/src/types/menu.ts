@@ -56,6 +56,38 @@ export interface ChefRecInput {
   reason?: string;
 }
 
+// Recommendation analytics (Phase 4). One tally row + the dashboard payload.
+export interface RecoTally {
+  name?: string;
+  source?: string;
+  recType?: string;
+  rotationGroup?: string;
+  chef?: boolean;
+  impressions: number;
+  clicks: number;
+  accepted: number;
+  dismissed: number;
+  ordered: number;
+  revenue: number;
+  revenueOrdered?: number;
+  clickRate: number;
+  acceptanceRate: number;
+  dismissalRate: number;
+  conversionRate: number;
+}
+
+export interface RecommendationAnalytics {
+  totals: RecoTally;
+  topShown: RecoTally[];
+  topClicked: RecoTally[];
+  topConverting: RecoTally[];
+  topRevenue: RecoTally[];
+  bySource: RecoTally[];
+  byRotationGroup: RecoTally[];
+  items: RecoTally[];
+  eventCount: number;
+}
+
 export interface MenuSubSection {
   title: string;
   visible?: boolean;

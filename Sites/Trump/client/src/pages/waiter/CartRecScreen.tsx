@@ -4,6 +4,7 @@ import { useWaiter } from '../../context/WaiterContext';
 import { api } from '../../services/api';
 import { money } from '../../lib/waiterFormat';
 import { RecommendationCard, type RecommendationItem } from '../../components/reco/RecommendationCard';
+import { trackImpressions, trackAccepted, type RecoContext } from '../../lib/recoAnalytics';
 import type { CartRecResponse } from '../../types/waiter';
 
 export function CartRecScreen() {
@@ -14,6 +15,7 @@ export function CartRecScreen() {
   const event = selectedTableId ? events[selectedTableId] : undefined;
   // Stable signature so we only refetch when the cart actually changes.
   const cartSig = useMemo(() => order.map(l => `${l.name}x${l.quantity}`).join('|'), [order]);
+  const recoCtx = (): RecoContext => ({ mode: 'waiter', source: 'cart-rec', originatingName: order[order.length - 1]?.name });
 
   const load = useCallback(() => {
     if (!selectedTableId) return;
@@ -22,7 +24,10 @@ export function CartRecScreen() {
       cart: order.map(l => ({ name: l.name, price: l.price, qty: l.quantity })),
       event: event?.type ?? null
     })
-      .then(setData)
+      .then(d => {
+        setData(d);
+        if (d?.recommendations?.length) trackImpressions(d.recommendations, recoCtx());
+      })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,7 +110,7 @@ export function CartRecScreen() {
             note={r.script}
             uplift={r.upsell}
             addLabel={`Add to order · ${money(r.price)}`}
-            onAdd={() => add(r.name, r.price, r.categoryType)}
+            onAdd={() => { trackAccepted(r as RecommendationItem, recoCtx()); add(r.name, r.price, r.categoryType); }}
           />
         </div>
       ))}

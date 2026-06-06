@@ -64,58 +64,14 @@
 }
 .blurb { font-size: 11.5px; color: var(--color-sand); }
 
+/* Course rows are now shared <RecommendationCard variant="detailed"> elements
+   (Phase 4, Task 3); this container only stacks them. */
 .courses {
   display: flex;
   flex-direction: column;
-  padding: 4px 8px;
-}
-
-.course {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 8px;
-  border: none;
-  border-radius: 10px;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-  transition: background 150ms ease;
 }
-.course:hover { background: rgba(255, 255, 255, 0.04); }
-
-.courseImg {
-  width: 42px;
-  height: 42px;
-  border-radius: 9px;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-.courseImgPh {
-  width: 42px;
-  height: 42px;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.06);
-  flex-shrink: 0;
-}
-
-.courseInfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.courseTag {
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent);
-  font-weight: 700;
-}
-.courseName {
-  font-size: 12.5px;
-  color: var(--color-cream);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.coursePrice { font-size: 12px; color: var(--color-gold); flex-shrink: 0; font-weight: 600; }
-.chev { color: var(--color-sand); opacity: 0.5; flex-shrink: 0; }
 
 .cardFoot {
   display: flex;
