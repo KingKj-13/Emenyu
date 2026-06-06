@@ -223,76 +223,13 @@
 .sendBtn:hover { filter: brightness(1.1); transform: scale(1.05); }
 .sendBtn:disabled { filter: brightness(0.6); cursor: not-allowed; transform: none; }
 
-/* Suggestion cards rendered under assistant messages */
+/* Suggestion cards rendered under assistant messages — each is a shared
+   <RecommendationCard variant="compact"> (Phase 3, Task 7). This container just
+   stacks them; the card owns its own styling. */
 .suggestionCards {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
   padding: 0 4px;
-}
-
-.suggestionCard {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  background: rgba(6, 32, 48, 0.85);
-  border: 1px solid rgba(198, 162, 75, 0.22);
-  border-radius: 8px;
-  color: var(--color-cream, #f5efe0);
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 160ms ease, background 160ms ease;
-  width: 100%;
-}
-
-.suggestionCard:hover {
-  border-color: rgba(198, 162, 75, 0.5);
-  background: rgba(198, 162, 75, 0.08);
-}
-
-.suggestionCard:focus-visible {
-  outline: 2px solid #c6a24b;
-  outline-offset: 2px;
-}
-
-.cardImg {
-  width: 44px;
-  height: 44px;
-  object-fit: cover;
-  border-radius: 4px;
-  flex-shrink: 0;
-  border: 1px solid rgba(198, 162, 75, 0.18);
-}
-
-.cardBody {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.cardName {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-cream, #f5efe0);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.cardPrice {
-  font-size: 11px;
-  color: #c6a24b;
-  font-weight: 600;
-}
-
-.cardSource {
-  font-size: 10px;
-  color: var(--color-sand, #b8a88a);
-  opacity: 0.75;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }

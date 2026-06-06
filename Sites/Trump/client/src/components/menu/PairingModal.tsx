@@ -5,9 +5,10 @@ import { Spinner } from '../ui/Spinner';
 import { api } from '../../services/api';
 import { useApp } from '../../context/AppContext';
 import type { MenuItem } from '../../types/menu';
+import { RecommendationCard, type RecommendationItem } from '../reco/RecommendationCard';
 import styles from './PairingModal.module.css';
 
-interface Pairing { name: string; reason: string; categoryType?: string; }
+interface Pairing { name: string; reason: string; categoryType?: string; price?: number; img?: string; source_title?: string; chef?: boolean; }
 
 interface PairingResult {
   title?: string;
@@ -79,15 +80,13 @@ export function PairingModal({ item, open, onClose }: PairingModalProps) {
                 return list.length > 0 && (
                 <div className={styles.pairings}>
                   {list.map((p, i) => (
-                    <button
+                    <RecommendationCard
                       key={i}
-                      className={`${styles.pairingCard} ${styles.pairingCardClickable}`}
-                      onClick={() => { setPendingItemName(p.name); onClose(); }}
-                      aria-label={`View ${p.name}`}
-                    >
-                      <div className={styles.pairingName}>{p.name}</div>
-                      <p className={styles.pairingReason}>{p.reason}</p>
-                    </button>
+                      variant="detailed"
+                      showReason
+                      item={p as RecommendationItem}
+                      onOpen={() => { setPendingItemName(p.name); onClose(); }}
+                    />
                   ))}
                 </div>
                 );

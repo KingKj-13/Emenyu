@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Plus, Sparkles, TrendingUp, Gift } from 'lucide-react';
+import { Gift } from 'lucide-react';
 import { useWaiter } from '../../context/WaiterContext';
 import { api } from '../../services/api';
 import { money } from '../../lib/waiterFormat';
+import { RecommendationCard, type RecommendationItem } from '../../components/reco/RecommendationCard';
 import type { CartRecResponse } from '../../types/waiter';
 
 export function CartRecScreen() {
@@ -96,21 +97,16 @@ export function CartRecScreen() {
       )}
 
       {recs.map((r, i) => (
-        <div key={`${r.name}-${i}`} className="w-card" style={{ marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <Sparkles size={14} color="var(--w-gold)" />
-                <span className="w-display" style={{ fontSize: 20 }}>{r.name}</span>
-              </div>
-              <p style={{ color: 'var(--w-text2)', fontSize: 13, marginTop: 4 }}>{r.reason}</p>
-            </div>
-            <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 999, background: 'rgba(73,164,108,0.15)', color: '#5fcf8a', fontSize: 12, fontWeight: 800 }}><TrendingUp size={13} /> +{money(r.upsell)}</span>
-          </div>
-          <p style={{ fontStyle: 'italic', color: 'var(--w-text)', marginTop: 10, fontSize: 13.5, lineHeight: 1.45 }}>“{r.script}”</p>
-          <button className="w-btn-primary" style={{ marginTop: 12 }} onClick={() => add(r.name, r.price, r.categoryType)}>
-            <Plus size={16} /> Add to order · {money(r.price)}
-          </button>
+        <div key={`${r.name}-${i}`} style={{ marginBottom: 12 }}>
+          <RecommendationCard
+            variant="waiter"
+            showReason
+            item={r as RecommendationItem}
+            note={r.script}
+            uplift={r.upsell}
+            addLabel={`Add to order · ${money(r.price)}`}
+            onAdd={() => add(r.name, r.price, r.categoryType)}
+          />
         </div>
       ))}
     </div>

@@ -19,6 +19,41 @@ export interface MenuItem {
   types?: string;
   category?: string;
   subcategory?: string;
+  // Authoritative server-side classification (Phase 3). When present the client
+  // consumes these instead of re-deriving the category locally.
+  categoryType?: string;
+  beverageKind?: string;
+}
+
+// Chef-controlled per-item recommendation (Phase 3, Task 8 owner controls).
+export type ChefRecType = 'DISH' | 'SIDE' | 'DESSERT' | 'BEVERAGE';
+export type ChefBeverageKind = 'WINE' | 'COCKTAIL' | 'BEER' | 'SOFT' | 'HOT' | 'NONE';
+
+export interface ChefRec {
+  id: number;
+  sourceItemId: number;
+  sourceName: string;
+  targetItemId: number;
+  targetName: string;
+  recType: ChefRecType;
+  beverageKind: ChefBeverageKind;
+  priority: number;
+  active: boolean;
+  season: string;
+  rotationGroup: string;
+  reason: string;
+}
+
+export interface ChefRecInput {
+  sourceItemId: number;
+  targetItemId: number;
+  recType: ChefRecType;
+  beverageKind?: ChefBeverageKind;
+  priority?: number;
+  active?: boolean;
+  season?: string;
+  rotationGroup?: string;
+  reason?: string;
 }
 
 export interface MenuSubSection {

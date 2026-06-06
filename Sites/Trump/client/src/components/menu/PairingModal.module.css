@@ -81,47 +81,12 @@
   padding: 24px 0;
 }
 
+/* Each pairing is a shared <RecommendationCard variant="detailed"> (Phase 3,
+   Task 7); this module only lays out the stacked list and the talk-track. */
 .pairings {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.pairingCard {
-  padding: 12px 14px;
-  border: 1px solid rgba(198,162,75,0.18);
-  border-radius: 8px;
-  background: rgba(198,162,75,0.04);
-  width: 100%;
-  text-align: left;
-  display: block;
-}
-
-.pairingCardClickable {
-  cursor: pointer;
-  transition: border-color 160ms ease, background 160ms ease;
-}
-.pairingCardClickable:hover {
-  border-color: rgba(198,162,75,0.5);
-  background: rgba(198,162,75,0.1);
-}
-.pairingCardClickable:focus-visible {
-  outline: 2px solid #c6a24b;
-  outline-offset: 2px;
-}
-
-.pairingName {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-gold);
-  margin-bottom: 4px;
-}
-
-.pairingReason {
-  margin: 0;
-  font-size: 12px;
-  color: var(--color-sand);
-  line-height: 1.5;
 }
 
 .talkTrack {

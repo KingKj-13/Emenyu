@@ -53,6 +53,8 @@
   const accountSection = document.getElementById("accountSection");
   const analyticsSection = document.getElementById("analyticsSection");
   const tabAnalyticsBtn = document.getElementById("tabAnalytics");
+  const chefRecsSection = document.getElementById("chefRecsSection");
+  const tabChefRecsBtn = document.getElementById("tabChefRecs");
 
   const currentChatContainer = document.getElementById("currentChatContainer");
   const historyChatContainer = document.getElementById("historyChatContainer");
@@ -510,10 +512,10 @@
   });
 
   function switchTab(tabKey) {
-    [menuSection, currentOrdersSection, orderHistorySection, dealSection, recommendSection, currentChatSection, chatHistorySection, accountSection, analyticsSection]
+    [menuSection, currentOrdersSection, orderHistorySection, dealSection, recommendSection, chefRecsSection, currentChatSection, chatHistorySection, accountSection, analyticsSection]
       .filter(Boolean)
       .forEach(s => s.classList.remove('active'));
-    [tabMenuBtn, tabCurrentOrdersBtn, tabOrderHistoryBtn, tabDealBtn, tabRecommendBtn, tabCurrentChatBtn, tabChatHistoryBtn, tabAccountsBtn, tabAnalyticsBtn]
+    [tabMenuBtn, tabCurrentOrdersBtn, tabOrderHistoryBtn, tabDealBtn, tabRecommendBtn, tabChefRecsBtn, tabCurrentChatBtn, tabChatHistoryBtn, tabAccountsBtn, tabAnalyticsBtn]
       .filter(Boolean)
       .forEach(b => b.classList.remove('active'));
 
@@ -523,6 +525,7 @@
       history: { section: orderHistorySection, btn: tabOrderHistoryBtn },
       deal: { section: dealSection, btn: tabDealBtn },
       recommend: { section: recommendSection, btn: tabRecommendBtn },
+      chefRecs: { section: chefRecsSection, btn: tabChefRecsBtn },
       currentChat: { section: currentChatSection, btn: tabCurrentChatBtn },
       chatHistory: { section: chatHistorySection, btn: tabChatHistoryBtn },
       accounts: { section: accountSection, btn: tabAccountsBtn },
@@ -916,6 +919,189 @@
     setTimeout(() => recStatus.textContent = '', 3000);
   });
 
+  // --- Chef Recommendations (owner controls — Phase 3, Task 8) ---
+  // Per-item chef recommendations that always take priority over the automatic
+  // engine. Backed by /api/menu/chef-recs (owner|manager). Source/target are real
+  // menu items (by dbId), so we populate the pickers from /api/menu/items.
+  let chefRecItemsLoaded = false;
+
+  function setChefRecStatus(message, isError) {
+    const el = document.getElementById('chefRecStatus');
+    if (!el) return;
+    el.textContent = message;
+    el.style.color = isError ? 'var(--accent-danger, #e08080)' : 'var(--accent-success, #6bbf73)';
+    if (message) setTimeout(() => { if (el.textContent === message) el.textContent = ''; }, 4000);
+  }
+
+  async function loadChefRecItems() {
+    let items = [];
+    try {
+      const resp = await fetch(apiPath('/api/menu/items'), { headers: authHeaders });
+      items = resp.ok ? await resp.json() : [];
+    } catch { items = []; }
+
+    const options = ['<option value="">— select item —</option>'].concat(
+      (Array.isArray(items) ? items : [])
+        .filter(it => it && it.dbId)
+        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
+        .map(it => `<option value="${it.dbId}">${escapeHtml(it.name)}</option>`)
+    ).join('');
+
+    const srcSel = document.getElementById('chefRecSource');
+    const tgtSel = document.getElementById('chefRecTarget');
+    if (srcSel) srcSel.innerHTML = options;
+    if (tgtSel) tgtSel.innerHTML = options;
+    chefRecItemsLoaded = true;
+  }
+
+  async function loadChefRecs() {
+    const listEl = document.getElementById('chefRecsList');
+    if (!listEl) return;
+    try {
+      const resp = await fetch(apiPath('/api/menu/chef-recs'), { headers: authHeaders });
+      if (!resp.ok) throw new Error('unavailable');
+      renderChefRecs(await resp.json());
+    } catch {
+      listEl.innerHTML = '<p>Could not load chef recommendations — the database may be unavailable.</p>';
+    }
+  }
+
+  async function loadChefRecData() {
+    if (!chefRecItemsLoaded) await loadChefRecItems();
+    await loadChefRecs();
+  }
+
+  function chefRecRowHtml(r) {
+    const kind = r.recType === 'BEVERAGE' ? `${escapeHtml(r.recType)} · ${escapeHtml(r.beverageKind || 'NONE')}` : escapeHtml(r.recType);
+    const season = r.season && r.season !== 'ALL_YEAR' ? ` · ${escapeHtml(r.season)}` : '';
+    return `
+      <div class="chef-rec-row" data-id="${r.id}" style="padding:10px 0; border-top:1px solid #333;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <div><strong>→ ${escapeHtml(r.targetName)}</strong>
+            <span style="color:#888; font-size:12px; margin-left:8px;">${kind}${season}</span></div>
+          <label class="toggle-label" style="margin:0;">
+            <input type="checkbox" class="chef-rec-active" ${r.active ? 'checked' : ''} />
+            <span>${r.active ? 'Active' : 'Disabled'}</span>
+          </label>
+        </div>
+        <div class="flex-row" style="gap:8px; margin-top:6px; align-items:flex-end;">
+          <div style="flex:2; min-width:200px;">
+            <label style="font-size:11px;">Reason</label>
+            <input type="text" class="chef-rec-reason" value="${escapeHtml(r.reason || '')}" />
+          </div>
+          <div style="flex:1; min-width:120px;">
+            <label style="font-size:11px;">Rotation group</label>
+            <input type="text" class="chef-rec-rotation" value="${escapeHtml(r.rotationGroup || '')}" />
+          </div>
+          <div style="width:84px;">
+            <label style="font-size:11px;">Priority</label>
+            <input type="number" class="chef-rec-priority" value="${Number(r.priority) || 0}" />
+          </div>
+          <button class="chef-rec-delete delete-btn" type="button">Delete</button>
+        </div>
+      </div>`;
+  }
+
+  function renderChefRecs(rows) {
+    const listEl = document.getElementById('chefRecsList');
+    if (!listEl) return;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      listEl.innerHTML = '<p>No chef recommendations yet. Add one above — it will take priority over automatic suggestions.</p>';
+      return;
+    }
+    const groups = {};
+    rows.forEach(r => { (groups[r.sourceName] = groups[r.sourceName] || []).push(r); });
+    listEl.innerHTML = Object.keys(groups).sort().map(sourceName => `
+      <div style="background:var(--bg-dark-tertiary); padding:12px 14px; border-radius:8px; margin-bottom:14px;">
+        <h4 style="margin:0 0 4px;">With <span style="color:var(--color-gold, #c6a24b)">${escapeHtml(sourceName)}</span></h4>
+        ${groups[sourceName].map(chefRecRowHtml).join('')}
+      </div>`).join('');
+    bindChefRecRowEvents();
+  }
+
+  async function patchChefRec(id, patch) {
+    try {
+      const resp = await fetch(apiPath('/api/menu/chef-recs/' + id), {
+        method: 'PATCH', headers: authHeaders, body: JSON.stringify(patch)
+      });
+      return resp.ok;
+    } catch { return false; }
+  }
+
+  function bindChefRecRowEvents() {
+    document.querySelectorAll('.chef-rec-row').forEach(row => {
+      const id = row.dataset.id;
+      const activeEl = row.querySelector('.chef-rec-active');
+      if (activeEl) activeEl.addEventListener('change', async () => {
+        const ok = await patchChefRec(id, { active: activeEl.checked });
+        if (ok) loadChefRecs(); else activeEl.checked = !activeEl.checked;
+      });
+      const reasonEl = row.querySelector('.chef-rec-reason');
+      if (reasonEl) reasonEl.addEventListener('change', () => patchChefRec(id, { reason: reasonEl.value }));
+      const rotationEl = row.querySelector('.chef-rec-rotation');
+      if (rotationEl) rotationEl.addEventListener('change', () => patchChefRec(id, { rotationGroup: rotationEl.value }));
+      const priorityEl = row.querySelector('.chef-rec-priority');
+      if (priorityEl) priorityEl.addEventListener('change', () => patchChefRec(id, { priority: parseInt(priorityEl.value, 10) || 0 }));
+      const deleteEl = row.querySelector('.chef-rec-delete');
+      if (deleteEl) deleteEl.addEventListener('click', async () => {
+        if (!confirm('Delete this chef recommendation?')) return;
+        try {
+          const resp = await fetch(apiPath('/api/menu/chef-recs/' + id), { method: 'DELETE', headers: authHeaders });
+          if (resp.ok) loadChefRecs();
+        } catch { /* ignore */ }
+      });
+    });
+  }
+
+  const chefRecTypeSel = document.getElementById('chefRecType');
+  if (chefRecTypeSel) chefRecTypeSel.addEventListener('change', () => {
+    const bk = document.getElementById('chefRecBeverageKind');
+    if (!bk) return;
+    if (chefRecTypeSel.value === 'BEVERAGE') {
+      bk.disabled = false;
+      if (bk.value === 'NONE') bk.value = 'WINE';
+    } else {
+      bk.value = 'NONE';
+      bk.disabled = true;
+    }
+  });
+
+  const saveChefRecBtn = document.getElementById('saveChefRecBtn');
+  if (saveChefRecBtn) saveChefRecBtn.addEventListener('click', async () => {
+    const sourceItemId = parseInt(document.getElementById('chefRecSource').value, 10);
+    const targetItemId = parseInt(document.getElementById('chefRecTarget').value, 10);
+    const recType = document.getElementById('chefRecType').value;
+    const beverageKind = document.getElementById('chefRecBeverageKind').value;
+    const priority = parseInt(document.getElementById('chefRecPriority').value, 10) || 100;
+    const season = document.getElementById('chefRecSeason').value;
+    const rotationGroup = document.getElementById('chefRecRotation').value.trim();
+    const reason = document.getElementById('chefRecReason').value.trim();
+    const active = document.getElementById('chefRecActive').checked;
+
+    if (!sourceItemId || !targetItemId) { setChefRecStatus('Select both a source and a target item.', true); return; }
+    if (sourceItemId === targetItemId) { setChefRecStatus('Source and target must be different items.', true); return; }
+
+    try {
+      const resp = await fetch(apiPath('/api/menu/chef-recs'), {
+        method: 'POST', headers: authHeaders,
+        body: JSON.stringify({ sourceItemId, targetItemId, recType, beverageKind, priority, season, rotationGroup, reason, active })
+      });
+      if (resp.ok) {
+        setChefRecStatus('Chef recommendation added.', false);
+        document.getElementById('chefRecReason').value = '';
+        await loadChefRecs();
+      } else {
+        const err = await resp.json().catch(() => ({}));
+        setChefRecStatus(err.error || 'Failed to add (it may already exist).', true);
+      }
+    } catch {
+      setChefRecStatus('Network error — could not save.', true);
+    }
+  });
+
+  const refreshChefRecsBtn = document.getElementById('refreshChefRecsBtn');
+  if (refreshChefRecsBtn) refreshChefRecsBtn.addEventListener('click', loadChefRecData);
+
   // --- Socket.IO Listeners ---
   socket.on('connect', () => {
     socket.emit('joinAdmin', { restaurantId: RESTAURANT_ID });
@@ -929,7 +1115,10 @@
   });
   socket.on('orderUpdated', () => { loadCurrentOrders(); loadOrderHistory(); });
   socket.on('dealUpdated', loadAllDeals);
-  socket.on('recommendationUpdated', loadAllRecommendations);
+  socket.on('recommendationUpdated', () => {
+    loadAllRecommendations();
+    if (chefRecsSection && chefRecsSection.classList.contains('active')) loadChefRecs();
+  });
   socket.on('waiterCallAlert', (data = {}) => {
     if (currentChatContainer.querySelector('p')) currentChatContainer.innerHTML = '';
 
@@ -1044,6 +1233,7 @@
   tabOrderHistoryBtn.addEventListener('click', () => { switchTab('history'); loadOrderHistory(); });
   tabDealBtn.addEventListener('click', () => { switchTab('deal'); populateCategorySelectorsForTab(dealMainCategorySelect); });
   tabRecommendBtn.addEventListener('click', () => { switchTab('recommend'); populateCategorySelectorsForTab(recMainCategorySelect); loadAllRecommendations(); });
+  if (tabChefRecsBtn) tabChefRecsBtn.addEventListener('click', () => { switchTab('chefRecs'); loadChefRecData(); });
   tabCurrentChatBtn.addEventListener('click', () => switchTab('currentChat'));
   tabChatHistoryBtn.addEventListener('click', () => switchTab('chatHistory'));
   if (tabAccountsBtn) tabAccountsBtn.addEventListener('click', () => switchTab('accounts'));

@@ -1,5 +1,5 @@
 import { ENDPOINTS } from '../constants/api';
-import type { MenuData } from '../types/menu';
+import type { MenuData, ChefRec, ChefRecInput } from '../types/menu';
 import type { LoginPayload, LoginResponse, AuthUser } from '../types/auth';
 import type { OrderPayload } from '../types/cart';
 
@@ -183,6 +183,27 @@ export const api = {
 
   deleteMenuItem(id: number) {
     return fetchJson<{ ok: boolean }>(ENDPOINTS.menuItemDelete(id), { method: 'DELETE' });
+  },
+
+  // Chef recommendations (owner controls — Phase 3, Task 8)
+  getChefRecs() {
+    return fetchJson<ChefRec[]>(ENDPOINTS.chefRecs);
+  },
+
+  createChefRec(payload: ChefRecInput) {
+    return postJson<{ ok: boolean; recommendation: ChefRec }>(ENDPOINTS.chefRecs, payload);
+  },
+
+  updateChefRec(id: number, patch: Partial<ChefRecInput>) {
+    return fetchJson<{ ok: boolean; recommendation: ChefRec }>(ENDPOINTS.chefRec(id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+  },
+
+  deleteChefRec(id: number) {
+    return fetchJson<{ ok: boolean }>(ENDPOINTS.chefRec(id), { method: 'DELETE' });
   },
 
   bulkMenuItemAction(action: 'hide' | 'show' | 'delete', ids: number[]) {

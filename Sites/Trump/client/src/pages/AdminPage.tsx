@@ -1,14 +1,15 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
-import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Plus, X } from 'lucide-react';
+import { useState, useEffect, useCallback, type ReactNode, type CSSProperties } from 'react';
+import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Plus, X, Sparkles } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../hooks/useAuth';
 import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
 import { api } from '../services/api';
 import { Spinner } from '../components/ui/Spinner';
 import { formatPrice } from '../lib/menuUtils';
+import type { ChefRec, ChefRecInput, ChefRecType, ChefBeverageKind } from '../types/menu';
 import styles from './AdminPage.module.css';
 
-type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals';
+type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs';
 
 interface Order {
   filename: string;
@@ -99,6 +100,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const [reportRatings, setReportRatings] = useState<RatingsData | null>(null);
   const [tableCarts, setTableCarts] = useState<TableCartEntry[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [chefRecs, setChefRecs] = useState<ChefRec[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'item' | 'reservation' | 'deal' | 'account'>(null);
@@ -135,6 +137,10 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
       } else if (t === 'deals') {
         const data = await api.getDeals();
         setDeals((data as Deal[]) || []);
+      } else if (t === 'chefrecs') {
+        const [recs, items] = await Promise.all([api.getChefRecs(), api.getAdminMenuItems()]);
+        setChefRecs((recs as ChefRec[]) || []);
+        setMenuItems((items as AdminMenuItem[]) || []);
       }
     } catch (err) {
       console.error(err);
@@ -220,6 +226,28 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     const res = await api.updateMenuItemMedia(id, patch);
     const updated = (res.item || patch) as Partial<AdminMenuItem>;
     setMenuItems(prev => prev.map(item => item.dbId === id ? { ...item, ...patch, ...updated } : item));
+  }, []);
+
+  // ── Chef recommendations (owner controls — Phase 3, Task 8) ──
+  const handleCreateChefRec = useCallback(async (input: ChefRecInput): Promise<string | null> => {
+    try {
+      await api.createChefRec(input);
+      // Re-fetch so the new row arrives enriched with source/target names.
+      setChefRecs((await api.getChefRecs() as ChefRec[]) || []);
+      return null;
+    } catch {
+      return 'Could not add — it may already exist, or the database is unavailable.';
+    }
+  }, []);
+
+  const handleUpdateChefRec = useCallback(async (id: number, patch: Partial<ChefRecInput>) => {
+    setChefRecs(prev => prev.map(r => r.id === id ? { ...r, ...patch } as ChefRec : r));
+    try { await api.updateChefRec(id, patch); } catch { /* keep optimistic value */ }
+  }, []);
+
+  const handleDeleteChefRec = useCallback(async (id: number) => {
+    if (!confirm('Delete this chef recommendation?')) return;
+    try { await api.deleteChefRec(id); setChefRecs(prev => prev.filter(r => r.id !== id)); } catch { /* ignore */ }
   }, []);
 
   useEffect(() => { loadTab(initialTab || 'orders'); }, []);
@@ -326,6 +354,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     ] },
     { label: 'MENU & OFFERS', items: [
       { key: 'menu', label: 'Menu', icon: UtensilsCrossed },
+      { key: 'chefrecs', label: 'Chef Recs', icon: Sparkles },
       { key: 'deals', label: 'Deals', icon: Clock },
       { key: 'qrcodes', label: 'QR Codes', icon: QrCode },
     ] },
@@ -346,6 +375,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     tables: { eyebrow: 'LIVE FLOOR', title: 'Tables', sub: `${liveCovers} active cart${liveCovers !== 1 ? 's' : ''} · manager override`, actions: <><span className={styles.livePill}><span className={styles.liveDot} /> Live sync</span>{refreshAction}</> },
     reservations: { eyebrow: 'BOOKINGS', title: 'Reservations', sub: `${reservations.length} booking${reservations.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('reservation')}><Plus size={14} /> New booking</button> },
     menu: { eyebrow: 'MENU MANAGEMENT', title: 'The menu', sub: `${menuItems.length} item${menuItems.length !== 1 ? 's' : ''}`, actions: <><button className={styles.actionBtnGold} onClick={openNewItem}><Plus size={14} /> New item</button>{refreshAction}</> },
+    chefrecs: { eyebrow: 'CHEF CURATION', title: 'Chef recommendations', sub: `${chefRecs.length} pairing${chefRecs.length !== 1 ? 's' : ''} · always shown ahead of automatic suggestions`, actions: refreshAction },
     deals: { eyebrow: 'OFFERS', title: 'Deals', sub: 'Bundle dishes into featured set menus', actions: <button className={styles.actionBtnGold} onClick={openNewDeal}><Plus size={14} /> New deal</button> },
     qrcodes: { eyebrow: 'TABLE QR CODES', title: 'QR codes', sub: 'Each links a guest straight to its table session' },
     reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top dishes, peak hours & guest ratings' },
@@ -517,6 +547,15 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
                     setReportRange(r);
                     loadReports(r);
                   }}
+                />
+              )}
+              {tab === 'chefrecs' && (
+                <ChefRecsPanel
+                  recs={chefRecs}
+                  menuItems={menuItems}
+                  onCreate={handleCreateChefRec}
+                  onUpdate={handleUpdateChefRec}
+                  onDelete={handleDeleteChefRec}
                 />
               )}
                 </>
@@ -1277,6 +1316,199 @@ function TablesPanel({ tableCarts, onApplyOverride }: {
       {selected && table && table.cart.length === 0 && (
         <div className={styles.emptyState}><p>No items in cart for {selected.replace(/^table/, 'Table ')}.</p></div>
       )}
+    </div>
+  );
+}
+
+// ── Chef recommendations management (owner controls — Phase 3, Task 8) ──
+const CHEF_REC_SEASONS = ['ALL_YEAR', 'SUMMER', 'WINTER', 'SPRING', 'AUTUMN', 'FESTIVE'];
+const CHEF_REC_TYPES: ChefRecType[] = ['DISH', 'SIDE', 'DESSERT', 'BEVERAGE'];
+const CHEF_BEVERAGE_KINDS: ChefBeverageKind[] = ['NONE', 'WINE', 'COCKTAIL', 'BEER', 'SOFT', 'HOT'];
+const titleCase = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
+
+const chefField: CSSProperties = {
+  width: '100%', padding: '9px 11px', background: 'rgba(0,0,0,0.35)',
+  border: '1px solid var(--color-line, rgba(198,162,75,0.22))', borderRadius: 8,
+  color: 'var(--color-cream, #f3ead6)', fontSize: 13, outline: 'none'
+};
+const chefLabel: CSSProperties = {
+  display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+  textTransform: 'uppercase', color: 'var(--color-sand, #b8a88a)', margin: '0 0 5px'
+};
+
+function ChefRecsPanel({ recs, menuItems, onCreate, onUpdate, onDelete }: {
+  recs: ChefRec[];
+  menuItems: AdminMenuItem[];
+  onCreate: (input: ChefRecInput) => Promise<string | null>;
+  onUpdate: (id: number, patch: Partial<ChefRecInput>) => void;
+  onDelete: (id: number) => void;
+}) {
+  const [sourceItemId, setSourceItemId] = useState(0);
+  const [targetItemId, setTargetItemId] = useState(0);
+  const [recType, setRecType] = useState<ChefRecType>('DISH');
+  const [beverageKind, setBeverageKind] = useState<ChefBeverageKind>('NONE');
+  const [priority, setPriority] = useState(100);
+  const [season, setSeason] = useState('ALL_YEAR');
+  const [rotationGroup, setRotationGroup] = useState('');
+  const [reason, setReason] = useState('');
+  const [active, setActive] = useState(true);
+  const [status, setStatus] = useState<{ msg: string; error: boolean } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const sortedItems = [...menuItems].filter(i => i.dbId).sort((a, b) => a.name.localeCompare(b.name));
+
+  function onTypeChange(t: ChefRecType) {
+    setRecType(t);
+    if (t === 'BEVERAGE') { if (beverageKind === 'NONE') setBeverageKind('WINE'); }
+    else setBeverageKind('NONE');
+  }
+
+  async function submit() {
+    if (!sourceItemId || !targetItemId) { setStatus({ msg: 'Select both a source and a target item.', error: true }); return; }
+    if (sourceItemId === targetItemId) { setStatus({ msg: 'Source and target must be different items.', error: true }); return; }
+    setSaving(true);
+    const err = await onCreate({ sourceItemId, targetItemId, recType, beverageKind, priority, season, rotationGroup: rotationGroup.trim(), reason: reason.trim(), active });
+    setSaving(false);
+    if (err) setStatus({ msg: err, error: true });
+    else { setStatus({ msg: 'Chef recommendation added.', error: false }); setReason(''); setRotationGroup(''); }
+  }
+
+  const groups = new Map<string, ChefRec[]>();
+  recs.forEach(r => { const arr = groups.get(r.sourceName) || []; arr.push(r); groups.set(r.sourceName, arr); });
+  const groupNames = [...groups.keys()].sort();
+
+  return (
+    <div>
+      <p style={{ color: 'var(--color-sand, #b8a88a)', fontSize: 13, lineHeight: 1.55, maxWidth: 720, marginBottom: 18 }}>
+        Chef recommendations <strong style={{ color: 'var(--color-gold, #c6a24b)' }}>always win</strong> — they show ahead of
+        every automatic suggestion across the guest app, chatbot, item pairings and the waiter upsell screen. Put several
+        beverages in one rotation group and the engine rotates between them for different guests. Category-safety rules
+        (one beverage, never wine + cocktail, no dessert → starter) still apply.
+      </p>
+
+      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-line, rgba(198,162,75,0.18))', borderRadius: 12, padding: 18, marginBottom: 24 }}>
+        <h3 style={{ margin: '0 0 14px', fontSize: 15, color: 'var(--color-cream, #f3ead6)' }}>Add chef recommendation</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+          <div>
+            <label style={chefLabel}>When the guest has…</label>
+            <select style={chefField} value={sourceItemId} onChange={e => setSourceItemId(Number(e.target.value))}>
+              <option value={0}>— select source item —</option>
+              {sortedItems.map(it => <option key={it.dbId} value={it.dbId}>{it.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={chefLabel}>…recommend</label>
+            <select style={chefField} value={targetItemId} onChange={e => setTargetItemId(Number(e.target.value))}>
+              <option value={0}>— select target item —</option>
+              {sortedItems.map(it => <option key={it.dbId} value={it.dbId}>{it.name}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginTop: 12 }}>
+          <div>
+            <label style={chefLabel}>Type</label>
+            <select style={chefField} value={recType} onChange={e => onTypeChange(e.target.value as ChefRecType)}>
+              {CHEF_REC_TYPES.map(t => <option key={t} value={t}>{titleCase(t)}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={chefLabel}>Beverage kind</label>
+            <select style={chefField} value={beverageKind} disabled={recType !== 'BEVERAGE'} onChange={e => setBeverageKind(e.target.value as ChefBeverageKind)}>
+              {CHEF_BEVERAGE_KINDS.map(k => <option key={k} value={k}>{k === 'NONE' ? '— (food)' : titleCase(k)}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={chefLabel}>Priority</label>
+            <input type="number" style={chefField} value={priority} min={0} max={1000} onChange={e => setPriority(Number(e.target.value))} />
+          </div>
+          <div>
+            <label style={chefLabel}>Season</label>
+            <select style={chefField} value={season} onChange={e => setSeason(e.target.value)}>
+              {CHEF_REC_SEASONS.map(s => <option key={s} value={s}>{s === 'ALL_YEAR' ? 'All year' : titleCase(s)}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <label style={chefLabel}>Rotation group (optional)</label>
+          <input type="text" style={chefField} placeholder="e.g. ribeye-reds — share across beverages to rotate them" value={rotationGroup} onChange={e => setRotationGroup(e.target.value)} />
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <label style={chefLabel}>Reason (shown to guests on the card)</label>
+          <input type="text" style={chefField} placeholder="e.g. Bold red — built to stand up to grilled beef." value={reason} onChange={e => setReason(e.target.value)} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 14, flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-cream, #f3ead6)', fontSize: 13, cursor: 'pointer' }}>
+            <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} /> Active
+          </label>
+          <button className={styles.actionBtnGold} onClick={submit} disabled={saving}>
+            {saving ? <Spinner size={13} /> : <Plus size={14} />} Add recommendation
+          </button>
+          {status && <span style={{ fontSize: 13, color: status.error ? '#fca5a5' : '#5fcf8a' }}>{status.msg}</span>}
+        </div>
+      </div>
+
+      {recs.length === 0 ? (
+        <div className={styles.emptyState}>
+          <Sparkles size={40} className={styles.emptyIcon} />
+          <p>No chef recommendations yet. Add one above — it takes priority over automatic suggestions.</p>
+        </div>
+      ) : (
+        groupNames.map(name => (
+          <div key={name} style={{ marginBottom: 18 }}>
+            <h3 style={{ fontSize: 14, color: 'var(--color-cream, #f3ead6)', margin: '0 0 8px' }}>
+              With <span style={{ color: 'var(--color-gold, #c6a24b)' }}>{name}</span>
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {groups.get(name)!.map(r => (
+                <ChefRecRow key={r.id} rec={r} onUpdate={onUpdate} onDelete={onDelete} />
+              ))}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function ChefRecRow({ rec, onUpdate, onDelete }: {
+  rec: ChefRec;
+  onUpdate: (id: number, patch: Partial<ChefRecInput>) => void;
+  onDelete: (id: number) => void;
+}) {
+  const [reason, setReason] = useState(rec.reason);
+  const [rotationGroup, setRotationGroup] = useState(rec.rotationGroup);
+  const [priority, setPriority] = useState(rec.priority);
+
+  const kindLabel = rec.recType === 'BEVERAGE' ? `${rec.recType} · ${rec.beverageKind}` : rec.recType;
+
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(198,162,75,0.14))', borderRadius: 10, padding: '12px 14px', opacity: rec.active ? 1 : 0.55 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+        <div>
+          <strong style={{ color: 'var(--color-cream, #f3ead6)' }}>→ {rec.targetName}</strong>
+          <span style={{ color: 'var(--color-sand, #b8a88a)', fontSize: 12, marginLeft: 8 }}>
+            {kindLabel}{rec.season && rec.season !== 'ALL_YEAR' ? ` · ${rec.season}` : ''}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--color-cream, #f3ead6)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={rec.active} onChange={e => onUpdate(rec.id, { active: e.target.checked })} />
+            {rec.active ? 'Active' : 'Disabled'}
+          </label>
+          <button onClick={() => onDelete(rec.id)} aria-label="Delete recommendation"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}>
+            <Trash2 size={12} /> Delete
+          </button>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 88px', gap: 8 }}>
+        <input style={chefField} value={reason} placeholder="Reason shown to guests"
+          onChange={e => setReason(e.target.value)} onBlur={() => { if (reason !== rec.reason) onUpdate(rec.id, { reason }); }} />
+        <input style={chefField} value={rotationGroup} placeholder="Rotation group"
+          onChange={e => setRotationGroup(e.target.value)} onBlur={() => { if (rotationGroup !== rec.rotationGroup) onUpdate(rec.id, { rotationGroup }); }} />
+        <input style={chefField} type="number" value={priority}
+          onChange={e => setPriority(Number(e.target.value))} onBlur={() => { if (priority !== rec.priority) onUpdate(rec.id, { priority }); }} />
+      </div>
     </div>
   );
 }

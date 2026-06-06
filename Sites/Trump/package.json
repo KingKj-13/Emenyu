@@ -18,6 +18,7 @@
     "auth:audit": "node scripts/audit-accounts.js",
     "auth:rotate": "node scripts/rotate-weak-accounts.js",
     "reco:seed": "node scripts/seed-chef-recommendations.js",
+    "reco:validate": "node scripts/phase3-validate.js",
     "menu:migrate": "node scripts/migrate-menu-to-postgres.js",
     "orders:migrate": "node scripts/migrate-orders-to-postgres.js",
     "prisma:generate": "npx prisma generate --schema ../../prisma/schema.prisma"

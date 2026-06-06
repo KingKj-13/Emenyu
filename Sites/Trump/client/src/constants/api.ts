@@ -28,6 +28,8 @@ export const ENDPOINTS = {
   menuItemMedia: (id: number) => `${API_PREFIX}/api/menu/items/${id}/media`,
   menuItemDelete: (id: number) => `${API_PREFIX}/api/menu/items/${id}`,
   menuItemBulk: `${API_PREFIX}/api/menu/items/bulk`,
+  chefRecs: `${API_PREFIX}/api/menu/chef-recs`,
+  chefRec: (id: number) => `${API_PREFIX}/api/menu/chef-recs/${id}`,
   kitchenOrders: `${API_PREFIX}/api/kitchen/orders`,
   kitchenUpdateStatus: (id: number) => `${API_PREFIX}/api/kitchen/orders/${id}/status`,
   analyticsummary: `${API_PREFIX}/api/analytics/summary`,

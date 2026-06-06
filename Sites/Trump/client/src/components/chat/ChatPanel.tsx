@@ -5,7 +5,7 @@ import { api } from '../../services/api';
 import { getSocket } from '../../services/socket';
 import { RESTAURANT_ID } from '../../constants/api';
 import { useApp } from '../../context/AppContext';
-import { resolveAssetPath } from '../../lib/imageResolver';
+import { RecommendationCard, type RecommendationItem } from '../reco/RecommendationCard';
 import type { ChatSuggestionItem, ChatResponse } from '../../types/menu';
 import styles from './ChatPanel.module.css';
 
@@ -131,28 +131,12 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
                   {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && (
                     <div className={styles.suggestionCards}>
                       {msg.suggestions.map((item, j) => (
-                        <button
+                        <RecommendationCard
                           key={j}
-                          className={styles.suggestionCard}
-                          onClick={() => onItemClick?.(item)}
-                          aria-label={`View ${item.name}`}
-                        >
-                          {item.img && (
-                            <img
-                              src={resolveAssetPath(item.img)}
-                              alt={item.name}
-                              className={styles.cardImg}
-                              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                            />
-                          )}
-                          <div className={styles.cardBody}>
-                            <span className={styles.cardName}>{item.name}</span>
-                            <span className={styles.cardPrice}>R{item.price.toFixed(2)}</span>
-                            {item.source_title && (
-                              <span className={styles.cardSource}>{item.source_title}</span>
-                            )}
-                          </div>
-                        </button>
+                          variant="compact"
+                          item={item as RecommendationItem}
+                          onOpen={() => onItemClick?.(item)}
+                        />
                       ))}
                     </div>
                   )}

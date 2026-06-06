@@ -253,6 +253,9 @@ function hasTerm(text: string, term: string): boolean {
 }
 
 export function isDrinkItem(item: MenuItem): boolean {
+  // Prefer the authoritative server classification when present (single source
+  // of truth — Phase 3, Task 3); fall back to local term matching otherwise.
+  if (item.categoryType) return item.categoryType === 'DRINK' || item.categoryType === 'WINE';
   const text = classificationText(item);
   return [...DRINK_TERMS, ...EXTRA_DRINK_TERMS].some(term => hasTerm(text, term));
 }
@@ -263,11 +266,13 @@ const COCKTAIL_TERMS = [
 ];
 
 export function isCocktailItem(item: MenuItem): boolean {
+  if (item.beverageKind) return item.beverageKind === 'COCKTAIL';
   const text = classificationText(item);
   return COCKTAIL_TERMS.some(term => hasTerm(text, term));
 }
 
 export function isDessertItem(item: MenuItem): boolean {
+  if (item.categoryType) return item.categoryType === 'DESSERT';
   const text = classificationText(item);
   return DESSERT_TERMS.some(term => hasTerm(text, term));
 }

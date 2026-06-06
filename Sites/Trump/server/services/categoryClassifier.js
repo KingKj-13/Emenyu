@@ -51,6 +51,12 @@ function categoryType(input) {
     return 'DRINK';
   }
 
+  // Named cocktails/spirits and other beverages the keyword lists above miss by
+  // name (e.g. "Margarita", "Negroni", "Old Fashioned", "Sangria"): defer to the
+  // beverageKind lexicon so categoryType and beverageKind can never disagree.
+  const kind = beverageKind(text);
+  if (kind !== 'NONE') return kind === 'WINE' ? 'WINE' : 'DRINK';
+
   return 'MAIN';
 }
 
@@ -62,22 +68,25 @@ function beverageKind(input) {
 
   // Water is always a soft beverage, even when labelled "sparkling".
   if (/\bwater\b/.test(text)) return 'SOFT';
-  if (/\b(cocktail|mocktail|margarita|martini|negroni|mojito|cosmopolitan|old fashioned|whiskey sour|whisky sour|aperol|spritz|long island|daiquiri|pina colada|caipirinha|mai tai|\bsour\b)\b/.test(text)) {
+  // Trailing `s?` lets plural category names ("Beers", "Wines", "Juices") match
+  // the singular keyword. Safe: `port` still won't match `porter` (needs a boundary
+  // or an `s` immediately after `port`).
+  if (/\b(cocktail|mocktail|margarita|martini|negroni|mojito|cosmopolitan|old fashioned|whiskey sour|whisky sour|aperol|spritz|long island|daiquiri|pina colada|caipirinha|mai tai|sour)s?\b/.test(text)) {
     return 'COCKTAIL';
   }
-  if (/\b(wine|cellar|champagne|sparkling|mcc|cap classique|sauvignon|chardonnay|merlot|shiraz|syrah|pinotage|pinot|cabernet|chenin|blend|ros[eé]|bubbly|port|sherry|sangria)\b/.test(text)) {
+  if (/\b(wine|cellar|champagne|sparkling|mcc|cap classique|sauvignon|chardonnay|merlot|shiraz|syrah|pinotage|pinot|cabernet|chenin|blend|ros[eé]|bubbly|port|sherry|sangria)s?\b/.test(text)) {
     return 'WINE';
   }
-  if (/\b(beer|lager|cider|draught|draft|ale|stout|pilsner|ipa)\b/.test(text)) return 'BEER';
-  if (/\b(coffee|cappuccino|latte|espresso|macchiato|americano|mocha|flat white|tea|rooibos|hot chocolate)\b/.test(text)) {
+  if (/\b(beer|lager|cider|draught|draft|ale|stout|pilsner|ipa)s?\b/.test(text)) return 'BEER';
+  if (/\b(coffee|cappuccino|latte|espresso|macchiato|americano|mocha|flat white|tea|rooibos|hot chocolate)s?\b/.test(text)) {
     return 'HOT';
   }
-  if (/\b(juice|soda|cola|lemonade|tonic|smoothie|shake|cordial|energy|red bull|iced tea|soft|fizz|sprite|coke|fanta|ginger ale)\b/.test(text)) {
+  if (/\b(juice|soda|cola|lemonade|tonic|smoothie|shake|cordial|energy|red bull|iced tea|soft|fizz|sprite|coke|fanta|ginger ale)s?\b/.test(text)) {
     return 'SOFT';
   }
 
   // Generic spirits / liqueurs without a clearer kind read as a cocktail-tier drink.
-  if (/\b(whisky|whiskey|vodka|\bgin\b|\brum\b|brandy|cognac|tequila|liqueur|spirit)\b/.test(text)) return 'COCKTAIL';
+  if (/\b(whisky|whiskey|vodka|\bgin\b|\brum\b|brandy|cognac|tequila|liqueur|spirit)s?\b/.test(text)) return 'COCKTAIL';
 
   return 'NONE';
 }

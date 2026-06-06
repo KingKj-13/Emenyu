@@ -801,7 +801,9 @@ class AiService {
       price: pairing.price,
       img: pairing.img,
       categoryType: pairing.categoryType,
+      beverageKind: pairing.beverageKind,
       source_title: pairing.source_title,
+      chef: pairing.chef === true,
       reason: this.pairingReason(pairing, item)
     }));
 

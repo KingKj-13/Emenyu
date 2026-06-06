@@ -8,6 +8,7 @@ import { BASE_PATH } from '../../constants/api';
 import { formatPrice } from '../../lib/menuUtils';
 import { api } from '../../services/api';
 import type { MenuItem } from '../../types/menu';
+import { RecommendationCard, type RecommendationItem } from '../reco/RecommendationCard';
 import styles from './ItemModal.module.css';
 
 interface ItemModalProps {
@@ -28,6 +29,11 @@ interface PairingItem {
   name: string;
   reason: string;
   categoryType?: string;
+  price?: number;
+  img?: string;
+  beverageKind?: string;
+  source_title?: string;
+  chef?: boolean;
 }
 
 interface PairingResult {
@@ -77,11 +83,13 @@ function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?:
               <div className={styles.pairGroupLabel}>Drink pairings</div>
               <div className={styles.pairStrip} data-noswipe>
                 {drinkPairings.map((p, i) => (
-                  <button key={i} className={`${styles.pairChip} ${styles.pairChipDrink}`} onClick={() => onRequestItem?.(p.name)} aria-label={`View ${p.name}`}>
-                    <span className={`${styles.pairBadge} ${styles.pairBadgeDrink}`}>Drink</span>
-                    <span className={styles.pairName}>{p.name}</span>
-                    <span className={styles.pairReason}>{p.reason}</span>
-                  </button>
+                  <RecommendationCard
+                    key={i}
+                    variant="compact"
+                    showReason
+                    item={p as RecommendationItem}
+                    onOpen={() => onRequestItem?.(p.name)}
+                  />
                 ))}
               </div>
             </>
@@ -91,11 +99,13 @@ function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?:
               <div className={`${styles.pairGroupLabel} ${hasDrink ? styles.pairGroupLabelSecond : ''}`}>Goes well with</div>
               <div className={styles.pairStrip} data-noswipe>
                 {foodPairings.map((p, i) => (
-                  <button key={i} className={styles.pairChip} onClick={() => onRequestItem?.(p.name)} aria-label={`View ${p.name}`}>
-                    <span className={styles.pairBadge}>Food</span>
-                    <span className={styles.pairName}>{p.name}</span>
-                    <span className={styles.pairReason}>{p.reason}</span>
-                  </button>
+                  <RecommendationCard
+                    key={i}
+                    variant="compact"
+                    showReason
+                    item={p as RecommendationItem}
+                    onOpen={() => onRequestItem?.(p.name)}
+                  />
                 ))}
               </div>
             </>

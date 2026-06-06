@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Sparkles, Mic, Wine, TrendingUp } from 'lucide-react';
+import { Sparkles, Mic, Wine } from 'lucide-react';
 import { useWaiter } from '../../context/WaiterContext';
 import { api } from '../../services/api';
 import { money } from '../../lib/waiterFormat';
+import { RecommendationCard, type RecommendationItem } from '../../components/reco/RecommendationCard';
 import { SPEECH_TONES } from '../../constants/waiter';
 import type { CoachResponse, SommelierResponse, SpeechTone } from '../../types/waiter';
 
@@ -64,28 +65,25 @@ export function AICoachScreen() {
           </div>
           {coach.suggestion ? (
             <>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginTop: 12 }}>
-                <span className="w-display" style={{ fontSize: 26 }}>{coach.suggestion.name}</span>
+              <div style={{ marginTop: 12 }}>
+                <RecommendationCard
+                  variant="waiter"
+                  showReason
+                  item={{ ...coach.suggestion, reason: coach.whyItWorks } as RecommendationItem}
+                  note={coach.sayToTable}
+                  addLabel={`Add to order · ${money(coach.suggestion.price)}`}
+                  onAdd={() => { addToOrder(coach.suggestion!); api.recordUpsell({ waiterName: shift.name, tableId: selectedTableId, suggestedItem: coach.suggestion!.name, accepted: true, source: 'coach', value: coach.suggestion!.price }).catch(() => {}); showToast(`Added ${coach.suggestion!.name}`); }}
+                />
               </div>
-              <div className="w-intel-row">
+              <div className="w-intel-row" style={{ marginTop: 12 }}>
                 <div><div className="k">Expected revenue</div><div className="v" style={{ color: 'var(--w-green)' }}>+{money(coach.expectedRevenue)}</div></div>
                 <div><div className="k">Success rate</div><div className="v">{coach.successRate}%</div></div>
               </div>
-              <div className="w-saytable">
-                <div className="lbl">Say to the table</div>
-                <p className="quote">“{coach.sayToTable}”</p>
-              </div>
-              <div className="w-tones">
+              <div className="w-tones" style={{ marginTop: 12 }}>
                 {SPEECH_TONES.map(({ key, label }) => (
                   <button key={key} className={`w-tone ${tone === key ? 'active' : ''}`} onClick={() => setTone(key)}>{label}</button>
                 ))}
               </div>
-              <p style={{ marginTop: 14, color: 'var(--w-text2)', fontSize: 14, display: 'flex', gap: 8 }}>
-                <TrendingUp size={16} color="var(--w-gold)" /> {coach.whyItWorks}
-              </p>
-              <button className="w-btn-primary" style={{ marginTop: 16 }} onClick={() => { addToOrder(coach.suggestion!); api.recordUpsell({ waiterName: shift.name, tableId: selectedTableId, suggestedItem: coach.suggestion!.name, accepted: true, source: 'coach', value: coach.suggestion!.price }).catch(() => {}); showToast(`Added ${coach.suggestion!.name}`); }}>
-                Add {coach.suggestion.name} to order
-              </button>
             </>
           ) : (
             <p className="w-sable-body" style={{ marginTop: 12 }}>{coach.whyItWorks || 'This table is well matched — suggest dessert as the pace slows.'}</p>
@@ -108,10 +106,14 @@ export function AICoachScreen() {
         </div>
         {sommLoading && <div className="w-spinner" />}
         {somm && somm.wine && (
-          <div className="w-saytable" style={{ marginTop: 14 }}>
-            <div className="lbl">{somm.wine.name} · {money(somm.wine.price)}</div>
-            <p className="quote" style={{ fontSize: 16 }}>{somm.explanation}</p>
-            <button className="w-pair-add" style={{ marginTop: 10 }} onClick={() => { addToOrder(somm.wine!); showToast(`Added ${somm.wine!.name}`); }}>+</button>
+          <div style={{ marginTop: 14 }}>
+            <RecommendationCard
+              variant="waiter"
+              showReason
+              item={{ ...somm.wine, reason: somm.explanation } as RecommendationItem}
+              addLabel={`Add · ${money(somm.wine.price)}`}
+              onAdd={() => { addToOrder(somm.wine!); showToast(`Added ${somm.wine!.name}`); }}
+            />
           </div>
         )}
       </div>
