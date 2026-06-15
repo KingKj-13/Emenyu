@@ -63,6 +63,7 @@
   border-radius: 50%;
   background: rgba(0,0,0,0.6);
   color: #fff;
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   transition: border-color 160ms ease;
 }
@@ -90,6 +91,7 @@
   border-radius: 50%;
   background: rgba(0,0,0,0.6);
   color: rgba(255,255,255,0.7);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   transition: color 160ms ease, border-color 160ms ease;
 }
@@ -179,7 +181,8 @@
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: var(--radius-card);
   color: var(--color-cream);
-  font-size: 13px;
+  /* ≥16px so iOS Safari doesn't zoom the viewport when the field is focused. */
+  font-size: 16px;
   resize: none;
   transition: border-color 160ms ease;
 }
@@ -244,6 +247,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   border-radius: inherit;
+  -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
 

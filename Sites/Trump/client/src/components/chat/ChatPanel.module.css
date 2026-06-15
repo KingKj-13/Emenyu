@@ -167,6 +167,7 @@
     bottom: calc(138px + env(safe-area-inset-bottom));
     width: auto;
     max-height: min(520px, calc(100vh - 188px));
+    max-height: min(520px, calc(100dvh - 188px));
     border-radius: var(--radius-lg);
   }
 
@@ -206,7 +207,8 @@
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 20px;
   color: var(--color-cream);
-  font-size: 13px;
+  /* ≥16px so iOS Safari doesn't zoom when the chat field is focused. */
+  font-size: 16px;
 }
 .input::placeholder { color: rgba(201,187,165,0.35); }
 .input:focus { outline: none; border-color: rgba(198,162,75,0.35); }

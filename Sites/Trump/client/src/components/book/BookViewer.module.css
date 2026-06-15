@@ -12,6 +12,7 @@
   background: rgba(0,15,24,0.8);
   border: 1px solid rgba(198,162,75,0.2);
   border-radius: var(--radius-pill);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
 

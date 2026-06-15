@@ -157,6 +157,7 @@
   padding: 3px 7px;
   border-radius: 999px;
   white-space: nowrap;
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 .slotChip {

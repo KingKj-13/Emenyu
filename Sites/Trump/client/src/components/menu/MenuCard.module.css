@@ -59,6 +59,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   pointer-events: none;
 }
@@ -111,6 +112,7 @@
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.5);
   color: var(--color-gold);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   transition: background 160ms ease, border-color 160ms ease;
 }
@@ -132,6 +134,7 @@
   border-radius: 50%;
   background: rgba(0,0,0,0.5);
   color: rgba(255,255,255,0.55);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   transition: color 160ms ease, border-color 160ms ease;
 }
@@ -258,6 +261,7 @@
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   font-family: var(--font-label);
 }
