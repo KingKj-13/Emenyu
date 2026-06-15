@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Heart, Plus, Minus, ShoppingCart, Sparkles, ChevronLeft } from 'lucide-react';
+import { X, Heart, Plus, Minus, ShoppingCart, ChevronLeft } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
@@ -8,7 +8,8 @@ import { BASE_PATH } from '../../constants/api';
 import { formatPrice } from '../../lib/menuUtils';
 import { api } from '../../services/api';
 import type { MenuItem } from '../../types/menu';
-import { RecommendationCard, type RecommendationItem } from '../reco/RecommendationCard';
+import type { RecommendationItem } from '../reco/RecommendationCard';
+import { RecommendationJourney } from '../reco/RecommendationJourney';
 import { trackImpressions, trackClick, markShown, flushDismissed, type RecoContext } from '../../lib/recoAnalytics';
 import styles from './ItemModal.module.css';
 
@@ -44,8 +45,7 @@ interface PairingResult {
 }
 
 function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?: (name: string) => void }) {
-  const [foodPairings, setFoodPairings] = useState<PairingItem[]>([]);
-  const [drinkPairings, setDrinkPairings] = useState<PairingItem[]>([]);
+  const [pool, setPool] = useState<RecommendationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const pairCtx: RecoContext = { mode: 'customer', source: 'pairing', originatingName: item.name };
   const surfaceKey = `pairing:${item.name}`;
@@ -53,20 +53,25 @@ function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?:
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setFoodPairings([]);
-    setDrinkPairings([]);
+    setPool([]);
     api.aiPairing({ name: item.name, price: item.price, description: item.description })
       .then((data: unknown) => {
         if (cancelled) return;
         const res = data as PairingResult;
-        const drink = res?.drinkPairings ?? [];
-        const food = res?.foodPairings ?? [];
-        setFoodPairings(food);
-        setDrinkPairings(drink);
-        const shown = [...drink, ...food] as RecommendationItem[];
-        if (shown.length) {
-          trackImpressions(shown, pairCtx);
-          markShown(surfaceKey, shown, pairCtx);
+        // One ordered pool the journey planner draws from — drinks first (they
+        // open the meal), then food. De-dupe by name so nothing fills two slots.
+        const merged = [...(res?.drinkPairings ?? []), ...(res?.foodPairings ?? [])] as RecommendationItem[];
+        const seen = new Set<string>();
+        const deduped = merged.filter(p => {
+          const key = (p.name || '').toLowerCase().trim();
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setPool(deduped);
+        if (deduped.length) {
+          trackImpressions(deduped, pairCtx);
+          markShown(surfaceKey, deduped, pairCtx);
         }
       })
       .catch(() => {})
@@ -76,55 +81,17 @@ function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.name]);
 
-  const hasFood = foodPairings.length > 0;
-  const hasDrink = drinkPairings.length > 0;
-  if (!loading && !hasFood && !hasDrink) return null;
+  if (loading) {
+    return <div className={styles.pairLoading}><Spinner size={18} /></div>;
+  }
+  if (pool.length === 0) return null;
 
   return (
-    <div className={styles.pairSection}>
-      <div className={styles.pairHeader}>
-        <Sparkles size={13} className={styles.pairIcon} />
-        <span className={styles.pairLabel}>AI Recommendations</span>
-      </div>
-      {loading ? (
-        <div className={styles.pairLoading}><Spinner size={16} /></div>
-      ) : (
-        <>
-          {hasDrink && (
-            <>
-              <div className={styles.pairGroupLabel}>Drink pairings</div>
-              <div className={styles.pairStrip} data-noswipe>
-                {drinkPairings.map((p, i) => (
-                  <RecommendationCard
-                    key={i}
-                    variant="compact"
-                    showReason
-                    item={p as RecommendationItem}
-                    onOpen={() => { trackClick(p as RecommendationItem, pairCtx); onRequestItem?.(p.name); }}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-          {hasFood && (
-            <>
-              <div className={`${styles.pairGroupLabel} ${hasDrink ? styles.pairGroupLabelSecond : ''}`}>Goes well with</div>
-              <div className={styles.pairStrip} data-noswipe>
-                {foodPairings.map((p, i) => (
-                  <RecommendationCard
-                    key={i}
-                    variant="compact"
-                    showReason
-                    item={p as RecommendationItem}
-                    onOpen={() => { trackClick(p as RecommendationItem, pairCtx); onRequestItem?.(p.name); }}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </>
-      )}
-    </div>
+    <RecommendationJourney
+      item={item}
+      pool={pool}
+      onOpenItem={rec => { trackClick(rec, pairCtx); onRequestItem?.(rec.name); }}
+    />
   );
 }
 
