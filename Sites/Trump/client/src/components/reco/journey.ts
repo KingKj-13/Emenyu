@@ -80,7 +80,9 @@ export interface JourneySlot {
 export interface JourneyPlan {
   slots: JourneySlot[];
   narrative: string;
-  leftovers: RecommendationItem[];
+  // Recommendations the engine returned beyond the 3-slot journey. They continue
+  // in the same horizontal row so nothing the engine produced is ever dropped.
+  leftovers: JourneySlot[];
 }
 
 export function planJourney(current: MenuItem, pool: RecommendationItem[]): JourneyPlan {
@@ -175,6 +177,8 @@ export function planJourney(current: MenuItem, pool: RecommendationItem[]): Jour
   }
 
   const slots = order.filter((s): s is JourneySlot => s !== null);
-  const leftovers = avail.filter(cand => !used.has(cand));
+  const leftovers = avail
+    .filter(cand => !used.has(cand))
+    .map((rec): JourneySlot => ({ rec, slotLabel: courseLabel(courseOf(rec)), youChoice: false }));
   return { slots, narrative, leftovers };
 }

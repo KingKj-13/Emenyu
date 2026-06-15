@@ -17,10 +17,14 @@ interface Props {
 }
 
 export function RecommendationJourney({ item, pool, onOpenItem, assistantName = ASSISTANT_NAME }: Props) {
-  const { slots, narrative } = planJourney(item, pool);
+  const { slots, narrative, leftovers } = planJourney(item, pool);
+
+  // Lead with the 3-slot journey, then let any extra recommendations continue in
+  // the same row so nothing the engine produced disappears.
+  const cards = [...slots, ...leftovers];
 
   // Nothing meaningful to suggest beyond the dish itself.
-  if (slots.length <= 1) return null;
+  if (!cards.some(c => !c.youChoice)) return null;
 
   return (
     <section className={styles.journey} aria-label={`${assistantName} recommends`}>
@@ -30,9 +34,9 @@ export function RecommendationJourney({ item, pool, onOpenItem, assistantName = 
       </div>
       {narrative && <p className={styles.narrative}>{narrative}</p>}
       <div className={styles.row} data-noswipe>
-        {slots.map((s, i) => (
+        {cards.map((s, i) => (
           <RecommendationCard
-            key={`slot-${s.rec.name}-${i}`}
+            key={`${s.youChoice ? 'you' : 'card'}-${s.rec.name}-${i}`}
             variant="journey"
             playable
             item={s.rec}

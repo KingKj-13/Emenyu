@@ -139,58 +139,13 @@
   letter-spacing: 0.06em;
 }
 
-.pairSection {
-  margin-bottom: 16px;
-  padding: 10px 12px;
-  border: 1px solid rgba(198,162,75,0.18);
-  border-radius: 8px;
-  background: rgba(198,162,75,0.04);
-}
-
-.pairHeader {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.pairIcon { color: var(--color-gold); }
-
-.pairLabel {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #d9c8ff;
-  opacity: 0.8;
-}
-
+/* The recommendation journey owns its own chrome (RecommendationJourney.module.css);
+   only the brief loading state lives here. */
 .pairLoading {
   display: flex;
   justify-content: center;
-  padding: 8px 0;
+  padding: 16px 0;
 }
-
-.pairStrip {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-bottom: 2px;
-}
-
-.pairStrip::-webkit-scrollbar { display: none; }
-
-.pairGroupLabel {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-sand);
-  opacity: 0.75;
-  margin: 0 0 7px;
-}
-.pairGroupLabelSecond { margin-top: 14px; }
 
 .actions { border-top: 1px solid var(--color-line); padding-top: 16px; display: flex; flex-direction: column; gap: 12px; }
 
