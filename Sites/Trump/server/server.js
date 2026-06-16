@@ -262,10 +262,11 @@ async function startServer() {
     auth.requirePage(['owner', 'manager', 'waiter']),
     controllers.waiter.serveWaiterPage
   );
+  // Retired: the vanilla owner.html is superseded by the React /Owner dashboard.
   app.get(
     ['/owner.html', '/Trump/owner.html', '/trump/owner.html'],
     auth.requirePage(['owner']),
-    (req, res) => res.sendFile(path.join(config.directories.base, 'owner.html'))
+    (req, res) => res.redirect(`${config.publicBasePath}/Owner`)
   );
 
   const staticOptions = createStaticOptions(config);

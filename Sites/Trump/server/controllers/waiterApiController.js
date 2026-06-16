@@ -46,12 +46,12 @@ function createWaiterApiController(deps) {
     const db = getPrisma();
     try {
       const [tableRow, activeCount, assignment] = await Promise.all([
-        db.table.findUnique({ where: { restaurantId_tableId: { restaurantId, tableId } }, select: { metadata: true } }),
+        db.table.findUnique({ where: { restaurantId_tableId: { restaurantId, tableId } }, select: { metadata: true, covers: true } }),
         db.order.count({ where: { restaurantId, tableId, status: 'active' } }),
         db.waiterAssignment.findFirst({ where: { restaurantId, tableId, status: 'active' }, orderBy: { assignedAt: 'desc' }, select: { waiterName: true } })
       ]);
       const meta = tableRow?.metadata && typeof tableRow.metadata === 'object' ? tableRow.metadata : {};
-      return { guests: meta.guests || null, status: activeCount > 0 ? 'cooking' : 'seated', waiter: assignment?.waiterName || null };
+      return { guests: tableRow?.covers || meta.guests || null, status: activeCount > 0 ? 'cooking' : 'seated', waiter: assignment?.waiterName || null };
     } catch {
       return { guests: null, status: 'seated', waiter: null };
     }
@@ -266,6 +266,25 @@ function createWaiterApiController(deps) {
         res.json({ ok: true, guestIntel: intel });
       } catch {
         res.status(500).json({ error: 'Failed to seat guest' });
+      }
+    },
+
+    // Light party-size capture at seating. Stored on the table; each order placed
+    // for the table inherits it (prismaOrderService), powering per-cover spend.
+    async setTableCovers(req, res) {
+      const tableId = getCanonicalTableId(req.params.tableId);
+      const covers = Math.max(0, Math.min(50, parseInt(req.body?.covers, 10) || 0));
+      try {
+        const db = getPrisma();
+        await db.table.upsert({
+          where: { restaurantId_tableId: { restaurantId, tableId } },
+          create: { restaurantId, tableId, displayName: tableId.replace(/^table/, 'Table '), covers },
+          update: { covers }
+        });
+        socketService.emitOrderUpdated();
+        res.json({ ok: true, tableId, covers });
+      } catch {
+        res.status(500).json({ error: 'Failed to set covers' });
       }
     },
 

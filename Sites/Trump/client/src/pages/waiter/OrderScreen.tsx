@@ -38,6 +38,7 @@ export function OrderScreen() {
     }
   }, [addToOrder, showToast, selectedTableId, shift.name]);
   const [intel, setIntel] = useState<TableIntel | null>(null);
+  const [covers, setCovers] = useState(0);
 
   const loadIntel = useCallback(() => {
     if (!selectedTableId) return;
@@ -45,8 +46,16 @@ export function OrderScreen() {
   }, [selectedTableId]);
 
   useEffect(() => { setIntel(null); loadIntel(); }, [loadIntel]);
+  useEffect(() => { setCovers(Number(intel?.tableInfo?.guests) || 0); }, [intel?.tableInfo?.guests]);
   useSocketEvent('orderPlaced', loadIntel);
   // Guest live-cart sync is handled globally in WaiterContext (works on any tab).
+
+  async function changeCovers(next: number) {
+    if (!selectedTableId) return;
+    const v = Math.max(0, Math.min(50, next));
+    setCovers(v);
+    try { await api.setTableCovers(selectedTableId, v); } catch { /* covers is best-effort */ }
+  }
 
   if (!selectedTableId) {
     return (
@@ -76,6 +85,23 @@ export function OrderScreen() {
           <h1 className="w-display" style={{ fontSize: 30, marginTop: 2 }}>Table {num}</h1>
         </div>
         <span className="w-status-tag">{(info?.status || 'seated').toUpperCase()}</span>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '2px 0 12px' }}>
+        <span className="w-eyebrow">Party size</span>
+        <button
+          type="button"
+          aria-label="Fewer guests"
+          onClick={() => changeCovers(covers - 1)}
+          style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--w-border, rgba(200,165,85,0.3))', background: 'rgba(255,255,255,0.04)', color: 'var(--w-gold, #c8a555)', fontSize: 18, lineHeight: 1, cursor: 'pointer' }}
+        >−</button>
+        <b style={{ minWidth: 24, textAlign: 'center', fontSize: 16, color: 'var(--w-text, #f3ead6)' }}>{covers || '—'}</b>
+        <button
+          type="button"
+          aria-label="More guests"
+          onClick={() => changeCovers(covers + 1)}
+          style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--w-border, rgba(200,165,85,0.3))', background: 'rgba(255,255,255,0.04)', color: 'var(--w-gold, #c8a555)', fontSize: 18, lineHeight: 1, cursor: 'pointer' }}
+        >+</button>
       </div>
 
       {event && (

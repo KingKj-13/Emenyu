@@ -477,6 +477,7 @@ function createRoleAuth(config, accountService, logger = null) {
   function getRoleHome(role) {
     if (role === 'waiter') return `${config.publicBasePath}/Waiter`;
     if (role === 'kitchen') return `${config.publicBasePath}/Kitchen`;
+    if (role === 'owner') return `${config.publicBasePath}/Owner`;
     return `${config.publicBasePath}/Admin`;
   }
 

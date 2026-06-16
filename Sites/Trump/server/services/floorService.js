@@ -34,7 +34,7 @@ function createFloorService({ config }) {
           select: { tableId: true, waiterName: true },
           orderBy: { assignedAt: 'desc' }
         }),
-        db.table.findMany({ where: { restaurantId }, select: { tableId: true, metadata: true } }),
+        db.table.findMany({ where: { restaurantId }, select: { tableId: true, metadata: true, covers: true } }),
         db.guest.findMany({ where: { restaurantId }, select: { id: true, vip: true, name: true } })
       ]);
     } catch {
@@ -54,6 +54,7 @@ function createFloorService({ config }) {
     const waiterByTable = new Map();
     for (const a of assignments) if (!waiterByTable.has(a.tableId)) waiterByTable.set(a.tableId, a.waiterName);
     const metaByTable = new Map(tables.map(t => [t.tableId, t.metadata && typeof t.metadata === 'object' ? t.metadata : {}]));
+    const coversByTable = new Map(tables.map(t => [t.tableId, t.covers || 0]));
 
     const counts = { seated: 0, cooking: 0, ready: 0, empty: 0 };
     const list = [];
@@ -83,7 +84,7 @@ function createFloorService({ config }) {
         status,
         spend,
         orderCount: orders?.count || 0,
-        guests: meta.guests || null,
+        guests: (coversByTable.get(tableId) || 0) || meta.guests || null,
         waiter: waiterByTable.get(tableId) || null,
         vip: Boolean(guest?.vip),
         guestName: guest?.name || null

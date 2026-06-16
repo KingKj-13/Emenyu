@@ -12,6 +12,7 @@ import { useAuth } from './hooks/useAuth';
 import type { Role } from './types/auth';
 
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
+const OwnerDashboard = lazy(() => import('./pages/OwnerDashboard').then(m => ({ default: m.OwnerDashboard })));
 const WaiterPage = lazy(() => import('./pages/WaiterPage').then(m => ({ default: m.WaiterPage })));
 const KitchenPage = lazy(() => import('./pages/KitchenPage').then(m => ({ default: m.KitchenPage })));
 const ReservationPage = lazy(() => import('./pages/ReservationPage').then(m => ({ default: m.ReservationPage })));
@@ -30,7 +31,7 @@ function ProtectedRoute({ roles, children }: { roles: Role[]; children: ReactEle
   if (authLoading) return <LoadingFallback />;
   if (!user) return <Navigate to="/login" replace />;
   if (!roles.includes(user.role)) {
-    const dest = user.role === 'waiter' ? '/Waiter' : user.role === 'kitchen' ? '/Kitchen' : '/Admin';
+    const dest = user.role === 'waiter' ? '/Waiter' : user.role === 'kitchen' ? '/Kitchen' : user.role === 'owner' ? '/Owner' : '/Admin';
     return <Navigate to={dest} replace />;
   }
 
@@ -50,6 +51,13 @@ export default function App() {
               <ProtectedRoute roles={['owner', 'manager']}>
                 <Suspense fallback={<LoadingFallback />}>
                   <AdminPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/Owner" element={
+              <ProtectedRoute roles={['owner']}>
+                <Suspense fallback={<LoadingFallback />}>
+                  <OwnerDashboard />
                 </Suspense>
               </ProtectedRoute>
             } />

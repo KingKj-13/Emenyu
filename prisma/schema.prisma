@@ -156,6 +156,7 @@ model Table {
   tableId           String
   displayName       String             @default("")
   status            String             @default("active")
+  covers            Int                @default(0)
   metadata          Json?
   orders            Order[]
   cartState         ActiveCartState?
@@ -182,6 +183,7 @@ model Order {
   service       Float                @default(0)
   tip           Float                @default(0)
   total         Float                @default(0)
+  covers        Int                  @default(0)
   timestamp     DateTime             @default(now())
   sourceKind    String               @default("orders")
   guestId       Int?

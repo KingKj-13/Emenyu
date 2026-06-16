@@ -57,6 +57,8 @@ tables/
 *.sqlite3
 *.dump
 *.sql
+# …but Prisma migration SQL must always be tracked (it's the deploy source of truth).
+!prisma/migrations/**/*.sql
 *.bak
 *.backup
 *accounts.json

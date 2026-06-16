@@ -264,9 +264,19 @@ export const api = {
     return fetchJson<unknown>(`${ENDPOINTS.analyticsummary}?${q}`);
   },
 
-  getAnalyticsItems(params: { from?: string; to?: string }) {
+  getAnalyticsItems(params: { from?: string; to?: string; order?: 'asc' | 'desc' }) {
     const q = new URLSearchParams(params as Record<string, string>).toString();
     return fetchJson<unknown[]>(`${ENDPOINTS.analyticsItems}?${q}`);
+  },
+
+  getAnalyticsTrend(params: { from?: string; to?: string; bucket?: 'day' | 'week' | 'month' }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<{ bucket: string; points: { date: string; revenue: number; orders: number }[] }>(`${ENDPOINTS.analyticsTrend}?${q}`);
+  },
+
+  getAnalyticsDayOfWeek(params: { from?: string; to?: string }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<{ dow: number; label: string; count: number; revenue: number }[]>(`${ENDPOINTS.analyticsDayOfWeek}?${q}`);
   },
 
   getAnalyticsTables(params: { from?: string; to?: string }) {
@@ -364,5 +374,8 @@ export const api = {
   },
   seatGuest(tableId: string, guestId: number) {
     return postJson<{ ok: boolean; guestIntel: import('../types/waiter').GuestIntel }>(ENDPOINTS.seatGuest(tableId), { guestId });
+  },
+  setTableCovers(tableId: string, covers: number) {
+    return postJson<{ ok: boolean; tableId: string; covers: number }>(ENDPOINTS.tableCovers(tableId), { covers });
   },
 };

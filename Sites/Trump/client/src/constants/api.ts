@@ -39,6 +39,8 @@ export const ENDPOINTS = {
   analyticsItems: `${API_PREFIX}/api/analytics/items`,
   analyticsTables: `${API_PREFIX}/api/analytics/tables`,
   analyticsHours: `${API_PREFIX}/api/analytics/hours`,
+  analyticsTrend: `${API_PREFIX}/api/analytics/trend`,
+  analyticsDayOfWeek: `${API_PREFIX}/api/analytics/day-of-week`,
   analyticsRecommendations: `${API_PREFIX}/api/analytics/recommendations`,
   analyticsRecommendationsInsights: `${API_PREFIX}/api/analytics/recommendations/insights`,
   recoEvents: `${API_PREFIX}/api/reco/events`,
@@ -62,5 +64,6 @@ export const ENDPOINTS = {
   guests: `${API_PREFIX}/api/guests`,
   guest: (id: number) => `${API_PREFIX}/api/guests/${id}`,
   seatGuest: (tableId: string) => `${API_PREFIX}/api/waiter/table/${tableId}/seat-guest`,
+  tableCovers: (tableId: string) => `${API_PREFIX}/api/waiter/table/${tableId}/covers`,
   nlgStatus: `${API_PREFIX}/api/waiter/nlg-status`,
 } as const;

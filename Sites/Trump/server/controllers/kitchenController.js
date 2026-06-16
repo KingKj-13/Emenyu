@@ -6,6 +6,11 @@ function getPrisma() {
   return prisma;
 }
 
+// The only legal forward path for a ticket. A transition is allowed iff the new
+// status is exactly the next step for the order's current status — no skips
+// (new → served) and no going backwards (ready → preparing).
+const STATUS_FLOW = { new: 'preparing', preparing: 'ready', ready: 'served' };
+
 function createKitchenController({ config, fileService, socketService }) {
   return {
     async getOrders(req, res) {
@@ -36,6 +41,25 @@ function createKitchenController({ config, fileService, socketService }) {
 
       try {
         const db = getPrisma();
+        const existing = await db.order.findUnique({
+          where: { id: Number(id) },
+          select: { kitchenStatus: true }
+        });
+        if (!existing) {
+          return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Enforce the forward-only flow: new → preparing → ready → served.
+        const expected = STATUS_FLOW[existing.kitchenStatus];
+        if (kitchenStatus !== expected) {
+          return res.status(409).json({
+            error: 'Illegal kitchen status transition',
+            from: existing.kitchenStatus,
+            to: kitchenStatus,
+            allowed: expected || null
+          });
+        }
+
         const order = await db.order.update({
           where: { id: Number(id) },
           data: { kitchenStatus },
