@@ -32,13 +32,16 @@ const RANGES: { key: RangeKey; label: string; days: number; bucket: 'day' | 'wee
   { key: '90d', label: '90 days', days: 89, bucket: 'week' },
 ];
 
-function isoDay(d: Date) { return d.toISOString().slice(0, 10); }
 function rangeParams(r: RangeKey) {
   const cfg = RANGES.find(x => x.key === r)!;
-  const to = new Date();
-  const from = new Date();
-  from.setDate(to.getDate() - cfg.days);
-  return { from: isoDay(from), to: isoDay(to), bucket: cfg.bucket };
+  const now = new Date();
+  // `to` must be the current moment (not date-only midnight), else today's orders
+  // — which are timestamped after 00:00 — get excluded. Mirrors AdminPage.
+  const to = now.toISOString();
+  const from = cfg.days === 0
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+    : new Date(Date.now() - cfg.days * 86400000).toISOString();
+  return { from, to, bucket: cfg.bucket };
 }
 function shortDate(key: string) {
   // key is YYYY-MM-DD (day/week) or YYYY-MM (month)
