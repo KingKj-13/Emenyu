@@ -1,10 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-
-let prisma;
-function getPrisma() {
-  if (!prisma) prisma = new PrismaClient();
-  return prisma;
-}
+// Shared, explicitly-resolved Prisma client (avoids the local @prisma/client stub
+// silently failing kitchen status updates).
+const { getPrisma } = require('../services/prismaClient');
 
 // The only legal forward path for a ticket. A transition is allowed iff the new
 // status is exactly the next step for the order's current status — no skips

@@ -1,13 +1,8 @@
 const path = require('path');
 
 const { normalizeId } = require('../utils/helpers');
-const { PrismaClient } = require('@prisma/client');
-
-let prisma;
-function getPrisma() {
-  if (!prisma) prisma = new PrismaClient();
-  return prisma;
-}
+// Shared, explicitly-resolved Prisma client (see prismaClient.js).
+const { getPrisma } = require('../services/prismaClient');
 
 function getItemQuantity(item) {
   return Number(item.quantity || item.qty || 1);

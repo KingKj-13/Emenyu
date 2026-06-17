@@ -1,10 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-
-let prisma;
-function getPrisma() {
-  if (!prisma) prisma = new PrismaClient();
-  return prisma;
-}
+// Shared, explicitly-resolved Prisma client (deterministic regardless of the
+// node_modules layout — see prismaClient.js).
+const { getPrisma } = require('../services/prismaClient');
 
 function createReservationController({ config }) {
   const restaurantId = config?.restaurantId || 'trump';

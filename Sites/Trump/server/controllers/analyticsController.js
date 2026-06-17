@@ -1,10 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-
-let prisma;
-function getPrisma() {
-  if (!prisma) prisma = new PrismaClient();
-  return prisma;
-}
+// Use the shared, explicitly-resolved Prisma client so a Trump-local @prisma/client
+// stub can't shadow the generated client (which silently zeroed analytics).
+const { getPrisma } = require('../services/prismaClient');
 
 function parseDateRange(from, to) {
   const ts = {};
