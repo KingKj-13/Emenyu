@@ -151,4 +151,43 @@ Your instinct (Owner/Data → Admin → Kitchen) is right; the code refines it s
 
 ---
 
-*Awaiting go-ahead before any implementation. Prod deploy remains paused; staging + tunnel + scratch DB still up as the fallback.*
+# Deploy notes — Prisma client resolution (READ BEFORE PROD DEPLOY)
+
+**The "local stub gotcha" is real and currently affects production.** Several server
+modules used a bare `require('@prisma/client')`, which Node resolves to
+`Sites/Trump/node_modules` **first**. On a real deploy that directory holds an
+**un-generated stub** (the actual client generates to the repo-root `node_modules`),
+so every query through those modules silently failed and their `try/catch` returned
+empty. Affected today on prod: **analytics (`/api/analytics/*`), kitchen status
+updates, ratings, reservations, and parts of the waiter app** — all silently
+degraded (e.g. the owner.html KPIs / reports read zeros). Only `prismaOrderService`
+dodged it (it already loads the client by explicit path), which is why orders kept
+working.
+
+**Source fix (commit `4f875eb`, this branch):** `prismaClient.js` now loads the
+client by explicit path (`PROJECT_ROOT/node_modules/@prisma/client`) first, and all
+the bare-require consumers route through that one singleton. This is deterministic
+regardless of `node_modules` layout — **no stub removal is required** once this code
+ships. Verified on staging with the stub layout faithfully recreated.
+
+**Belt-and-braces deploy step (do it anyway):** after `npm ci` + build, before the
+PM2 restart, run:
+
+```bash
+# 1. Generate the client against the root schema (writes to repo-root node_modules)
+npx prisma generate --schema prisma/schema.prisma
+# 2. Remove any Trump-local @prisma/client stub so nothing can shadow the generated client
+rm -rf Sites/Trump/node_modules/@prisma/client Sites/Trump/node_modules/.prisma
+# (the app falls through to the root client; prismaOrderService + prismaClient.js both
+#  resolve it by explicit path regardless)
+```
+
+Then verify post-deploy: `GET /Trump/api/analytics/summary` returns non-zero
+revenue, and a kitchen `new→preparing` transition succeeds (and `new→served` 409s).
+
+> Net: the code fix makes this robust; the runbook step is a safety net and a
+> reminder that **prod analytics + kitchen-status are broken until this branch ships.**
+
+---
+
+*Phase 0 + Phase 1 implemented on `feat/management-ui-phase0-1` (unpushed, local only); staging + tunnel + scratch DB up for review. Phase 2 (Settings + unified live order board) queued pending owner-dashboard sign-off.*
