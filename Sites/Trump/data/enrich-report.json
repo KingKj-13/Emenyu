@@ -1,0 +1,577 @@
+{
+  "generatedAt": "2026-06-19T20:06:18.612Z",
+  "applied": true,
+  "total": 439,
+  "written": 439,
+  "skippedReviewed": 0,
+  "kind": {
+    "FOOD": 153,
+    "DRINK": 286
+  },
+  "axisFill": {
+    "protein": 153,
+    "dietary": 66,
+    "spice": 48,
+    "richness": 153,
+    "acid": 30,
+    "sweetness": 43,
+    "flavour": 276,
+    "texture": 123,
+    "aromatics": 67,
+    "occasion": 439,
+    "temperature": 439,
+    "drinkType": 286,
+    "body": 286,
+    "drySweet": 286
+  },
+  "lowConfidence": [
+    {
+      "id": 4,
+      "name": "BEEF BILTONG",
+      "weak": [
+        "flavour",
+        "texture"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "BOEREWORS & CHAKALAKA",
+      "weak": [
+        "flavour",
+        "texture"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "TEMPURA BILTONG",
+      "weak": [
+        "flavour"
+      ]
+    },
+    {
+      "id": 30,
+      "name": "RAINBOW ROLL - VEGETABLE (8pc)",
+      "weak": [
+        "flavour",
+        "texture"
+      ]
+    },
+    {
+      "id": 33,
+      "name": "RAINBOW ROLL - VEGETABLE (4pc)",
+      "weak": [
+        "flavour",
+        "texture"
+      ]
+    },
+    {
+      "id": 37,
+      "name": "TRUMPS CALIFORNIA RAINBOW RELOADED (8pc)",
+      "weak": [
+        "flavour"
+      ]
+    },
+    {
+      "id": 67,
+      "name": "TOMAHAWK 850g - 900g",
+      "weak": [
+        "flavour",
+        "texture"
+      ]
+    },
+    {
+      "id": 68,
+      "name": "T-BONE 850g - 900g",
+      "weak": [
+        "flavour",
+        "texture"
+      ]
+    },
+    {
+      "id": 69,
+      "name": "RIBEYE 850g - 900g",
+      "weak": [
+        "flavour"
+      ]
+    },
+    {
+      "id": 70,
+      "name": "WAGYU RIBEYE 300g",
+      "weak": [
+        "flavour"
+      ]
+    },
+    {
+      "id": 71,
+      "name": "WAGYU FILLET 300g",
+      "weak": [
+        "flavour"
+      ]
+    },
+    {
+      "id": 72,
+      "name": "WAGYU SIRLOIN 300g",
+      "weak": [
+        "flavour"
+      ]
+    },
+    {
+      "id": 73,
+      "name": "WAGYU CHUCKEYE 350g",
+      "weak": [
+        "flavour",
+        "texture"
+      ]
+    },
+    {
+      "id": 74,
+      "name": "WAGYU RUMP 350g",
+      "weak": [
+        "flavour"
+      ]
+    },
+    {
+      "id": 75,
+      "name": "WAGYU DENVER 350g",
+      "weak": [
+        "flavour",
+        "texture"
+      ]
+    },
+    {
+      "id": 82,
+      "name": "CHAKALAKA SAUCE",
+      "weak": [
+        "flavour",
+        "texture"
+      ]
+    },
+    {
+      "id": 84,
+      "name": "SWEET CHILLI SAUCE",
+      "weak": [
+        "flavour",
+        "texture"
+      ]
+    },
+    {
+      "id": 86,
+      "name": "CHIMICHURRI",
+      "weak": [
+        "flavour",
+        "texture"
+      ]
+    },
+    {
+      "id": 98,
+      "name": "OXTAIL",
+      "weak": [
+        "flavour"
+      ]
+    },
+    {
+      "id": 101,
+      "name": "PRIME STEAK & LAMB CHOPS",
+      "weak": [
+        "flavour"
+      ]
+    },
+    {
+      "id": 105,
+      "name": "PRIME STEAK & PRAWNS (Surf & Turf)",
+      "weak": [
+        "flavour"
+      ]
+    }
+  ],
+  "lowConfidenceCount": 21,
+  "samples": [
+    {
+      "name": "FIRECRACKER CHICKEN WINGS (400g)",
+      "tags": {
+        "v": 1,
+        "source": "bootstrap",
+        "kind": "FOOD",
+        "course": "STARTER",
+        "protein": [
+          "chicken"
+        ],
+        "dietary": [],
+        "spice": 1,
+        "richness": 1,
+        "acid": 0,
+        "sweetness": 1,
+        "flavour": [
+          "smoky"
+        ],
+        "texture": [],
+        "aromatics": [
+          "chilli",
+          "smoke"
+        ],
+        "temperature": "hot",
+        "occasion": [
+          "sharing"
+        ]
+      }
+    },
+    {
+      "name": "GARLIC LEMON CALAMARI",
+      "tags": {
+        "v": 1,
+        "source": "bootstrap",
+        "kind": "FOOD",
+        "course": "STARTER",
+        "protein": [
+          "seafood"
+        ],
+        "dietary": [],
+        "spice": 0,
+        "richness": 3,
+        "acid": 2,
+        "sweetness": 0,
+        "flavour": [
+          "garlicky",
+          "citrus",
+          "briny"
+        ],
+        "texture": [
+          "crispy",
+          "tender"
+        ],
+        "aromatics": [
+          "garlic",
+          "citrus"
+        ],
+        "temperature": "hot",
+        "occasion": [
+          "light"
+        ]
+      }
+    },
+    {
+      "name": "SMALL GREEK SALAD",
+      "tags": {
+        "v": 1,
+        "source": "bootstrap",
+        "kind": "FOOD",
+        "course": "STARTER",
+        "protein": [
+          "none"
+        ],
+        "dietary": [
+          "vegetarian"
+        ],
+        "spice": 0,
+        "richness": 1,
+        "acid": 2,
+        "sweetness": 0,
+        "flavour": [
+          "cheesy",
+          "fresh"
+        ],
+        "texture": [
+          "crunchy"
+        ],
+        "aromatics": [],
+        "temperature": "cold",
+        "occasion": [
+          "light"
+        ]
+      }
+    },
+    {
+      "name": "GREEK SALAD",
+      "tags": {
+        "v": 1,
+        "source": "bootstrap",
+        "kind": "FOOD",
+        "course": "SALAD",
+        "protein": [
+          "none"
+        ],
+        "dietary": [
+          "vegetarian"
+        ],
+        "spice": 0,
+        "richness": 1,
+        "acid": 2,
+        "sweetness": 0,
+        "flavour": [
+          "cheesy",
+          "fresh"
+        ],
+        "texture": [
+          "crunchy"
+        ],
+        "aromatics": [],
+        "temperature": "cold",
+        "occasion": [
+          "light"
+        ]
+      }
+    },
+    {
+      "name": "TRUMPS SALMON SASHIMI",
+      "tags": {
+        "v": 1,
+        "source": "bootstrap",
+        "kind": "FOOD",
+        "course": "SUSHI",
+        "protein": [
+          "seafood"
+        ],
+        "dietary": [],
+        "spice": 0,
+        "richness": 2,
+        "acid": 1,
+        "sweetness": 0,
+        "flavour": [
+          "umami",
+          "nutty",
+          "briny",
+          "fresh"
+        ],
+        "texture": [
+          "soft"
+        ],
+        "aromatics": [],
+        "temperature": "cold",
+        "occasion": [
+          "date",
+          "light"
+        ]
+      }
+    },
+    {
+      "name": "JALAPENO SALMON SASHIMI",
+      "tags": {
+        "v": 1,
+        "source": "bootstrap",
+        "kind": "FOOD",
+        "course": "SUSHI",
+        "protein": [
+          "seafood"
+        ],
+        "dietary": [],
+        "spice": 2,
+        "richness": 1,
+        "acid": 1,
+        "sweetness": 0,
+        "flavour": [
+          "umami",
+          "briny",
+          "fresh"
+        ],
+        "texture": [
+          "soft",
+          "crunchy"
+        ],
+        "aromatics": [
+          "chilli"
+        ],
+        "temperature": "cold",
+        "occasion": [
+          "date",
+          "light"
+        ]
+      }
+    },
+    {
+      "name": "RIBEYE 380g",
+      "tags": {
+        "v": 1,
+        "source": "bootstrap",
+        "kind": "FOOD",
+        "course": "MAIN",
+        "protein": [
+          "beef"
+        ],
+        "dietary": [],
+        "spice": 0,
+        "richness": 2,
+        "acid": 0,
+        "sweetness": 1,
+        "flavour": [
+          "smoky",
+          "charred",
+          "peppery"
+        ],
+        "texture": [
+          "juicy"
+        ],
+        "aromatics": [
+          "smoke"
+        ],
+        "temperature": "hot",
+        "occasion": [
+          "hearty"
+        ]
+      }
+    },
+    {
+      "name": "LAMB CHOPS 4's 500g",
+      "tags": {
+        "v": 1,
+        "source": "bootstrap",
+        "kind": "FOOD",
+        "course": "MAIN",
+        "protein": [
+          "lamb"
+        ],
+        "dietary": [],
+        "spice": 0,
+        "richness": 2,
+        "acid": 0,
+        "sweetness": 0,
+        "flavour": [
+          "charred",
+          "peppery"
+        ],
+        "texture": [
+          "juicy",
+          "tender"
+        ],
+        "aromatics": [],
+        "temperature": "hot",
+        "occasion": [
+          "hearty"
+        ]
+      }
+    },
+    {
+      "name": "FIRECRACKER CHICKEN WINGS - 800g",
+      "tags": {
+        "v": 1,
+        "source": "bootstrap",
+        "kind": "FOOD",
+        "course": "MAIN",
+        "protein": [
+          "chicken"
+        ],
+        "dietary": [],
+        "spice": 2,
+        "richness": 1,
+        "acid": 0,
+        "sweetness": 1,
+        "flavour": [
+          "smoky",
+          "charred"
+        ],
+        "texture": [],
+        "aromatics": [
+          "chilli",
+          "smoke"
+        ],
+        "temperature": "hot",
+        "occasion": [
+          "sharing"
+        ]
+      }
+    },
+    {
+      "name": "SEAFOOD PASTA",
+      "tags": {
+        "v": 1,
+        "source": "bootstrap",
+        "kind": "FOOD",
+        "course": "MAIN",
+        "protein": [
+          "seafood"
+        ],
+        "dietary": [
+          "contains-gluten"
+        ],
+        "spice": 1,
+        "richness": 3,
+        "acid": 2,
+        "sweetness": 0,
+        "flavour": [
+          "garlicky",
+          "creamy",
+          "briny",
+          "fresh"
+        ],
+        "texture": [],
+        "aromatics": [
+          "garlic",
+          "chilli"
+        ],
+        "temperature": "hot",
+        "occasion": [
+          "hearty"
+        ]
+      }
+    },
+    {
+      "name": "VEG BURGER",
+      "tags": {
+        "v": 1,
+        "source": "bootstrap",
+        "kind": "FOOD",
+        "course": "MAIN",
+        "protein": [
+          "none"
+        ],
+        "dietary": [
+          "vegetarian",
+          "contains-gluten"
+        ],
+        "spice": 1,
+        "richness": 1,
+        "acid": 2,
+        "sweetness": 1,
+        "flavour": [
+          "herby",
+          "umami",
+          "fruity",
+          "fresh"
+        ],
+        "texture": [
+          "juicy"
+        ],
+        "aromatics": [
+          "chilli"
+        ],
+        "temperature": "hot",
+        "occasion": [
+          "quick",
+          "light"
+        ]
+      }
+    },
+    {
+      "name": "DEATH BY CHOCOLATE CAKE",
+      "tags": {
+        "v": 1,
+        "source": "bootstrap",
+        "kind": "FOOD",
+        "course": "DESSERT",
+        "protein": [
+          "none"
+        ],
+        "dietary": [
+          "vegetarian",
+          "contains-gluten",
+          "contains-egg"
+        ],
+        "spice": 0,
+        "richness": 3,
+        "acid": 0,
+        "sweetness": 3,
+        "flavour": [
+          "creamy",
+          "chocolate"
+        ],
+        "texture": [
+          "soft"
+        ],
+        "aromatics": [],
+        "temperature": "room",
+        "occasion": [
+          "date"
+        ]
+      }
+    }
+  ]
+}

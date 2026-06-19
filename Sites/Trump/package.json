@@ -27,7 +27,10 @@
     "smoke:test": "node scripts/smoke-test.js",
     "bundles:seed": "node scripts/seed-bundles.js",
     "menu:migrate": "node scripts/migrate-menu-to-postgres.js",
+    "menu:enrich": "node scripts/enrich-menu-tags.js",
     "orders:migrate": "node scripts/migrate-orders-to-postgres.js",
+    "orders:seed:demo": "node scripts/seed-demo-orders.js",
+    "orders:purge:demo": "node scripts/purge-demo-orders.js",
     "prisma:generate": "npx prisma generate --schema ../../prisma/schema.prisma"
   },
   "engines": {
