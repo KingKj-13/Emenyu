@@ -50,11 +50,16 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
       const { id } = req.params;
       const service = prismaMenuService || fileService?.prismaMenu;
       if (!service) return res.status(503).json({ error: 'Not available' });
-      const ok = await service.withPrisma('menu_delete_item_failed', async prisma => {
-        await prisma.menuItem.delete({ where: { id: Number(id) } });
-        return true;
-      }, false);
-      if (!ok) return res.status(500).json({ error: 'Delete failed' });
+      // Scope the delete to this tenant so an admin can never remove another
+      // restaurant's item by id (defence-in-depth — reads are already scoped).
+      const count = await service.withPrisma('menu_delete_item_failed', async prisma => {
+        const result = await prisma.menuItem.deleteMany({
+          where: { id: Number(id), restaurantId: service.restaurantId }
+        });
+        return result.count;
+      }, null);
+      if (count === null) return res.status(500).json({ error: 'Delete failed' });
+      if (count === 0) return res.status(404).json({ error: 'Item not found' });
       socketService.emitMenuUpdated();
       res.json({ ok: true });
     },
@@ -67,17 +72,18 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
       const service = prismaMenuService || fileService?.prismaMenu;
       if (!service) return res.status(503).json({ error: 'Not available' });
       const numIds = ids.map(Number);
-      const ok = await service.withPrisma('menu_bulk_action_failed', async prisma => {
-        if (action === 'delete') {
-          await prisma.menuItem.deleteMany({ where: { id: { in: numIds } } });
-        } else {
-          await prisma.menuItem.updateMany({ where: { id: { in: numIds } }, data: { visible: action === 'show' } });
-        }
-        return true;
-      }, false);
-      if (!ok) return res.status(500).json({ error: 'Bulk action failed' });
+      // Scope to this tenant so a bulk action can never touch another restaurant's
+      // items, even if a foreign id is passed in. Report the real affected count.
+      const count = await service.withPrisma('menu_bulk_action_failed', async prisma => {
+        const where = { id: { in: numIds }, restaurantId: service.restaurantId };
+        const result = action === 'delete'
+          ? await prisma.menuItem.deleteMany({ where })
+          : await prisma.menuItem.updateMany({ where, data: { visible: action === 'show' } });
+        return result.count;
+      }, null);
+      if (count === null) return res.status(500).json({ error: 'Bulk action failed' });
       socketService.emitMenuUpdated();
-      res.json({ ok: true, count: numIds.length });
+      res.json({ ok: true, count });
     },
 
     async getAdminItems(req, res) {
