@@ -198,14 +198,16 @@ async function startServer() {
   const socketService = new SocketService(config, fileService, logger, { auth });
   socketService.initialize(server);
 
-  const aiService = new AiService(config, fileService, socketService, { logger });
+  // Waiter-AI: deterministic business logic + pluggable wording layer (hybrid).
+  // Built before aiService so the shared reasonComposer (Phase 3A) reuses one
+  // NLG instance across the chatbot, the customer cards and the waiter app.
+  const nlgService = createNlgService({ config, logger });
+  const aiService = new AiService(config, fileService, socketService, { logger, nlgService });
   const mediaEnrichmentService = new MediaEnrichmentService(config);
   const recommendationEventService = new RecommendationEventService({ config, logger });
   const recommendationBundleService = new RecommendationBundleService({ config, logger });
   const orderValidationService = createOrderValidationService({ config, fileService, logger });
 
-  // Waiter-AI: deterministic business logic + pluggable wording layer (hybrid).
-  const nlgService = createNlgService({ config, logger });
   const guestService = createGuestService({ config });
   const opportunityService = createOpportunityService({ config, aiService });
   const waiterAnalyticsService = createWaiterAnalyticsService({ config });

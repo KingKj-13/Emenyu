@@ -3,7 +3,10 @@ const classifier = require('./categoryClassifier');
 const { createRotationService } = require('./rotationService');
 const { createRecommendationRules } = require('./recommendationRules');
 const chatbotNlu = require('./chatbotNlu');
+const intentClassifier = require('./intentClassifier');
 const { createKnowledgeService } = require('./knowledgeService');
+const { createNlgService } = require('./nlg/nlgService');
+const { createReasonComposer } = require('./reasonComposer');
 
 const SPECIAL_WORDS = [
   'birthday',
@@ -142,7 +145,10 @@ function publicItem(item = {}, sourceTitle = '') {
     subcategory: item.subcategory || '',
     categoryType: item.categoryType || 'MAIN',
     story: item.story || '',
-    source_title: sourceTitle || item.source_title || ''
+    source_title: sourceTitle || item.source_title || '',
+    // Phase 3A: carry the structured tags so the shared reasonComposer can craft
+    // tag-true copy on any surface. Absent (undefined) when the menu isn't enriched.
+    tags: item.tags && typeof item.tags === 'object' ? item.tags : undefined
   };
 }
 
@@ -310,8 +316,25 @@ function itemQuantity(item = {}) {
   return Number(item.qty || item.quantity || 1) || 1;
 }
 
+// Phase 3A: hard dietary gate. Prefers the Phase-2 tags; falls back to scanning
+// allergens/name when the menu isn't enriched, so a vegetarian/vegan request
+// never surfaces meat regardless of which source proposed the item.
+const MEAT_PROTEINS = new Set(['beef', 'chicken', 'lamb', 'pork', 'seafood', 'game']);
+const MEAT_TEXT = /beef|steak|chicken|wings|lamb|pork|ribs|bacon|prawn|calamari|salmon|fish|seafood|sushi|sashimi|oxtail|game|venison|ostrich|biltong|wors/;
+function dietaryOk(item = {}, diets = []) {
+  const tags = item.tags || {};
+  const dietary = Array.isArray(tags.dietary) ? tags.dietary : [];
+  const protein = Array.isArray(tags.protein) ? tags.protein : [];
+  const hasMeat = tags.protein
+    ? protein.some(p => MEAT_PROTEINS.has(p))
+    : MEAT_TEXT.test(`${item.allergens || ''} ${item.searchText || item.name || ''}`.toLowerCase());
+  if (diets.includes('vegan')) return tags.dietary ? dietary.includes('vegan') : !hasMeat;
+  if (diets.includes('vegetarian')) return dietary.includes('vegetarian') || !hasMeat;
+  return true;
+}
+
 class AiService {
-  constructor(config, fileService, socketService, { logger = null } = {}) {
+  constructor(config, fileService, socketService, { logger = null, nlgService = null } = {}) {
     this.config = config;
     this.fileService = fileService;
     this.socketService = socketService;
@@ -319,6 +342,10 @@ class AiService {
     this.rotation = createRotationService({ config, logger });
     this.rules = createRecommendationRules({ config, logger });
     this.knowledge = createKnowledgeService({ config, fileService, logger });
+    // Phase 3A: shared copy layer (one voice for cards/chat/waiter). Reuses the
+    // injected NLG service when available, else builds its own (always offline).
+    this.nlgService = nlgService || createNlgService({ config, logger });
+    this.reason = createReasonComposer({ nlgService: this.nlgService, logger });
   }
 
   async getMenuContext() {
@@ -336,6 +363,8 @@ class AiService {
     // "whats good", "wats gud", "stake", "vegitarian" reach the right intent.
     const nlu = chatbotNlu.normalize(message);
     const lower = nlu.normalized || message.toLowerCase();
+    // Phase 3A: structured intent + slots (attribute/dietary/occasion) for tag-aware routing.
+    const intent = intentClassifier.classify(message);
     const knowledgeIntent = this.knowledge.detectIntent(lower);
     const knowledgeAnswer = knowledgeIntent && knowledgeIntent !== 'special'
       ? await this.knowledge.answer(knowledgeIntent, lower, menuContext)
@@ -377,6 +406,22 @@ class AiService {
             ? 'Guests who order like this also lean toward'
             : 'I would steer you toward'
         ),
+        suggestions
+      };
+    } else if (['attribute', 'dietary', 'occasion'].includes(intent.type)) {
+      // Phase 3A: tag-aware matching for "something spicy", "anything light",
+      // "vegetarian options", "watching the football", etc.
+      const suggestions = await this.recommend({
+        cart: Array.isArray(payload.cart) ? payload.cart : [],
+        limit: 4,
+        intent,
+        reason: nlu.tokens.join(' '),
+        tableId: requestBody.tableId,
+        deviceId: payload.deviceId,
+        menuContext
+      });
+      responseData = {
+        reply: this.buildSuggestionReply(suggestions, this.intentLead(intent)),
         suggestions
       };
     } else if (lower.includes('wine') || lower.includes('cellar') || lower.includes('champagne') || lower.includes('shiraz') || lower.includes('cabernet') || lower.includes('merlot') || lower.includes('pinotage') || lower.includes('sauvignon') || lower.includes('chardonnay')) {
@@ -726,45 +771,6 @@ class AiService {
     };
   }
 
-  pairingReason(pairing, forItem) {
-    const cat = (pairing.categoryType || '').toUpperCase();
-    const pairingName = (pairing.name || '').toLowerCase();
-    const foodName = (forItem?.name || '').toLowerCase();
-    if (cat === 'WINE') {
-      if (/steak|beef|rump|fillet|tomahawk|ribeye|wagyu/.test(foodName)) return 'Full-bodied red — pairs beautifully with grilled beef.';
-      if (/prawn|seafood|salmon|calamari|kingklip/.test(foodName)) return 'Crisp white — a classic match for seafood.';
-      if (/lamb|pork/.test(foodName)) return 'Medium-bodied red — complements the richness.';
-      if (/burger|ribs|chicken/.test(foodName)) return 'Easy-drinking red — great with grilled proteins.';
-      if (/pasta|cream|mushroom/.test(foodName)) return 'Light white or rosé — beautiful with pasta.';
-      return 'Recommended wine pairing for this dish.';
-    }
-    if (cat === 'DRINK') {
-      if (/beer|lager|cider/.test(pairingName)) return 'A cold beer — the classic grill companion.';
-      if (/cocktail|margarita|old fashioned|martini/.test(pairingName)) return 'A signature cocktail to round off the evening.';
-      if (/mocktail|lemonade|iced tea/.test(pairingName)) return 'A refreshing non-alcoholic choice.';
-      return 'Great drink to round off this course.';
-    }
-    if (cat === 'DESSERT') return 'Sweet finish to complete the meal.';
-    if (cat === 'STARTER') {
-      if (/calamari|prawn|oyster/.test(pairingName)) return 'A perfect light start before the mains.';
-      if (/garlic bread|bruschetta/.test(pairingName)) return 'Share at the table before mains arrive.';
-      return 'Light start before your main.';
-    }
-    if (cat === 'MAIN') {
-      if (/chips|fries/.test(pairingName)) return 'Classic side — goes with almost everything.';
-      if (/onion rings/.test(pairingName)) return 'Crispy side — a crowd favourite.';
-      if (/sauce/.test(pairingName)) return 'Drizzle it over — takes it to the next level.';
-      if (/salad/.test(pairingName)) return 'Fresh balance alongside a rich main.';
-      if (/garlic bread/.test(pairingName)) return 'Mop up every last drop of sauce.';
-      return 'Goes well with this dish.';
-    }
-    const src = pairing.source_title || '';
-    if (src === "Chef's Pairing") return "Chef's hand-picked pairing.";
-    if (src === 'People also ordered') return 'Other guests ordering this also chose it.';
-    if (src === 'Cellar recommendation') return 'From the cellar — highly recommended.';
-    return 'Goes well with this dish.';
-  }
-
   async buildWineReply(menuContext, lower, payload = {}) {
     const wineSuggestions = await this.recommend({
       cart: Array.isArray(payload.cart) ? payload.cart : [],
@@ -797,13 +803,31 @@ class AiService {
     return `${prefix} ${names.join(', ')}. Tap a dish card and I can help you build the rest of the table.`;
   }
 
+  // Phase 3A: a short, intent-shaped lead-in for tag-matched suggestions.
+  intentLead(intent) {
+    const s = (intent && intent.slots) || {};
+    if (s.spice) return 'For a bit of heat, try';
+    if (s.body === 'light') return 'Something on the lighter side —';
+    if (s.body === 'full') return 'For a hearty plate —';
+    if ((s.dietary || []).includes('vegan')) return 'Plant-based picks —';
+    if ((s.dietary || []).length) return 'Vegetarian-friendly —';
+    if (s.occasion === 'sharing') return 'Great for the table —';
+    if (s.occasion === 'celebration') return "Let's make it special —";
+    if (s.occasion === 'date') return 'For a memorable evening —';
+    if (s.occasion === 'quick') return 'Quick and satisfying —';
+    if ((s.proteinWanted || []).length) return `For ${s.proteinWanted[0]} lovers, I'd suggest`;
+    return 'I would steer you toward';
+  }
+
   async aiPairing(payload = {}) {
     const rawItem = payload.item || payload.selectedItem || payload.name || payload.cart?.[0];
     const menuContext = await this.getMenuContext();
     const item = typeof rawItem === 'string' ? fuzzyFindItem(menuContext, rawItem) : fuzzyFindItem(menuContext, rawItem?.name) || rawItem;
     const recs = await this.recommend({ cart: item ? [item] : [], limit: 6, menuContext });
 
-    const enriched = recs.map(pairing => ({
+    // Phase 3A: one shared copy layer (varietal notes, dish hooks, tag bridges,
+    // chef-authored reason verbatim, never blank) — replaces the old bland templates.
+    const enriched = await Promise.all(recs.map(async pairing => ({
       name: pairing.name,
       price: pairing.price,
       img: pairing.img,
@@ -811,8 +835,8 @@ class AiService {
       beverageKind: pairing.beverageKind,
       source_title: pairing.source_title,
       chef: pairing.chef === true,
-      reason: this.pairingReason(pairing, item)
-    }));
+      reason: await this.reason.pairingReason(pairing, item)
+    })));
 
     const foodPairings = enriched.filter(p => !['WINE', 'DRINK'].includes(p.categoryType || ''));
     const drinkPairings = enriched.filter(p => ['WINE', 'DRINK'].includes(p.categoryType || ''));
@@ -902,6 +926,14 @@ class AiService {
       });
     }
 
+    // 2.5) Phase 3A: tag-aware matching. When the chat intent carries attribute/
+    //      dietary/occasion slots (spicy/light/seafood/veg/football…), match the
+    //      Phase-2 metadata.tags directly — a high band, below chef, above the
+    //      generic algorithmic sources. No-op when the menu isn't enriched.
+    if (payload.intent && intentClassifier.hasAttributeSlots(payload.intent.slots || {})) {
+      this.addTagMatches(payload.intent, menuContext, addCandidate);
+    }
+
     // 3) Algorithmic fallback sources — only fill what chef curation did not cover.
     this.addPeopleAlsoOrdered(cartNames, menuContext, orderRecords, addCandidate);
     this.addPerfectPairings(cartNames, menuContext, addCandidate);
@@ -931,7 +963,17 @@ class AiService {
     const { ordered } = this.rotation.rotate(candidates, payload);
     const { kept } = this.rules.applyCategorySafety(ordered, enrichedCart);
 
-    return kept.slice(0, recommendationLimit).map(candidate => {
+    // Phase 3A: enforce a dietary request as a hard constraint — meat must never
+    // reach a vegetarian/vegan result, even from the popular/backfill sources.
+    // Never returns empty (falls back to the unfiltered set if nothing qualifies).
+    let finalKept = kept;
+    const wantDiet = payload.intent && payload.intent.slots && payload.intent.slots.dietary;
+    if (Array.isArray(wantDiet) && wantDiet.length) {
+      const filtered = kept.filter(candidate => dietaryOk(candidate.item, wantDiet));
+      if (filtered.length) finalKept = filtered;
+    }
+
+    return finalKept.slice(0, recommendationLimit).map(candidate => {
       const pub = publicItem(candidate.item, candidate.source);
       pub.beverageKind = candidate.beverageKind && candidate.beverageKind !== 'NONE'
         ? candidate.beverageKind
@@ -1153,6 +1195,31 @@ class AiService {
         addCandidate(choice, suggestion.title, suggestion.score);
       }
     });
+  }
+
+  // Phase 3A: score every menu item against the chat intent's slots using the
+  // Phase-2 metadata.tags, and add the strongest as high-priority candidates.
+  // Occasion intents also nudge in an archetype drink (football→beer, etc.).
+  addTagMatches(intent, menuContext, addCandidate) {
+    const slots = intent.slots || {};
+
+    menuContext.items
+      .map(item => ({ item, score: intentClassifier.tagScore(item.tags, slots) }))
+      .filter(entry => entry.score > 0)
+      .sort((left, right) => right.score - left.score)
+      .slice(0, 8)
+      .forEach(({ item, score }) => addCandidate(item, 'Matched to your taste', 200 + score));
+
+    // Occasion archetype drinks (only when an occasion was detected).
+    const archetypeDrink = slots.occasion === 'sharing'
+      ? { kind: 'beer', title: 'A cold one for the table' }
+      : slots.occasion === 'celebration'
+        ? { kind: 'sparkling', title: 'Something to celebrate with' }
+        : null;
+    if (archetypeDrink) {
+      const drink = menuContext.items.find(item => item.tags && item.tags.drinkType === archetypeDrink.kind);
+      if (drink) addCandidate(drink, archetypeDrink.title, 230);
+    }
   }
 
   addPopularCandidates(menuContext, popularity, addCandidate) {

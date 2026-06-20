@@ -19,6 +19,7 @@
     "auth:rotate": "node scripts/rotate-weak-accounts.js",
     "reco:seed": "node scripts/seed-chef-recommendations.js",
     "reco:validate": "node scripts/phase3-validate.js",
+    "chat:validate": "node scripts/chat-validate.js",
     "reco:health": "node scripts/reco-health.js",
     "reco:health:test": "node scripts/reco-health.js --selftest",
     "reco:verify:live": "node scripts/reco-verify-live.js",
