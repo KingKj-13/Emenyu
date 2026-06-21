@@ -86,6 +86,23 @@ function check(name, pass, detail) { results.push({ section, name, pass: !!pass,
   const cartCtx = chatSession.build([], fixtureCtx, [{ name: 'SEARED SALMON' }]);
   check('cart item becomes the anchor', cartCtx.anchorDish && cartCtx.anchorDish.name === 'SEARED SALMON', `anchor=${cartCtx.anchorDish && cartCtx.anchorDish.name}`);
 
+  // ── 5. Phase 3C: authored hero pairings (Commit A) ──────────────────────────
+  group('5. Authored hero pairings');
+  const { createHeroPairings } = require('../server/services/heroPairings');
+  const heroSvc = createHeroPairings({});
+  check('hero pairings file loaded', heroSvc.ready);
+  check('"RIBEYE 380g" → Ribeye hero dish', (heroSvc.dishFor('RIBEYE 380g', { protein: ['beef'] }) || {}).dish === 'Ribeye');
+  check('"WAGYU RIBEYE 300g" → Wagyu Ribeye (more specific)', (heroSvc.dishFor('WAGYU RIBEYE 300g', { protein: ['beef'] }) || {}).dish === 'Wagyu Ribeye');
+  check('protein gate: KINGKLIP FILLET is NOT a beef "Fillet"', !heroSvc.dishFor('KINGKLIP FILLET', { protein: ['seafood'] }));
+  const heroReason = heroSvc.reasonFor({ name: 'RIBEYE 380g', tags: { protein: ['beef'] } }, { name: 'Neil Ellis Cab', category: 'CABERNET SAUVIGNON' });
+  check('Ribeye × Cabernet bottle → the authored hero line', /Cabernet's firm tannin/.test(heroReason || ''), `got="${heroReason}"`);
+  check('Ribeye × Sauvignon Blanc bottle → no hero (wrong varietal)', heroSvc.reasonFor({ name: 'RIBEYE 380g', tags: { protein: ['beef'] } }, { name: 'X', category: 'SAUVIGNON BLANC' }) === null);
+
+  const stubHero = { ready: true, reasonFor: (s, t) => (s && s.name === 'RIBEYE 380g' && t && t.name === 'HeroCab') ? 'HERO LINE' : null };
+  const composerH = createReasonComposer({ heroPairings: stubHero });
+  check('reasonComposer: hero tier beats chef reason', (await composerH.pairingReason({ name: 'HeroCab', categoryType: 'WINE', reason: 'chef line' }, { name: 'RIBEYE 380g' })) === 'HERO LINE');
+  check('reasonComposer: falls to chef when no hero', (await composerH.pairingReason({ name: 'Other', categoryType: 'WINE', reason: 'chef line' }, { name: 'RIBEYE 380g' })) === 'chef line');
+
   // ── Report ──────────────────────────────────────────────────────────────────
   const failed = results.filter(r => !r.pass);
   if (process.argv.includes('--json')) {

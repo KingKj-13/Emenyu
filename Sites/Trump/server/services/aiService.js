@@ -8,6 +8,7 @@ const chatSession = require('./chatSession');
 const { createKnowledgeService } = require('./knowledgeService');
 const { createNlgService } = require('./nlg/nlgService');
 const { createReasonComposer } = require('./reasonComposer');
+const { createHeroPairings } = require('./heroPairings');
 
 const SPECIAL_WORDS = [
   'birthday',
@@ -352,10 +353,12 @@ class AiService {
     this.rotation = createRotationService({ config, logger });
     this.rules = createRecommendationRules({ config, logger });
     this.knowledge = createKnowledgeService({ config, fileService, logger });
-    // Phase 3A: shared copy layer (one voice for cards/chat/waiter). Reuses the
-    // injected NLG service when available, else builds its own (always offline).
+    // Phase 3A/3C: shared copy layer (one voice for cards/chat/waiter) with the
+    // Tier-1 authored hero pairings layered in. Reuses the injected NLG service
+    // when available, else builds its own (always offline).
     this.nlgService = nlgService || createNlgService({ config, logger });
-    this.reason = createReasonComposer({ nlgService: this.nlgService, logger });
+    this.hero = createHeroPairings({ logger });
+    this.reason = createReasonComposer({ nlgService: this.nlgService, heroPairings: this.hero, logger });
   }
 
   async getMenuContext() {
@@ -579,7 +582,9 @@ class AiService {
         img: r.img,
         categoryType: r.categoryType,
         story: r.story || '',
-        reason: this.cartRecReason(r, cart),
+        // Phase 3C: the waiter reads the same composed reason as the cards/chat
+        // (authored hero → chef → Tier-2). cartRecReason remains only as a guard.
+        reason: r.reason || this.cartRecReason(r, cart),
         upsell: Math.round(Number(r.price) || 0),
         script: this.cartRecScript(r),
         // Phase 4 analytics attribution.
@@ -1038,6 +1043,13 @@ class AiService {
       });
     }
 
+    // 2.4) Phase 3C: AUTHORED HERO pairings. When the cart holds a hero dish,
+    //      prefer its authored varietals — boost the in-stock bottles of each
+    //      varietal (rotationService rotates them). Band below chef, above all else.
+    if (this.hero && this.hero.ready && cart.length) {
+      this.addHeroPairings(cart, menuContext, addCandidate);
+    }
+
     // 2.5) Phase 3A: tag-aware matching. When the chat intent carries attribute/
     //      dietary/occasion slots (spicy/light/seafood/veg/football…), match the
     //      Phase-2 metadata.tags directly — a high band, below chef, above the
@@ -1085,20 +1097,28 @@ class AiService {
       if (filtered.length) finalKept = filtered;
     }
 
-    return finalKept.slice(0, recommendationLimit).map(candidate => {
+    // Phase 3C: ONE copy source. Compose every result's reason via reasonComposer
+    // (authored hero → chef → tag-true Tier-2 → never-blank), anchored to the
+    // primary food dish in the cart so a hero dish renders its varietal's line.
+    const sourceDish = cart
+      .map(c => fuzzyFindItem(menuContext, c.name))
+      .find(m => m && !['WINE', 'DRINK'].includes(m.categoryType)) || null;
+
+    const out = [];
+    for (const candidate of finalKept.slice(0, recommendationLimit)) {
       const pub = publicItem(candidate.item, candidate.source);
       pub.beverageKind = candidate.beverageKind && candidate.beverageKind !== 'NONE'
         ? candidate.beverageKind
         : (pub.categoryType === 'WINE' ? 'WINE' : pub.categoryType === 'DRINK' ? classifier.beverageKind(candidate.item) : 'NONE');
-      if (candidate.reason) {
-        pub.reason = candidate.reason;
-      }
+      if (candidate.reason) pub.reason = candidate.reason;
       pub.chef = candidate.chef === true;
       // Phase 4: carry the rotation group through so analytics can attribute
       // impressions/clicks to the group the engine drew from.
       pub.rotationGroup = candidate.rotationGroup || '';
-      return pub;
-    });
+      pub.reason = await this.reason.pairingReason(pub, sourceDish);
+      out.push(pub);
+    }
+    return out;
   }
 
   readCart(payload = {}) {
@@ -1322,15 +1342,47 @@ class AiService {
       .slice(0, 8)
       .forEach(({ item, score }) => addCandidate(item, 'Matched to your taste', 200 + score));
 
-    // Occasion archetype drinks (only when an occasion was detected).
-    const archetypeDrink = slots.occasion === 'sharing'
-      ? { kind: 'beer', title: 'A cold one for the table' }
-      : slots.occasion === 'celebration'
-        ? { kind: 'sparkling', title: 'Something to celebrate with' }
-        : null;
-    if (archetypeDrink) {
-      const drink = menuContext.items.find(item => item.tags && item.tags.drinkType === archetypeDrink.kind);
-      if (drink) addCandidate(drink, archetypeDrink.title, 230);
+    // Phase 3C: occasion archetype from the authored occasions block — boost the
+    // curated lead-with dishes and the occasion's drinks (football → Castle +
+    // sharing plates, celebration → bubbles, date → Cab/Pinot, group → platter).
+    if (slots.occasion && this.hero && this.hero.ready) {
+      const arch = this.hero.archetypeFor(slots.occasion);
+      if (arch) {
+        arch.leadWith.forEach((dishName, i) => {
+          const item = this.hero.itemsForDishName(menuContext.items, dishName)[0];
+          if (item) addCandidate(item, 'Made for the occasion', 270 - i);
+        });
+        arch.drinkKeys.forEach((vk, i) => {
+          const bottle = this.hero.bottlesOfVarietal(menuContext.items, vk)[0];
+          if (bottle) addCandidate(bottle, 'Goes with the moment', 250 - i);
+        });
+      }
+    }
+  }
+
+  // Phase 3C: boost the in-stock bottles of a hero dish's authored varietals so
+  // the drink recommended for that dish is its sommelier pairing. All of a dish's
+  // hero bottles share ONE rotation group, so rotationService rotates across the
+  // varietals (Cabernet ↔ Shiraz) and the bottles within them. Band 1200 — above
+  // the legacy chef-rec table (these authored heroes are the source of truth now).
+  addHeroPairings(cart, menuContext, addCandidate) {
+    for (const line of cart) {
+      const src = fuzzyFindItem(menuContext, line.name);
+      if (!src) continue;
+      const dish = this.hero.dishFor(src.name, src.tags || {});
+      if (!dish) continue;
+      const group = `hero:${normalizeName(dish.dish)}`;
+      dish.varietals.forEach(v => {
+        if (!v.key) return;
+        const score = v.tier === 'hero' ? 1200 : 1150;
+        this.hero.bottlesOfVarietal(menuContext.items, v.key).forEach(bottle => {
+          addCandidate(bottle, 'Chef pairing', score, {
+            chef: true,
+            rotationGroup: group,
+            priority: v.tier === 'hero' ? 100 : 80
+          });
+        });
+      });
     }
   }
 

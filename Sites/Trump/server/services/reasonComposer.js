@@ -11,7 +11,7 @@
 const { KINDS } = require('./nlg/nlgProvider');
 const { createNlgService } = require('./nlg/nlgService');
 
-function createReasonComposer({ nlgService = null, logger = null } = {}) {
+function createReasonComposer({ nlgService = null, heroPairings = null, logger = null } = {}) {
   const nlg = nlgService || createNlgService({ logger });
 
   function lc(v) { return String(v || '').toLowerCase(); }
@@ -36,7 +36,13 @@ function createReasonComposer({ nlgService = null, logger = null } = {}) {
   // The per-item reason shown on cards / chat / waiter for `target`, optionally
   // paired to an anchor dish `source`. tone: 'short' | 'professional' | 'luxury' | …
   async function pairingReason(target = {}, source = null, { tone = 'professional' } = {}) {
-    // Tier 1 — chef authored reason wins verbatim.
+    // Tier 1a — AUTHORED HERO: the curated dish × varietal line (renders for any
+    // bottle of that varietal). One source for cards, chat and the waiter.
+    if (heroPairings && heroPairings.ready && source) {
+      const hero = heroPairings.reasonFor(source, target);
+      if (hero) return hero;
+    }
+    // Tier 1b — chef per-pair authored reason wins verbatim.
     if (typeof target.reason === 'string' && target.reason.trim()) {
       return target.reason.trim();
     }

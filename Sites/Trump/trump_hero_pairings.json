@@ -1,0 +1,112 @@
+{
+  "meta": {
+    "restaurant": "Trumps Prime Grillhouse",
+    "purpose": "Tier-1 authored 'hero' pairings for Donald. These override the engine's auto-generated (Tier-2) lines for the dishes that matter most. The ~90k-pair long tail stays auto-generated from tags.",
+    "voice": "Donald — warm, a real sommelier's eye, unstuffy, one sentence each, sensory, always with a clear 'why'.",
+    "drink_naming": "Drinks are named at the VARIETAL / CATEGORY level (Cabernet Sauvignon, Sauvignon Blanc, Castle Lager, Cap Classique). The menu lists many specific bottles under each varietal — the engine should expand a varietal here to the specific in-stock bottles of that varietal (and rotate between them).",
+    "axis_variety": "Every reason deliberately uses a DIFFERENT angle (fat-and-tannin, acid-lift, spice-echo, sauce-echo, braise-mirror, bubbles-for-delicacy, spice-cool, local-classic, etc.) so no two read alike. Preserve this when generating the long tail.",
+    "tiers": "hero = the restaurant's own printed suggestion or a signature match. strong = a sommelier-sound alternative.",
+    "source_note": "Steak pairings are taken directly from Trumps' own 'WINE PAIRING SUGGESTION' lines on the menu. The rest follow standard grillhouse sommelier logic."
+  },
+
+  "pairings": [
+    { "dish": "Fillet", "category": "Premium Steak", "drink": "Merlot", "drink_type": "red", "tier": "hero", "axis": "gentleness", "reason": "The fillet is the gentlest cut on the menu, so it takes a gentle wine — soft, plummy Merlot lets that delicate tenderness lead instead of fighting it." },
+    { "dish": "Fillet", "category": "Premium Steak", "drink": "Pinot Noir", "drink_type": "red", "tier": "hero", "axis": "elegance", "reason": "Silky meets silky — Pinot Noir's light red-cherry elegance flatters the fillet without ever weighing it down." },
+    { "dish": "Fillet", "category": "Premium Steak", "drink": "Pinotage", "drink_type": "red", "tier": "strong", "axis": "local-restraint", "reason": "A softer Pinotage brings just enough dark fruit to frame the fillet's subtle flavour — a homegrown match the cellar's proud of." },
+
+    { "dish": "Sirloin", "category": "Premium Steak", "drink": "Shiraz", "drink_type": "red", "tier": "hero", "axis": "spice-echo", "reason": "Sirloin carries a robust, open flavour, and Shiraz answers it with black pepper and dark fruit that lean straight into the char." },
+    { "dish": "Sirloin", "category": "Premium Steak", "drink": "Malbec", "drink_type": "red", "tier": "hero", "axis": "fruit-balance", "reason": "Lean and savoury, the sirloin loves Malbec's plush plum and velvet tannin — fruit to round out the cut's bolder edge." },
+    { "dish": "Sirloin", "category": "Premium Steak", "drink": "Merlot", "drink_type": "red", "tier": "strong", "axis": "smoothness", "reason": "When you want the sirloin easy-going, Merlot's ripe plum and supple finish keep everything smooth." },
+
+    { "dish": "Ribeye", "category": "Premium Steak", "drink": "Cabernet Sauvignon", "drink_type": "red", "tier": "hero", "axis": "fat-and-tannin", "reason": "Marbled and char-grilled, the ribeye wants a wine with backbone — Cabernet's firm tannin and blackcurrant depth stand right up to all that richness." },
+    { "dish": "Ribeye", "category": "Premium Steak", "drink": "Shiraz", "drink_type": "red", "tier": "hero", "axis": "intensity-match", "reason": "Bold beef, bold wine — Shiraz brings blackberry and a peppery kick that matches the ribeye's intensity bite for bite." },
+    { "dish": "Ribeye", "category": "Premium Steak", "drink": "Malbec", "drink_type": "red", "tier": "hero", "axis": "smoke-and-fat", "reason": "Malbec's smoky, generous fruit wraps around the ribeye's marbling like it was made for it." },
+
+    { "dish": "Rump", "category": "Premium Steak", "drink": "Cabernet Sauvignon", "drink_type": "red", "tier": "hero", "axis": "richness-cut", "reason": "That rich line of fat through the rump needs structure to cut it, and Cabernet's grip and dark fruit do exactly that." },
+    { "dish": "Rump", "category": "Premium Steak", "drink": "Shiraz", "drink_type": "red", "tier": "hero", "axis": "depth", "reason": "Juicy and full-flavoured, the rump meets its match in Shiraz's spice and depth." },
+    { "dish": "Rump", "category": "Premium Steak", "drink": "Red Blend", "drink_type": "red", "tier": "hero", "axis": "complexity", "reason": "A Bordeaux-style blend gives the rump layers — cassis, cedar, fine tannin — to match its rich, juicy character." },
+
+    { "dish": "T-Bone", "category": "Premium Steak", "drink": "Red Blend", "drink_type": "red", "tier": "hero", "axis": "two-in-one", "reason": "Two cuts on one bone — tender fillet and marbled sirloin — so a blend that does it all, dark fruit and firm structure together, covers both sides of the plate." },
+    { "dish": "T-Bone", "category": "Premium Steak", "drink": "Cabernet Sauvignon", "drink_type": "red", "tier": "hero", "axis": "structure", "reason": "The marbled sirloin side calls the shots here — Cabernet's tannin and blackcurrant keep pace with every bite." },
+    { "dish": "T-Bone", "category": "Premium Steak", "drink": "Shiraz", "drink_type": "red", "tier": "hero", "axis": "char", "reason": "Shiraz's pepper and dark fruit lean into the char on both sides of the bone." },
+
+    { "dish": "Tomahawk", "category": "Premium Steak", "drink": "Malbec", "drink_type": "red", "tier": "hero", "axis": "scale-match", "reason": "A showpiece cut wants a generous wine — plush, smoky Malbec is big enough to meet every charred, beefy edge." },
+    { "dish": "Tomahawk", "category": "Premium Steak", "drink": "Cabernet Sauvignon", "drink_type": "red", "tier": "hero", "axis": "power", "reason": "All that aged, beefy intensity calls for Cabernet's power and grip — a heavyweight for a heavyweight." },
+    { "dish": "Tomahawk", "category": "Premium Steak", "drink": "Shiraz", "drink_type": "red", "tier": "hero", "axis": "weight", "reason": "Shiraz brings the spice and dark-fruit weight to stand beside the tomahawk's bold flavour." },
+
+    { "dish": "Wagyu Ribeye", "category": "Wagyu", "drink": "Cabernet Sauvignon", "drink_type": "red", "tier": "hero", "axis": "fat-cut", "reason": "Wagyu marbling is pure richness, so it needs a wine that won't fold — Cabernet's firm tannin slices clean through the buttery fat." },
+    { "dish": "Wagyu Fillet", "category": "Wagyu", "drink": "Pinot Noir", "drink_type": "red", "tier": "hero", "axis": "finesse", "reason": "Rich but delicate, the Wagyu fillet shines with a silky Pinot Noir that lifts without overpowering." },
+    { "dish": "Wagyu Sirloin", "category": "Wagyu", "drink": "Shiraz", "drink_type": "red", "tier": "strong", "axis": "equals", "reason": "The Wagyu sirloin's deep flavour and Shiraz's peppery dark fruit are a match of equals." },
+    { "dish": "Wagyu Rump", "category": "Wagyu", "drink": "Red Blend", "drink_type": "red", "tier": "strong", "axis": "layers", "reason": "Intense marbling meets a layered blend — cedar, cassis and structure to carry the Wagyu's richness." },
+
+    { "dish": "Ostrich Fillet", "category": "Venison & Game", "drink": "Pinot Noir", "drink_type": "red", "tier": "hero", "axis": "lean-needs-light", "reason": "Ostrich is lean, dark and faintly sweet, so it pairs best with a lighter red — Pinot Noir's red-cherry brightness suits it far better than anything heavy." },
+    { "dish": "Ostrich Fillet", "category": "Venison & Game", "drink": "Merlot", "drink_type": "red", "tier": "strong", "axis": "roundness", "reason": "If you'd rather something rounder, Merlot's soft plum keeps the lean ostrich juicy and easy." },
+    { "dish": "Kudu", "category": "Venison & Game", "drink": "Pinotage", "drink_type": "red", "tier": "hero", "axis": "earth-and-smoke", "reason": "Kudu's gamey, earthy character finds a soulmate in Pinotage, whose smoky dark-fruit depth echoes the wild edge." },
+    { "dish": "Springbok", "category": "Venison & Game", "drink": "Shiraz", "drink_type": "red", "tier": "hero", "axis": "pepper-lift", "reason": "Lean and earthy springbok loves Shiraz's black pepper and plum — spice to lift the subtle, gamey sweetness." },
+
+    { "dish": "Lamb Chops", "category": "Lamb", "drink": "Shiraz", "drink_type": "red", "tier": "hero", "axis": "spice-and-sweet", "reason": "Lamb and Shiraz are old friends — the wine's peppery spice echoes the char while its dark fruit lifts the chop's natural sweetness." },
+    { "dish": "Lamb Chops", "category": "Lamb", "drink": "Cabernet Sauvignon", "drink_type": "red", "tier": "strong", "axis": "cut", "reason": "For a firmer match, Cabernet's tannin cuts through the lamb's richness and leaves the palate clean." },
+    { "dish": "Lamb Rump", "category": "Lamb", "drink": "Pinotage", "drink_type": "red", "tier": "hero", "axis": "local-richness", "reason": "The lamb rump's bold, aged flavour meets Pinotage's smoke and dark fruit — rich, earthy, unmistakably South African." },
+    { "dish": "Lamb Shank", "category": "Lamb", "drink": "Red Blend", "drink_type": "red", "tier": "hero", "axis": "braise-echo", "reason": "Slow-braised in red wine, the shank wants that same depth back on the table — a full red blend echoes the braise and stands up to the falling-off-the-bone richness." },
+
+    { "dish": "Pork Chops", "category": "Pork & Ribs", "drink": "Chenin Blanc", "drink_type": "white", "tier": "hero", "axis": "fat-cut-white", "reason": "Pork and a touch of sweetness belong together — off-dry Chenin's apple-and-honey fruit cuts the fat and flatters the chop." },
+    { "dish": "Pork Tomahawk", "category": "Pork & Ribs", "drink": "Pinotage", "drink_type": "red", "tier": "strong", "axis": "bbq-and-smoke", "reason": "This marbled pork showpiece can take a light red — Pinotage's smoky fruit matches the bbq baste without overwhelming the meat." },
+    { "dish": "Eisbein", "category": "Pork & Ribs", "drink": "Chenin Blanc", "drink_type": "white", "tier": "hero", "axis": "richness-cut", "reason": "Crackling skin, rich meat and apple sauce — a crisp, off-dry Chenin cuts straight through and keeps every bite bright." },
+    { "dish": "Full Rack Pork Loin Ribs", "category": "Pork & Ribs", "drink": "Shiraz", "drink_type": "red", "tier": "hero", "axis": "bbq-match", "reason": "Sticky, smoky bbq ribs love Shiraz — dark fruit and pepper to match the glaze's sweet-savoury char." },
+    { "dish": "Full Rack Pork Loin Ribs", "category": "Pork & Ribs", "drink": "Castle Lager", "drink_type": "beer", "tier": "strong", "axis": "cold-reset", "reason": "Sometimes sticky ribs just want an ice-cold draught — Castle's crisp, clean bite resets the palate between every messy mouthful." },
+
+    { "dish": "Oxtail", "category": "Oxtail & Beef Ribs", "drink": "Red Blend", "drink_type": "red", "tier": "hero", "axis": "braise-mirror", "reason": "Braised slow in red wine and onion, oxtail wants that richness mirrored — a deep red blend echoes the sauce and matches the melting, savoury meat." },
+    { "dish": "Beef Ribs", "category": "Oxtail & Beef Ribs", "drink": "Shiraz", "drink_type": "red", "tier": "hero", "axis": "smoke-match", "reason": "Slow-cooked and bbq-finished, these ribs meet Shiraz's smoky dark fruit head-on." },
+    { "dish": "Beef Ribs", "category": "Oxtail & Beef Ribs", "drink": "Castle Lager", "drink_type": "beer", "tier": "strong", "axis": "cut-and-cold", "reason": "Big, sticky beef ribs and a cold draught — crisp beer to cut the richness and keep you going." },
+
+    { "dish": "Garlic Lemon Calamari", "category": "Starter", "drink": "Sauvignon Blanc", "drink_type": "white", "tier": "hero", "axis": "acid-lift", "reason": "Crisp calamari, crisper wine — Sauvignon Blanc's zippy citrus cuts the garlic butter and brightens every bite." },
+    { "dish": "Queen Prawns", "category": "Starter", "drink": "Sauvignon Blanc", "drink_type": "white", "tier": "hero", "axis": "acid-and-spice", "reason": "Grilled prawns with peri-peri and lemon garlic want a zesty white — Sauvignon Blanc's bright acidity cools the spice and lifts the sweetness of the prawn." },
+    { "dish": "Mussels", "category": "Starter", "drink": "Chardonnay", "drink_type": "white", "tier": "hero", "axis": "sauce-echo", "reason": "Steamed in white wine, the mussels echo beautifully into a Chardonnay — its soft citrus and gentle weight mirror the creamy broth." },
+    { "dish": "Mussels", "category": "Starter", "drink": "Sauvignon Blanc", "drink_type": "white", "tier": "strong", "axis": "acid-cut", "reason": "For something brighter, Sauvignon Blanc's crisp acidity slices through the creamy white-wine sauce." },
+    { "dish": "Garlic Snails", "category": "Starter", "drink": "Chardonnay", "drink_type": "white", "tier": "hero", "axis": "richness-match", "reason": "Rich, creamy garlic snails meet a buttery Chardonnay — richness matched with richness, balanced by a thread of citrus." },
+
+    { "dish": "Springbok Carpaccio", "category": "Starter", "drink": "Cap Classique", "drink_type": "sparkling", "tier": "hero", "axis": "delicacy-and-bubbles", "reason": "Delicate raw springbok with rocket and parmesan calls for bubbles — Cap Classique's crisp acidity and fine fizz keep every paper-thin slice fresh." },
+    { "dish": "Springbok Carpaccio", "category": "Starter", "drink": "Champagne", "drink_type": "sparkling", "tier": "strong", "axis": "celebration", "reason": "For a celebration, Champagne — its bright, biscuity sparkle is the perfect foil to the lean, savoury carpaccio." },
+    { "dish": "Flash Pan Fried Chicken Livers", "category": "Starter", "drink": "Rose", "drink_type": "rose", "tier": "hero", "axis": "spice-cool", "reason": "Peri-peri livers run hot and rich, so a chilled Rosé works a treat — its strawberry fruit and cool freshness tame the spice." },
+    { "dish": "Chicken Trinchado", "category": "Starter", "drink": "Rose", "drink_type": "rose", "tier": "strong", "axis": "heat-calm", "reason": "Sizzled in peri-peri, the trinchado wants something fruity and cold — Rosé's bright berry calms the heat." },
+    { "dish": "Firecracker Chicken Wings", "category": "Starter", "drink": "Castle Lager", "drink_type": "beer", "tier": "hero", "axis": "spice-and-cold", "reason": "Sweet, sticky, spicy wings and an ice-cold Castle — the crisp draught is the classic cooldown for all that heat and glaze." },
+    { "dish": "Firecracker Chicken Wings", "category": "Starter", "drink": "Savanna Dry", "drink_type": "cider", "tier": "strong", "axis": "cider-cut", "reason": "For a little fruit, a cold Savanna cider cuts the peri-peri and matches the sweet bbq glaze." },
+    { "dish": "Boerewors & Chakalaka", "category": "Starter", "drink": "Pinotage", "drink_type": "red", "tier": "hero", "axis": "local-soulmate", "reason": "Spicy boerewors and smoky Pinotage are a born-and-bred South African pairing — earthy, soulful, and made for each other." },
+    { "dish": "Fried Halloumi Fingers", "category": "Starter", "drink": "Sauvignon Blanc", "drink_type": "white", "tier": "hero", "axis": "acid-and-salt", "reason": "Salty, golden halloumi with sweet chilli wants a crisp white — Sauvignon Blanc's acidity cuts the richness and lifts the sweet-spicy dip." },
+    { "dish": "Beef Biltong", "category": "Starter", "drink": "Pinotage", "drink_type": "red", "tier": "hero", "axis": "local-classic", "reason": "Our own biltong and a glass of Pinotage — dark fruit and smoke beside salty, spiced beef, the way it's meant to be." },
+
+    { "dish": "Greek Salad", "category": "Salad", "drink": "Sauvignon Blanc", "drink_type": "white", "tier": "hero", "axis": "freshness-match", "reason": "Fresh tomato, feta and olives sing alongside a cool Sauvignon Blanc — crisp, herbaceous, and bright as the salad itself." },
+    { "dish": "Halloumi Salad", "category": "Salad", "drink": "Sauvignon Blanc", "drink_type": "white", "tier": "strong", "axis": "zest", "reason": "Zesty lime, salty halloumi and a crisp white — Sauvignon Blanc keeps the whole bowl fresh and lifted." },
+    { "dish": "Caprese & Avocado Salad", "category": "Salad", "drink": "Chardonnay", "drink_type": "white", "tier": "strong", "axis": "creamy-match", "reason": "Creamy avocado and mozzarella meet a softly textured Chardonnay — gentle weight to match, citrus to keep it light." },
+    { "dish": "Trumps Char Grilled Chicken", "category": "Salad", "drink": "Chenin Blanc", "drink_type": "white", "tier": "strong", "axis": "easy", "reason": "Grilled chicken over crisp greens pairs easily with Chenin's apple-fresh fruit — light, clean, and easy-drinking." },
+
+    { "dish": "BBQ / Peri-Peri Beef Burger", "category": "Burger", "drink": "Castle Lager", "drink_type": "beer", "tier": "hero", "axis": "casual-classic", "reason": "A proper steakhouse burger and an ice-cold draught — no fuss, just a crisp Castle to match the char." },
+    { "dish": "Cheese Burger", "category": "Burger", "drink": "Merlot", "drink_type": "red", "tier": "strong", "axis": "juicy-soft", "reason": "If you'd rather wine, Merlot's soft plum and easy tannin suit the juicy beef and melted cheddar." },
+    { "dish": "Jalapeno Chilli And Cheese Burger", "category": "Burger", "drink": "Castle Lite", "drink_type": "beer", "tier": "hero", "axis": "heat-cool", "reason": "Jalapeño heat and sriracha mayo call for cold and crisp — a light draught cools the burn without getting in the way." },
+    { "dish": "Bacon And Cheese Burger", "category": "Burger", "drink": "Shiraz", "drink_type": "red", "tier": "strong", "axis": "smoke-match", "reason": "Smoky bacon and rich cheese stand up to Shiraz's pepper and dark fruit." },
+
+    { "dish": "Half Chicken", "category": "Chicken", "drink": "Chenin Blanc", "drink_type": "white", "tier": "hero", "axis": "spice-balance", "reason": "Flame-grilled peri-peri chicken loves an off-dry Chenin — a touch of sweetness to balance the spice and keep it juicy." },
+    { "dish": "Mushroom Sauce Chicken Breast", "category": "Chicken", "drink": "Chardonnay", "drink_type": "white", "tier": "hero", "axis": "creamy-earthy", "reason": "Creamy mushroom sauce and a buttery, lightly oaked Chardonnay are a natural pair — earthy richness on both sides." },
+    { "dish": "Full Chicken", "category": "Chicken", "drink": "Rose", "drink_type": "rose", "tier": "strong", "axis": "easygoing", "reason": "An easy, crowd-pleasing bird wants an easy, crowd-pleasing Rosé — fresh berry fruit that suits the whole table." },
+
+    { "dish": "Seafood Pasta", "category": "Pasta", "drink": "Sauvignon Blanc", "drink_type": "white", "tier": "hero", "axis": "coastal-lift", "reason": "Prawns, calamari and mussels in a light sauce want a bright, coastal white — Sauvignon Blanc's citrus and acidity lift the whole plate." },
+    { "dish": "Seafood Pasta", "category": "Pasta", "drink": "Chenin Blanc", "drink_type": "white", "tier": "strong", "axis": "gentle-lift", "reason": "Chenin's apple-fresh fruit and gentle weight are another lovely lift for the seafood and cream." },
+    { "dish": "Beef Fillet Pasta", "category": "Pasta", "drink": "Merlot", "drink_type": "red", "tier": "hero", "axis": "soft-tomato", "reason": "Tender fillet strips in napolitana meet Merlot's ripe plum — soft fruit to match the gentle beef and tomato." },
+    { "dish": "Spaghetti Bolognese", "category": "Pasta", "drink": "Red Blend", "drink_type": "red", "tier": "strong", "axis": "savoury-echo", "reason": "Rich, slow-simmered mince and a savoury red blend — dark fruit and herbs that echo the napolitana." },
+    { "dish": "Creamy Basil Pesto & Mushroom", "category": "Pasta", "drink": "Chardonnay", "drink_type": "white", "tier": "strong", "axis": "creamy-veg", "reason": "Earthy mushrooms in a creamy pesto sauce find their match in a soft, citrusy Chardonnay." },
+
+    { "dish": "Death By Chocolate Cake", "category": "Dessert", "drink": "Ferreira Ruby Port", "drink_type": "fortified", "tier": "hero", "axis": "sweet-match", "reason": "Dark, dense chocolate wants a sweet, fortified red — a ruby port's plummy richness meets the ganache without losing its footing." },
+    { "dish": "Death By Chocolate Cake", "category": "Dessert", "drink": "Pinotage", "drink_type": "red", "tier": "strong", "axis": "cocoa-and-fruit", "reason": "For something unexpected, a bold Pinotage — its dark fruit and faint smoke flatter the bitter cocoa." },
+    { "dish": "Cape Malva Pudding", "category": "Dessert", "drink": "Amarula", "drink_type": "fortified", "tier": "hero", "axis": "local-dessert", "reason": "Warm, caramelly malva and creamy Amarula are a South African comfort classic — sweet, rich and made to finish a meal." },
+    { "dish": "Red Velvet Cake", "category": "Dessert", "drink": "Cap Classique", "drink_type": "sparkling", "tier": "strong", "axis": "sweet-sparkle", "reason": "A touch of sweetness and sparkle — an off-dry bubbly lifts the creamy frosting and keeps the cake from feeling heavy." },
+    { "dish": "Chocolate Brownie", "category": "Dessert", "drink": "Ferreira Tawny Port", "drink_type": "fortified", "tier": "strong", "axis": "nutty-match", "reason": "Warm nutty brownie and a tawny port — caramel, nuts and dried fruit, a perfect cosy finish." }
+  ],
+
+  "occasions": [
+    { "occasion": "football / watching the game / sharing", "lead_with": ["Firecracker Chicken Wings", "Full Rack Pork Loin Ribs", "Beef Ribs", "Boerewors & Chakalaka", "Beef Biltong"], "drink": ["Castle Lager (draught)", "Castle Lite", "Savanna Dry"], "note": "Sharing plates + cold draught. Keep it casual and loud-friendly." },
+    { "occasion": "date night", "lead_with": ["Springbok Carpaccio", "Fillet", "Ribeye"], "drink": ["Cabernet Sauvignon", "Pinot Noir", "Cap Classique"], "note": "Finish with Death by Chocolate Cake to share." },
+    { "occasion": "celebration", "lead_with": ["Springbok Carpaccio", "Tomahawk", "Kings Cut Ribeye"], "drink": ["Champagne", "Cap Classique", "Red Blend (Meerlust / Vilafonte)"], "note": "Open with bubbles, a big shared cut for the table, bubbly + cake to close." },
+    { "occasion": "quick bite", "lead_with": ["BBQ / Peri-Peri Beef Burger", "Cheese Burger"], "drink": ["Castle Lager", "Soft drink"], "note": "One plate, one drink, in and out." },
+    { "occasion": "big group / platter", "lead_with": ["Trumps Signature Platter", "The King, Queen Platter", "Mixed Grill"], "drink": ["Pinotage", "Shiraz (by the bottle)"], "note": "A platter to share + a couple of bottles of an easy SA red." }
+  ]
+}

@@ -122,6 +122,16 @@ Donald now has memory, cart-awareness, a guardrail and his name. Validated on `e
 
 **Deferred to 3C:** waiter-only "ordered-together" market-basket rec; point the waiter upsell at `reasonComposer` and delete `cartRecReason`/`cartRecScript`. Hero pairings (you supply) still seed Tier-1.
 
+## 3C / Commit A — authored hero pairings (2026-06-21)
+
+The chef's curated dish × varietal sommelier lines now drive the drink the engine recommends and the reason every surface shows. Local-only; offline.
+
+- **`heroPairings.js`** — loads `trump_hero_pairings.json` (52 dishes × varietal). `dishFor` (protein-gated, most-specific token match — KINGKLIP FILLET never becomes a beef "Fillet"), `reasonFor` (source dish × target bottle's varietal), `bottlesOfVarietal`, `archetypeFor` (occasions). **52/52 dishes mapped to menu items, 0 misses.**
+- **`reasonComposer`** — new Tier-1a: authored hero → Tier-1b chef per-pair → Tier-2 NLG → never-blank. One reason per dish × varietal, applied to any bottle of that varietal.
+- **`recommend()`** — `addHeroPairings` boosts the in-stock bottles of a hero dish's varietals (band 1200, above the legacy chef-rec table) under **one rotation group per dish**, so rotationService rotates across Cabernet ↔ Shiraz and the bottles within. Every result's reason is now composed through the one `reasonComposer` (anchored to the cart's primary food dish) — cards, chat and waiter read identically.
+- **Occasions** — `addTagMatches` occasion archetype rebuilt from the authored `occasions` block (football → sharing plates + Castle, celebration → bubbles, date → Cab/Pinot, group → platter); `intentClassifier` gained a `group` occasion.
+- **Verified live:** Ribeye card/Donald/waiter all → a real in-stock Cabernet (Neil Ellis) with the authored line, one source. Football → Castle + sharing plates. Non-hero kingklip → tag-true Tier-2 (no regression). `chat:validate` 38/38, `reco:validate` 41/41.
+
 ## Open questions for your review
 1. **Donald rebrand pipeline** — OK to add `TRUMP_ASSISTANT_NAME` (default `Donald`) server config + a small public `/api/config` so the client stops hardcoding? (Alternative: keep it a client-only constant.)
 2. **Waiter "ordered-together"** — confirm it's a **new, separate** waiter-only panel (counted social proof), distinct from the existing cart upsell — not a merge.

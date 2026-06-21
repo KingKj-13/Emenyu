@@ -31,6 +31,7 @@ const OCCASION_MAP = [
   ['sharing', /\b(football|soccer|rugby|the game|the match|watching|sports|to share|sharing|with friends|the boys|the lads|group)\b/],
   ['date', /\b(date night|date|romantic|just the two|for two|impress)\b/],
   ['quick', /\b(quick|fast|in a hurry|on the go|grab a|before a movie|quick bite)\b/],
+  ['group', /\b(big group|large group|whole table|group booking|platter for|for the whole)\b/],
 ];
 
 const PAIRING_RE = /\b(pair|pairs|pairing|go with|goes with|with this|with my|wine for|drink for|what wine|what goes)\b/;
