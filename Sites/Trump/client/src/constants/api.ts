@@ -55,6 +55,7 @@ export const ENDPOINTS = {
   tableIntel: (tableId: string) => `${API_PREFIX}/api/waiter/table/${tableId}/intel`,
   coach: `${API_PREFIX}/api/waiter/coach`,
   cartRecommendations: `${API_PREFIX}/api/waiter/cart-recommendations`,
+  orderedTogether: `${API_PREFIX}/api/waiter/ordered-together`,
   sommelier: `${API_PREFIX}/api/sommelier`,
   ask: `${API_PREFIX}/api/ask`,
   recovery: `${API_PREFIX}/api/waiter/recovery`,

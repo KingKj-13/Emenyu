@@ -1,15 +1,16 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Gift } from 'lucide-react';
+import { Gift, Users } from 'lucide-react';
 import { useWaiter } from '../../context/WaiterContext';
 import { api } from '../../services/api';
 import { money } from '../../lib/waiterFormat';
 import { RecommendationCard, type RecommendationItem } from '../../components/reco/RecommendationCard';
 import { trackImpressions, trackAccepted, type RecoContext } from '../../lib/recoAnalytics';
-import type { CartRecResponse } from '../../types/waiter';
+import type { CartRecResponse, OrderedTogetherResponse } from '../../types/waiter';
 
 export function CartRecScreen() {
   const { selectedTableId, order, events, addToOrder, showToast, setTab, shift } = useWaiter();
   const [data, setData] = useState<CartRecResponse | null>(null);
+  const [together, setTogether] = useState<OrderedTogetherResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
   const event = selectedTableId ? events[selectedTableId] : undefined;
@@ -30,6 +31,10 @@ export function CartRecScreen() {
       })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
+    // Phase 3C: waiter-only "ordered together" social proof (separate panel).
+    api.orderedTogether({ cart: order.map(l => ({ name: l.name, price: l.price, qty: l.quantity })) })
+      .then(setTogether)
+      .catch(() => setTogether(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTableId, cartSig, event?.type]);
 
@@ -107,13 +112,39 @@ export function CartRecScreen() {
             variant="waiter"
             showReason
             item={r as RecommendationItem}
-            note={r.script}
             uplift={r.upsell}
             addLabel={`Add to order · ${money(r.price)}`}
             onAdd={() => { trackAccepted(r as RecommendationItem, recoCtx()); add(r.name, r.price, r.categoryType); }}
           />
         </div>
       ))}
+
+      {/* Phase 3C: waiter-only "ordered together" — counted social proof, distinct
+          from the AI upsell above. Never shown to customers. */}
+      {together && together.recommendations.length > 0 && (
+        <>
+          <div className="w-section-label" style={{ marginTop: 22 }}>
+            <span className="w-eyebrow">Ordered together</span><span className="line" />
+            <span className="w-eyebrow-dim">from past tables</span>
+          </div>
+          {together.recommendations.map((r, i) => (
+            <div key={`ot-${r.name}-${i}`} className="w-card" style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Users size={15} color="var(--w-gold)" />
+                <span className="w-eyebrow">{r.countLabel}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 }}>
+                <p className="w-display" style={{ fontSize: 18 }}>{r.name}</p>
+                <span style={{ color: 'var(--w-text2)', fontSize: 13 }}>{money(r.price)}</span>
+              </div>
+              <p style={{ color: 'var(--w-text2)', fontSize: 13, marginTop: 2 }}>{r.why}</p>
+              <button className="w-btn-ghost" style={{ marginTop: 8 }} onClick={() => add(r.name, r.price, r.categoryType)}>
+                Add to order · {money(r.price)}
+              </button>
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 }

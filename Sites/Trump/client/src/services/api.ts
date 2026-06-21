@@ -346,6 +346,10 @@ export const api = {
   coach(payload: { tableId?: string; cart?: unknown[]; dishName?: string; tone?: string }) {
     return postJson<import('../types/waiter').CoachResponse>(ENDPOINTS.coach, payload);
   },
+  orderedTogether(payload: { cart?: unknown[]; limit?: number }) {
+    return postJson<import('../types/waiter').OrderedTogetherResponse>(ENDPOINTS.orderedTogether, payload);
+  },
+
   cartRecommendations(payload: { cart?: unknown[]; event?: string | null; reason?: string }) {
     return postJson<import('../types/waiter').CartRecResponse>(ENDPOINTS.cartRecommendations, payload);
   },

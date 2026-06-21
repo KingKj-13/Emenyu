@@ -26,6 +26,13 @@ function createAiController({ aiService, config = {} }) {
       res.json(data);
     },
 
+    // Phase 3C: waiter-only "ordered together" (counted co-occurrence). The route
+    // is waiter-auth gated; this is never surfaced to customers.
+    async orderedTogether(req, res) {
+      const data = await aiService.orderedTogether(req.body);
+      res.json(data);
+    },
+
     async getChatHistory(req, res) {
       const history = await aiService.getChatHistory();
       res.json(history);

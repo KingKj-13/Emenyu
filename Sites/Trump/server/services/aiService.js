@@ -9,6 +9,7 @@ const { createKnowledgeService } = require('./knowledgeService');
 const { createNlgService } = require('./nlg/nlgService');
 const { createReasonComposer } = require('./reasonComposer');
 const { createHeroPairings } = require('./heroPairings');
+const { computeOrderedTogether } = require('./marketBasket');
 
 const SPECIAL_WORDS = [
   'birthday',
@@ -550,29 +551,13 @@ class AiService {
     return false;
   }
 
-  cartRecReason(rec, cart) {
-    const ct = (rec.categoryType || '').toUpperCase();
-    const main = (cart || []).find(c => /platter|pasta|steak|tomahawk|fillet|rump|prawn|salad|seafood/i.test(c.name || ''));
-    if (ct === 'WINE') return `Pairs beautifully with ${main ? main.name : 'this table’s mains'}`;
-    if (ct === 'DESSERT') return 'A popular way to finish — strong dessert attach rate';
-    if (ct === 'DRINK') return 'A signature pour to lift the average check';
-    if (ct === 'STARTER') return 'A light, high-margin start before the mains';
-    return 'Frequently added by similar tables';
-  }
-
-  cartRecScript(rec) {
-    const ct = (rec.categoryType || '').toUpperCase();
-    if (ct === 'WINE') return `Our ${rec.name} pairs beautifully with your selection — may I pour a glass?`;
-    if (ct === 'DESSERT') return `A lot of guests finish with our ${rec.name}. Would you like one for the table to share?`;
-    if (ct === 'DRINK') return `Can I start you with our ${rec.name}?`;
-    return `Many guests enjoy our ${rec.name} alongside — shall I add one?`;
-  }
-
   async cartRecommendations(payload = {}) {
     const cart = this.readCart(payload);
     const recs = await this.recommend({ cart, limit: 8, reason: payload.reason });
     const cartNames = new Set(cart.map(c => normalizeName(c.name)));
 
+    // Phase 3C: the waiter upsell reads the SAME composed reason as the cards and
+    // chat (authored hero → chef → tag-true Tier-2 → never blank). One copy source.
     const recommendations = recs
       .filter(r => !cartNames.has(normalizeName(r.name)))
       .slice(0, 4)
@@ -582,11 +567,8 @@ class AiService {
         img: r.img,
         categoryType: r.categoryType,
         story: r.story || '',
-        // Phase 3C: the waiter reads the same composed reason as the cards/chat
-        // (authored hero → chef → Tier-2). cartRecReason remains only as a guard.
-        reason: r.reason || this.cartRecReason(r, cart),
+        reason: r.reason || '',
         upsell: Math.round(Number(r.price) || 0),
-        script: this.cartRecScript(r),
         // Phase 4 analytics attribution.
         source_title: r.source_title || '',
         rotationGroup: r.rotationGroup || '',
@@ -597,6 +579,15 @@ class AiService {
 
     const potentialUplift = recommendations.reduce((sum, r) => sum + r.upsell, 0);
     return { recommendations, eventRec, potentialUplift };
+  }
+
+  // Phase 3C: waiter-only "ordered together" — counted co-occurrence over real
+  // order history + a flavour why. Never customer-facing (waiter-auth route).
+  async orderedTogether(payload = {}) {
+    const cart = this.readCart(payload);
+    const [menuContext, orderRecords] = await Promise.all([this.getMenuContext(), this.getOrderRecords()]);
+    const recommendations = computeOrderedTogether(cart, orderRecords, menuContext, { limit: Number(payload.limit) || 4 });
+    return { recommendations };
   }
 
   isRecommendationQuestion(lower) {

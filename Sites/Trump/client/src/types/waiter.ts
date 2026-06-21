@@ -20,7 +20,7 @@ export interface CartRec {
   story?: string;
   reason: string;
   upsell: number;
-  script: string;
+  script?: string;
   complimentary?: boolean;
   // Phase 4 analytics attribution.
   source_title?: string;
@@ -32,6 +32,22 @@ export interface CartRecResponse {
   recommendations: CartRec[];
   eventRec: CartRec | null;
   potentialUplift: number;
+}
+
+// Phase 3C: waiter-only "ordered together" (counted co-occurrence + flavour why).
+export interface OrderedTogetherRec {
+  name: string;
+  price: number;
+  img?: string;
+  categoryType?: string;
+  count: number;
+  countLabel: string;
+  why: string;
+  upsell: number;
+}
+
+export interface OrderedTogetherResponse {
+  recommendations: OrderedTogetherRec[];
 }
 export type LeaderboardPeriod = 'today' | 'week' | 'month';
 
