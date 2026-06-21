@@ -216,7 +216,7 @@ async function startServer() {
   logger.info('nlg_mode', nlgService.status());
 
   const controllers = {
-    ai: createAiController({ aiService }),
+    ai: createAiController({ aiService, config }),
     analytics: createAnalyticsController({ config }),
     recommendationAnalytics: createRecommendationAnalyticsController({ recommendationEventService, prismaMenuService: fileService.prismaMenu }),
     recommendationBundle: createRecommendationBundleController({ recommendationBundleService, socketService }),

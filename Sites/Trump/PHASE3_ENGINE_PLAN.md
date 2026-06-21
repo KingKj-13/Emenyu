@@ -107,6 +107,21 @@ Live spot-check: "something spicy" → spice-2 dishes; "anything light" → sala
 
 **Deferred to 3B/3C as planned:** session memory + swap resolution, cart-from-ChatPanel, full occasion polish, off-topic decline, Donald rebrand (3B); waiter "ordered-together" + pointing the waiter upsell at `reasonComposer` and deleting `cartRecReason` (3C). Hero pairings (you supply) seed Tier-1 next.
 
+## 3B — implemented (2026-06-21)
+
+Donald now has memory, cart-awareness, a guardrail and his name. Validated on `emenyu_local`; prod untouched; fully local/offline.
+
+- **`chatSession.js`** — per-turn context from `payload.history` + cart (anchor dish, last wine). No persistence.
+- **Swap** — `intent.type==='swap'` ("actually something fishy") picks the new dish from tags, re-pairs it, and **switches a carried-over red for a crisp white** (still whites first), naming the switch.
+- **Cart-aware** — ChatPanel sends the cart; the recommendation lead becomes "you've got the **{cart item}** — add **{x}**, or keep it light with **{y}**."
+- **Memory** — `buildPairingReply` resolves "a wine for it" from the anchor and returns a colour-appropriate, wine-only pour.
+- **Off-topic decline** — `intent.type==='offtopic'` → a warm in-character reply (no suggestions), never a random menu match.
+- **Donald rebrand** — `assistantName` from `TRUMP_ASSISTANT_NAME` (default Donald) in `createConfig`; public `GET /api/config`; `ChatPanel` reads header/welcome from it (was "Trump AI").
+- **Branch precedence fix** — an occasion/attribute intent now beats the generic "what's good" keyword, so "what's good, watching the football" → sharing plates **+ a beer**.
+- **Tests** — `chat:validate` 30/30 (added off-topic + session-memory rows); `reco:validate` 41/41; client `tsc --noEmit` clean. Live acceptance run: tests 2–5, 8 all pass.
+
+**Deferred to 3C:** waiter-only "ordered-together" market-basket rec; point the waiter upsell at `reasonComposer` and delete `cartRecReason`/`cartRecScript`. Hero pairings (you supply) still seed Tier-1.
+
 ## Open questions for your review
 1. **Donald rebrand pipeline** — OK to add `TRUMP_ASSISTANT_NAME` (default `Donald`) server config + a small public `/api/config` so the client stops hardcoding? (Alternative: keep it a client-only constant.)
 2. **Waiter "ordered-together"** — confirm it's a **new, separate** waiter-only panel (counted social proof), distinct from the existing cart upsell — not a merge.

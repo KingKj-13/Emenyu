@@ -9,6 +9,8 @@
 
 const intent = require('../server/services/intentClassifier');
 const { createReasonComposer } = require('../server/services/reasonComposer');
+const chatSession = require('../server/services/chatSession');
+const { normalizeName } = require('../server/utils/helpers');
 
 const results = [];
 let section = '';
@@ -61,6 +63,28 @@ function check(name, pass, detail) { results.push({ section, name, pass: !!pass,
     { name: 'BBQ Ribs', tags: { flavour: ['smoky'] } }
   );
   check('Tag bridge: shared "smoky" flavour surfaces in the line', /smoky/i.test(bridge), `got="${bridge}"`);
+
+  // ── 4. Phase 3B: off-topic guardrail + session memory (pure) ────────────────
+  group('4. Off-topic guardrail + session memory');
+  check('"what\'s Apple\'s stock price" → offtopic', cls("what's Apple's stock price").type === 'offtopic');
+  check('"tell me a joke" → offtopic', cls('tell me a joke').type === 'offtopic');
+  check('"what are the steaks" stays on-menu (not offtopic)', cls('what are the steaks').type !== 'offtopic');
+
+  const fixtureItems = [
+    { name: 'RIBEYE 380g', categoryType: 'MAIN', tags: { protein: ['beef'] } },
+    { name: 'NEDERBURG CABERNET', categoryType: 'WINE', tags: { drinkType: 'red' } },
+    { name: 'SEARED SALMON', categoryType: 'MAIN', tags: { protein: ['seafood'] } },
+  ];
+  const fixtureCtx = { items: fixtureItems, byName: new Map(fixtureItems.map(i => [normalizeName(i.name), i])) };
+  const history = [
+    { role: 'user', content: 'what wine goes with the RIBEYE 380g' },
+    { role: 'assistant', content: 'I would pour the NEDERBURG CABERNET with your ribeye.' },
+  ];
+  const ctx = chatSession.build(history, fixtureCtx, []);
+  check('session anchor = the steak (RIBEYE)', ctx.anchorDish && ctx.anchorDish.name === 'RIBEYE 380g', `anchor=${ctx.anchorDish && ctx.anchorDish.name}`);
+  check('session lastWine = the red (NEDERBURG CABERNET)', ctx.lastWine && ctx.lastWine.name === 'NEDERBURG CABERNET', `lastWine=${ctx.lastWine && ctx.lastWine.name}`);
+  const cartCtx = chatSession.build([], fixtureCtx, [{ name: 'SEARED SALMON' }]);
+  check('cart item becomes the anchor', cartCtx.anchorDish && cartCtx.anchorDish.name === 'SEARED SALMON', `anchor=${cartCtx.anchorDish && cartCtx.anchorDish.name}`);
 
   // ── Report ──────────────────────────────────────────────────────────────────
   const failed = results.filter(r => !r.pass);

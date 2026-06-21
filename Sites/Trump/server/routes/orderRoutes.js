@@ -18,6 +18,7 @@ function registerOrderRoutes(app, controllers, auth) {
     controllers.order.serveMenuPage
   );
 
+  app.get(['/api/config', '/Trump/api/config', '/trump/api/config'], controllers.ai.getConfig);
   app.post(['/api/chat', '/Trump/api/chat', '/trump/api/chat'], controllers.ai.chat);
   app.post(['/api/ai-pairing', '/Trump/api/ai-pairing', '/trump/api/ai-pairing'], controllers.ai.aiPairing);
   app.post(['/api/recommend', '/Trump/api/recommend', '/trump/api/recommend'], controllers.ai.recommend);

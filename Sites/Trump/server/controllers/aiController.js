@@ -1,5 +1,11 @@
-function createAiController({ aiService }) {
+function createAiController({ aiService, config = {} }) {
   return {
+    // Public client config (Phase 3B): lets the SPA render the assistant's name
+    // (Donald) from server config instead of hardcoding "Trump AI".
+    getConfig(req, res) {
+      res.json({ assistantName: config.assistantName || 'Donald', brandName: config.brandName || 'Trump' });
+    },
+
     async chat(req, res) {
       const data = await aiService.chat(req.body);
       res.json(data);

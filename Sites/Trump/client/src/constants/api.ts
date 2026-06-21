@@ -8,6 +8,7 @@ export const ENDPOINTS = {
   deals: `${API_PREFIX}/api/deals`,
   recommend: `${API_PREFIX}/api/recommend`,
   chat: `${API_PREFIX}/api/chat`,
+  config: `${API_PREFIX}/api/config`,
   aiPairing: `${API_PREFIX}/api/ai-pairing`,
   submitOrder: `${API_PREFIX}/submit_order`,
   authMe: `${API_PREFIX}/api/auth/me`,

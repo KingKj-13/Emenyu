@@ -5,6 +5,7 @@ import { api } from '../../services/api';
 import { getSocket } from '../../services/socket';
 import { RESTAURANT_ID } from '../../constants/api';
 import { useApp } from '../../context/AppContext';
+import { useCart } from '../../context/CartContext';
 import { RecommendationCard, type RecommendationItem } from '../reco/RecommendationCard';
 import { trackImpressions, trackClick } from '../../lib/recoAnalytics';
 import type { ChatSuggestionItem, ChatResponse } from '../../types/menu';
@@ -32,10 +33,17 @@ const SUGGESTED_PROMPTS = [
 
 export function ChatPanel({ onItemClick }: ChatPanelProps) {
   const { chatOpen, setChatOpen, tableId } = useApp();
+  const { items: cartItems } = useCart();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [waiterCalled, setWaiterCalled] = useState(false);
+  // Phase 3B: the assistant's display name (Donald) comes from server config.
+  const [assistantName, setAssistantName] = useState('Donald');
+
+  useEffect(() => {
+    api.getConfig().then(c => { if (c?.assistantName) setAssistantName(c.assistantName); }).catch(() => { /* keep default */ });
+  }, []);
 
   function callWaiter() {
     getSocket().emit('callWaiter', { restaurantId: RESTAURANT_ID, tableId });
@@ -64,7 +72,8 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
     setLoading(true);
     try {
       const history = messages.map(m => ({ role: m.role, content: m.content }));
-      const res = await api.chat({ message: content, history, tableId }) as ChatResponse;
+      // Phase 3B: send the live cart so Donald can do cart-aware cross-sell.
+      const res = await api.chat({ message: content, history, tableId, cart: cartItems }) as ChatResponse;
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: res.reply || 'Sorry, I had trouble responding.',
@@ -110,13 +119,13 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
           >
             <div className={styles.panelHeader}>
               <Sparkles size={16} />
-              <span>Trump AI</span>
+              <span>{assistantName}</span>
             </div>
 
             <div className={styles.messages} aria-live="polite" aria-atomic="false">
               {messages.length === 0 && (
                 <div className={styles.welcome}>
-                  <p>Hello! I'm Trump AI — your personal dining assistant. How can I help you tonight?</p>
+                  <p>Hello! I'm {assistantName} — your personal dining assistant. How can I help you tonight?</p>
                   <div className={styles.suggestions}>
                     {SUGGESTED_PROMPTS.map((p, i) => (
                       <button key={i} className={styles.suggestion} onClick={() => sendMessage(p)}>

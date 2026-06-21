@@ -4,6 +4,7 @@ const { createRotationService } = require('./rotationService');
 const { createRecommendationRules } = require('./recommendationRules');
 const chatbotNlu = require('./chatbotNlu');
 const intentClassifier = require('./intentClassifier');
+const chatSession = require('./chatSession');
 const { createKnowledgeService } = require('./knowledgeService');
 const { createNlgService } = require('./nlg/nlgService');
 const { createReasonComposer } = require('./reasonComposer');
@@ -333,6 +334,15 @@ function dietaryOk(item = {}, diets = []) {
   return true;
 }
 
+// Phase 3B: crisp "white" pours for a seafood/light pairing, still whites first
+// (so a seafood swap isn't four champagnes), then rosé, then sparkling.
+const CRISP_RANK = { white: 0, rose: 1, sparkling: 2 };
+function crispWhites(items = []) {
+  return items
+    .filter(item => item.tags && ['white', 'sparkling', 'rose'].includes(item.tags.drinkType))
+    .sort((a, b) => (CRISP_RANK[a.tags.drinkType] ?? 3) - (CRISP_RANK[b.tags.drinkType] ?? 3));
+}
+
 class AiService {
   constructor(config, fileService, socketService, { logger = null, nlgService = null } = {}) {
     this.config = config;
@@ -365,6 +375,10 @@ class AiService {
     const lower = nlu.normalized || message.toLowerCase();
     // Phase 3A: structured intent + slots (attribute/dietary/occasion) for tag-aware routing.
     const intent = intentClassifier.classify(message);
+    // Phase 3B: cart-awareness + per-turn memory (anchor dish / last wine) from the
+    // history the client already sends, so swaps and "a wine for it" resolve.
+    const cart = this.readCart(payload);
+    const session = chatSession.build(payload.history, menuContext, cart);
     const knowledgeIntent = this.knowledge.detectIntent(lower);
     const knowledgeAnswer = knowledgeIntent && knowledgeIntent !== 'special'
       ? await this.knowledge.answer(knowledgeIntent, lower, menuContext)
@@ -384,23 +398,35 @@ class AiService {
         reply: knowledgeAnswer.reply,
         suggestions: (knowledgeAnswer.suggestions || []).map(item => publicItem(item, 'From our kitchen'))
       };
+    } else if (intent.type === 'offtopic') {
+      // Phase 3B: warm, in-character decline — never a random menu match.
+      responseData = this.buildOfftopicReply();
+    } else if (intent.type === 'swap') {
+      // Phase 3B: "actually something fishy" — swap the dish AND the drink, using
+      // the anchor remembered from the conversation.
+      responseData = await this.buildSwapReply(menuContext, intent, session, payload);
     } else if (this.isCategoryQuestion(lower)) {
       responseData = this.buildCategoryReply(menuContext);
-    } else if (lower.includes('pair') || lower.includes('go with') || lower.includes('with this')) {
-      responseData = await this.buildPairingReply(menuContext, lower, payload);
+    } else if (lower.includes('pair') || lower.includes('go with') || lower.includes('with this') || intent.type === 'pairing') {
+      responseData = await this.buildPairingReply(menuContext, lower, payload, session);
     } else if (this.isComboQuestion(lower)) {
       responseData = await this.buildComboReply(menuContext, lower, payload);
-    } else if (this.isRecommendationQuestion(lower) || chatbotNlu.isRecommendationIntent(lower)) {
+    } else if (!['attribute', 'dietary', 'occasion'].includes(intent.type)
+      && (this.isRecommendationQuestion(lower) || chatbotNlu.isRecommendationIntent(lower))) {
+      // A bare "what's good" lands here; "what's good, watching the football"
+      // carries an occasion intent and falls through to the tag-aware branch below.
       const suggestions = await this.recommend({
-        cart: Array.isArray(payload.cart) ? payload.cart : [],
+        cart,
         limit: 4,
         reason: nlu.tokens.join(' '),
         tableId: requestBody.tableId,
         deviceId: payload.deviceId,
         menuContext
       });
+      // Phase 3B: when there's a cart, make the lead a cart-aware cross-sell.
+      const cartLead = this.cartAwareLead(cart, suggestions);
       responseData = {
-        reply: this.buildSuggestionReply(
+        reply: cartLead || this.buildSuggestionReply(
           suggestions,
           suggestions.some(item => item.source_title === 'People also ordered')
             ? 'Guests who order like this also lean toward'
@@ -412,7 +438,7 @@ class AiService {
       // Phase 3A: tag-aware matching for "something spicy", "anything light",
       // "vegetarian options", "watching the football", etc.
       const suggestions = await this.recommend({
-        cart: Array.isArray(payload.cart) ? payload.cart : [],
+        cart,
         limit: 4,
         intent,
         reason: nlu.tokens.join(' '),
@@ -662,9 +688,13 @@ class AiService {
     };
   }
 
-  async buildPairingReply(menuContext, lower, payload = {}) {
+  async buildPairingReply(menuContext, lower, payload = {}, session = null) {
     const cart = this.readCart(payload);
-    const mentioned = findMentionedItem(menuContext, payload.message || lower);
+    let mentioned = findMentionedItem(menuContext, payload.message || lower);
+    // Phase 3B: "a wine for it" — resolve "it" from the remembered anchor dish.
+    if (!mentioned && cart.length === 0 && session && session.anchorDish) {
+      mentioned = session.anchorDish;
+    }
     const cartItems = mentioned ? [mentioned, ...cart] : cart;
     const suggestions = await this.recommend({
       cart: cartItems,
@@ -672,6 +702,22 @@ class AiService {
       reason: payload.message || lower,
       menuContext
     });
+
+    // Phase 3B: "a wine for it" — return a colour-appropriate wine (crisp white
+    // for seafood), not a mixed plate. Resolves "it" from the remembered anchor.
+    if (/\bwine\b|\bcellar\b/.test(lower)) {
+      const isCrisp = x => x && x.tags && ['white', 'sparkling', 'rose'].includes(x.tags.drinkType);
+      const anchorSeafood = mentioned && mentioned.tags && Array.isArray(mentioned.tags.protein) && mentioned.tags.protein.includes('seafood');
+      let wines = suggestions.filter(s => s.categoryType === 'WINE');
+      if (anchorSeafood) {
+        const crisp = wines.filter(isCrisp);
+        wines = (crisp.length ? crisp : crispWhites(menuContext.items).slice(0, 4).map(w => publicItem(w, 'Crisp white')));
+      }
+      if (wines.length === 0) wines = (menuContext.categorized.WINE || []).slice(0, 3).map(w => publicItem(w, 'Cellar selection'));
+      wines = wines.slice(0, 4);
+      const lead = mentioned ? `For the ${mentioned.name}, from the cellar I'd pour` : 'From the cellar I would pour';
+      return { reply: this.buildSuggestionReply(wines, lead), suggestions: wines };
+    }
 
     if (suggestions.length > 0) {
       return {
@@ -817,6 +863,72 @@ class AiService {
     if (s.occasion === 'quick') return 'Quick and satisfying —';
     if ((s.proteinWanted || []).length) return `For ${s.proteinWanted[0]} lovers, I'd suggest`;
     return 'I would steer you toward';
+  }
+
+  // Phase 3B: resolve a swap — pick the newly-wanted dish from its tags, re-pair
+  // it, drop a red carried over from the old anchor when moving to a lighter or
+  // seafood plate, and say plainly what we're switching.
+  async buildSwapReply(menuContext, intent, session, payload) {
+    const slots = intent.slots || {};
+    const hits = menuContext.items
+      .map(item => ({ item, score: intentClassifier.tagScore(item.tags, slots) }))
+      .filter(entry => entry.score > 0)
+      .sort((left, right) => right.score - left.score);
+    const newDish = (hits[0] && hits[0].item) || null;
+
+    if (!newDish) {
+      const suggestions = await this.recommend({ cart: this.readCart(payload), intent, menuContext, limit: 4 });
+      return { reply: this.buildSuggestionReply(suggestions, 'How about'), suggestions };
+    }
+
+    const recs = await this.recommend({ cart: [newDish], intent, menuContext, limit: 6 });
+    const goesLighter = (newDish.tags && Array.isArray(newDish.tags.protein) && newDish.tags.protein.includes('seafood'))
+      || (slots.proteinWanted || []).includes('seafood') || slots.body === 'light';
+
+    // Pick the new drink off tags.drinkType (never mistake a dish for a wine): a
+    // crisp white/sparkling for a lighter/seafood swap, otherwise any wine pour.
+    const isCrisp = x => x && x.tags && ['white', 'sparkling', 'rose'].includes(x.tags.drinkType);
+    const isAnyWine = x => x && (x.categoryType === 'WINE' || (x.tags && ['white', 'sparkling', 'rose', 'red'].includes(x.tags.drinkType)));
+    const newWine = goesLighter
+      ? (recs.find(isCrisp) || crispWhites(menuContext.items)[0])
+      : recs.find(isAnyWine);
+
+    const prevWine = session && session.lastWine;
+    const drinkClause = prevWine && newWine
+      ? ` — and I'd switch the ${prevWine.name} for the ${newWine.name}`
+      : newWine ? ` — with a glass of ${newWine.name}` : '';
+
+    const foodRecs = recs.filter(rec => !isAnyWine(rec) && normalizeName(rec.name) !== normalizeName(newDish.name));
+    const suggestions = [
+      publicItem(newDish, 'Your swap'),
+      ...(newWine ? [publicItem(newWine, 'Crisp pairing')] : []),
+      ...foodRecs
+    ].slice(0, 4);
+    return { reply: `Good call — let's go with the ${newDish.name}${drinkClause}.`, suggestions };
+  }
+
+  // Phase 3B: warm, in-character decline for anything off the menu.
+  buildOfftopicReply() {
+    const name = (this.config && this.config.assistantName) || 'Donald';
+    return {
+      reply: `Ha — that one's a little beyond my table. I'm ${name}, your dining host: I can talk steaks, seafood, sushi, wines and pairings, or help you build the perfect meal. What are you in the mood for?`,
+      suggestions: []
+    };
+  }
+
+  // Phase 3B: cart-aware cross-sell lead ("you've got the carpaccio — add … or keep it light with …").
+  cartAwareLead(cart, suggestions) {
+    if (!Array.isArray(cart) || cart.length === 0 || !Array.isArray(suggestions) || suggestions.length === 0) {
+      return null;
+    }
+    const anchor = cart[cart.length - 1].name;
+    const add = suggestions[0] && suggestions[0].name;
+    const light = suggestions.find(s => s.name !== add
+      && (['STARTER', 'SALAD'].includes((s.tags && s.tags.course) || '') || s.categoryType === 'STARTER'));
+    let line = `You've already got the ${anchor}`;
+    if (add) line += ` — add the ${add}`;
+    if (light && light.name !== add) line += `, or keep it light with the ${light.name}`;
+    return `${line}.`;
   }
 
   async aiPairing(payload = {}) {

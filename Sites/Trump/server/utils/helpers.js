@@ -214,6 +214,9 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     publicOrigin,
     tableCount: parseInteger(env.TRUMP_TABLE_COUNT, 30),
     brandName: env.TRUMP_BRAND_NAME || 'Trump',
+    // Phase 3B: the chatbot's display name (Donald). Surfaced to the client via
+    // GET /api/config so the SPA stops hardcoding "Trump AI".
+    assistantName: env.TRUMP_ASSISTANT_NAME || 'Donald',
     host: env.TRUMP_HOST || env.HOST || '0.0.0.0',
     port,
     admin: {
