@@ -360,10 +360,84 @@ class AiService {
     this.nlgService = nlgService || createNlgService({ config, logger });
     this.hero = createHeroPairings({ logger });
     this.reason = createReasonComposer({ nlgService: this.nlgService, heroPairings: this.hero, logger });
+
+    // Perf: the recommendation/chat path used to reload the whole menu, every
+    // order + history record, the admin/chef recs and recompute popularity on
+    // EVERY recommend() call — and a single chat() fans out several recommend()
+    // calls. On a large order history the popularity loop also blocks the event
+    // loop (starving unrelated requests like staff login). These derived datasets
+    // change rarely relative to request rate, so we memoize them with a short TTL
+    // and a stale-while-revalidate refresh: a request never waits on a recompute
+    // (after warm-up); the refresh runs in the background and swaps in atomically.
+    this._cache = new Map();
+    this._cacheTtlMs = Number(process.env.TRUMP_RECO_CACHE_TTL_MS) || 30000;
+  }
+
+  // Memoize an async producer with stale-while-revalidate semantics. Concurrent
+  // cold misses are de-duplicated via a shared in-flight promise; once warm, a
+  // call past the TTL returns the stale value immediately and refreshes in the
+  // background, so request latency is unaffected by the recompute cost.
+  _cached(key, producer) {
+    const entry = this._cache.get(key);
+    if (entry && 'value' in entry) {
+      if (Date.now() >= entry.expiresAt && !entry.refreshing) {
+        entry.refreshing = true;
+        Promise.resolve()
+          .then(producer)
+          .then(value => this._cache.set(key, { value, expiresAt: Date.now() + this._cacheTtlMs, refreshing: false }))
+          .catch(error => { entry.refreshing = false; this.logger?.debug?.('reco_cache_refresh_failed', { key, error: error?.message }); });
+      }
+      return Promise.resolve(entry.value);
+    }
+    if (entry && entry.inflight) {
+      return entry.inflight;
+    }
+    const inflight = Promise.resolve()
+      .then(producer)
+      .then(value => { this._cache.set(key, { value, expiresAt: Date.now() + this._cacheTtlMs, refreshing: false }); return value; })
+      .catch(error => { this._cache.delete(key); throw error; });
+    this._cache.set(key, { inflight });
+    return inflight;
+  }
+
+  // Drop all memoized reco datasets — call after a menu/order/recs write so the
+  // next request rebuilds from fresh data instead of waiting out the TTL.
+  invalidateCaches() {
+    this._cache.clear();
+  }
+
+  // Prime the caches off the request path (called once after the server binds)
+  // so the very first guest request is already fast.
+  async warmCaches() {
+    try {
+      await Promise.all([this.getCachedRecommendations(), this.getCachedChefRecommendations()]);
+      await this.getPopularity();
+    } catch (error) {
+      this.logger?.debug?.('reco_cache_warm_failed', { error: error?.message });
+    }
   }
 
   async getMenuContext() {
-    return buildMenuContext(await this.fileService.loadMenu());
+    return this._cached('menuContext', async () => buildMenuContext(await this.fileService.loadMenu()));
+  }
+
+  // Cached admin recommendation groups + per-item chef recs (one DB read each
+  // per TTL window instead of one per recommend() call).
+  getCachedRecommendations() {
+    return this._cached('adminRecs', () => this.fileService.loadRecommendations());
+  }
+
+  getCachedChefRecommendations() {
+    return this._cached('chefRecs', () => this.fileService.loadChefRecommendations());
+  }
+
+  // Popularity is a name-keyed score map derived from the (cached) menu + orders;
+  // computing it is the heaviest synchronous work, so it gets its own cache entry.
+  getPopularity() {
+    return this._cached('popularity', async () => {
+      const [menuContext, orderRecords] = await Promise.all([this.getMenuContext(), this.getOrderRecords()]);
+      return this.getPopularityScores(menuContext, orderRecords);
+    });
   }
 
   async chat(payload = {}) {
@@ -967,10 +1041,12 @@ class AiService {
     // Perf (Phase 4, Task 5): reuse a caller-supplied menu context so a single
     // chat()/aiPairing() request doesn't load + rebuild the whole menu twice.
     const menuContext = payload.menuContext || await this.getMenuContext();
-    const adminGroups = await this.fileService.loadRecommendations();
-    const chefRecs = await this.fileService.loadChefRecommendations();
-    const orderRecords = await this.getOrderRecords();
-    const popularity = await this.getPopularityScores(menuContext, orderRecords);
+    const [adminGroups, chefRecs, orderRecords, popularity] = await Promise.all([
+      this.getCachedRecommendations(),
+      this.getCachedChefRecommendations(),
+      this.getOrderRecords(),
+      this.getPopularity()
+    ]);
 
     const cartNames = cart.map(item => normalizeName(item.name));
     const seen = new Set(cartNames);
@@ -1385,24 +1461,41 @@ class AiService {
   }
 
   async getPopularItems(menuContext, limit = 6) {
-    const orderRecords = await this.getOrderRecords();
-    const popularity = await this.getPopularityScores(menuContext, orderRecords);
+    const popularity = await this.getPopularity();
     return [...menuContext.items]
       .sort((left, right) => (popularity.get(normalizeName(right.name)) || 0) - (popularity.get(normalizeName(left.name)) || 0))
       .slice(0, limit);
   }
 
   async getOrderRecords() {
-    const [orders, history] = await Promise.all([this.fileService.listOrders('orders'), this.fileService.listOrders('history')]);
-    return [...orders, ...history].filter(order => Array.isArray(order.items));
+    return this._cached('orderRecords', async () => {
+      const [orders, history] = await Promise.all([this.fileService.listOrders('orders'), this.fileService.listOrders('history')]);
+      return [...orders, ...history].filter(order => Array.isArray(order.items));
+    });
   }
 
   async getPopularityScores(menuContext, orderRecords) {
     const scores = new Map();
 
+    // fuzzyFindItem falls back to an O(menuItems) substring scan whenever a name
+    // isn't an exact match (renamed items, "x2" suffixes, typos in old history).
+    // Memoizing per distinct name keeps that scan to once-per-unique-name instead
+    // of once-per-order-line — the difference between ~60ms and ~700ms on a large
+    // history, and the synchronous work that otherwise blocks the event loop.
+    const resolveCache = new Map();
+    const resolveName = rawName => {
+      const cacheKey = String(rawName || '');
+      if (resolveCache.has(cacheKey)) {
+        return resolveCache.get(cacheKey);
+      }
+      const match = fuzzyFindItem(menuContext, rawName);
+      resolveCache.set(cacheKey, match);
+      return match;
+    };
+
     orderRecords.forEach(order => {
       (order.items || []).forEach(item => {
-        const match = fuzzyFindItem(menuContext, item.name);
+        const match = resolveName(item.name);
         if (!match) {
           return;
         }
@@ -1413,7 +1506,7 @@ class AiService {
 
     const configuredPopular = await this.fileService.loadPopular();
     configuredPopular.forEach((entry, index) => {
-      const match = fuzzyFindItem(menuContext, entry.name);
+      const match = resolveName(entry.name);
       if (!match) {
         return;
       }

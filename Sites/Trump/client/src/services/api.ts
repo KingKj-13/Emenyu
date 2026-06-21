@@ -66,8 +66,20 @@ export const api = {
       .catch(() => null);
   },
 
-  login(payload: LoginPayload): Promise<LoginResponse> {
-    return postJson<LoginResponse>(ENDPOINTS.authLogin, payload);
+  async login(payload: LoginPayload): Promise<LoginResponse> {
+    // Don't route through fetchJson (which throws on any non-2xx): a 401/403 is a
+    // valid auth answer, not a connection failure. Surface the server's error
+    // message so the UI can say "Invalid credentials" instead of "Unable to connect".
+    // Only a genuine network failure (fetch rejects) propagates as a thrown error.
+    const res = await fetch(ENDPOINTS.authLogin, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const text = await res.text();
+    const data = text.trim() ? (JSON.parse(text) as LoginResponse) : ({} as LoginResponse);
+    if (res.ok) return data;
+    return { ok: false, error: data.error || 'Invalid credentials. Please try again.' };
   },
 
   logout(): Promise<void> {

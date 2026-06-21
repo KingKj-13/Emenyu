@@ -66,6 +66,12 @@ function createStaticOptions(config) {
     etag: true,
     lastModified: true,
     setHeaders(res, filePath) {
+      if (/\.mp4$/i.test(filePath)) {
+        res.type('video/mp4');
+      } else if (/\.webm$/i.test(filePath)) {
+        res.type('video/webm');
+      }
+
       if (/[\\/]sw\.js$/i.test(filePath)) {
         res.setHeader('Cache-Control', 'no-store');
         return;
@@ -203,6 +209,10 @@ async function startServer() {
   // NLG instance across the chatbot, the customer cards and the waiter app.
   const nlgService = createNlgService({ config, logger });
   const aiService = new AiService(config, fileService, socketService, { logger, nlgService });
+  // Drop the reco caches the moment menu / recommendation / order data mutates,
+  // so owner edits (and new orders) are reflected immediately rather than after
+  // the cache TTL. Every mutation path already funnels through these emitters.
+  socketService.onDataChange(() => aiService.invalidateCaches());
   const mediaEnrichmentService = new MediaEnrichmentService(config);
   const recommendationEventService = new RecommendationEventService({ config, logger });
   const recommendationBundleService = new RecommendationBundleService({ config, logger });
@@ -338,6 +348,10 @@ async function startServer() {
   });
 
   registerProcessHandlers({ server, socketService, accountService, fileService, logger, config });
+
+  // Warm the recommendation caches off the request path so the first guest
+  // request is already fast and never triggers a blocking recompute inline.
+  aiService.warmCaches();
 
   // Nightly media enrichment — runs at 03:00 server time if API keys are configured
   try {

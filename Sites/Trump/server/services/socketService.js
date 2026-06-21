@@ -18,6 +18,29 @@ class SocketService {
     this.io = null;
     this.tableMemory = {};
     this.connectedWaiters = {};
+    // Listeners notified when menu / recommendation / order data mutates. Used by
+    // aiService to drop its reco caches immediately so owner edits show without
+    // waiting out the cache TTL. Independent of socket connectivity.
+    this._dataChangeListeners = [];
+  }
+
+  // Register a callback fired on every menu/recommendation/order mutation. The
+  // scope ('menu' | 'recommendations' | 'orders') is passed through for listeners
+  // that want to be selective.
+  onDataChange(listener) {
+    if (typeof listener === 'function') {
+      this._dataChangeListeners.push(listener);
+    }
+  }
+
+  _notifyDataChange(scope) {
+    for (const listener of this._dataChangeListeners) {
+      try {
+        listener(scope);
+      } catch (error) {
+        this.logger?.warn('data_change_listener_failed', { scope, error: error?.message });
+      }
+    }
   }
 
   initialize(server) {
@@ -267,6 +290,7 @@ class SocketService {
   }
 
   emitMenuUpdated() {
+    this._notifyDataChange('menu');
     if (this.io) {
       this.io.emit('menuUpdated');
     }
@@ -279,12 +303,14 @@ class SocketService {
   }
 
   emitRecommendationUpdated() {
+    this._notifyDataChange('recommendations');
     if (this.io) {
       this.io.emit('recommendationUpdated');
     }
   }
 
   emitOrderPlaced(order) {
+    this._notifyDataChange('orders');
     if (this.io) {
       this.io
         .to(this.getAdminRoom())
@@ -322,6 +348,7 @@ class SocketService {
   }
 
   emitOrderUpdated() {
+    this._notifyDataChange('orders');
     if (this.io) {
       // Staff rooms only — customers track state via syncHistory/syncCart.
       this.io.to(this.getAdminRoom()).to(this.getWaiterRoom()).emit('orderUpdated', {
