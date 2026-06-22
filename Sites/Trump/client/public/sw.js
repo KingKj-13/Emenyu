@@ -1,12 +1,24 @@
-const CACHE = 'emenyu-trump-v1';
+const CACHE = 'emenyu-trump-v4';
 const API_PATTERNS = ['/api/', '/Trump/api/', '/socket.io/'];
 
 function isApiRequest(url) {
   return API_PATTERNS.some(p => url.includes(p));
 }
 
+function isServiceWorkerScript(url) {
+  try {
+    return new URL(url).pathname.toLowerCase().endsWith('/sw.js');
+  } catch {
+    return false;
+  }
+}
+
 self.addEventListener('install', e => {
   self.skipWaiting();
+});
+
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
@@ -23,6 +35,13 @@ self.addEventListener('fetch', e => {
 
   const url = request.url;
 
+  // Never serve the service-worker script from our runtime cache. Otherwise a
+  // deployed update can require two manual refreshes before the new worker runs.
+  if (isServiceWorkerScript(url)) {
+    e.respondWith(fetch(request, { cache: 'no-store' }));
+    return;
+  }
+
   // Network-first for API and socket
   if (isApiRequest(url)) {
     e.respondWith(
@@ -31,12 +50,14 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Cache-first for static assets (JS/CSS/images)
-  if (/\.(js|css|png|jpg|jpeg|webp|svg|woff2?|ttf)(\?.*)?$/.test(url)) {
+  // Cache-first for static assets (JS/CSS/images/video).
+  if (/\.(js|css|png|jpg|jpeg|webp|svg|woff2?|ttf|mp4|mov|m4v|webm)(\?.*)?$/.test(url)) {
     e.respondWith(
       caches.match(request).then(cached => {
         const network = fetch(request).then(res => {
-          if (res.ok) {
+          // Only cache complete 200 responses — caching a 206 partial (range
+          // request, used for video) is invalid and breaks playback.
+          if (res.ok && res.status === 200) {
             const clone = res.clone();
             caches.open(CACHE).then(c => c.put(request, clone));
           }

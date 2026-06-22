@@ -2,6 +2,7 @@
   padding: 16px clamp(16px, 4vw, 48px);
   background: rgba(0, 15, 24, 0.6);
   border-bottom: 1px solid var(--color-line);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   position: sticky;
   top: var(--header-h);
@@ -36,7 +37,8 @@
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: var(--radius-card);
   color: var(--color-cream);
-  font-size: 14px;
+  /* ≥16px so iOS Safari doesn't zoom when the search field is focused. */
+  font-size: 16px;
   transition: border-color 160ms ease;
 }
 

@@ -1,10 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-
-let prisma;
-function getPrisma() {
-  if (!prisma) prisma = new PrismaClient();
-  return prisma;
-}
+// Shared, explicitly-resolved Prisma client (see prismaClient.js).
+const { getPrisma } = require('./prismaClient');
 
 let webpush;
 function getWebPush() {

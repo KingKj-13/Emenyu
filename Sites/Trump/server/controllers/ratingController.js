@@ -1,10 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-
-let prisma;
-function getPrisma() {
-  if (!prisma) prisma = new PrismaClient();
-  return prisma;
-}
+// Shared, explicitly-resolved Prisma client (so ratings — surfaced on the owner
+// dashboard — aren't silently zeroed by a local @prisma/client stub).
+const { getPrisma } = require('../services/prismaClient');
 
 function createRatingController({ config }) {
   const restaurantId = config?.restaurantId || 'trump';

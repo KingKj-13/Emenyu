@@ -129,20 +129,10 @@ class AccountService {
       }
 
       const existing = byUsername.get(username);
-      const shouldRefreshDemo = defaultUser.demo === true && !defaultUser.passwordFromEnv;
       if (existing) {
-        if (shouldRefreshDemo || existing.status === 'suspended') {
-          byUsername.set(username, {
-            ...existing,
-            role: defaultUser.role,
-            label: defaultUser.label || existing.label || defaultUser.role,
-            status: 'active',
-            passwordHash: shouldRefreshDemo ? hashPassword(defaultUser.password) : existing.passwordHash,
-            updatedAt: now,
-            suspendedAt: null,
-            sessionInvalidBefore: null
-          });
-        }
+        // Seed default accounts only when missing. Never reset, re-activate, or
+        // overwrite an existing account's password on startup — password changes
+        // and suspensions made by an owner/manager must persist across restarts.
         return;
       }
 
@@ -216,9 +206,7 @@ class AccountService {
         return null;
       }
 
-      const valid = postgresUser.passwordHash
-        ? verifyPasswordHash(password, postgresUser.passwordHash)
-        : postgresUser.password === password;
+      const valid = Boolean(postgresUser.passwordHash) && verifyPasswordHash(password, postgresUser.passwordHash);
 
       return valid ? sanitizeAccount(postgresUser) : null;
     }
@@ -230,9 +218,7 @@ class AccountService {
       return null;
     }
 
-    const valid = account.passwordHash
-      ? verifyPasswordHash(password, account.passwordHash)
-      : account.password === password;
+    const valid = Boolean(account.passwordHash) && verifyPasswordHash(password, account.passwordHash);
 
     if (valid) {
       await this.prismaAuth.upsertUser(account, { overwrite: false });
@@ -419,5 +405,7 @@ class AccountService {
 
 module.exports = {
   AccountService,
-  normalizeUsername
+  normalizeUsername,
+  hashPassword,
+  verifyPasswordHash
 };

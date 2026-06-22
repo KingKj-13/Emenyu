@@ -12,6 +12,7 @@ import { TipSelector } from './TipSelector';
 import { ReceiptView } from './ReceiptView';
 import { flattenMenu, formatPrice, normalizeName } from '../../lib/menuUtils';
 import { resolveImage } from '../../lib/imageResolver';
+import { trackOrdered } from '../../lib/recoAnalytics';
 import { Spinner } from '../ui/Spinner';
 import type { MenuItem } from '../../types/menu';
 import styles from './CartDrawer.module.css';
@@ -79,6 +80,8 @@ export function CartDrawer() {
         })),
         table_number: tableId,
       });
+      // Phase 4: attribute "ordered" events to any recommendations accepted this session.
+      trackOrdered(orderedItems.map(i => i.name));
       setHistory([...currentOrder, ...orderedItems]);
       clear();
       setTab('current');
@@ -200,17 +203,28 @@ export function CartDrawer() {
                         <p>No current order for this table yet.</p>
                       </div>
                     ) : (
-                      currentOrder.map((item, i) => (
-                        <div key={`${item.name}-${i}`} className={styles.historyItem}>
-                          {item.img && <img src={item.img} alt={item.name} className={styles.historyThumb} loading="lazy" />}
-                          <div className={styles.historyMeta}>
-                            <span className={styles.historyName}>{item.name}</span>
-                            {item.note && <span className={styles.historyNote}>{item.note}</span>}
+                      currentOrder.map((item, i) => {
+                        const imgSrc = resolveImage({ name: item.name, price: item.price, description: item.description, img: item.img });
+                        return (
+                          <div key={`${item.name}-${i}`} className={styles.historyItem}>
+                            {imgSrc && (
+                              <img
+                                src={imgSrc}
+                                alt={item.name}
+                                className={styles.historyThumb}
+                                loading="lazy"
+                                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            )}
+                            <div className={styles.historyMeta}>
+                              <span className={styles.historyName}>{item.name}</span>
+                              {item.note && <span className={styles.historyNote}>{item.note}</span>}
+                            </div>
+                            <span className={styles.historyQty}>x{item.qty}</span>
+                            <span className={styles.historyPrice}>{formatPrice(item.price * item.qty)}</span>
                           </div>
-                          <span className={styles.historyQty}>x{item.qty}</span>
-                          <span className={styles.historyPrice}>{formatPrice(item.price * item.qty)}</span>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 ) : (

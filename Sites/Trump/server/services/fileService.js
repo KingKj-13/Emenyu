@@ -88,9 +88,19 @@ class FileService {
 
   async writeJson(filePath, value) {
     await fsPromises.mkdir(path.dirname(filePath), { recursive: true });
-    const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-    await fsPromises.writeFile(tempPath, JSON.stringify(value, null, 2));
-    await fsPromises.rename(tempPath, filePath);
+    // Unique temp name (pid + time + per-process counter + random) so concurrent
+    // writes to the SAME file never collide — a same-millisecond collision used
+    // to make one rename hit ENOENT and crash the process.
+    this._writeSeq = (this._writeSeq || 0) + 1;
+    const unique = `${process.pid}.${Date.now()}.${this._writeSeq}.${Math.random().toString(36).slice(2, 8)}`;
+    const tempPath = `${filePath}.${unique}.tmp`;
+    try {
+      await fsPromises.writeFile(tempPath, JSON.stringify(value, null, 2));
+      await fsPromises.rename(tempPath, filePath);
+    } catch (error) {
+      await fsPromises.unlink(tempPath).catch(() => {});
+      throw error;
+    }
   }
 
   async loadMenu() {
@@ -111,6 +121,10 @@ class FileService {
 
   async loadRecommendations() {
     return (await this.prismaMenu.loadRecommendations()) || [];
+  }
+
+  async loadChefRecommendations() {
+    return (await this.prismaMenu.loadChefRecommendations()) || [];
   }
 
   async loadPopular() {

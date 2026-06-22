@@ -1,8 +1,8 @@
 const path = require('path');
 
-const { normalizeId, tableIdFromFilename } = require('../utils/helpers');
+const { tableIdFromFilename } = require('../utils/helpers');
 
-function createOrderController({ config, fileService, socketService }) {
+function createOrderController({ config, fileService, socketService, orderValidationService }) {
   return {
     serveAdminPage(req, res) {
       res.sendFile(path.join(config.directories.base, 'admin.html'));
@@ -21,21 +21,18 @@ function createOrderController({ config, fileService, socketService }) {
     },
 
     async submitOrder(req, res) {
-      const order = req.body;
-      if (!order || !Array.isArray(order.items) || order.items.length === 0) {
-        return res.status(400).json({ error: 'Empty order' });
+      let validated;
+      try {
+        // Server-authoritative validation: rejects unknown/unavailable items,
+        // bad quantities, and invalid tables; recomputes prices + totals from the
+        // live menu so client-supplied pricing is never trusted.
+        validated = await orderValidationService.validateOrder(req.body, { requireTotals: true });
+      } catch (error) {
+        const status = error.statusCode === 503 ? 503 : 400;
+        return res.status(status).json({ error: error.message || 'Invalid order', details: error.details || [] });
       }
 
-      const tableId = normalizeId(order.table_number);
-      if (!tableId || tableId === 'unknown') {
-        return res.status(400).json({ error: 'Invalid table ID' });
-      }
-
-      const storedOrder = {
-        ...order,
-        table_number: tableId,
-        restaurantId: config.restaurantId
-      };
+      const { order: storedOrder, tableId } = validated;
 
       try {
         await fileService.saveOrder(storedOrder, tableId);

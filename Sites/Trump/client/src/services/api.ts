@@ -1,5 +1,6 @@
 import { ENDPOINTS } from '../constants/api';
-import type { MenuData } from '../types/menu';
+import type { MenuData, ChefRec, ChefRecInput, RecommendationAnalytics, RecoInsightsResult, BundleAdmin, BundleInput } from '../types/menu';
+import type { PersonaOrder } from '../constants/recommendedOrders';
 import type { LoginPayload, LoginResponse, AuthUser } from '../types/auth';
 import type { OrderPayload } from '../types/cart';
 
@@ -44,6 +45,10 @@ export const api = {
     return postJson<unknown>(ENDPOINTS.chat, payload);
   },
 
+  getConfig(): Promise<{ assistantName: string; brandName: string }> {
+    return fetchJson<{ assistantName: string; brandName: string }>(ENDPOINTS.config);
+  },
+
   aiPairing(payload: unknown) {
     return postJson<unknown>(ENDPOINTS.aiPairing, payload);
   },
@@ -61,8 +66,20 @@ export const api = {
       .catch(() => null);
   },
 
-  login(payload: LoginPayload): Promise<LoginResponse> {
-    return postJson<LoginResponse>(ENDPOINTS.authLogin, payload);
+  async login(payload: LoginPayload): Promise<LoginResponse> {
+    // Don't route through fetchJson (which throws on any non-2xx): a 401/403 is a
+    // valid auth answer, not a connection failure. Surface the server's error
+    // message so the UI can say "Invalid credentials" instead of "Unable to connect".
+    // Only a genuine network failure (fetch rejects) propagates as a thrown error.
+    const res = await fetch(ENDPOINTS.authLogin, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const text = await res.text();
+    const data = text.trim() ? (JSON.parse(text) as LoginResponse) : ({} as LoginResponse);
+    if (res.ok) return data;
+    return { ok: false, error: data.error || 'Invalid credentials. Please try again.' };
   },
 
   logout(): Promise<void> {
@@ -144,6 +161,21 @@ export const api = {
     return fetchJson<unknown[]>(ENDPOINTS.menuAdminItems);
   },
 
+  getMenuCategories() {
+    return fetchJson<Array<{ id: number; title: string }>>(ENDPOINTS.menuCategories);
+  },
+
+  createMenuItem(payload: {
+    name: string;
+    category: string;
+    price: number;
+    description?: string;
+    available?: boolean;
+    chefPick?: boolean;
+  }) {
+    return postJson<{ ok: boolean; item: unknown }>(ENDPOINTS.menuAdminItems, payload);
+  },
+
   toggleMenuItemAvailability(id: number, available: boolean) {
     return fetchJson<{ ok: boolean }>(`${ENDPOINTS.menuItemAvailability(id)}`, {
       method: 'PATCH',
@@ -170,6 +202,67 @@ export const api = {
     return fetchJson<{ ok: boolean }>(ENDPOINTS.menuItemDelete(id), { method: 'DELETE' });
   },
 
+  // Chef recommendations (owner controls — Phase 3, Task 8)
+  getChefRecs() {
+    return fetchJson<ChefRec[]>(ENDPOINTS.chefRecs);
+  },
+
+  createChefRec(payload: ChefRecInput) {
+    return postJson<{ ok: boolean; recommendation: ChefRec }>(ENDPOINTS.chefRecs, payload);
+  },
+
+  updateChefRec(id: number, patch: Partial<ChefRecInput>) {
+    return fetchJson<{ ok: boolean; recommendation: ChefRec }>(ENDPOINTS.chefRec(id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+  },
+
+  deleteChefRec(id: number) {
+    return fetchJson<{ ok: boolean }>(ENDPOINTS.chefRec(id), { method: 'DELETE' });
+  },
+
+  // Recommended-order bundles (Phase 5)
+  getBundles() {
+    return fetchJson<PersonaOrder[]>(ENDPOINTS.bundles);
+  },
+
+  getBundlesAdmin() {
+    return fetchJson<BundleAdmin[]>(ENDPOINTS.bundlesAdmin);
+  },
+
+  createBundle(payload: BundleInput) {
+    return postJson<{ ok: boolean; bundle: BundleAdmin }>(ENDPOINTS.bundles, payload);
+  },
+
+  updateBundle(id: number, patch: Partial<BundleInput>) {
+    return fetchJson<{ ok: boolean; bundle: BundleAdmin }>(ENDPOINTS.bundle(id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+  },
+
+  deleteBundle(id: number) {
+    return fetchJson<{ ok: boolean }>(ENDPOINTS.bundle(id), { method: 'DELETE' });
+  },
+
+  // Recommendation analytics dashboard (Phase 4, owner|manager)
+  getRecommendationAnalytics(params: { from?: string; to?: string; category?: string; source?: string; rotationGroup?: string; mode?: string } = {}) {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== '') as [string, string][]
+    ).toString();
+    return fetchJson<RecommendationAnalytics>(`${ENDPOINTS.analyticsRecommendations}${qs ? `?${qs}` : ''}`);
+  },
+
+  getRecommendationInsights(params: { from?: string; to?: string; mode?: string } = {}) {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== '') as [string, string][]
+    ).toString();
+    return fetchJson<RecoInsightsResult>(`${ENDPOINTS.analyticsRecommendationsInsights}${qs ? `?${qs}` : ''}`);
+  },
+
   bulkMenuItemAction(action: 'hide' | 'show' | 'delete', ids: number[]) {
     return postJson<{ ok: boolean; count: number }>(ENDPOINTS.menuItemBulk, { action, ids });
   },
@@ -187,9 +280,19 @@ export const api = {
     return fetchJson<unknown>(`${ENDPOINTS.analyticsummary}?${q}`);
   },
 
-  getAnalyticsItems(params: { from?: string; to?: string }) {
+  getAnalyticsItems(params: { from?: string; to?: string; order?: 'asc' | 'desc' }) {
     const q = new URLSearchParams(params as Record<string, string>).toString();
     return fetchJson<unknown[]>(`${ENDPOINTS.analyticsItems}?${q}`);
+  },
+
+  getAnalyticsTrend(params: { from?: string; to?: string; bucket?: 'day' | 'week' | 'month' }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<{ bucket: string; points: { date: string; revenue: number; orders: number }[] }>(`${ENDPOINTS.analyticsTrend}?${q}`);
+  },
+
+  getAnalyticsDayOfWeek(params: { from?: string; to?: string }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<{ dow: number; label: string; count: number; revenue: number }[]>(`${ENDPOINTS.analyticsDayOfWeek}?${q}`);
   },
 
   getAnalyticsTables(params: { from?: string; to?: string }) {
@@ -242,5 +345,57 @@ export const api = {
 
   subscribePush(subscription: unknown) {
     return postJson<unknown>(ENDPOINTS.pushSubscribe, subscription);
+  },
+
+  // ── Waiter-AI app ──
+  getFloor() {
+    return fetchJson<import('../types/waiter').FloorState>(ENDPOINTS.floor);
+  },
+  getTableIntel(tableId: string, tone?: string) {
+    const q = tone ? `?tone=${encodeURIComponent(tone)}` : '';
+    return fetchJson<import('../types/waiter').TableIntel>(`${ENDPOINTS.tableIntel(tableId)}${q}`);
+  },
+  coach(payload: { tableId?: string; cart?: unknown[]; dishName?: string; tone?: string }) {
+    return postJson<import('../types/waiter').CoachResponse>(ENDPOINTS.coach, payload);
+  },
+  orderedTogether(payload: { cart?: unknown[]; limit?: number }) {
+    return postJson<import('../types/waiter').OrderedTogetherResponse>(ENDPOINTS.orderedTogether, payload);
+  },
+
+  cartRecommendations(payload: { cart?: unknown[]; event?: string | null; reason?: string }) {
+    return postJson<import('../types/waiter').CartRecResponse>(ENDPOINTS.cartRecommendations, payload);
+  },
+  sommelier(payload: { dish?: string; cart?: unknown[]; tone?: string }) {
+    return postJson<import('../types/waiter').SommelierResponse>(ENDPOINTS.sommelier, payload);
+  },
+  ask(payload: { message: string; tableId?: string; cart?: unknown[] }) {
+    return postJson<import('../types/waiter').AskResponse>(ENDPOINTS.ask, payload);
+  },
+  recovery(payload: { tableId: string; delayMinutes?: number; tone?: string }) {
+    return postJson<import('../types/waiter').RecoveryResponse>(ENDPOINTS.recovery, payload);
+  },
+  recordUpsell(payload: { waiterName: string; tableId?: string; suggestedItem: string; accepted: boolean; source?: string; value?: number }) {
+    return postJson<{ ok: boolean }>(ENDPOINTS.upsellEvent, payload);
+  },
+  getWaiterPerformance(params: { waiter?: string; period?: string }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<import('../types/waiter').Performance>(`${ENDPOINTS.waiterPerformance}?${q}`);
+  },
+  getWaiterShiftReport(params: { waiter?: string; period?: string }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<import('../types/waiter').ShiftReport>(`${ENDPOINTS.waiterShiftReport}?${q}`);
+  },
+  getWaiterLeaderboard(params: { waiter?: string; period?: string }) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<import('../types/waiter').LeaderboardResponse>(`${ENDPOINTS.waiterLeaderboard}?${q}`);
+  },
+  getGuests() {
+    return fetchJson<import('../types/waiter').Guest[]>(ENDPOINTS.guests);
+  },
+  seatGuest(tableId: string, guestId: number) {
+    return postJson<{ ok: boolean; guestIntel: import('../types/waiter').GuestIntel }>(ENDPOINTS.seatGuest(tableId), { guestId });
+  },
+  setTableCovers(tableId: string, covers: number) {
+    return postJson<{ ok: boolean; tableId: string; covers: number }>(ENDPOINTS.tableCovers(tableId), { covers });
   },
 };

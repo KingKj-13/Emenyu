@@ -1,13 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
-import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback, type ReactNode, type CSSProperties } from 'react';
+import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Plus, X, Sparkles, TrendingUp } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../hooks/useAuth';
+import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
 import { api } from '../services/api';
 import { Spinner } from '../components/ui/Spinner';
 import { formatPrice } from '../lib/menuUtils';
+import type { ChefRec, ChefRecInput, ChefRecType, ChefBeverageKind, RecommendationAnalytics, RecoTally, RecoInsightsResult, RecoInsight, BundleAdmin, BundleInput, BundleItemInput } from '../types/menu';
 import styles from './AdminPage.module.css';
 
-type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals';
+type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles';
 
 interface Order {
   filename: string;
@@ -76,9 +78,10 @@ interface Deal {
   activeDays?: number[];
 }
 
-export function AdminPage() {
+export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
+  useHomeBackGuard();
   const { user, logout } = useAuth();
-  const [tab, setTab] = useState<Tab>('orders');
+  const [tab, setTab] = useState<Tab>(initialTab || 'orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [history, setHistory] = useState<Order[]>([]);
   const [accounts, setAccounts] = useState<unknown[]>([]);
@@ -97,8 +100,15 @@ export function AdminPage() {
   const [reportRatings, setReportRatings] = useState<RatingsData | null>(null);
   const [tableCarts, setTableCarts] = useState<TableCartEntry[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [chefRecs, setChefRecs] = useState<ChefRec[]>([]);
+  const [recoAnalytics, setRecoAnalytics] = useState<RecommendationAnalytics | null>(null);
+  const [recoInsights, setRecoInsights] = useState<RecoInsightsResult | null>(null);
+  const [recoFilters, setRecoFilters] = useState<{ range: ReportRange; category: string; source: string; rotationGroup: string; mode: string }>({ range: '7d', category: '', source: '', rotationGroup: '', mode: '' });
+  const [bundles, setBundles] = useState<BundleAdmin[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [modal, setModal] = useState<null | 'item' | 'reservation' | 'deal' | 'account'>(null);
+  const [menuCategoryNames, setMenuCategoryNames] = useState<string[]>([]);
 
   async function loadTab(t: Tab) {
     setTab(t);
@@ -131,12 +141,45 @@ export function AdminPage() {
       } else if (t === 'deals') {
         const data = await api.getDeals();
         setDeals((data as Deal[]) || []);
+      } else if (t === 'chefrecs') {
+        const [recs, items] = await Promise.all([api.getChefRecs(), api.getAdminMenuItems()]);
+        setChefRecs((recs as ChefRec[]) || []);
+        setMenuItems((items as AdminMenuItem[]) || []);
+      } else if (t === 'recoanalytics') {
+        await loadRecoAnalytics(recoFilters);
+        return;
+      } else if (t === 'bundles') {
+        const data = await api.getBundlesAdmin();
+        setBundles((data as BundleAdmin[]) || []);
       }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadRecoAnalytics(filters: typeof recoFilters) {
+    setLoading(true);
+    const { from, to } = getDateRange(filters.range);
+    try {
+      const [data, ins] = await Promise.all([
+        api.getRecommendationAnalytics({
+          from, to,
+          category: filters.category || undefined,
+          source: filters.source || undefined,
+          rotationGroup: filters.rotationGroup || undefined,
+          mode: filters.mode || undefined
+        }),
+        api.getRecommendationInsights({ from, to, mode: filters.mode || undefined })
+      ]);
+      setRecoAnalytics(data);
+      setRecoInsights(ins);
+    } catch {
+      setRecoAnalytics(null);
+      setRecoInsights(null);
+    }
+    setLoading(false);
   }
 
   function getDateRange(range: ReportRange): { from?: string; to?: string } {
@@ -218,7 +261,49 @@ export function AdminPage() {
     setMenuItems(prev => prev.map(item => item.dbId === id ? { ...item, ...patch, ...updated } : item));
   }, []);
 
-  useEffect(() => { loadTab('orders'); }, []);
+  // ── Chef recommendations (owner controls — Phase 3, Task 8) ──
+  const handleCreateChefRec = useCallback(async (input: ChefRecInput): Promise<string | null> => {
+    try {
+      await api.createChefRec(input);
+      // Re-fetch so the new row arrives enriched with source/target names.
+      setChefRecs((await api.getChefRecs() as ChefRec[]) || []);
+      return null;
+    } catch {
+      return 'Could not add — it may already exist, or the database is unavailable.';
+    }
+  }, []);
+
+  const handleUpdateChefRec = useCallback(async (id: number, patch: Partial<ChefRecInput>) => {
+    setChefRecs(prev => prev.map(r => r.id === id ? { ...r, ...patch } as ChefRec : r));
+    try { await api.updateChefRec(id, patch); } catch { /* keep optimistic value */ }
+  }, []);
+
+  const handleDeleteChefRec = useCallback(async (id: number) => {
+    if (!confirm('Delete this chef recommendation?')) return;
+    try { await api.deleteChefRec(id); setChefRecs(prev => prev.filter(r => r.id !== id)); } catch { /* ignore */ }
+  }, []);
+
+  // ── Recommended-order bundles (Phase 5, Task 1) ──
+  const reloadBundles = useCallback(async () => {
+    try { setBundles((await api.getBundlesAdmin() as BundleAdmin[]) || []); } catch { /* ignore */ }
+  }, []);
+
+  const handleCreateBundle = useCallback(async (input: BundleInput): Promise<string | null> => {
+    try { await api.createBundle(input); await reloadBundles(); return null; }
+    catch { return 'Could not create the bundle — the database may be unavailable.'; }
+  }, [reloadBundles]);
+
+  const handleUpdateBundle = useCallback(async (id: number, patch: Partial<BundleInput>) => {
+    setBundles(prev => prev.map(b => b.id === id ? { ...b, ...patch } as BundleAdmin : b));
+    try { await api.updateBundle(id, patch); } catch { reloadBundles(); }
+  }, [reloadBundles]);
+
+  const handleDeleteBundle = useCallback(async (id: number) => {
+    if (!confirm('Delete this bundle?')) return;
+    try { await api.deleteBundle(id); setBundles(prev => prev.filter(b => b.id !== id)); } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadTab(initialTab || 'orders'); }, []);
 
   async function handleComplete(filename: string) {
     setActionLoading(filename);
@@ -240,56 +325,183 @@ export function AdminPage() {
     setActionLoading(null);
   }
 
-  const TABS: { key: Tab; label: string; icon: typeof ClipboardList }[] = [
-    { key: 'orders', label: 'Orders', icon: ClipboardList },
-    { key: 'history', label: 'History', icon: BookOpen },
-    { key: 'accounts', label: 'Accounts', icon: Users },
-    { key: 'chat', label: 'Chat Logs', icon: MessageSquare },
-    { key: 'menu', label: 'Menu', icon: UtensilsCrossed },
-    { key: 'tables', label: 'Tables', icon: LayoutGrid },
-    { key: 'deals', label: 'Deals', icon: Clock },
-    { key: 'reports', label: 'Reports', icon: BarChart2 },
-    { key: 'qrcodes', label: 'QR Codes', icon: QrCode },
-    { key: 'reservations', label: 'Reservations', icon: CalendarDays },
+  async function openNewItem() {
+    setModal('item');
+    try {
+      const cats = await api.getMenuCategories();
+      setMenuCategoryNames((cats || []).map(c => c.title));
+    } catch { setMenuCategoryNames([]); }
+  }
+
+  async function openNewDeal() {
+    setModal('deal');
+    if (menuItems.length === 0) {
+      try {
+        const data = await api.getAdminMenuItems();
+        setMenuItems((data as AdminMenuItem[]) || []);
+      } catch {}
+    }
+  }
+
+  async function handleCreateItem(payload: { name: string; category: string; price: number; description: string; available: boolean; chefPick: boolean }) {
+    const res = await api.createMenuItem(payload);
+    const created = res?.item as AdminMenuItem | undefined;
+    if (created) setMenuItems(prev => [...prev, created]);
+    setModal(null);
+    if (tab !== 'menu') loadTab('menu');
+  }
+
+  async function handleCreateReservation(payload: { name: string; phone: string; partySize: number; date: string; notes: string }) {
+    await api.createReservation(payload);
+    setModal(null);
+    const onDate = payload.date.slice(0, 10);
+    setReservationDate(onDate);
+    const data = await api.getReservations(onDate);
+    setReservations((data as Reservation[]) || []);
+    if (tab !== 'reservations') setTab('reservations');
+  }
+
+  async function handleCreateDeal(deal: Deal) {
+    const next = [...deals, deal];
+    await api.saveDeals(next);
+    setDeals(next);
+    setModal(null);
+    if (tab !== 'deals') setTab('deals');
+  }
+
+  async function handleCreateAccount(payload: { username: string; password: string; role: string; label: string }) {
+    await api.createAccount(payload);
+    setModal(null);
+    const data = await api.getAccounts();
+    setAccounts(data || []);
+    if (tab !== 'accounts') loadTab('accounts');
+  }
+
+  function exportHistoryCsv() {
+    const rows = [['Table', 'Time', 'Items', 'Total']];
+    history.forEach(o => {
+      rows.push([
+        String(o.tableId || o.table_number || ''),
+        o.timestamp ? new Date(o.timestamp).toLocaleString() : '',
+        String(o.items?.length ?? ''),
+        String(o.total ?? o.subtotal ?? ''),
+      ]);
+    });
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `order-history-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const liveCovers = tableCarts.filter(t => t.itemCount > 0).length;
+
+  const NAV_GROUPS: { label: string; items: { key: Tab; label: string; icon: typeof ClipboardList; badge?: number }[] }[] = [
+    { label: 'SERVICE', items: [
+      { key: 'orders', label: 'Orders', icon: ClipboardList, badge: orders.length || undefined },
+      { key: 'history', label: 'History', icon: BookOpen },
+      { key: 'tables', label: 'Tables', icon: LayoutGrid },
+      { key: 'reservations', label: 'Reservations', icon: CalendarDays },
+    ] },
+    { label: 'MENU & OFFERS', items: [
+      { key: 'menu', label: 'Menu', icon: UtensilsCrossed },
+      { key: 'chefrecs', label: 'Chef Recs', icon: Sparkles },
+      { key: 'bundles', label: 'Bundles', icon: LayoutGrid },
+      { key: 'deals', label: 'Deals', icon: Clock },
+      { key: 'qrcodes', label: 'QR Codes', icon: QrCode },
+    ] },
+    { label: 'INSIGHT', items: [
+      { key: 'reports', label: 'Reports', icon: BarChart2 },
+      { key: 'recoanalytics', label: 'Reco Analytics', icon: TrendingUp },
+      { key: 'accounts', label: 'Accounts', icon: Users },
+      { key: 'chat', label: 'Chat Logs', icon: MessageSquare },
+    ] },
   ];
 
+  const refreshAction = (
+    <button className={styles.actionBtn} onClick={() => loadTab(tab)}><RefreshCw size={14} /> Refresh</button>
+  );
+
+  const PAGE_HEADS: Record<Tab, { eyebrow: string; title: string; sub: string; actions?: ReactNode }> = {
+    orders: { eyebrow: 'SERVICE · LIVE', title: 'Live orders', sub: `${orders.length} active ticket${orders.length !== 1 ? 's' : ''}`, actions: <><span className={styles.livePill}><span className={styles.liveDot} /> {liveCovers} live covers</span>{refreshAction}</> },
+    history: { eyebrow: 'COMPLETED', title: 'Order history', sub: `${history.length} settled order${history.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtn} onClick={exportHistoryCsv}><Download size={14} /> Export CSV</button> },
+    tables: { eyebrow: 'LIVE FLOOR', title: 'Tables', sub: `${liveCovers} active cart${liveCovers !== 1 ? 's' : ''} · manager override`, actions: <><span className={styles.livePill}><span className={styles.liveDot} /> Live sync</span>{refreshAction}</> },
+    reservations: { eyebrow: 'BOOKINGS', title: 'Reservations', sub: `${reservations.length} booking${reservations.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('reservation')}><Plus size={14} /> New booking</button> },
+    menu: { eyebrow: 'MENU MANAGEMENT', title: 'The menu', sub: `${menuItems.length} item${menuItems.length !== 1 ? 's' : ''}`, actions: <><button className={styles.actionBtnGold} onClick={openNewItem}><Plus size={14} /> New item</button>{refreshAction}</> },
+    chefrecs: { eyebrow: 'CHEF CURATION', title: 'Chef recommendations', sub: `${chefRecs.length} pairing${chefRecs.length !== 1 ? 's' : ''} · always shown ahead of automatic suggestions`, actions: refreshAction },
+    recoanalytics: { eyebrow: 'ANALYTICS', title: 'Recommendation performance', sub: `${recoAnalytics?.eventCount ?? 0} events · impression → click → accept → order`, actions: refreshAction },
+    bundles: { eyebrow: 'CURATED MENUS', title: 'Recommended orders', sub: `${bundles.length} persona bundle${bundles.length !== 1 ? 's' : ''} · the menu "Not sure what to order?" strip`, actions: refreshAction },
+    deals: { eyebrow: 'OFFERS', title: 'Deals', sub: 'Bundle dishes into featured set menus', actions: <button className={styles.actionBtnGold} onClick={openNewDeal}><Plus size={14} /> New deal</button> },
+    qrcodes: { eyebrow: 'TABLE QR CODES', title: 'QR codes', sub: 'Each links a guest straight to its table session' },
+    reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top dishes, peak hours & guest ratings' },
+    accounts: { eyebrow: 'STAFF', title: 'Accounts', sub: `${accounts.length} team member${accounts.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('account')}><Plus size={14} /> Add account</button> },
+    chat: { eyebrow: 'AI SOMMELIER', title: 'Chat logs', sub: 'Guest conversations with the AI sommelier' },
+  };
+  const head = PAGE_HEADS[tab];
+  const initials = (user?.label || user?.username || 'AD').slice(0, 2).toUpperCase();
+
   return (
-    <AppShell requireRole={['owner', 'manager']}>
-      <div className={styles.page}>
-        <div className={styles.pageHeader}>
-          <div>
-            <h1 className={styles.pageTitle}>Admin Dashboard</h1>
-            <p className={styles.pageSubtitle}>{user?.label || user?.username} · {user?.role}</p>
-          </div>
-          <NotificationButton />
-          <button className={styles.logoutBtn} onClick={logout} aria-label="Sign out">
-            <LogOut size={16} />
-            Sign Out
-          </button>
+    <AppShell requireRole={['owner', 'manager']} hideHeader>
+      <div className={styles.console}>
+        <div className={styles.topChrome}>
+          <div className={styles.lights}><span /><span /><span /></div>
+          <div className={styles.urlPill}><span className={styles.urlDot} /> emenyu.io/admin · Trump Steakhouse</div>
+          <div className={styles.chromeRight}><NotificationButton /></div>
         </div>
+        <div className={styles.body}>
+          <aside className={styles.sidebar}>
+            <div className={styles.brand}>
+              <div className={styles.brandLogo}>T</div>
+              <div>
+                <div className={styles.brandName}>Trump</div>
+                <div className={styles.brandSub}>{(user?.role || 'manager').toUpperCase()} CONSOLE</div>
+              </div>
+            </div>
+            <nav className={styles.nav}>
+              {NAV_GROUPS.map(group => (
+                <div key={group.label} className={styles.navGroup}>
+                  <div className={styles.navGroupLabel}>{group.label}</div>
+                  {group.items.map(({ key, label, icon: Icon, badge }) => (
+                    <button
+                      key={key}
+                      className={`${styles.navItem} ${tab === key ? styles.navItemActive : ''}`}
+                      onClick={() => loadTab(key)}
+                      aria-selected={tab === key}
+                    >
+                      <Icon size={16} />
+                      <span className={styles.navItemLabel}>{label}</span>
+                      {badge ? <span className={styles.navBadge}>{badge}</span> : null}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </nav>
+            <div className={styles.userFooter}>
+              <div className={styles.userAvatar}>{initials}</div>
+              <div className={styles.userMeta}>
+                <div className={styles.userName}>{user?.label || user?.username}</div>
+                <div className={styles.userRole}>{user?.role}</div>
+              </div>
+              <button className={styles.logoutIcon} onClick={logout} aria-label="Sign out"><LogOut size={16} /></button>
+            </div>
+          </aside>
 
-        <div className={styles.tabBar}>
-          {TABS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              className={`${styles.tabBtn} ${tab === key ? styles.tabActive : ''}`}
-              onClick={() => loadTab(key)}
-              aria-selected={tab === key}
-            >
-              <Icon size={16} />
-              {label}
-            </button>
-          ))}
-          <button className={styles.refreshBtn} onClick={() => loadTab(tab)} aria-label="Refresh">
-            <RefreshCw size={15} />
-          </button>
-        </div>
-
-        <div className={styles.tabContent}>
-          {loading ? (
-            <div className={styles.loadingState}><Spinner size={36} /></div>
-          ) : (
-            <>
+          <main className={styles.main}>
+            <div className={styles.pageHead}>
+              <div>
+                <div className={styles.eyebrow}>{head.eyebrow}</div>
+                <h1 className={styles.pageTitleNew}>{head.title}</h1>
+                <div className={styles.pageSub}>{head.sub}</div>
+              </div>
+              {head.actions && <div className={styles.pageActions}>{head.actions}</div>}
+            </div>
+            <div className={styles.pageBody}>
+              {loading ? (
+                <div className={styles.loadingState}><Spinner size={36} /></div>
+              ) : (
+                <>
               {tab === 'orders' && (
                 <OrderList
                   orders={orders}
@@ -394,10 +606,41 @@ export function AdminPage() {
                   }}
                 />
               )}
-            </>
-          )}
+              {tab === 'chefrecs' && (
+                <ChefRecsPanel
+                  recs={chefRecs}
+                  menuItems={menuItems}
+                  onCreate={handleCreateChefRec}
+                  onUpdate={handleUpdateChefRec}
+                  onDelete={handleDeleteChefRec}
+                />
+              )}
+              {tab === 'recoanalytics' && (
+                <RecoAnalyticsPanel
+                  data={recoAnalytics}
+                  insights={recoInsights}
+                  filters={recoFilters}
+                  onFilterChange={next => { setRecoFilters(next); loadRecoAnalytics(next); }}
+                />
+              )}
+              {tab === 'bundles' && (
+                <BundlesPanel
+                  bundles={bundles}
+                  onCreate={handleCreateBundle}
+                  onUpdate={handleUpdateBundle}
+                  onDelete={handleDeleteBundle}
+                />
+              )}
+                </>
+              )}
+            </div>
+          </main>
         </div>
       </div>
+      {modal === 'item' && <NewItemModal categories={menuCategoryNames} onClose={() => setModal(null)} onSubmit={handleCreateItem} />}
+      {modal === 'reservation' && <NewReservationModal defaultDate={reservationDate} onClose={() => setModal(null)} onSubmit={handleCreateReservation} />}
+      {modal === 'deal' && <NewDealModal menuItems={menuItems} onClose={() => setModal(null)} onSubmit={handleCreateDeal} />}
+      {modal === 'account' && <NewAccountModal currentRole={user?.role} onClose={() => setModal(null)} onSubmit={handleCreateAccount} />}
     </AppShell>
   );
 }
@@ -1150,6 +1393,459 @@ function TablesPanel({ tableCarts, onApplyOverride }: {
   );
 }
 
+// ── Chef recommendations management (owner controls — Phase 3, Task 8) ──
+const CHEF_REC_SEASONS = ['ALL_YEAR', 'SUMMER', 'WINTER', 'SPRING', 'AUTUMN', 'FESTIVE'];
+const CHEF_REC_TYPES: ChefRecType[] = ['DISH', 'SIDE', 'DESSERT', 'BEVERAGE'];
+const CHEF_BEVERAGE_KINDS: ChefBeverageKind[] = ['NONE', 'WINE', 'COCKTAIL', 'BEER', 'SOFT', 'HOT'];
+const titleCase = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
+
+const chefField: CSSProperties = {
+  width: '100%', padding: '9px 11px', background: 'rgba(0,0,0,0.35)',
+  border: '1px solid var(--color-line, rgba(198,162,75,0.22))', borderRadius: 8,
+  color: 'var(--color-cream, #f3ead6)', fontSize: 13, outline: 'none'
+};
+const chefLabel: CSSProperties = {
+  display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+  textTransform: 'uppercase', color: 'var(--color-sand, #b8a88a)', margin: '0 0 5px'
+};
+
+function ChefRecsPanel({ recs, menuItems, onCreate, onUpdate, onDelete }: {
+  recs: ChefRec[];
+  menuItems: AdminMenuItem[];
+  onCreate: (input: ChefRecInput) => Promise<string | null>;
+  onUpdate: (id: number, patch: Partial<ChefRecInput>) => void;
+  onDelete: (id: number) => void;
+}) {
+  const [sourceItemId, setSourceItemId] = useState(0);
+  const [targetItemId, setTargetItemId] = useState(0);
+  const [recType, setRecType] = useState<ChefRecType>('DISH');
+  const [beverageKind, setBeverageKind] = useState<ChefBeverageKind>('NONE');
+  const [priority, setPriority] = useState(100);
+  const [season, setSeason] = useState('ALL_YEAR');
+  const [rotationGroup, setRotationGroup] = useState('');
+  const [reason, setReason] = useState('');
+  const [active, setActive] = useState(true);
+  const [status, setStatus] = useState<{ msg: string; error: boolean } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const sortedItems = [...menuItems].filter(i => i.dbId).sort((a, b) => a.name.localeCompare(b.name));
+
+  function onTypeChange(t: ChefRecType) {
+    setRecType(t);
+    if (t === 'BEVERAGE') { if (beverageKind === 'NONE') setBeverageKind('WINE'); }
+    else setBeverageKind('NONE');
+  }
+
+  async function submit() {
+    if (!sourceItemId || !targetItemId) { setStatus({ msg: 'Select both a source and a target item.', error: true }); return; }
+    if (sourceItemId === targetItemId) { setStatus({ msg: 'Source and target must be different items.', error: true }); return; }
+    setSaving(true);
+    const err = await onCreate({ sourceItemId, targetItemId, recType, beverageKind, priority, season, rotationGroup: rotationGroup.trim(), reason: reason.trim(), active });
+    setSaving(false);
+    if (err) setStatus({ msg: err, error: true });
+    else { setStatus({ msg: 'Chef recommendation added.', error: false }); setReason(''); setRotationGroup(''); }
+  }
+
+  const groups = new Map<string, ChefRec[]>();
+  recs.forEach(r => { const arr = groups.get(r.sourceName) || []; arr.push(r); groups.set(r.sourceName, arr); });
+  const groupNames = [...groups.keys()].sort();
+
+  return (
+    <div>
+      <p style={{ color: 'var(--color-sand, #b8a88a)', fontSize: 13, lineHeight: 1.55, maxWidth: 720, marginBottom: 18 }}>
+        Chef recommendations <strong style={{ color: 'var(--color-gold, #c6a24b)' }}>always win</strong> — they show ahead of
+        every automatic suggestion across the guest app, chatbot, item pairings and the waiter upsell screen. Put several
+        beverages in one rotation group and the engine rotates between them for different guests. Category-safety rules
+        (one beverage, never wine + cocktail, no dessert → starter) still apply.
+      </p>
+
+      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-line, rgba(198,162,75,0.18))', borderRadius: 12, padding: 18, marginBottom: 24 }}>
+        <h3 style={{ margin: '0 0 14px', fontSize: 15, color: 'var(--color-cream, #f3ead6)' }}>Add chef recommendation</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+          <div>
+            <label style={chefLabel}>When the guest has…</label>
+            <select style={chefField} value={sourceItemId} onChange={e => setSourceItemId(Number(e.target.value))}>
+              <option value={0}>— select source item —</option>
+              {sortedItems.map(it => <option key={it.dbId} value={it.dbId}>{it.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={chefLabel}>…recommend</label>
+            <select style={chefField} value={targetItemId} onChange={e => setTargetItemId(Number(e.target.value))}>
+              <option value={0}>— select target item —</option>
+              {sortedItems.map(it => <option key={it.dbId} value={it.dbId}>{it.name}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginTop: 12 }}>
+          <div>
+            <label style={chefLabel}>Type</label>
+            <select style={chefField} value={recType} onChange={e => onTypeChange(e.target.value as ChefRecType)}>
+              {CHEF_REC_TYPES.map(t => <option key={t} value={t}>{titleCase(t)}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={chefLabel}>Beverage kind</label>
+            <select style={chefField} value={beverageKind} disabled={recType !== 'BEVERAGE'} onChange={e => setBeverageKind(e.target.value as ChefBeverageKind)}>
+              {CHEF_BEVERAGE_KINDS.map(k => <option key={k} value={k}>{k === 'NONE' ? '— (food)' : titleCase(k)}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={chefLabel}>Priority</label>
+            <input type="number" style={chefField} value={priority} min={0} max={1000} onChange={e => setPriority(Number(e.target.value))} />
+          </div>
+          <div>
+            <label style={chefLabel}>Season</label>
+            <select style={chefField} value={season} onChange={e => setSeason(e.target.value)}>
+              {CHEF_REC_SEASONS.map(s => <option key={s} value={s}>{s === 'ALL_YEAR' ? 'All year' : titleCase(s)}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <label style={chefLabel}>Rotation group (optional)</label>
+          <input type="text" style={chefField} placeholder="e.g. ribeye-reds — share across beverages to rotate them" value={rotationGroup} onChange={e => setRotationGroup(e.target.value)} />
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <label style={chefLabel}>Reason (shown to guests on the card)</label>
+          <input type="text" style={chefField} placeholder="e.g. Bold red — built to stand up to grilled beef." value={reason} onChange={e => setReason(e.target.value)} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 14, flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-cream, #f3ead6)', fontSize: 13, cursor: 'pointer' }}>
+            <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} /> Active
+          </label>
+          <button className={styles.actionBtnGold} onClick={submit} disabled={saving}>
+            {saving ? <Spinner size={13} /> : <Plus size={14} />} Add recommendation
+          </button>
+          {status && <span style={{ fontSize: 13, color: status.error ? '#fca5a5' : '#5fcf8a' }}>{status.msg}</span>}
+        </div>
+      </div>
+
+      {recs.length === 0 ? (
+        <div className={styles.emptyState}>
+          <Sparkles size={40} className={styles.emptyIcon} />
+          <p>No chef recommendations yet. Add one above — it takes priority over automatic suggestions.</p>
+        </div>
+      ) : (
+        groupNames.map(name => (
+          <div key={name} style={{ marginBottom: 18 }}>
+            <h3 style={{ fontSize: 14, color: 'var(--color-cream, #f3ead6)', margin: '0 0 8px' }}>
+              With <span style={{ color: 'var(--color-gold, #c6a24b)' }}>{name}</span>
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {groups.get(name)!.map(r => (
+                <ChefRecRow key={r.id} rec={r} onUpdate={onUpdate} onDelete={onDelete} />
+              ))}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function ChefRecRow({ rec, onUpdate, onDelete }: {
+  rec: ChefRec;
+  onUpdate: (id: number, patch: Partial<ChefRecInput>) => void;
+  onDelete: (id: number) => void;
+}) {
+  const [reason, setReason] = useState(rec.reason);
+  const [rotationGroup, setRotationGroup] = useState(rec.rotationGroup);
+  const [priority, setPriority] = useState(rec.priority);
+
+  const kindLabel = rec.recType === 'BEVERAGE' ? `${rec.recType} · ${rec.beverageKind}` : rec.recType;
+
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(198,162,75,0.14))', borderRadius: 10, padding: '12px 14px', opacity: rec.active ? 1 : 0.55 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+        <div>
+          <strong style={{ color: 'var(--color-cream, #f3ead6)' }}>→ {rec.targetName}</strong>
+          <span style={{ color: 'var(--color-sand, #b8a88a)', fontSize: 12, marginLeft: 8 }}>
+            {kindLabel}{rec.season && rec.season !== 'ALL_YEAR' ? ` · ${rec.season}` : ''}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--color-cream, #f3ead6)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={rec.active} onChange={e => onUpdate(rec.id, { active: e.target.checked })} />
+            {rec.active ? 'Active' : 'Disabled'}
+          </label>
+          <button onClick={() => onDelete(rec.id)} aria-label="Delete recommendation"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}>
+            <Trash2 size={12} /> Delete
+          </button>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 88px', gap: 8 }}>
+        <input style={chefField} value={reason} placeholder="Reason shown to guests"
+          onChange={e => setReason(e.target.value)} onBlur={() => { if (reason !== rec.reason) onUpdate(rec.id, { reason }); }} />
+        <input style={chefField} value={rotationGroup} placeholder="Rotation group"
+          onChange={e => setRotationGroup(e.target.value)} onBlur={() => { if (rotationGroup !== rec.rotationGroup) onUpdate(rec.id, { rotationGroup }); }} />
+        <input style={chefField} type="number" value={priority}
+          onChange={e => setPriority(Number(e.target.value))} onBlur={() => { if (priority !== rec.priority) onUpdate(rec.id, { priority }); }} />
+      </div>
+    </div>
+  );
+}
+
+// ── Recommendation analytics dashboard (Phase 4, Task 2) ──
+const RECO_RANGES: { key: ReportRange; label: string }[] = [
+  { key: 'today', label: 'Today' }, { key: '7d', label: '7 Days' }, { key: '30d', label: '30 Days' }, { key: 'all', label: 'All' }
+];
+const RECO_CATEGORIES = ['', 'DISH', 'SIDE', 'DESSERT', 'BEVERAGE', 'STARTER', 'MAIN', 'WINE', 'DRINK'];
+const pctLabel = (r: number) => `${((Number(r) || 0) * 100).toFixed(1)}%`;
+
+type RecoFilters = { range: ReportRange; category: string; source: string; rotationGroup: string; mode: string };
+
+function RecoKpi({ value, label, sub }: { value: string; label: string; sub?: string }) {
+  return (
+    <div className={styles.summaryCard}>
+      <div className={styles.summaryValue}>{value}</div>
+      <div className={styles.summaryLabel}>{label}</div>
+      {sub ? <div className={styles.summaryLabel} style={{ opacity: 0.65 }}>{sub}</div> : null}
+    </div>
+  );
+}
+
+function RecoBoard({ title, rows, metric }: { title: string; rows: RecoTally[]; metric: (r: RecoTally) => string }) {
+  if (!rows || rows.length === 0) return null;
+  return (
+    <div className={styles.reportSection}>
+      <h3 className={styles.reportSectionTitle}>{title}</h3>
+      <div className={styles.topItemsList}>
+        {rows.map((r, i) => (
+          <div key={`${r.name || r.source || r.rotationGroup || 'row'}-${i}`} className={styles.topItemRow}>
+            <span className={styles.topItemRank}>#{i + 1}</span>
+            <span className={styles.topItemName}>{r.name || r.source || r.rotationGroup || '—'}{r.chef ? ' ⭐' : ''}</span>
+            <span className={styles.topItemQty}>{r.impressions} shown</span>
+            <span className={styles.topItemRev}>{metric(r)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const SEVERITY_COLOR: Record<string, string> = { high: '#fca5a5', medium: '#e6c06b', low: '#9aa6b2' };
+
+function RecoActionItems({ insights }: { insights: RecoInsight[] }) {
+  if (!insights || insights.length === 0) return null;
+  return (
+    <div className={styles.reportSection} style={{ marginBottom: 18 }}>
+      <h3 className={styles.reportSectionTitle}>Action items ({insights.length})</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {insights.slice(0, 12).map((ins, i) => (
+          <div key={i} style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(198,162,75,0.14))', borderLeft: `3px solid ${SEVERITY_COLOR[ins.severity] || '#9aa6b2'}`, borderRadius: 8, padding: '10px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: SEVERITY_COLOR[ins.severity] || '#9aa6b2' }}>{ins.severity}</span>
+              <strong style={{ color: 'var(--color-cream, #f3ead6)', fontSize: 13 }}>{ins.title}</strong>
+            </div>
+            <div style={{ color: 'var(--color-sand, #b8a88a)', fontSize: 12, marginTop: 3 }}>{ins.detail}</div>
+            <div style={{ color: 'var(--color-gold, #c6a24b)', fontSize: 12, marginTop: 4 }}>→ {ins.action}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RecoAnalyticsPanel({ data, insights, filters, onFilterChange }: {
+  data: RecommendationAnalytics | null;
+  insights: RecoInsightsResult | null;
+  filters: RecoFilters;
+  onFilterChange: (next: RecoFilters) => void;
+}) {
+  const totals = data?.totals;
+  const set = (patch: Partial<RecoFilters>) => onFilterChange({ ...filters, ...patch });
+  const sources = (data?.bySource || []).map(s => s.source).filter(Boolean) as string[];
+  const groups = (data?.byRotationGroup || []).map(g => g.rotationGroup).filter(Boolean) as string[];
+
+  return (
+    <div className={styles.reportsPanel}>
+      <div className={styles.rangeBar}>
+        {RECO_RANGES.map(r => (
+          <button key={r.key} className={`${styles.rangeBtn} ${filters.range === r.key ? styles.rangeBtnActive : ''}`} onClick={() => set({ range: r.key })}>{r.label}</button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '0 0 18px' }}>
+        <select style={{ ...chefField, width: 'auto' }} value={filters.mode} onChange={e => set({ mode: e.target.value })}>
+          <option value="">All modes</option>
+          <option value="customer">Customer</option>
+          <option value="waiter">Waiter</option>
+        </select>
+        <select style={{ ...chefField, width: 'auto' }} value={filters.category} onChange={e => set({ category: e.target.value })}>
+          {RECO_CATEGORIES.map(c => <option key={c} value={c}>{c ? titleCase(c) : 'All categories'}</option>)}
+        </select>
+        <select style={{ ...chefField, width: 'auto' }} value={filters.source} onChange={e => set({ source: e.target.value })}>
+          <option value="">All sources</option>
+          {sources.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select style={{ ...chefField, width: 'auto' }} value={filters.rotationGroup} onChange={e => set({ rotationGroup: e.target.value })}>
+          <option value="">All rotation groups</option>
+          {groups.map(g => <option key={g} value={g}>{g}</option>)}
+        </select>
+      </div>
+
+      <RecoActionItems insights={insights?.insights || []} />
+
+      {!totals || totals.impressions === 0 ? (
+        <div className={styles.emptyState}>
+          <TrendingUp size={40} className={styles.emptyIcon} />
+          <p>No recommendation events for this filter yet. Events stream in as guests and waiters see, click and accept recommendations.</p>
+        </div>
+      ) : (
+        <>
+          <div className={styles.summaryCards}>
+            <RecoKpi value={String(totals.impressions)} label="Impressions" />
+            <RecoKpi value={String(totals.clicks)} label="Clicks" sub={`${pctLabel(totals.clickRate)} CTR`} />
+            <RecoKpi value={String(totals.accepted)} label="Accepted" />
+            <RecoKpi value={pctLabel(totals.acceptanceRate)} label="Acceptance rate" />
+            <RecoKpi value={pctLabel(totals.dismissalRate)} label="Dismissal rate" />
+            <RecoKpi value={String(totals.ordered)} label="Orders generated" />
+            <RecoKpi value={formatPrice(totals.revenue)} label="Revenue attributed" sub={`${formatPrice(totals.revenuePerImpression || 0)} / impression`} />
+          </div>
+
+          <div className={styles.reportsGrid}>
+            <RecoBoard title="Most shown" rows={data!.topShown} metric={r => `${r.impressions}×`} />
+            <RecoBoard title="Most clicked" rows={data!.topClicked} metric={r => `${r.clicks} clicks`} />
+            <RecoBoard title="Highest conversion" rows={data!.topConverting} metric={r => pctLabel(r.acceptanceRate)} />
+            <RecoBoard title="Underperforming (shown, rarely taken)" rows={data!.underperforming || []} metric={r => pctLabel(r.acceptanceRate)} />
+            <RecoBoard title="Revenue attributed" rows={(data!.topRevenue || []).filter(r => r.revenue > 0)} metric={r => formatPrice(r.revenue)} />
+          </div>
+
+          <RecoBoard title="By source" rows={data!.bySource} metric={r => `${pctLabel(r.acceptanceRate)} acc.`} />
+          <RecoBoard title="By bundle (persona)" rows={data!.byBundle || []} metric={r => `${pctLabel(r.acceptanceRate)} acc.`} />
+          <RecoBoard title="By rotation group" rows={data!.byRotationGroup} metric={r => `${pctLabel(r.acceptanceRate)} acc.`} />
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Recommended-order bundle management (Phase 5, Task 1) ──
+const BUNDLE_COURSES = ['Drink', 'Starter', 'Main', 'Dessert', 'Side', 'Extra'];
+const iconBtn: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', borderRadius: 8, cursor: 'pointer' };
+
+function BundleItemsEditor({ items, onChange }: { items: BundleItemInput[]; onChange: (items: BundleItemInput[]) => void }) {
+  const update = (i: number, patch: Partial<BundleItemInput>) => onChange(items.map((it, idx) => idx === i ? { ...it, ...patch } : it));
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {items.map((it, i) => (
+        <div key={i} style={{ display: 'grid', gridTemplateColumns: '120px 1fr 90px 36px', gap: 6 }}>
+          <select style={chefField} value={it.course} onChange={e => update(i, { course: e.target.value })}>
+            {BUNDLE_COURSES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <input style={chefField} placeholder="Item name" value={it.itemName} onChange={e => update(i, { itemName: e.target.value })} />
+          <input style={chefField} type="number" placeholder="Price" value={it.price} onChange={e => update(i, { price: Number(e.target.value) || 0 })} />
+          <button style={iconBtn} aria-label="Remove course" onClick={() => onChange(items.filter((_, idx) => idx !== i))}><Trash2 size={12} /></button>
+        </div>
+      ))}
+      <button className={styles.actionBtn} style={{ alignSelf: 'flex-start' }} onClick={() => onChange([...items, { course: 'Main', itemName: '', price: 0 }])}>
+        <Plus size={13} /> Add course
+      </button>
+    </div>
+  );
+}
+
+function BundleRow({ bundle, onUpdate, onDelete }: {
+  bundle: BundleAdmin;
+  onUpdate: (id: number, patch: Partial<BundleInput>) => void;
+  onDelete: (id: number) => void;
+}) {
+  const [items, setItems] = useState<BundleItemInput[]>(bundle.items || []);
+  const [priority, setPriority] = useState(bundle.priority);
+  const [rotationGroup, setRotationGroup] = useState(bundle.rotationGroup || '');
+  const dirty = JSON.stringify(items) !== JSON.stringify(bundle.items || []);
+
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(198,162,75,0.14))', borderRadius: 10, padding: '12px 14px', marginBottom: 12, opacity: bundle.active ? 1 : 0.55 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+        <strong style={{ color: 'var(--color-cream, #f3ead6)' }}>{bundle.icon} {bundle.persona}</strong>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--color-cream, #f3ead6)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={bundle.active} onChange={e => onUpdate(bundle.id, { active: e.target.checked })} />
+            {bundle.active ? 'Active' : 'Disabled'}
+          </label>
+          <button style={iconBtn} aria-label="Delete bundle" onClick={() => onDelete(bundle.id)}><Trash2 size={12} /> Delete</button>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+        <div><label style={chefLabel}>Priority</label><input style={{ ...chefField, width: 90 }} type="number" value={priority} onChange={e => setPriority(Number(e.target.value) || 0)} onBlur={() => { if (priority !== bundle.priority) onUpdate(bundle.id, { priority }); }} /></div>
+        <div><label style={chefLabel}>Rotation group</label><input style={{ ...chefField, width: 160 }} value={rotationGroup} onChange={e => setRotationGroup(e.target.value)} onBlur={() => { if (rotationGroup !== (bundle.rotationGroup || '')) onUpdate(bundle.id, { rotationGroup }); }} /></div>
+      </div>
+      <BundleItemsEditor items={items} onChange={setItems} />
+      {dirty && (
+        <button className={styles.actionBtnGold} style={{ marginTop: 10 }} onClick={() => onUpdate(bundle.id, { items: items.filter(it => it.itemName.trim()) })}>Save courses</button>
+      )}
+    </div>
+  );
+}
+
+function BundlesPanel({ bundles, onCreate, onUpdate, onDelete }: {
+  bundles: BundleAdmin[];
+  onCreate: (input: BundleInput) => Promise<string | null>;
+  onUpdate: (id: number, patch: Partial<BundleInput>) => void;
+  onDelete: (id: number) => void;
+}) {
+  const [persona, setPersona] = useState('');
+  const [description, setDescription] = useState('');
+  const [icon, setIcon] = useState('🍽️');
+  const [accent, setAccent] = useState('#a8812c');
+  const [priority, setPriority] = useState(100);
+  const [rotationGroup, setRotationGroup] = useState('');
+  const [items, setItems] = useState<BundleItemInput[]>([{ course: 'Drink', itemName: '', price: 0 }, { course: 'Main', itemName: '', price: 0 }]);
+  const [status, setStatus] = useState<{ msg: string; error: boolean } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    if (!persona.trim()) { setStatus({ msg: 'Persona name is required.', error: true }); return; }
+    const cleanItems = items.filter(it => it.itemName.trim());
+    if (cleanItems.length === 0) { setStatus({ msg: 'Add at least one item.', error: true }); return; }
+    setSaving(true);
+    const err = await onCreate({ persona: persona.trim(), description, icon, accent, priority, rotationGroup, items: cleanItems });
+    setSaving(false);
+    if (err) { setStatus({ msg: err, error: true }); return; }
+    setStatus({ msg: 'Bundle created.', error: false });
+    setPersona(''); setDescription(''); setRotationGroup('');
+    setItems([{ course: 'Drink', itemName: '', price: 0 }, { course: 'Main', itemName: '', price: 0 }]);
+  }
+
+  return (
+    <div>
+      <p style={{ color: 'var(--color-sand, #b8a88a)', fontSize: 13, lineHeight: 1.55, maxWidth: 720, marginBottom: 18 }}>
+        Persona bundles power the guest menu's <strong>"Not sure what to order?"</strong> strip. Each is a curated full
+        meal (drink, starter, main, dessert). Disable one to hide it; priority orders the strip. The guest app falls back
+        to a built-in set only if the database is unavailable.
+      </p>
+
+      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-line, rgba(198,162,75,0.18))', borderRadius: 12, padding: 18, marginBottom: 24 }}>
+        <h3 style={{ margin: '0 0 14px', fontSize: 15, color: 'var(--color-cream, #f3ead6)' }}>Add bundle</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+          <div><label style={chefLabel}>Persona</label><input style={chefField} placeholder="The Steak Lover" value={persona} onChange={e => setPersona(e.target.value)} /></div>
+          <div><label style={chefLabel}>Icon</label><input style={chefField} value={icon} onChange={e => setIcon(e.target.value)} /></div>
+          <div><label style={chefLabel}>Accent (hex)</label><input style={chefField} value={accent} onChange={e => setAccent(e.target.value)} /></div>
+          <div><label style={chefLabel}>Priority</label><input style={chefField} type="number" value={priority} onChange={e => setPriority(Number(e.target.value) || 0)} /></div>
+          <div><label style={chefLabel}>Rotation group</label><input style={chefField} value={rotationGroup} onChange={e => setRotationGroup(e.target.value)} /></div>
+        </div>
+        <div style={{ marginTop: 12 }}><label style={chefLabel}>Description</label><input style={chefField} placeholder="Flame-grilled, dry-aged, unapologetic." value={description} onChange={e => setDescription(e.target.value)} /></div>
+        <div style={{ marginTop: 12 }}><label style={chefLabel}>Courses & items</label><BundleItemsEditor items={items} onChange={setItems} /></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 14 }}>
+          <button className={styles.actionBtnGold} onClick={submit} disabled={saving}>{saving ? <Spinner size={13} /> : <Plus size={14} />} Add bundle</button>
+          {status && <span style={{ fontSize: 13, color: status.error ? '#fca5a5' : '#5fcf8a' }}>{status.msg}</span>}
+        </div>
+      </div>
+
+      {bundles.length === 0 ? (
+        <div className={styles.emptyState}>
+          <LayoutGrid size={40} className={styles.emptyIcon} />
+          <p>No bundles in the database. The guest menu is using the built-in fallback set — add bundles here (or run <code>npm run bundles:seed -- --apply</code>) to manage them.</p>
+        </div>
+      ) : (
+        bundles.map(b => <BundleRow key={b.id} bundle={b} onUpdate={onUpdate} onDelete={onDelete} />)
+      )}
+    </div>
+  );
+}
+
 function DealsPanel({ deals, onSave }: { deals: Deal[]; onSave: (d: Deal[]) => void }) {
   const [local, setLocal] = useState<Deal[]>(deals);
   useEffect(() => { setLocal(deals); }, [deals]);
@@ -1222,6 +1918,278 @@ function DealsPanel({ deals, onSave }: { deals: Deal[]; onSave: (d: Deal[]) => v
         </button>
       )}
     </div>
+  );
+}
+
+function Modal({ title, subtitle, onClose, children, footer, wide = false }: {
+  title: string;
+  subtitle?: string;
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+  wide?: boolean;
+}) {
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={`${styles.modalCard} ${wide ? styles.modalWide : ''}`} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHead}>
+          <div>
+            <h3 className={styles.modalTitle}>{title}</h3>
+            {subtitle && <p className={styles.modalSubtitle}>{subtitle}</p>}
+          </div>
+          <button className={styles.modalClose} onClick={onClose} aria-label="Close"><X size={16} /></button>
+        </div>
+        <div className={styles.modalBody}>{children}</div>
+        {footer && <div className={styles.modalFooter}>{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+function NewItemModal({ categories, onClose, onSubmit }: {
+  categories: string[];
+  onClose: () => void;
+  onSubmit: (payload: { name: string; category: string; price: number; description: string; available: boolean; chefPick: boolean }) => Promise<void>;
+}) {
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const [price, setPrice] = useState('');
+  const [description, setDescription] = useState('');
+  const [available, setAvailable] = useState(true);
+  const [chefPick, setChefPick] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit() {
+    if (!name.trim() || !category.trim()) { setError('Name and category are required.'); return; }
+    setBusy(true); setError('');
+    try {
+      await onSubmit({ name: name.trim(), category: category.trim(), price: Number(price) || 0, description: description.trim(), available, chefPick });
+    } catch { setError('Could not create the item.'); setBusy(false); }
+  }
+
+  return (
+    <Modal
+      title="New menu item"
+      subtitle="Add a dish to the live menu"
+      onClose={onClose}
+      footer={<>
+        <button className={styles.modalCancel} onClick={onClose} disabled={busy}>Cancel</button>
+        <button className={styles.modalSubmit} onClick={submit} disabled={busy}>{busy ? <Spinner size={13} /> : 'Create item'}</button>
+      </>}
+    >
+      <label className={styles.formLabel}>Name
+        <input className={styles.formInput} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Dry-Aged Tomahawk" autoFocus />
+      </label>
+      <label className={styles.formLabel}>Category
+        <input className={styles.formInput} list="admin-cat-list" value={category} onChange={e => setCategory(e.target.value)} placeholder="Pick or type a category" />
+        <datalist id="admin-cat-list">{categories.map(c => <option key={c} value={c} />)}</datalist>
+      </label>
+      <label className={styles.formLabel}>Price (R)
+        <input className={styles.formInput} type="number" min={0} value={price} onChange={e => setPrice(e.target.value)} placeholder="0" />
+      </label>
+      <label className={styles.formLabel}>Description
+        <textarea className={styles.formTextarea} value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Optional" />
+      </label>
+      <div className={styles.formToggles}>
+        <label className={styles.formCheck}><input type="checkbox" checked={available} onChange={e => setAvailable(e.target.checked)} /> Available now</label>
+        <label className={styles.formCheck}><input type="checkbox" checked={chefPick} onChange={e => setChefPick(e.target.checked)} /> Chef's pick</label>
+      </div>
+      {error && <p className={styles.formError}>{error}</p>}
+    </Modal>
+  );
+}
+
+function NewReservationModal({ defaultDate, onClose, onSubmit }: {
+  defaultDate: string;
+  onClose: () => void;
+  onSubmit: (payload: { name: string; phone: string; partySize: number; date: string; notes: string }) => Promise<void>;
+}) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [partySize, setPartySize] = useState('2');
+  const [date, setDate] = useState(defaultDate);
+  const [time, setTime] = useState('19:00');
+  const [notes, setNotes] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit() {
+    if (!name.trim() || !date) { setError('Name and date are required.'); return; }
+    setBusy(true); setError('');
+    try {
+      const iso = new Date(`${date}T${time || '19:00'}`).toISOString();
+      await onSubmit({ name: name.trim(), phone: phone.trim(), partySize: Number(partySize) || 2, date: iso, notes: notes.trim() });
+    } catch { setError('Could not create the booking.'); setBusy(false); }
+  }
+
+  return (
+    <Modal
+      title="New booking"
+      subtitle="Add a reservation"
+      onClose={onClose}
+      footer={<>
+        <button className={styles.modalCancel} onClick={onClose} disabled={busy}>Cancel</button>
+        <button className={styles.modalSubmit} onClick={submit} disabled={busy}>{busy ? <Spinner size={13} /> : 'Create booking'}</button>
+      </>}
+    >
+      <label className={styles.formLabel}>Guest name
+        <input className={styles.formInput} value={name} onChange={e => setName(e.target.value)} placeholder="Full name" autoFocus />
+      </label>
+      <label className={styles.formLabel}>Phone
+        <input className={styles.formInput} value={phone} onChange={e => setPhone(e.target.value)} placeholder="Optional" />
+      </label>
+      <div className={styles.formGrid3}>
+        <label className={styles.formLabel}>Party
+          <input className={styles.formInput} type="number" min={1} value={partySize} onChange={e => setPartySize(e.target.value)} />
+        </label>
+        <label className={styles.formLabel}>Date
+          <input className={styles.formInput} type="date" value={date} onChange={e => setDate(e.target.value)} />
+        </label>
+        <label className={styles.formLabel}>Time
+          <input className={styles.formInput} type="time" value={time} onChange={e => setTime(e.target.value)} />
+        </label>
+      </div>
+      <label className={styles.formLabel}>Notes
+        <textarea className={styles.formTextarea} value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Allergies, occasion, seating…" />
+      </label>
+      {error && <p className={styles.formError}>{error}</p>}
+    </Modal>
+  );
+}
+
+function NewDealModal({ menuItems, onClose, onSubmit }: {
+  menuItems: AdminMenuItem[];
+  onClose: () => void;
+  onSubmit: (deal: Deal) => Promise<void>;
+}) {
+  const [title, setTitle] = useState('');
+  const [search, setSearch] = useState('');
+  const [picked, setPicked] = useState<AdminMenuItem[]>([]);
+  const [price, setPrice] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const regular = picked.reduce((s, i) => s + (i.price || 0), 0);
+  const results = search.trim()
+    ? menuItems.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) && !picked.some(p => p.dbId === i.dbId)).slice(0, 6)
+    : [];
+
+  async function submit() {
+    if (picked.length === 0) { setError('Add at least one dish.'); return; }
+    setBusy(true); setError('');
+    try {
+      await onSubmit({
+        title: title.trim() || 'Featured set menu',
+        items: picked.map(i => ({ name: i.name, price: i.price, img: i.img })),
+        price: Number(price) || regular,
+        activeDays: [0, 1, 2, 3, 4, 5, 6],
+      });
+    } catch { setError('Could not save the deal.'); setBusy(false); }
+  }
+
+  return (
+    <Modal
+      title="New deal"
+      subtitle="Bundle dishes into a featured set menu"
+      onClose={onClose}
+      wide
+      footer={<>
+        <button className={styles.modalCancel} onClick={onClose} disabled={busy}>Cancel</button>
+        <button className={styles.modalSubmit} onClick={submit} disabled={busy}>{busy ? <Spinner size={13} /> : 'Publish deal'}</button>
+      </>}
+    >
+      <label className={styles.formLabel}>Deal name
+        <input className={styles.formInput} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. The Hearth · Table d'Hôte" autoFocus />
+      </label>
+      <label className={styles.formLabel}>Add dishes
+        <input className={styles.formInput} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search the menu…" />
+      </label>
+      {results.length > 0 && (
+        <div className={styles.dealResults}>
+          {results.map(i => (
+            <button key={i.dbId} className={styles.dealResult} onClick={() => { setPicked(p => [...p, i]); setSearch(''); }}>
+              <span>{i.name}</span><span className={styles.dealResultPrice}>{formatPrice(i.price)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {picked.length > 0 && (
+        <div className={styles.dealPicked}>
+          {picked.map((i, idx) => (
+            <div key={i.dbId} className={styles.dealPickedRow}>
+              <span className={styles.dealPickedIdx}>{idx + 1}</span>
+              <span className={styles.dealPickedName}>{i.name}</span>
+              <span className={styles.dealPickedPrice}>{formatPrice(i.price)}</span>
+              <button className={styles.dealPickedRemove} onClick={() => setPicked(p => p.filter(x => x.dbId !== i.dbId))} aria-label="Remove"><X size={13} /></button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className={styles.formGrid2}>
+        <label className={styles.formLabel}>Bundle price (R)
+          <input className={styles.formInput} type="number" min={0} value={price} onChange={e => setPrice(e.target.value)} placeholder={String(regular || 0)} />
+        </label>
+        <div className={styles.dealRegular}>
+          <span>Regular total</span>
+          <strong>{formatPrice(regular)}</strong>
+        </div>
+      </div>
+      {error && <p className={styles.formError}>{error}</p>}
+    </Modal>
+  );
+}
+
+function NewAccountModal({ currentRole, onClose, onSubmit }: {
+  currentRole?: string;
+  onClose: () => void;
+  onSubmit: (payload: { username: string; password: string; role: string; label: string }) => Promise<void>;
+}) {
+  const roleOptions = currentRole === 'owner' ? ['manager', 'waiter', 'kitchen'] : ['waiter', 'kitchen'];
+  const [username, setUsername] = useState('');
+  const [label, setLabel] = useState('');
+  const [role, setRole] = useState(roleOptions[0]);
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit() {
+    if (!/^[a-z0-9._-]{3,32}$/.test(username.trim().toLowerCase())) { setError('Username must be 3-32 chars: letters, numbers, dot, dash, underscore.'); return; }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+    setBusy(true); setError('');
+    try {
+      await onSubmit({ username: username.trim().toLowerCase(), password, role, label: label.trim() || username.trim() });
+    } catch (e) { setError((e as Error)?.message || 'Could not create the account.'); setBusy(false); }
+  }
+
+  return (
+    <Modal
+      title="Add staff account"
+      subtitle="Create a login for a team member"
+      onClose={onClose}
+      footer={<>
+        <button className={styles.modalCancel} onClick={onClose} disabled={busy}>Cancel</button>
+        <button className={styles.modalSubmit} onClick={submit} disabled={busy}>{busy ? <Spinner size={13} /> : 'Create account'}</button>
+      </>}
+    >
+      <label className={styles.formLabel}>Username
+        <input className={styles.formInput} value={username} onChange={e => setUsername(e.target.value)} placeholder="lowercase, no spaces" autoFocus />
+      </label>
+      <label className={styles.formLabel}>Display name
+        <input className={styles.formInput} value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. Sarah M." />
+      </label>
+      <div className={styles.formGrid2}>
+        <label className={styles.formLabel}>Role
+          <select className={styles.formInput} value={role} onChange={e => setRole(e.target.value)}>
+            {roleOptions.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </label>
+        <label className={styles.formLabel}>Password
+          <input className={styles.formInput} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="min 6 characters" />
+        </label>
+      </div>
+      {error && <p className={styles.formError}>{error}</p>}
+    </Modal>
   );
 }
 

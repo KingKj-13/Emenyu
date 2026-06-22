@@ -15,7 +15,7 @@ export function LoginPage() {
   const [error, setError] = useState('');
 
   if (user) {
-    const dest = user.role === 'waiter' ? '/Waiter' : user.role === 'kitchen' ? '/Kitchen' : '/Admin';
+    const dest = user.role === 'waiter' ? '/Waiter' : user.role === 'kitchen' ? '/Kitchen' : user.role === 'owner' ? '/Owner' : '/Admin';
     return <Navigate to={dest} replace />;
   }
 
@@ -24,6 +24,7 @@ export function LoginPage() {
     if (path) return path;
     if (role === 'waiter') return '/Waiter';
     if (role === 'kitchen') return '/Kitchen';
+    if (role === 'owner') return '/Owner';
     return '/Admin';
   }
 

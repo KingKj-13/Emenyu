@@ -7,6 +7,8 @@ const dotenv = require('dotenv');
 
 const { createAiController } = require('./controllers/aiController');
 const { createAnalyticsController } = require('./controllers/analyticsController');
+const { createRecommendationAnalyticsController } = require('./controllers/recommendationAnalyticsController');
+const { createRecommendationBundleController } = require('./controllers/recommendationBundleController');
 const { createDealController } = require('./controllers/dealController');
 const { createKitchenController } = require('./controllers/kitchenController');
 const { createMenuController } = require('./controllers/menuController');
@@ -16,7 +18,11 @@ const { createReservationController } = require('./controllers/reservationContro
 const { createOrderController } = require('./controllers/orderController');
 const { createUploadController } = require('./controllers/uploadController');
 const { createWaiterController } = require('./controllers/waiterController');
+const { createWaiterApiController } = require('./controllers/waiterApiController');
 const { registerAnalyticsRoutes } = require('./routes/analyticsRoutes');
+const { registerRecommendationAnalyticsRoutes } = require('./routes/recommendationAnalyticsRoutes');
+const { registerRecommendationBundleRoutes } = require('./routes/recommendationBundleRoutes');
+const { registerWaiterApiRoutes } = require('./routes/waiterApiRoutes');
 const { registerDealRoutes } = require('./routes/dealRoutes');
 const { registerKitchenRoutes } = require('./routes/kitchenRoutes');
 const { registerMenuRoutes } = require('./routes/menuRoutes');
@@ -28,10 +34,19 @@ const { registerUploadRoutes } = require('./routes/uploadRoutes');
 const { configureSecurity } = require('./middleware/security');
 const { createErrorHandler, createRequestLogger } = require('./middleware/requestLogger');
 const { AiService } = require('./services/aiService');
+const { createOrderValidationService } = require('./services/orderValidationService');
+const { createNlgService } = require('./services/nlg/nlgService');
+const { createGuestService } = require('./services/guestService');
+const { createOpportunityService } = require('./services/opportunityService');
+const { createWaiterAnalyticsService } = require('./services/waiterAnalyticsService');
+const { createServiceRecoveryService } = require('./services/serviceRecoveryService');
+const { createFloorService } = require('./services/floorService');
 const { AccountService } = require('./services/accountService');
 const { FileService } = require('./services/fileService');
 const { SocketService } = require('./services/socketService');
 const { MediaEnrichmentService } = require('./services/mediaEnrichmentService');
+const { RecommendationEventService } = require('./services/recommendationEventService');
+const { RecommendationBundleService } = require('./services/recommendationBundleService');
 const { createLogger } = require('./utils/logger');
 const { createConfig, createRoleAuth } = require('./utils/helpers');
 
@@ -51,6 +66,17 @@ function createStaticOptions(config) {
     etag: true,
     lastModified: true,
     setHeaders(res, filePath) {
+      if (/\.mp4$/i.test(filePath)) {
+        res.type('video/mp4');
+      } else if (/\.webm$/i.test(filePath)) {
+        res.type('video/webm');
+      }
+
+      if (/[\\/]sw\.js$/i.test(filePath)) {
+        res.setHeader('Cache-Control', 'no-store');
+        return;
+      }
+
       if (/\.html$/i.test(filePath)) {
         res.setHeader('Cache-Control', 'no-store');
         return;
@@ -174,24 +200,56 @@ async function startServer() {
 
   const app = express();
   const server = http.createServer(app);
-  const socketService = new SocketService(config, fileService, logger);
+  const auth = createRoleAuth(config, accountService, logger);
+  const socketService = new SocketService(config, fileService, logger, { auth });
   socketService.initialize(server);
 
-  const aiService = new AiService(config, fileService, socketService);
+  // Waiter-AI: deterministic business logic + pluggable wording layer (hybrid).
+  // Built before aiService so the shared reasonComposer (Phase 3A) reuses one
+  // NLG instance across the chatbot, the customer cards and the waiter app.
+  const nlgService = createNlgService({ config, logger });
+  const aiService = new AiService(config, fileService, socketService, { logger, nlgService });
+  // Drop the reco caches the moment menu / recommendation / order data mutates,
+  // so owner edits (and new orders) are reflected immediately rather than after
+  // the cache TTL. Every mutation path already funnels through these emitters.
+  socketService.onDataChange(() => aiService.invalidateCaches());
   const mediaEnrichmentService = new MediaEnrichmentService(config);
-  const auth = createRoleAuth(config, accountService, logger);
+  const recommendationEventService = new RecommendationEventService({ config, logger });
+  const recommendationBundleService = new RecommendationBundleService({ config, logger });
+  const orderValidationService = createOrderValidationService({ config, fileService, logger });
+
+  const guestService = createGuestService({ config });
+  const opportunityService = createOpportunityService({ config, aiService });
+  const waiterAnalyticsService = createWaiterAnalyticsService({ config });
+  const serviceRecoveryService = createServiceRecoveryService({ config });
+  const floorService = createFloorService({ config });
+  logger.info('nlg_mode', nlgService.status());
 
   const controllers = {
-    ai: createAiController({ aiService }),
+    ai: createAiController({ aiService, config }),
     analytics: createAnalyticsController({ config }),
+    recommendationAnalytics: createRecommendationAnalyticsController({ recommendationEventService, prismaMenuService: fileService.prismaMenu }),
+    recommendationBundle: createRecommendationBundleController({ recommendationBundleService, socketService }),
     deal: createDealController({ fileService, socketService }),
     kitchen: createKitchenController({ config, fileService, socketService }),
     menu: createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService: fileService.prismaMenu }),
-    order: createOrderController({ config, fileService, socketService }),
+    order: createOrderController({ config, fileService, socketService, orderValidationService }),
     push: createPushController({ config }),
     rating: createRatingController({ config }),
     reservation: createReservationController({ config }),
-    waiter: createWaiterController({ config, fileService, socketService })
+    waiter: createWaiterController({ config, fileService, socketService, orderValidationService }),
+    waiterApi: createWaiterApiController({
+      config,
+      fileService,
+      socketService,
+      aiService,
+      nlgService,
+      guestService,
+      opportunityService,
+      waiterAnalyticsService,
+      serviceRecoveryService,
+      floorService
+    })
   };
   const uploadController = createUploadController(config);
 
@@ -216,10 +274,11 @@ async function startServer() {
     auth.requirePage(['owner', 'manager', 'waiter']),
     controllers.waiter.serveWaiterPage
   );
+  // Retired: the vanilla owner.html is superseded by the React /Owner dashboard.
   app.get(
     ['/owner.html', '/Trump/owner.html', '/trump/owner.html'],
     auth.requirePage(['owner']),
-    (req, res) => res.sendFile(path.join(config.directories.base, 'owner.html'))
+    (req, res) => res.redirect(`${config.publicBasePath}/Owner`)
   );
 
   const staticOptions = createStaticOptions(config);
@@ -251,6 +310,8 @@ async function startServer() {
   );
 
   registerAnalyticsRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
+  registerRecommendationAnalyticsRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
+  registerRecommendationBundleRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerMenuRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerDealRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerKitchenRoutes(app, controllers, auth.requireRoles(['owner', 'manager', 'kitchen']));
@@ -258,6 +319,7 @@ async function startServer() {
   registerRatingRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerReservationRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerUploadRoutes(app, uploadController, auth.requireRoles(['owner', 'manager']));
+  registerWaiterApiRoutes(app, controllers, auth);
   registerOrderRoutes(app, controllers, auth);
 
   // SPA fallback: serve React app for all /Trump/* routes with no file extension
@@ -286,6 +348,10 @@ async function startServer() {
   });
 
   registerProcessHandlers({ server, socketService, accountService, fileService, logger, config });
+
+  // Warm the recommendation caches off the request path so the first guest
+  // request is already fast and never triggers a blocking recompute inline.
+  aiService.warmCaches();
 
   // Nightly media enrichment — runs at 03:00 server time if API keys are configured
   try {

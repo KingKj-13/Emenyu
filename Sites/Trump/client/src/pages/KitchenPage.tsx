@@ -7,6 +7,7 @@ import { api } from '../services/api';
 import { Spinner } from '../components/ui/Spinner';
 import { RESTAURANT_ID } from '../constants/api';
 import { getSocket } from '../services/socket';
+import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
 import styles from './KitchenPage.module.css';
 
 const STATUS_ORDER = ['new', 'preparing', 'ready'] as const;
@@ -61,6 +62,7 @@ const COL_BTN_LABEL: Record<KitchenStatus, string> = {
 };
 
 export function KitchenPage() {
+  useHomeBackGuard();
   const { logout } = useAuth();
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [loading, setLoading] = useState(true);

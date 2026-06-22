@@ -13,6 +13,7 @@ interface CartContextValue {
   setIsOpen: (v: boolean) => void;
   setTipMode: (m: TipMode) => void;
   setCustomTip: (v: number) => void;
+  justAdded: { name: string; t: number } | null;
   addItem: (item: Omit<CartItem, 'qty' | 'note'> & { qty?: number; note?: string }) => void;
   updateQty: (index: number, delta: number) => void;
   removeAt: (index: number) => void;
@@ -43,6 +44,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [tipMode, setTipMode] = useState<TipMode>(0);
   const [customTip, setCustomTip] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
+  const [justAdded, setJustAdded] = useState<{ name: string; t: number } | null>(null);
 
   const addItem = useCallback((raw: Partial<CartItem>) => {
     const next = normalizeItem(raw);
@@ -53,6 +55,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, next];
     });
+    setJustAdded({ name: next.name, t: Date.now() });
   }, []);
 
   const updateQty = useCallback((index: number, delta: number) => {
@@ -99,7 +102,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   return (
     <CartContext.Provider value={{
       items, history, count, subtotal,
-      tipMode, customTip, isOpen,
+      tipMode, customTip, isOpen, justAdded,
       setIsOpen, setTipMode, setCustomTip,
       addItem, updateQty, removeAt, setNote,
       clear, replaceCart, setHistory, getTotals,

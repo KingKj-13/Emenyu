@@ -1,0 +1,47 @@
+/* The meal-journey block inside the item modal. The cards themselves are the
+   shared RecommendationCard (journey variant); this module owns the header,
+   narrative line, and the horizontally-scrolling row. */
+.journey {
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid rgba(198, 162, 75, 0.18);
+  border-radius: 10px;
+  background: rgba(198, 162, 75, 0.04);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.icon { color: var(--color-gold, #c6a24b); flex-shrink: 0; }
+.heading {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-gold, #c6a24b);
+}
+
+.narrative {
+  margin: 0 0 12px;
+  font-family: var(--font-heading, 'Georgia', serif);
+  font-style: italic;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--color-cream, #f3ead6);
+  opacity: 0.9;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.row::-webkit-scrollbar { display: none; }
+.row > * { scroll-snap-align: start; }

@@ -106,7 +106,7 @@ Sites/Trump/
 
 **Config pattern**: `createConfig(basePath)` in `server/utils/helpers.js` reads all `TRUMP_*` env vars and returns a single config object passed to every controller/service constructor. There is no global config singleton — everything is injected.
 
-**Auth pattern**: `createRoleAuth(config, accountService, logger)` returns an `auth` object with `auth.requirePage(roles)` (redirects to login) and `auth.requireRoles(roles)` (returns 403 JSON). Session is cookie-based (express-session backed by an in-memory map on AccountService). Account data lives in PostgreSQL via PrismaAuthService.
+**Auth pattern**: `createRoleAuth(config, accountService, logger)` returns an `auth` object with `auth.requirePage(roles)` (redirects to login) and `auth.requireRoles(roles)` (returns 403 JSON). Sessions are stateless: an HMAC-SHA256-signed token in the `trump_session` cookie, validated on each request against the user record in PostgreSQL (a per-user `sessionInvalidBefore` timestamp enables server-side logout/invalidation). There is no in-memory session store. Account data and PBKDF2 password hashes live in PostgreSQL via PrismaAuthService, with a `data/accounts.json` fallback. Default accounts are seeded from env only when missing and are never reset on startup.
 
 ### Prisma / database
 
@@ -132,10 +132,10 @@ All socket logic lives in `server/services/socketService.js`. The socket path is
 
 ### AI / recommendations
 
-`server/services/aiService.js` wraps external LLM calls. Endpoints:
+`server/services/aiService.js` is a fully local, deterministic recommendation/chat engine (keyword + order-popularity + course-completion scoring). It makes **no external LLM/API calls** — there is no Groq, Anthropic, or OpenAI integration. Waiter-app wording is generated locally by `server/services/nlg/templateNlgProvider.js`. Endpoints:
 - `POST /Trump/api/ai-pairing` — per-item food + drink pairings (used in ItemModal)
 - `POST /Trump/api/recommend` — cart-level suggestions (used in waiter order view)
-- `POST /Trump/api/chat` — customer chatbot
+- `POST /Trump/api/chat` — customer chatbot (deterministic)
 
 ### Analytics API
 

@@ -21,6 +21,7 @@
     <button id="tabOrderHistory">Order History</button>
     <button id="tabDeal">Deal of the Day</button>
     <button id="tabRecommend">Recommendations</button>
+    <button id="tabChefRecs">Chef Recs</button>
     <button id="tabCurrentChat">Current Chat</button>
     <button id="tabChatHistory">Chat History</button>
     <button id="tabAccounts">Accounts</button>
@@ -168,6 +169,85 @@
       <hr style="margin: 1em 0;" />
       <h3>Current Recommendations</h3>
       <div id="allRecsList" class="saved-list-container" aria-live="polite" role="region" aria-label="All saved recommendations"></div>
+    </section>
+
+    <section id="chefRecsSection" class="section">
+      <h2 class="section-header">Chef Recommendations</h2>
+      <p style="color:#aaa; font-size:13px; margin:-6px 0 16px; max-width:720px; line-height:1.55;">
+        Chef recommendations <strong>always win</strong> — they appear ahead of any automatic
+        suggestion across the guest app, chatbot, item pairings and the waiter upsell screen.
+        Link a menu item (source) to the dish, side, dessert or beverage you want suggested with it.
+        Put several beverages in one <em>rotation group</em> and the engine rotates between them so
+        different guests see different (valid) pours. Category-safety rules still apply
+        (one beverage, never wine + cocktail, no dessert → starter).
+      </p>
+
+      <div class="account-panel" style="margin-bottom:22px;">
+        <h3>Add Chef Recommendation</h3>
+        <div class="flex-row">
+          <div style="flex:1; min-width:220px;">
+            <label for="chefRecSource">When the guest has… (source item)</label>
+            <select id="chefRecSource"></select>
+          </div>
+          <div style="flex:1; min-width:220px;">
+            <label for="chefRecTarget">…recommend (target item)</label>
+            <select id="chefRecTarget"></select>
+          </div>
+        </div>
+        <div class="flex-row" style="margin-top:10px;">
+          <div>
+            <label for="chefRecType">Type</label>
+            <select id="chefRecType">
+              <option value="DISH">Dish</option>
+              <option value="SIDE">Side</option>
+              <option value="DESSERT">Dessert</option>
+              <option value="BEVERAGE">Beverage</option>
+            </select>
+          </div>
+          <div>
+            <label for="chefRecBeverageKind">Beverage kind</label>
+            <select id="chefRecBeverageKind" disabled>
+              <option value="NONE">— (food)</option>
+              <option value="WINE">Wine</option>
+              <option value="COCKTAIL">Cocktail</option>
+              <option value="BEER">Beer</option>
+              <option value="SOFT">Soft</option>
+              <option value="HOT">Hot</option>
+            </select>
+          </div>
+          <div>
+            <label for="chefRecPriority">Priority</label>
+            <input id="chefRecPriority" type="number" value="100" min="0" max="1000" style="width:90px;" />
+          </div>
+          <div>
+            <label for="chefRecSeason">Season</label>
+            <select id="chefRecSeason">
+              <option value="ALL_YEAR">All year</option>
+              <option value="SUMMER">Summer</option>
+              <option value="WINTER">Winter</option>
+              <option value="SPRING">Spring</option>
+              <option value="AUTUMN">Autumn</option>
+              <option value="FESTIVE">Festive</option>
+            </select>
+          </div>
+        </div>
+        <label for="chefRecRotation">Rotation group (optional — share across beverages to rotate them)</label>
+        <input id="chefRecRotation" type="text" placeholder="e.g. ribeye-reds" />
+        <label for="chefRecReason">Reason (shown to guests on the recommendation card)</label>
+        <input id="chefRecReason" type="text" placeholder="e.g. Bold red — built to stand up to grilled beef." />
+        <label class="toggle-label" style="margin-top:10px;">
+          <input type="checkbox" id="chefRecActive" checked />
+          <span>Active</span>
+        </label>
+        <button id="saveChefRecBtn" type="button" style="margin-top:12px;">Add Chef Recommendation</button>
+        <div id="chefRecStatus" class="account-status" role="status"></div>
+      </div>
+
+      <div class="section-heading-inline">
+        <h3>Current Chef Recommendations</h3>
+        <button id="refreshChefRecsBtn" type="button">Refresh</button>
+      </div>
+      <div id="chefRecsList" class="saved-list-container" aria-live="polite" role="region" aria-label="Chef recommendations"></div>
     </section>
 
     <section id="currentChatSection" class="section">

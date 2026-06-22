@@ -3,13 +3,16 @@ import { Suspense, lazy, type ReactElement } from 'react';
 import { AppProvider } from './context/AppContext';
 import { CartProvider } from './context/CartContext';
 import { MenuProvider } from './context/MenuContext';
+import { FavoritesProvider } from './context/FavoritesContext';
 import { MenuPage } from './pages/MenuPage';
+import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { Spinner } from './components/ui/Spinner';
 import { useAuth } from './hooks/useAuth';
 import type { Role } from './types/auth';
 
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
+const OwnerDashboard = lazy(() => import('./pages/OwnerDashboard').then(m => ({ default: m.OwnerDashboard })));
 const WaiterPage = lazy(() => import('./pages/WaiterPage').then(m => ({ default: m.WaiterPage })));
 const KitchenPage = lazy(() => import('./pages/KitchenPage').then(m => ({ default: m.KitchenPage })));
 const ReservationPage = lazy(() => import('./pages/ReservationPage').then(m => ({ default: m.ReservationPage })));
@@ -28,7 +31,7 @@ function ProtectedRoute({ roles, children }: { roles: Role[]; children: ReactEle
   if (authLoading) return <LoadingFallback />;
   if (!user) return <Navigate to="/login" replace />;
   if (!roles.includes(user.role)) {
-    const dest = user.role === 'waiter' ? '/Waiter' : user.role === 'kitchen' ? '/Kitchen' : '/Admin';
+    const dest = user.role === 'waiter' ? '/Waiter' : user.role === 'kitchen' ? '/Kitchen' : user.role === 'owner' ? '/Owner' : '/Admin';
     return <Navigate to={dest} replace />;
   }
 
@@ -39,6 +42,7 @@ export default function App() {
   return (
     <AppProvider>
       <CartProvider>
+        <FavoritesProvider>
         <MenuProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -47,6 +51,13 @@ export default function App() {
               <ProtectedRoute roles={['owner', 'manager']}>
                 <Suspense fallback={<LoadingFallback />}>
                   <AdminPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/Owner" element={
+              <ProtectedRoute roles={['owner']}>
+                <Suspense fallback={<LoadingFallback />}>
+                  <OwnerDashboard />
                 </Suspense>
               </ProtectedRoute>
             } />
@@ -69,14 +80,16 @@ export default function App() {
                 <ReservationPage />
               </Suspense>
             } />
+            <Route path="/:tableId/menu" element={<MenuPage />} />
             <Route path="/:tableId/book" element={<MenuPage sectionFilter="book" />} />
             <Route path="/:tableId/drinks" element={<MenuPage sectionFilter="drinks" />} />
             <Route path="/:tableId/setmenu" element={<MenuPage sectionFilter="setmenu" />} />
-            <Route path="/:tableId" element={<MenuPage />} />
+            <Route path="/:tableId" element={<LandingPage />} />
             <Route path="/" element={<Navigate to="/table1" replace />} />
             <Route path="*" element={<Navigate to="/table1" replace />} />
           </Routes>
         </MenuProvider>
+        </FavoritesProvider>
       </CartProvider>
     </AppProvider>
   );

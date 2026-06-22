@@ -1,13 +1,8 @@
 const path = require('path');
 
 const { normalizeId } = require('../utils/helpers');
-const { PrismaClient } = require('@prisma/client');
-
-let prisma;
-function getPrisma() {
-  if (!prisma) prisma = new PrismaClient();
-  return prisma;
-}
+// Shared, explicitly-resolved Prisma client (see prismaClient.js).
+const { getPrisma } = require('../services/prismaClient');
 
 function getItemQuantity(item) {
   return Number(item.quantity || item.qty || 1);
@@ -21,10 +16,15 @@ function getItemsCount(items) {
   return items.reduce((sum, item) => sum + getItemQuantity(item), 0);
 }
 
-function createWaiterController({ config, fileService, socketService }) {
+function createWaiterController({ config, fileService, socketService, orderValidationService }) {
   return {
     serveWaiterPage(req, res) {
-      res.sendFile(path.join(config.directories.base, 'waiter.html'));
+      // The waiter app is now the React SPA (client/dist). React Router (basename
+      // "/Trump") renders the /Waiter route. The legacy waiter.html is retired.
+      const spaIndex = path.join(config.directories.base, 'client', 'dist', 'index.html');
+      res.sendFile(spaIndex, err => {
+        if (err) res.sendFile(path.join(config.directories.base, 'waiter.html'));
+      });
     },
 
     async getTableStatus(req, res) {
@@ -56,19 +56,28 @@ function createWaiterController({ config, fileService, socketService }) {
 
     async addItems(req, res) {
       const { tableId, items, waiterName, notes } = req.body || {};
-      if (!tableId || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ error: 'Missing tableId or items' });
+
+      let validated;
+      try {
+        // Same authoritative menu validation as guest orders (item existence,
+        // availability, quantity bounds, server-side prices). Totals are not
+        // required for waiter-entered orders.
+        validated = await orderValidationService.validateOrder(
+          { items, table_number: tableId },
+          { requireTotals: false, tableId }
+        );
+      } catch (error) {
+        const status = error.statusCode === 503 ? 503 : 400;
+        return res.status(status).json({ error: error.message || 'Invalid order', details: error.details || [] });
       }
 
-      const cleanId = normalizeId(tableId);
+      const { order: validatedOrder, tableId: cleanId } = validated;
       const actor = req.user?.username || waiterName || 'waiter';
       const order = {
-        table_number: cleanId,
+        ...validatedOrder,
         waiterName: waiterName || actor,
         notes: notes || '',
-        items,
-        timestamp: new Date().toISOString(),
-        restaurantId: config.restaurantId
+        timestamp: new Date().toISOString()
       };
 
       try {

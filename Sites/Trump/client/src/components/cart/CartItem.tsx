@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Plus, Minus, Trash2 } from 'lucide-react';
 import { formatPrice } from '../../lib/menuUtils';
+import { resolveImage } from '../../lib/imageResolver';
 import type { CartItem as CartItemType } from '../../types/cart';
 import styles from './CartItem.module.css';
 
@@ -12,10 +14,28 @@ interface CartItemProps {
 }
 
 export function CartItemRow({ item, index, onUpdateQty, onRemove, onNoteChange }: CartItemProps) {
+  const [imgError, setImgError] = useState(false);
+  const imgSrc = imgError ? '' : resolveImage({
+    name: item.name,
+    price: item.price,
+    description: item.description,
+    img: item.img,
+  });
+
+  useEffect(() => {
+    setImgError(false);
+  }, [item.name, item.img]);
+
   return (
     <div className={styles.row}>
-      {item.img && (
-        <img src={item.img} alt={item.name} className={styles.thumb} loading="lazy" />
+      {imgSrc && (
+        <img
+          src={imgSrc}
+          alt={item.name}
+          className={styles.thumb}
+          loading="lazy"
+          onError={() => setImgError(true)}
+        />
       )}
       <div className={styles.info}>
         <span className={styles.name}>{item.name}</span>

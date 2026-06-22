@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Heart, Plus, Minus, ShoppingCart, Sparkles, ChevronLeft } from 'lucide-react';
+import { X, Heart, Plus, Minus, ShoppingCart, ChevronLeft } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
@@ -8,6 +8,9 @@ import { BASE_PATH } from '../../constants/api';
 import { formatPrice } from '../../lib/menuUtils';
 import { api } from '../../services/api';
 import type { MenuItem } from '../../types/menu';
+import type { RecommendationItem } from '../reco/RecommendationCard';
+import { RecommendationJourney } from '../reco/RecommendationJourney';
+import { trackImpressions, trackClick, markShown, flushDismissed, type RecoContext } from '../../lib/recoAnalytics';
 import styles from './ItemModal.module.css';
 
 interface ItemModalProps {
@@ -18,6 +21,8 @@ interface ItemModalProps {
   onFavoriteToggle: (name: string) => void;
   onAddToCart: (item: MenuItem, qty: number, note: string) => void;
   onRequestItem?: (name: string) => void;
+  onOpenItem?: (item: MenuItem) => void;
+  onAddSuggestion?: (item: MenuItem) => void;
   canGoBack?: boolean;
   onBack?: () => void;
 }
@@ -26,6 +31,11 @@ interface PairingItem {
   name: string;
   reason: string;
   categoryType?: string;
+  price?: number;
+  img?: string;
+  beverageKind?: string;
+  source_title?: string;
+  chef?: boolean;
 }
 
 interface PairingResult {
@@ -35,66 +45,53 @@ interface PairingResult {
 }
 
 function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?: (name: string) => void }) {
-  const [foodPairings, setFoodPairings] = useState<PairingItem[]>([]);
-  const [drinkPairings, setDrinkPairings] = useState<PairingItem[]>([]);
+  const [pool, setPool] = useState<RecommendationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const pairCtx: RecoContext = { mode: 'customer', source: 'pairing', originatingName: item.name };
+  const surfaceKey = `pairing:${item.name}`;
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setFoodPairings([]);
-    setDrinkPairings([]);
+    setPool([]);
     api.aiPairing({ name: item.name, price: item.price, description: item.description })
       .then((data: unknown) => {
         if (cancelled) return;
         const res = data as PairingResult;
-        setFoodPairings(res?.foodPairings ?? []);
-        setDrinkPairings(res?.drinkPairings ?? []);
+        // One ordered pool the journey planner draws from — drinks first (they
+        // open the meal), then food. De-dupe by name so nothing fills two slots.
+        const merged = [...(res?.drinkPairings ?? []), ...(res?.foodPairings ?? [])] as RecommendationItem[];
+        const seen = new Set<string>();
+        const deduped = merged.filter(p => {
+          const key = (p.name || '').toLowerCase().trim();
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setPool(deduped);
+        if (deduped.length) {
+          trackImpressions(deduped, pairCtx);
+          markShown(surfaceKey, deduped, pairCtx);
+        }
       })
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    // Record pairings shown but never opened as a dismissal when the strip unmounts.
+    return () => { cancelled = true; flushDismissed(surfaceKey); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.name]);
 
-  const hasFood = foodPairings.length > 0;
-  const hasDrink = drinkPairings.length > 0;
-  if (!loading && !hasFood && !hasDrink) return null;
+  if (loading) {
+    return <div className={styles.pairLoading}><Spinner size={18} /></div>;
+  }
+  if (pool.length === 0) return null;
 
   return (
-    <div className={styles.pairSection}>
-      <div className={styles.pairHeader}>
-        <Sparkles size={13} className={styles.pairIcon} />
-        <span className={styles.pairLabel}>AI Recommendations</span>
-      </div>
-      {loading ? (
-        <div className={styles.pairLoading}><Spinner size={16} /></div>
-      ) : (
-        <>
-          {hasFood && (
-            <div className={styles.pairStrip}>
-              {foodPairings.map((p, i) => (
-                <button key={i} className={styles.pairChip} onClick={() => onRequestItem?.(p.name)} aria-label={`View ${p.name}`}>
-                  <span className={styles.pairBadge}>AI Recommend</span>
-                  <span className={styles.pairName}>{p.name}</span>
-                  <span className={styles.pairReason}>{p.reason}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          {hasDrink && (
-            <div className={`${styles.pairStrip} ${hasFood ? styles.pairStripSecond : ''}`}>
-              {drinkPairings.map((p, i) => (
-                <button key={i} className={`${styles.pairChip} ${styles.pairChipDrink}`} onClick={() => onRequestItem?.(p.name)} aria-label={`View ${p.name}`}>
-                  <span className={styles.pairBadge}>AI Recommend</span>
-                  <span className={styles.pairName}>{p.name}</span>
-                  <span className={styles.pairReason}>{p.reason}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-    </div>
+    <RecommendationJourney
+      item={item}
+      pool={pool}
+      onOpenItem={rec => { trackClick(rec, pairCtx); onRequestItem?.(rec.name); }}
+    />
   );
 }
 
@@ -106,6 +103,8 @@ export function ItemModal({
   onFavoriteToggle,
   onAddToCart,
   onRequestItem,
+  onOpenItem,
+  onAddSuggestion,
   canGoBack = false,
   onBack,
 }: ItemModalProps) {
@@ -119,6 +118,7 @@ export function ItemModal({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipeActiveRef = useRef(false);
+  const noSwipeRef = useRef(false);
   const SWIPE_THRESHOLD = 80;
 
   useEffect(() => {
@@ -150,13 +150,20 @@ export function ItemModal({
   }
 
   function handleTouchStart(e: React.TouchEvent) {
+    // Don't hijack horizontal swipes that begin inside the recommendation strip
+    // (or any opted-out region) — let them scroll/select on their own.
+    noSwipeRef.current = !!(e.target as HTMLElement).closest('[data-noswipe]');
+    if (noSwipeRef.current) {
+      touchStartRef.current = null;
+      return;
+    }
     const t = e.touches[0];
     touchStartRef.current = { x: t.clientX, y: t.clientY };
     swipeActiveRef.current = false;
   }
 
   function handleTouchMove(e: React.TouchEvent) {
-    if (!touchStartRef.current) return;
+    if (noSwipeRef.current || !touchStartRef.current) return;
     const t = e.touches[0];
     const dx = t.clientX - touchStartRef.current.x;
     const dy = t.clientY - touchStartRef.current.y;
@@ -208,6 +215,7 @@ export function ItemModal({
           transform: `translateX(${swipeX}px) rotate(${swipeX * 0.04}deg)`,
           transition: swipeX === 0 ? 'transform 280ms ease' : 'none',
           transformOrigin: 'bottom center',
+          touchAction: 'pan-y',
         }}
       >
         <div className={styles.media}>
@@ -283,9 +291,7 @@ export function ItemModal({
           <h2 className={styles.name}>{item.name}</h2>
           <p className={styles.price}>{formatPrice(item.price)}</p>
 
-          {item.description && (
-            <p className={styles.description}>{item.description}</p>
-          )}
+          {item.description ? <p className={styles.description}>{item.description}</p> : null}
 
           {item.allergens && (
             <p className={styles.allergens}>
@@ -320,6 +326,7 @@ export function ItemModal({
 
             <textarea
               className={styles.noteInput}
+              data-noswipe
               placeholder="Special requests or dietary notes…"
               value={note}
               onChange={e => setNote(e.target.value)}

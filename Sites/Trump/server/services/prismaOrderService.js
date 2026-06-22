@@ -147,6 +147,7 @@ function orderToDbData(order = {}, filename, kind, restaurantId) {
     service: totals.service,
     tip: totals.tip,
     total: totals.total,
+    covers: Math.max(0, parseInt(order.covers, 10) || 0),
     timestamp,
     sourceKind: kind,
     raw: {
@@ -298,6 +299,16 @@ class PrismaOrderService {
       async prisma => {
         await prisma.$transaction(async tx => {
           await this.ensureTable(tx, data.tableId);
+          // Stamp the table's current party size (set by the waiter at seating)
+          // onto the order when the payload didn't carry one. Guarded so per-cover
+          // capture never blocks an order save.
+          if (!data.covers) {
+            const tableRow = await tx.table.findUnique({
+              where: { restaurantId_tableId: { restaurantId: this.restaurantId, tableId: data.tableId } },
+              select: { covers: true }
+            });
+            data.covers = tableRow?.covers || 0;
+          }
           const where = {
             restaurantId_sourceKind_filename: {
               restaurantId: this.restaurantId,

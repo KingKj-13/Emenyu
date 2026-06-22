@@ -19,6 +19,132 @@ export interface MenuItem {
   types?: string;
   category?: string;
   subcategory?: string;
+  // Authoritative server-side classification (Phase 3). When present the client
+  // consumes these instead of re-deriving the category locally.
+  categoryType?: string;
+  beverageKind?: string;
+}
+
+// Chef-controlled per-item recommendation (Phase 3, Task 8 owner controls).
+export type ChefRecType = 'DISH' | 'SIDE' | 'DESSERT' | 'BEVERAGE';
+export type ChefBeverageKind = 'WINE' | 'COCKTAIL' | 'BEER' | 'SOFT' | 'HOT' | 'NONE';
+
+export interface ChefRec {
+  id: number;
+  sourceItemId: number;
+  sourceName: string;
+  targetItemId: number;
+  targetName: string;
+  recType: ChefRecType;
+  beverageKind: ChefBeverageKind;
+  priority: number;
+  active: boolean;
+  season: string;
+  rotationGroup: string;
+  reason: string;
+}
+
+export interface ChefRecInput {
+  sourceItemId: number;
+  targetItemId: number;
+  recType: ChefRecType;
+  beverageKind?: ChefBeverageKind;
+  priority?: number;
+  active?: boolean;
+  season?: string;
+  rotationGroup?: string;
+  reason?: string;
+}
+
+// Recommendation analytics (Phase 4). One tally row + the dashboard payload.
+export interface RecoTally {
+  name?: string;
+  source?: string;
+  recType?: string;
+  rotationGroup?: string;
+  chef?: boolean;
+  impressions: number;
+  clicks: number;
+  accepted: number;
+  dismissed: number;
+  ordered: number;
+  revenue: number;
+  revenueOrdered?: number;
+  clickRate: number;
+  acceptanceRate: number;
+  dismissalRate: number;
+  conversionRate: number;
+  revenuePerImpression?: number;
+}
+
+// Recommended-order bundles (Phase 5). The public shape matches the existing
+// PersonaOrder used by RecommendedOrders; admin shape adds the editable fields.
+export interface BundleItemInput {
+  course: string;
+  itemName: string;
+  price: number;
+  itemId?: number | null;
+  sortOrder?: number;
+}
+
+export interface BundleAdmin {
+  id: number;
+  slug: string;
+  persona: string;
+  description: string;
+  icon: string;
+  accent: string;
+  active: boolean;
+  priority: number;
+  rotationGroup: string;
+  sortOrder: number;
+  items: BundleItemInput[];
+}
+
+export interface BundleInput {
+  persona: string;
+  description?: string;
+  icon?: string;
+  accent?: string;
+  active?: boolean;
+  priority?: number;
+  rotationGroup?: string;
+  sortOrder?: number;
+  slug?: string;
+  items?: BundleItemInput[];
+}
+
+export interface RecommendationAnalytics {
+  totals: RecoTally;
+  topShown: RecoTally[];
+  topClicked: RecoTally[];
+  topConverting: RecoTally[];
+  underperforming?: RecoTally[];
+  topRevenue: RecoTally[];
+  bySource: RecoTally[];
+  byRotationGroup: RecoTally[];
+  byBundle?: RecoTally[];
+  items: RecoTally[];
+  eventCount: number;
+}
+
+export interface RecoInsight {
+  severity: 'high' | 'medium' | 'low';
+  type: string;
+  title: string;
+  detail: string;
+  action: string;
+  name?: string;
+  recId?: number;
+  rotationGroup?: string;
+  impressions?: number;
+  acceptanceRate?: number;
+}
+
+export interface RecoInsightsResult {
+  count: number;
+  counts: Record<string, number>;
+  insights: RecoInsight[];
 }
 
 export interface MenuSubSection {

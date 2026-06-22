@@ -16,9 +16,16 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
+      // Register the service worker for offline caching, but NEVER auto-reload a
+      // running session. A new worker installs in the background and takes over
+      // on the next natural page load — so the app never jumps or refreshes
+      // unexpectedly during a live demo.
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/Trump/sw.js', { scope: '/Trump/' }).catch(() => {});
+          navigator.serviceWorker.register('/Trump/sw.js', {
+            scope: '/Trump/',
+            updateViaCache: 'none'
+          }).catch(() => {});
         });
       }
     </script>

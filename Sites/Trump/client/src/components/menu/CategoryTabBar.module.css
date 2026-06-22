@@ -6,6 +6,7 @@
   z-index: var(--z-tabs);
   background: rgba(0, 12, 20, 0.92);
   border-bottom: 1px solid rgba(198, 162, 75, 0.14);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
 

@@ -1,0 +1,129 @@
+# Deployment Readiness Checklist (Phase 5, Task 5)
+
+Covers the recommendation/analytics/bundle stack (Phases 3–5). Run from `Sites/Trump`
+unless noted. **Do not deploy to production from this branch until it is merged and
+reviewed.** Everything below is additive and degrades gracefully without a database.
+
+## 0. Pre-flight
+
+- [ ] Branch merged to `master` (or the agreed release branch) and reviewed.
+- [ ] `DATABASE_URL` is set (root `.env`) and points at the **intended** Postgres.
+- [ ] Environment validated: `npm run env:check` (root `npm run env:check` for Prisma).
+- [ ] Client built: `cd client && npm run build` (server serves `client/dist/`).
+
+## 1. Prisma migration sequence
+
+Migrations are ordered and idempotent (`CREATE TABLE IF NOT EXISTS`, guarded FKs).
+Apply in order with the standard command (it runs pending migrations only):
+
+```bash
+npx prisma migrate deploy --schema prisma/schema.prisma
+npx prisma generate        --schema prisma/schema.prisma   # regenerate the client
+```
+
+Recommendation-related migrations, in order:
+
+| Order | Migration | Adds |
+|--:|---|---|
+| 1 | `20260603100000_phase3_menu_item_recommendation` | `MenuItemRecommendation` (chef recs) |
+| 2 | `20260606000000_phase4_recommendation_event` | `RecommendationEvent` (analytics) |
+| 3 | `20260606120000_phase5_recommendation_bundle` | `RecommendationBundle` + `RecommendationBundleItem` |
+
+> Take a database backup/snapshot **before** `migrate deploy` (see [BACKUP_AND_DR.md](../../../../docs/BACKUP_AND_DR.md)). The migrations only add tables, but the snapshot is the rollback safety net.
+
+## 2. Seed sequence
+
+```bash
+npm run reco:seed -- --apply        # chef recommendations (idempotent upsert)
+npm run bundles:seed -- --apply      # recommended-order bundles (idempotent; also writes the JSON fallback)
+```
+
+- Both are safe to re-run (they replace their own `createdBy="seed"` rows).
+- `bundles:seed --json` (no DB) writes only `data/recommendation-bundles.json`, the
+  fallback the bundle service reads when Postgres is down.
+
+## 3. Health checks
+
+```bash
+npm run reco:health        # chef-rec data integrity vs the live menu (exit 1 on fail-level issues)
+npm run health             # general server/env healthcheck
+```
+
+Gate the deploy on `reco:health` exit 0 (no `fail`-level issues: no orphaned sources,
+no missing targets). Warnings (disabled targets, single-member rotation groups) are
+non-blocking but should be reviewed in Admin → Reco Analytics → Action items.
+
+## 4. Recommendation verification (dev database)
+
+```bash
+# Against a DEVELOPMENT database only — writes isolated, auto-cleaned test rows.
+npm run reco:verify:live -- --confirm
+```
+
+Verifies, end-to-end against Postgres: analytics ingest, aggregation, dashboard queries,
+chef-rec retrieval, bundle retrieval and rotation behaviour. Uses `restaurantId="verify-suite"`
+and deletes its rows afterwards, so real `trump` data is never touched.
+
+## 5. Analytics verification (post-deploy smoke)
+
+```bash
+# ingest a probe event (should return {"ok":true,"sink":"postgres"})
+curl -s -X POST "$BASE/Trump/api/reco/events" -H 'content-type: application/json' \
+  -d '{"eventType":"impression","recommendedName":"Deploy probe","source":"smoke"}'
+
+# read it back as owner/manager (cookie auth) — totals.impressions should be ≥ 1
+curl -s "$BASE/Trump/api/analytics/recommendations?from=$(date -I)" -b cookies.txt
+```
+
+If `sink` is `"json"`, Postgres or the generated Prisma model is missing — re-run the
+migration and `prisma generate`.
+
+## 6. Functional verification
+
+- [ ] Guest menu shows the "Not sure what to order?" strip (DB bundles, not the fallback).
+- [ ] Admin → Bundles lists the seeded bundles; toggle/edit/delete works.
+- [ ] Admin → Chef Recs lists chef recommendations; create/edit works.
+- [ ] Admin → Reco Analytics renders metrics and Action items.
+- [ ] Item modal pairings, cart recommendations and waiter cart-rec render `RecommendationCard`.
+
+## 7. Rollback procedure
+
+The features are additive and isolated; rollback options, least to most invasive:
+
+1. **Disable without rollback:** set chef recs / bundles inactive in Admin (engine falls
+   back to algorithmic recs; bundle strip falls back to the built-in constant). Analytics
+   ingest can be left running (harmless) or the client build reverted.
+2. **Revert code:** redeploy the previous build / `git revert` the Phase 3–5 commits. The
+   new tables are simply unused; no schema rollback required.
+3. **Full schema rollback (only if required):** restore the pre-deploy snapshot, or drop
+   the additive tables:
+   ```sql
+   DROP TABLE IF EXISTS "RecommendationBundleItem";
+   DROP TABLE IF EXISTS "RecommendationBundle";
+   DROP TABLE IF EXISTS "RecommendationEvent";
+   DROP TABLE IF EXISTS "MenuItemRecommendation";
+   ```
+   This only removes recommendation/analytics data; orders, menu, accounts and all core
+   data are untouched.
+
+## 8. Required environment variables
+
+`DATABASE_URL` lives in the **root** `.env`; the rest in `Sites/Trump/.env`
+(generated by `node scripts/bootstrap-env.js`). Full reference: [docs/ENVIRONMENT.md](../../docs/ENVIRONMENT.md).
+
+| Variable | Required | Default | Used by |
+|---|:--:|---|---|
+| `DATABASE_URL` | ✅ (for DB mode) | — | Prisma; all DB-backed features. Without it, chef recs/bundles/analytics use fallbacks. |
+| `TRUMP_RESTAURANT_ID` | — | `trump` | row scoping across all models |
+| `TRUMP_MENU_POSTGRES_ENABLED` | — | `true` | enables the Postgres menu/recs path |
+| `TRUMP_RECO_MAX_BEVERAGES` | — | `1` | category-safety: max beverages per rec set |
+| `TRUMP_RECO_ENFORCE_STAGE` | — | `true` | category-safety: course-stage rules |
+| `TRUMP_RECO_ROTATION_SCOPE` | — | `session` | rotation scope (`session` \| `day`) |
+| `TRUMP_RECO_ROTATION_BUCKET` | — | `day` | rotation time bucket (`hour` \| `day` \| `week`) |
+| `TRUMP_RECO_ROTATION_POOL` | — | `5` | rotation candidate pool size |
+| `TRUMP_CHAT_RATE_LIMIT_MAX` | — | `120` prod | also limits `POST /api/reco/events` (shared bucket) |
+| `TRUMP_PUBLIC_WRITE_RATE_LIMIT_MAX` | — | `60` prod | order/rating/reservation public writes |
+| `TRUMP_RATE_LIMIT_MAX` / `TRUMP_RATE_LIMIT_WINDOW_MS` | — | `600` / `15m` | general limiter |
+| `RECO_VERIFY_RESTAURANT_ID` | — | `verify-suite` | isolated id for `reco:verify:live` (optional) |
+
+(Session/secret/CORS variables are unchanged from Phase 1 — see ENVIRONMENT.md.)
