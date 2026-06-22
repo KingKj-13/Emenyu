@@ -1,6 +1,8 @@
 import { BASE_PATH } from '../constants/api';
 import type { MenuItem } from '../types/menu';
 
+// Trump-first keyword fallbacks (Greek dish images removed). New on-brand dish
+// photos are used where available; generic steak/seafood/dessert images otherwise.
 const KEYWORD_MAP: Record<string, string> = {
   tomahawk: 'Tomahawk.jpg',
   ribeye: 'Rump Steak.jpg',
@@ -9,37 +11,22 @@ const KEYWORD_MAP: Record<string, string> = {
   rump: 'Rump Steak.jpg',
   sirloin: 'Rump Steak.jpg',
   't-bone': 'Tomahawk.jpg',
-  calamari: 'Calamari.jpeg',
-  squid: 'Squid head.jpg',
+  calamari: 'GARLIC LEMON CALAMARI.jpg',
   prawn: 'Butter-garlic-prawns.jpg',
   oyster: 'Oyster.jpg',
-  mussel: 'Mussels.jpg',
-  sardine: 'Sardiens.jpg',
-  sole: 'East Coast Sole.jpg',
+  mussel: 'MUSSELS.jpg',
   salmon: 'Kingklip.png',
   kingklip: 'Kingklip.png',
   'pork chop': 'Crispy Pork Chops.jpg',
   'lamb chop': 'Crispy Lamb Chops.jpg',
   'lamb rack': 'Crispy Lamb Chops.jpg',
-  souvlakia: 'SOUVLAKIA (Beef).jpg',
-  souvlaki: 'SOUVLAKIA (Beef).jpg',
-  halloumi: 'Halloumi.jpg',
-  keftethes: 'Keftethes.jpg',
-  biftekia: 'Biftekia.jpg',
-  dolmades: 'Dolmades.jpg',
-  spanakopita: 'Spanakopita.jpg',
-  tiropita: 'Tiropita.jpg',
-  falafel: 'Falafel.jpg',
-  soutzoukakia: 'Soutzoukakia.jpg',
-  loukoumades: 'Loukoumades.jpg',
-  rizogalo: 'Rizogalo.jpg',
-  portokalopita: 'Portokalopita.jpg',
-  ekmek: 'Ekmek Kataifi.jpg',
-  linguine: 'Garida Linguine.jpeg',
-  mushroom: 'Black Mushroom.jpg',
-  zucchini: 'Zucchini Fries.jpg',
+  halloumi: 'FRIED HALLOUMI FINGERS.jpg',
+  snail: 'GARLIC SNAILS.jpg',
+  biltong: 'BEEF BILTONG.jpg',
+  trinchado: 'CHICKEN TRINCHADO.jpg',
+  boerewors: 'BOEREWORS & CHAKALAKA.jpg',
+  carpaccio: 'SPRINGBOK CARPACCIO.jpeg',
   cheesecake: 'Cheese Cake.jpg',
-  baklava: 'Baklava Cheese Cake.jpg',
   chocolate: 'Ice Cream & Bar-One Sauce.png',
   'ice cream': 'Ice Cream & Bar-One Sauce.png',
   margarita: 'Margarita.jpg',
@@ -47,16 +34,16 @@ const KEYWORD_MAP: Record<string, string> = {
   'old fashioned': 'Old Fashioned.jpg',
   espresso: 'Espresso Martini.jpg',
   heineken: 'Heineken (330ml).jpg',
-  burger: 'Bifteki Burger.jpg',
-  salad: 'Veg Meze Platter.jpg',
+  burger: 'Tomahawk.jpg',
+  salad: 'GREEK SALAD.jpg',
   pasta: 'Beef Fillet Pasta.jpg',
   lasagna: 'Chicken lasagna.jpg',
   lasagne: 'Chicken lasagna.jpg',
   chicken: 'Chicken Pasta.jpg',
-  'chicken liver': 'Chicken Livers.jpeg',
+  'chicken liver': 'FLASH PAN FRIED CHICKEN LIVERS.jpg',
+  wings: 'FIRECRACKER CHICKEN WINGS.jpg',
   ribs: 'Crispy Pork Chops.jpg',
   oxtail: 'Rump Steak.jpg',
-  strips: 'Beef Strips.jpg',
 };
 
 const DRINK_IMAGE_MAP: Record<string, string> = {
@@ -109,22 +96,22 @@ const CATEGORY_IMAGE_MAP: Record<string, string> = {
   ice: 'Ice Cream & Bar-One Sauce.png',
   steak: 'Tomahawk.jpg',
   beef: 'Beef fillet.jpg',
-  burger: 'Bifteki Burger.jpg',
+  burger: 'Tomahawk.jpg',
   lamb: 'Crispy Lamb Chops.jpg',
   pork: 'Crispy Pork Chops.jpg',
   ribs: 'Crispy Pork Chops.jpg',
-  seafood: 'Seafood Meze Platter.jpg',
+  seafood: 'GARLIC LEMON CALAMARI.jpg',
   prawn: 'Butter-garlic-prawns.jpg',
   oyster: 'Oyster.jpg',
-  fish: 'Fish & Chips.jpg',
+  fish: 'Kingklip.png',
   salmon: 'Kingklip.png',
   pasta: 'Beef Fillet Pasta.jpg',
   chicken: 'Chicken Pasta.jpg',
-  salad: 'Veg Meze Platter.jpg',
-  sushi: 'Seafood Meze Platter.jpg',
-  vegetarian: 'Veg Meze Platter.jpg',
-  side: 'Zucchini Fries.jpg',
-  starter: 'Cheese Croquettes.jpg',
+  salad: 'TRUMPS SALAD.jpg',
+  sushi: 'RAINBOW ROLL - SALMON (8pc).jpg',
+  vegetarian: 'CAPRESE & AVOCADO SALAD.jpg',
+  side: 'Tomahawk.jpg',
+  starter: 'GARLIC SNAILS.jpg',
 };
 
 const DRINK_TERMS = [
@@ -143,83 +130,32 @@ const EXTRA_DRINK_TERMS = [
 
 const DESSERT_TERMS = ['dessert', 'cake', 'ice cream', 'cheesecake', 'sweet', 'baklava', 'fondant'];
 
+// Trump-usable dish clips only. Everything Greek was removed; unmatched items
+// fall through to the category demo loops in demoVideoFor (steak-grill, seafood,
+// pasta, dessert), so the Greek video files are now unreferenced and purgeable.
 const LOCAL_OPTIMIZED_VIDEO_MAP: Record<string, string> = {
-  // Previously mapped
-  'baby marrow keftethes': 'Baby Marrow Keftethes.mp4',
-  'baklava & ice cream': 'Baklava & Ice Cream.mp4',
-  'beef fillet pasta': 'Beef Fillet Pasta.mp4',
-  'bifteki burger': 'Bifteki Burger.mp4',
-  'chicken pasta': 'Chicken Pasta.mp4',
-  'fried brinjals with tzatziki': 'Fried Brinjals with Tzatziki.mp4',
-  'frozen greek yoghurt': 'Frozen Greek Yoghurt.mp4',
-  'meat meze platter': 'Meat Meze Platter.mp4',
-  'mythos mixed meze': 'Mythos Mixed Meze.mp4',
-  oyster: 'Oysters.mp4',
-  oysters: 'Oysters.mp4',
-  'prawn katafi': 'Prawn Katafi.mp4',
   // Steak & beef
   'beef tomahawk': 'Beef Tomahawk.mp4',
   tomahawk: 'Beef Tomahawk.mp4',
   'beef fillet': 'beef fillet.mp4',
-  'filetto mythos': 'Filetto Mythos.mp4',
   'rump steak 200g': 'Rump Steak 200g.mp4',
   'rump steak 300g': 'Rump Steak 300g.mp4',
   'rump steak': 'Rump Steak 300g.mp4',
   'beef strips': 'Beef Strips.mp4',
-  biftekia: 'Biftekia.mp4',
+  'beef fillet pasta': 'Beef Fillet Pasta.mp4',
   // Lamb & pork
   'crispy lamb chops': 'Crispy Lamb Chops.mp4',
   'crispy chops lamb 300g': 'Crispy Chops Lamb 300g.mp4',
   'crispy chops lamb 150g': 'Crispy Chops Lamb 150g.mp4',
   'crispy pork chops': 'Crispy Pork Chops.mp4',
-  'souvlakia (lamb)': 'SOUVLAKIA (Lamb).mp4',
-  'souvlakia lamb': 'SOUVLAKIA (Lamb).mp4',
-  'souvlakia (chicken)': 'SOUVLAKIA (Chicken).mp4',
-  'souvlakia chicken': 'SOUVLAKIA (Chicken).mp4',
-  'souvlakia (beef)': 'SOUVLAKIA (Beef).mp4',
-  'souvlakia beef': 'SOUVLAKIA (Beef).mp4',
-  soutzoukakia: 'Soutzoukakia.mp4',
-  keftethes: 'Keftethes.mp4',
   // Seafood
   calamari: 'Calamari.mp4',
   mussels: 'Mussels.mp4',
-  'medium prawns': 'Medium Prawns.mp4',
-  'prawn saganaki': 'Prawn Saganaki.mp4',
-  'prawn curry': 'Prawn Curry.mp4',
-  sardines: 'Sardines.mp4',
-  sardine: 'Sardines.mp4',
-  'squid head': 'Squid Head.mp4',
-  'east coast sole': 'East Coast Sole.mp4',
-  'seafood meze platter': 'Seafood Meze Platter.mp4',
-  // Pasta & mains
-  'greek bolognese': 'Greek Bolognese.mp4',
-  'garida linguine': 'Garida Linguine.mp4',
+  // Chicken & pasta
+  'chicken pasta': 'Chicken Pasta.mp4',
   'chicken lasagna': 'Chicken lasagna.mp4',
   'chicken lasagne': 'Chicken lasagna.mp4',
   'chicken livers': 'Chicken Livers.mp4',
-  // Starters & mezedes
-  halloumi: 'Halloumi.mp4',
-  'santorini halloumi': 'Santorini Halloumi.mp4',
-  dolmades: 'Dolmades.mp4',
-  spanakopita: 'Spanakopita.mp4',
-  tiropita: 'Tiropita.mp4',
-  'feta in phyllo': 'Feta in Phyllo.mp4',
-  falafel: 'Falafel.mp4',
-  'black mushroom': 'Black Mushroom.mp4',
-  'cheese croquettes': 'Cheese Croquettes.mp4',
-  'veg meze platter': 'Veg Meze Platter.mp4',
-  'zucchini fries': 'Zucchini Fries.mp4',
-  // Desserts
-  'cheese cake': 'Cheese Cake.mp4',
-  cheesecake: 'Cheese Cake.mp4',
-  'baklava cheese cake': 'Baklava Cheese Cake.mp4',
-  'ice cream & bar-one sauce': 'Ice Cream & Bar-One Sauce.mp4',
-  'ice cream': 'Ice Cream & Bar-One Sauce.mp4',
-  loukoumades: 'Loukoumades.mp4',
-  rizogalo: 'Rizogalo.mp4',
-  portokalopita: 'Portokalopita.mp4',
-  'ekmek kataifi': 'Ekmek Kataifi.mp4',
-  ekmek: 'Ekmek Kataifi.mp4',
 };
 
 function mediaText(item: MenuItem): string {
@@ -319,9 +255,9 @@ function demoVideoFor(item: MenuItem): string | null {
   if (/(seafood|prawn|shrimp|oyster|mussel|fish|salmon|kingklip|hake|sole|calamari|squid|line ?fish)/.test(text)) {
     return `${BASE_PATH}/Video/demo/seafood.mp4`;
   }
-  // Vegetarian / salads / mezze get a real plant-forward clip rather than a seafood demo.
-  if (/(vegetarian|veg |veggie|salad|caprese|halloumi|falafel|mushroom|brinjal|zucchini|avocado|meze|phyllo|spanakopita|tiropita|dolmades|side)/.test(text)) {
-    return `${BASE_PATH}/Video/Veg Meze Platter.mp4`;
+  // Vegetarian / salads get the pasta demo loop (no Greek meze clip anymore).
+  if (/(vegetarian|veg |veggie|salad|caprese|halloumi|avocado|side)/.test(text)) {
+    return `${BASE_PATH}/Video/demo/pasta.mp4`;
   }
   if (/(steak|beef|fillet|sirloin|rump|rib|burger|lamb|pork|chop|grill|tomahawk|venison|game|oxtail|biltong|wors|chicken|trinchado)/.test(text)) {
     return `${BASE_PATH}/Video/demo/steak-grill.mp4`;

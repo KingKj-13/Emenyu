@@ -45,3 +45,38 @@
   border-color: rgba(198, 162, 75, 0.5);
   background: rgba(198, 162, 75, 0.1);
 }
+
+/* Top-level 4-group row */
+.groupStrip {
+  display: flex;
+  gap: 6px;
+  padding: 7px 12px 0;
+}
+
+.groupPill {
+  flex: 1 1 0;
+  padding: 8px 6px;
+  border: 1px solid rgba(198, 162, 75, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.015);
+  color: rgba(201, 187, 165, 0.62);
+  font-family: var(--font-heading, inherit);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.groupPill:hover { color: var(--color-cream); border-color: rgba(198, 162, 75, 0.4); }
+
+.groupActive {
+  color: #1a1206;
+  border-color: transparent;
+  background: linear-gradient(160deg, var(--color-gold-soft, #e3c980), var(--color-gold, #c6a24b));
+  box-shadow: 0 4px 14px rgba(198, 162, 75, 0.3);
+}
+
+/* the sub-row sits a touch tighter under the group row */
+.groupStrip + .strip { padding-top: 6px; }

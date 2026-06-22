@@ -72,16 +72,7 @@ const I = {
   ),
 };
 
-const HERO: Category = {
-  key: 'steaks', label: 'Premium Steaks', sub: 'Dry-aged on-site · olive-wood fire',
-  glow: 'rgba(150, 72, 38, 0.20)', icon: I.steak, to: t => sec(t, 'Trumps Premium Steaks'),
-};
-
-const DRINKS_HERO: Category = {
-  key: 'drinks', label: 'Drinks', sub: 'Wine, cocktails and all beverages',
-  glow: 'rgba(56, 102, 148, 0.28)', icon: I.drinks, to: t => `/${t}/drinks`,
-};
-
+// 2×3 chooser grid (matches the phone-fit opening). Butchery moves to a footer link.
 const CATEGORIES: Category[] = [
   { key: 'wine', label: 'Wine', sub: 'The cellar', glow: 'rgba(122, 64, 130, 0.32)', icon: I.wine, to: t => drink(t, 'Red Wine') },
   { key: 'cocktails', label: 'Cocktails', sub: 'Signature pours', glow: 'rgba(162, 102, 42, 0.32)', icon: I.cocktails, to: t => drink(t, 'Cocktails') },
@@ -89,8 +80,9 @@ const CATEGORIES: Category[] = [
   { key: 'mains', label: 'Mains', sub: 'Steaks, seafood and grill', glow: 'rgba(150, 72, 38, 0.30)', icon: I.steak, to: t => sec(t, 'Trumps Premium Steaks') },
   { key: 'starters', label: 'Starters', sub: 'To begin', glow: 'rgba(74, 122, 78, 0.30)', icon: I.starters, to: t => sec(t, 'Starters') },
   { key: 'sushi', label: 'Sushi & Sashimi', sub: 'From the sea', glow: 'rgba(58, 112, 152, 0.34)', icon: I.sushi, to: t => sec(t, 'Sushi') },
-  { key: 'butchery', label: 'Butchery', sub: 'Cuts to take home', glow: 'rgba(158, 58, 46, 0.34)', icon: I.butchery, external: true, to: () => `${BASE_PATH}/frontend/pages/butchery.html` },
 ];
+
+const BUTCHERY_HREF = `${BASE_PATH}/frontend/pages/butchery.html`;
 
 export function LandingPage() {
   const { tableId: paramTableId } = useParams<{ tableId: string }>();
@@ -137,14 +129,6 @@ export function LandingPage() {
         </button>
 
         <div className={styles.grid}>
-          <button className={`${styles.tile} ${styles.hero}`} style={{ '--glow': DRINKS_HERO.glow } as CSSProperties} onClick={() => go(DRINKS_HERO)}>
-            <span className={styles.glow} aria-hidden />
-            <span className={styles.tileText}>
-              <span className={styles.tileLabel}>{DRINKS_HERO.label}</span>
-              <span className={styles.tileSub}>{DRINKS_HERO.sub}</span>
-            </span>
-          </button>
-
           {CATEGORIES.map(c => (
             <button key={c.key} className={styles.tile} style={{ '--glow': c.glow } as CSSProperties} onClick={() => go(c)}>
               <span className={styles.glow} aria-hidden />
@@ -157,7 +141,9 @@ export function LandingPage() {
           ))}
         </div>
 
-        <p className={styles.footer}>Powered by Emenyu</p>
+        <p className={styles.footer}>
+          <a className={styles.butchery} href={BUTCHERY_HREF}>Butchery · cuts to take home</a>
+        </p>
       </div>
     </div>
   );

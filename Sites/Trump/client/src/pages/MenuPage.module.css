@@ -31,7 +31,7 @@
 }
 
 .content {
-  padding: calc(var(--header-h) + 48px) clamp(16px, 4vw, 48px) 120px;
+  padding: calc(var(--header-h) + 90px) clamp(16px, 4vw, 48px) 120px;
   max-width: 1400px;
   margin: 0 auto;
 }

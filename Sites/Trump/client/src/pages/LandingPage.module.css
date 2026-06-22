@@ -1,8 +1,7 @@
 .page {
   position: fixed;
   inset: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;               /* phone-fit: the opening never scrolls */
   background:
     radial-gradient(120% 60% at 50% -10%, rgba(40, 30, 20, 0.30), transparent 60%),
     #0a0a0b;
@@ -13,7 +12,10 @@
 .inner {
   width: 100%;
   max-width: 460px;
-  padding: calc(34px + env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: calc(16px + env(safe-area-inset-top)) 18px calc(12px + env(safe-area-inset-bottom));
 }
 
 /* ───────── Header ───────── */
@@ -22,22 +24,22 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-bottom: 26px;
+  margin-bottom: 14px;
 }
 
 .monogram {
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 1px solid var(--color-gold-dim);
   color: var(--color-gold);
   font-family: var(--font-heading);
-  font-size: 26px;
+  font-size: 22px;
   line-height: 1;
   padding-bottom: 2px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .eyebrow {
@@ -54,7 +56,7 @@
   margin: 6px 0 0;
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: clamp(52px, 17vw, 66px);
+  font-size: clamp(40px, 13vw, 56px);
   line-height: 0.98;
   letter-spacing: 0.01em;
   color: var(--color-gold-soft);
@@ -77,8 +79,8 @@
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  margin-top: 22px;
-  padding: 10px 20px;
+  margin-top: 12px;
+  padding: 8px 18px;
   border: 1px solid rgba(200, 165, 85, 0.32);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.02);
@@ -100,9 +102,12 @@
 
 /* ───────── Tile grid ───────── */
 .grid {
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  grid-auto-rows: 1fr;            /* 3 equal rows fill the remaining height */
+  gap: 11px;
 }
 
 .tile {
@@ -111,8 +116,8 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  min-height: 184px;
-  padding: 20px;
+  min-height: 0;
+  padding: 16px;
   text-align: left;
   border: 1px solid rgba(231, 221, 201, 0.08);
   border-radius: 18px;
@@ -122,10 +127,6 @@
   transition: transform var(--transition-med), border-color var(--transition-med), box-shadow var(--transition-med);
 }
 
-.hero {
-  grid-column: 1 / -1;
-  min-height: 268px;
-}
 
 .glow {
   position: absolute;
@@ -140,8 +141,8 @@
 
 .icon {
   position: relative;
-  width: 27px;
-  height: 27px;
+  width: 24px;
+  height: 24px;
   margin-bottom: auto;
   color: var(--color-gold);
 }
@@ -157,17 +158,15 @@
 .tileLabel {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 27px;
+  font-size: clamp(20px, 6vw, 25px);
   line-height: 1.04;
   letter-spacing: 0.005em;
   color: #fff;
 }
 
-.hero .tileLabel { font-size: 38px; }
-
 .tileSub {
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.52);
 }
 
@@ -183,9 +182,10 @@
   justify-content: space-between;
   gap: 16px;
   width: 100%;
-  margin: 0 0 22px;
-  padding: 22px 22px;
+  margin: 0 0 12px;
+  padding: 14px 20px;
   text-align: left;
+  flex: none;
   border: 1px solid rgba(200, 165, 85, 0.40);
   border-radius: 18px;
   background:
@@ -226,17 +226,24 @@
 
 /* ───────── Footer ───────── */
 .footer {
-  margin: 28px 0 0;
+  margin: 10px 0 0;
   text-align: center;
+  flex: none;
+}
+
+.butchery {
   font-family: var(--font-label);
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.30em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.30);
+  color: rgba(200, 165, 85, 0.6);
+  text-decoration: none;
 }
+.butchery:hover { color: var(--color-gold); }
 
-@media (max-width: 360px) {
-  .tile { min-height: 160px; padding: 16px; }
-  .tileLabel { font-size: 24px; }
+@media (max-height: 680px) {
+  .brand { font-size: clamp(34px, 11vw, 44px); }
+  .monogram { width: 40px; height: 40px; font-size: 19px; margin-bottom: 7px; }
+  .tileSub { display: none; }   /* tightest phones: keep labels, drop sublines */
 }
