@@ -1,4 +1,4 @@
-function createAiController({ aiService, config = {} }) {
+function createAiController({ aiService, config = {}, waiterWorkflowService = null }) {
   return {
     // Public client config (Phase 3B): lets the SPA render the assistant's name
     // (Donald) from server config instead of hardcoding "Trump AI".
@@ -9,6 +9,14 @@ function createAiController({ aiService, config = {} }) {
     async chat(req, res) {
       const data = await aiService.chat(req.body);
       res.json(data);
+      // S11: run guest messages through the deterministic event detector so the
+      // waiter gets birthday/allergy/complaint/VIP notifications automatically —
+      // fire-and-forget so it never delays or breaks the guest reply.
+      const tableId = req.body?.tableId;
+      const message = req.body?.message;
+      if (waiterWorkflowService && tableId && message) {
+        waiterWorkflowService.analyzeMessage({ tableId, message, waiterName: '' }).catch(() => {});
+      }
     },
 
     async aiPairing(req, res) {

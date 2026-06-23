@@ -19,6 +19,16 @@ function registerWaiterApiRoutes(app, controllers, auth) {
   app.post(alias('waiter/recovery'), waiterAuth, c.postRecovery);
   app.post(alias('upsell-event'), waiterAuth, c.postUpsellEvent);
 
+  // Workflow alerts, chat analysis, manager requests, birthday approvals
+  app.get(alias('waiter/tasks'), waiterAuth, c.listTasks);
+  app.post(alias('waiter/tasks'), waiterAuth, c.createTask);
+  app.post(alias('waiter/tasks/:id/ack'), waiterAuth, c.ackTask);
+  app.post(alias('waiter/tasks/:id/resolve'), waiterAuth, c.resolveTask);
+  app.get(alias('waiter/chat-center'), waiterAuth, c.getChatCenter);
+  app.post(alias('waiter/chat-analysis'), waiterAuth, c.analyzeChat);
+  app.post(alias('waiter/birthday-request'), waiterAuth, c.requestBirthdayApproval);
+  app.post(alias('waiter/birthday-approval/:id'), auth.requireRoles(['owner', 'manager']), c.approveBirthday);
+
   // Performance / leaderboard / shift report
   app.get(alias('waiter/me/performance'), waiterAuth, c.getMyPerformance);
   app.get(alias('waiter/me/shift-report'), waiterAuth, c.getMyShiftReport);

@@ -75,9 +75,28 @@ function createWaiterAnalyticsService({ config }) {
       });
       const offered = events.length;
       const accepted = events.filter(e => e.accepted).length;
-      return { offered, accepted, rate: offered ? accepted / offered : 0, events };
+      // Real "additional revenue" — sum of accepted upsell values (not a heuristic).
+      const revenue = events.filter(e => e.accepted).reduce((s, e) => s + (Number(e.value) || 0), 0);
+      return { offered, accepted, rate: offered ? accepted / offered : 0, revenue: Number(revenue.toFixed(2)), events };
     } catch {
-      return { offered: 0, accepted: 0, rate: 0, events: [] };
+      return { offered: 0, accepted: 0, rate: 0, revenue: 0, events: [] };
+    }
+  }
+
+  // Real guest rating — average OrderRating for orders this waiter served in the
+  // period (joined via Order.waiterName). null when there are no reviews yet.
+  async function getGuestRating(waiterName, from, to) {
+    const db = getPrisma();
+    try {
+      const ratings = await db.orderRating.findMany({
+        where: { restaurantId, createdAt: { gte: from, lte: to }, order: { waiterName } },
+        select: { rating: true }
+      });
+      if (!ratings.length) return { rating: null, ratingCount: 0 };
+      const avg = ratings.reduce((s, r) => s + (Number(r.rating) || 0), 0) / ratings.length;
+      return { rating: Number(avg.toFixed(1)), ratingCount: ratings.length };
+    } catch {
+      return { rating: null, ratingCount: 0 };
     }
   }
 
@@ -128,9 +147,10 @@ function createWaiterAnalyticsService({ config }) {
 
   async function getPerformance({ waiterName, period = 'today' }) {
     const { from, to } = rangeForPeriod(period);
-    const [orders, upsell] = await Promise.all([
+    const [orders, upsell, ratingStats] = await Promise.all([
       fetchWaiterOrders(waiterName, from, to),
-      getUpsellStats(waiterName, from, to)
+      getUpsellStats(waiterName, from, to),
+      getGuestRating(waiterName, from, to)
     ]);
 
     const salesDriven = Number(orders.reduce((s, o) => s + (Number(o.total) || 0), 0).toFixed(2));
@@ -153,6 +173,9 @@ function createWaiterAnalyticsService({ config }) {
       upsellRate: Number(upsell.rate.toFixed(2)),
       upsellOffered: upsell.offered,
       upsellAccepted: upsell.accepted,
+      upsellRevenue: upsell.revenue,
+      guestRating: ratingStats.rating,
+      ratingCount: ratingStats.ratingCount,
       salesByCourse: courses,
       vsAverage
     };

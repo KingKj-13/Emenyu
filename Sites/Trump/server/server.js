@@ -41,6 +41,7 @@ const { createOpportunityService } = require('./services/opportunityService');
 const { createWaiterAnalyticsService } = require('./services/waiterAnalyticsService');
 const { createServiceRecoveryService } = require('./services/serviceRecoveryService');
 const { createFloorService } = require('./services/floorService');
+const { createWaiterWorkflowService } = require('./services/waiterWorkflowService');
 const { AccountService } = require('./services/accountService');
 const { FileService } = require('./services/fileService');
 const { SocketService } = require('./services/socketService');
@@ -223,10 +224,11 @@ async function startServer() {
   const waiterAnalyticsService = createWaiterAnalyticsService({ config });
   const serviceRecoveryService = createServiceRecoveryService({ config });
   const floorService = createFloorService({ config });
+  const waiterWorkflowService = createWaiterWorkflowService({ config, socketService });
   logger.info('nlg_mode', nlgService.status());
 
   const controllers = {
-    ai: createAiController({ aiService, config }),
+    ai: createAiController({ aiService, config, waiterWorkflowService }),
     analytics: createAnalyticsController({ config }),
     recommendationAnalytics: createRecommendationAnalyticsController({ recommendationEventService, prismaMenuService: fileService.prismaMenu }),
     recommendationBundle: createRecommendationBundleController({ recommendationBundleService, socketService }),
@@ -248,7 +250,8 @@ async function startServer() {
       opportunityService,
       waiterAnalyticsService,
       serviceRecoveryService,
-      floorService
+      floorService,
+      waiterWorkflowService
     })
   };
   const uploadController = createUploadController(config);
