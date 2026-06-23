@@ -326,6 +326,31 @@ model UpsellEvent {
   @@index([restaurantId, accepted])
 }
 
+model WaiterTask {
+  id           Int       @id @default(autoincrement())
+  restaurantId String    @default("trump")
+  tableId      String    @default("")
+  waiterName   String    @default("")
+  type         String
+  title        String
+  message      String    @default("")
+  priority     Int       @default(3)
+  status       String    @default("open")
+  payload      Json?
+  requestedBy  String    @default("system")
+  approvedBy   String    @default("")
+  dueAt        DateTime?
+  acknowledgedAt DateTime?
+  resolvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([restaurantId, status, priority, createdAt])
+  @@index([restaurantId, tableId, status])
+  @@index([restaurantId, waiterName, status])
+  @@index([type])
+}
+
 // Phase 4: recommendation lifecycle analytics. One row per event
 // (impression | click | accepted | dismissed | ordered). The recommendation
 // engine is name-keyed, so recommendedName is the reliable join key and the
