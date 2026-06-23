@@ -7,9 +7,10 @@ import { api } from '../services/api';
 import { Spinner } from '../components/ui/Spinner';
 import { formatPrice } from '../lib/menuUtils';
 import type { ChefRec, ChefRecInput, ChefRecType, ChefBeverageKind, RecommendationAnalytics, RecoTally, RecoInsightsResult, RecoInsight, BundleAdmin, BundleInput, BundleItemInput } from '../types/menu';
+import type { WaiterTask } from '../types/waiter';
 import styles from './AdminPage.module.css';
 
-type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles';
+type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles' | 'servicedesk';
 
 interface Order {
   filename: string;
@@ -105,6 +106,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const [recoInsights, setRecoInsights] = useState<RecoInsightsResult | null>(null);
   const [recoFilters, setRecoFilters] = useState<{ range: ReportRange; category: string; source: string; rotationGroup: string; mode: string }>({ range: '7d', category: '', source: '', rotationGroup: '', mode: '' });
   const [bundles, setBundles] = useState<BundleAdmin[]>([]);
+  const [serviceTasks, setServiceTasks] = useState<WaiterTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'item' | 'reservation' | 'deal' | 'account'>(null);
@@ -151,6 +153,9 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
       } else if (t === 'bundles') {
         const data = await api.getBundlesAdmin();
         setBundles((data as BundleAdmin[]) || []);
+      } else if (t === 'servicedesk') {
+        const data = await api.getWaiterTasks({ status: 'all' });
+        setServiceTasks((data as WaiterTask[]) || []);
       }
     } catch (err) {
       console.error(err);
@@ -401,6 +406,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const NAV_GROUPS: { label: string; items: { key: Tab; label: string; icon: typeof ClipboardList; badge?: number }[] }[] = [
     { label: 'SERVICE', items: [
       { key: 'orders', label: 'Orders', icon: ClipboardList, badge: orders.length || undefined },
+      { key: 'servicedesk', label: 'Service Desk', icon: Bell, badge: serviceTasks.filter(t => ['open', 'acknowledged'].includes(t.status)).length || undefined },
       { key: 'history', label: 'History', icon: BookOpen },
       { key: 'tables', label: 'Tables', icon: LayoutGrid },
       { key: 'reservations', label: 'Reservations', icon: CalendarDays },
@@ -426,6 +432,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
 
   const PAGE_HEADS: Record<Tab, { eyebrow: string; title: string; sub: string; actions?: ReactNode }> = {
     orders: { eyebrow: 'SERVICE · LIVE', title: 'Live orders', sub: `${orders.length} active ticket${orders.length !== 1 ? 's' : ''}`, actions: <><span className={styles.livePill}><span className={styles.liveDot} /> {liveCovers} live covers</span>{refreshAction}</> },
+    servicedesk: { eyebrow: 'SERVICE · LIVE', title: 'Service desk', sub: 'Approvals, manager dispatch & live floor requests', actions: <><span className={styles.livePill}><span className={styles.liveDot} /> Live</span>{refreshAction}</> },
     history: { eyebrow: 'COMPLETED', title: 'Order history', sub: `${history.length} settled order${history.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtn} onClick={exportHistoryCsv}><Download size={14} /> Export CSV</button> },
     tables: { eyebrow: 'LIVE FLOOR', title: 'Tables', sub: `${liveCovers} active cart${liveCovers !== 1 ? 's' : ''} · manager override`, actions: <><span className={styles.livePill}><span className={styles.liveDot} /> Live sync</span>{refreshAction}</> },
     reservations: { eyebrow: 'BOOKINGS', title: 'Reservations', sub: `${reservations.length} booking${reservations.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('reservation')}><Plus size={14} /> New booking</button> },
@@ -630,6 +637,9 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
                   onUpdate={handleUpdateBundle}
                   onDelete={handleDeleteBundle}
                 />
+              )}
+              {tab === 'servicedesk' && (
+                <ServiceDeskPanel tasks={serviceTasks} onChange={setServiceTasks} />
               )}
                 </>
               )}
@@ -2190,6 +2200,142 @@ function NewAccountModal({ currentRole, onClose, onSubmit }: {
       </div>
       {error && <p className={styles.formError}>{error}</p>}
     </Modal>
+  );
+}
+
+// Manager → waiter dispatch presets (S10). Each creates a WaiterTask the waiter
+// app surfaces instantly in its Alerts Center via the `waiterTaskCreated` socket.
+const DISPATCH_ACTIONS: { type: string; title: string; message: string; priority: number }[] = [
+  { type: 'manager_visit', title: 'Visit Table', message: 'Manager has asked you to visit this table.', priority: 2 },
+  { type: 'complaint', title: 'Handle Complaint', message: 'Guest complaint — please handle promptly.', priority: 1 },
+  { type: 'vip', title: 'VIP Guest', message: 'VIP guest at this table — give priority service.', priority: 1 },
+  { type: 'special_request', title: 'Special Request', message: 'There is a special request at this table.', priority: 2 },
+  { type: 'priority', title: 'Priority Service', message: 'Priority service required at this table.', priority: 1 },
+];
+
+function deskTableNum(tableId?: string) {
+  return String(tableId || '').replace(/^table/i, '') || '?';
+}
+
+// S12 (manager side) + S10. Pending birthday-dessert approvals, manager dispatch
+// presets, and the live floor-request queue, all in one console tab. Stays live
+// via the admin socket room (managerApprovalRequested / waiterTask* events).
+function ServiceDeskPanel({ tasks, onChange }: { tasks: WaiterTask[]; onChange: (t: WaiterTask[]) => void }) {
+  const [table, setTable] = useState('1');
+  const [busy, setBusy] = useState<number | string | null>(null);
+
+  const reload = useCallback(() => {
+    api.getWaiterTasks({ status: 'all' }).then(d => onChange((d as WaiterTask[]) || [])).catch(() => {});
+  }, [onChange]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let cleanup = () => {};
+    import('../services/socket').then(({ getSocket }) => {
+      if (cancelled) return;
+      const socket = getSocket();
+      socket.emit('joinAdmin', { restaurantId: 'trump' });
+      const onEvt = () => reload();
+      socket.on('managerApprovalRequested', onEvt);
+      socket.on('waiterTaskCreated', onEvt);
+      socket.on('waiterTaskUpdated', onEvt);
+      cleanup = () => {
+        socket.off('managerApprovalRequested', onEvt);
+        socket.off('waiterTaskCreated', onEvt);
+        socket.off('waiterTaskUpdated', onEvt);
+      };
+    });
+    return () => { cancelled = true; cleanup(); };
+  }, [reload]);
+
+  const approvals = tasks.filter(t => t.type === 'birthday_approval' && t.status === 'open');
+  const openTasks = tasks
+    .filter(t => ['open', 'acknowledged'].includes(t.status) && t.type !== 'birthday_approval')
+    .sort((a, b) => a.priority - b.priority);
+
+  async function decide(id: number, approved: boolean) {
+    setBusy(id);
+    try { await api.approveBirthday(id, approved); reload(); } catch {}
+    setBusy(null);
+  }
+  async function dispatch(action: typeof DISPATCH_ACTIONS[number]) {
+    const tableId = `table${parseInt(table, 10) || 1}`;
+    setBusy(action.type);
+    try {
+      await api.createWaiterTask({ tableId, type: action.type, title: action.title, message: action.message, priority: action.priority });
+      reload();
+    } catch {}
+    setBusy(null);
+  }
+  async function resolve(id: number) {
+    setBusy(id);
+    try { await api.resolveWaiterTask(id); reload(); } catch {}
+    setBusy(null);
+  }
+
+  const card: CSSProperties = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 16, marginBottom: 12 };
+  const sectionTitle: CSSProperties = { fontSize: 13, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--color-sand)', opacity: 0.7, margin: '22px 0 10px' };
+
+  return (
+    <div>
+      {/* ── Pending approvals (S12) ── */}
+      <div style={sectionTitle}>Pending approvals</div>
+      {approvals.length === 0 ? (
+        <div className={styles.emptyState}><p>No approvals waiting.</p></div>
+      ) : approvals.map(t => (
+        <div key={t.id} style={{ ...card, borderColor: 'rgba(198,162,75,0.4)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontWeight: 600, color: '#c6a24b' }}>🎂 {t.title} · Table {deskTableNum(t.tableId)}</div>
+              <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>{t.message}</div>
+              <div style={{ fontSize: 12, opacity: 0.55, marginTop: 4 }}>Requested by {t.waiterName || t.requestedBy || 'waiter'}</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className={`${styles.resvBtn} ${styles.resvBtnConfirm}`} disabled={busy === t.id} onClick={() => decide(t.id, true)}>Approve</button>
+              <button className={`${styles.resvBtn} ${styles.resvBtnCancel}`} disabled={busy === t.id} onClick={() => decide(t.id, false)}>Reject</button>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* ── Manager → waiter dispatch (S10) ── */}
+      <div style={sectionTitle}>Send to waiter</div>
+      <div style={card}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <span style={{ fontSize: 14, opacity: 0.8 }}>Table</span>
+          <input
+            value={table}
+            onChange={e => setTable(e.target.value.replace(/[^0-9]/g, ''))}
+            inputMode="numeric"
+            style={{ width: 80, padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.25)', color: 'inherit', fontSize: 16 }}
+          />
+        </label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {DISPATCH_ACTIONS.map(a => (
+            <button key={a.type} className={styles.actionBtn} disabled={busy === a.type} onClick={() => dispatch(a)}>
+              {a.title}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Live floor requests (S7/S10) ── */}
+      <div style={sectionTitle}>Floor requests ({openTasks.length})</div>
+      {openTasks.length === 0 ? (
+        <div className={styles.emptyState}><p>No open requests.</p></div>
+      ) : openTasks.map(t => (
+        <div key={t.id} style={{ ...card, borderColor: t.priority <= 1 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.08)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontWeight: 600 }}>{t.title}{t.tableId ? ` · Table ${deskTableNum(t.tableId)}` : ''}</div>
+              <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>{t.message}</div>
+              <div style={{ fontSize: 12, opacity: 0.55, marginTop: 4 }}>{t.status.toUpperCase()} · P{t.priority}</div>
+            </div>
+            <button className={styles.actionBtn} disabled={busy === t.id} onClick={() => resolve(t.id)}>Resolve</button>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

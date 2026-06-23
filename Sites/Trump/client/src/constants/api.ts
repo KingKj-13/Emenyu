@@ -68,4 +68,11 @@ export const ENDPOINTS = {
   seatGuest: (tableId: string) => `${API_PREFIX}/api/waiter/table/${tableId}/seat-guest`,
   tableCovers: (tableId: string) => `${API_PREFIX}/api/waiter/table/${tableId}/covers`,
   nlgStatus: `${API_PREFIX}/api/waiter/nlg-status`,
+  waiterTasks: `${API_PREFIX}/api/waiter/tasks`,
+  waiterTaskAck: (id: number | string) => `${API_PREFIX}/api/waiter/tasks/${id}/ack`,
+  waiterTaskResolve: (id: number | string) => `${API_PREFIX}/api/waiter/tasks/${id}/resolve`,
+  waiterChatCenter: `${API_PREFIX}/api/waiter/chat-center`,
+  waiterChatAnalysis: `${API_PREFIX}/api/waiter/chat-analysis`,
+  waiterBirthdayRequest: `${API_PREFIX}/api/waiter/birthday-request`,
+  waiterBirthdayApproval: (id: number | string) => `${API_PREFIX}/api/waiter/birthday-approval/${id}`,
 } as const;

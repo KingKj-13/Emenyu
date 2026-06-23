@@ -78,7 +78,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     section: DEFAULT_SECTION,
     target: { revenue: 50000, avgCheck: 1200, upsell: 0.6 }
   });
-  const [tab, setTab] = useState<WaiterTab>('floor');
+  const [tab, setTab] = useState<WaiterTab>('home');
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [order, setOrder] = useState<OrderLine[]>([]);
   const [openItem, setOpenItem] = useState<MenuItem | null>(null);
@@ -106,7 +106,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     setShift(s => ({ ...s, started: false }));
     setSelectedTableId(null);
     setOrder([]);
-    setTab('floor');
+    setTab('home');
   }, []);
 
   const selectTable = useCallback((tableId: string) => {
@@ -114,7 +114,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     selectedTableRef.current = tableId;
     setOrder([]);
     setPlacedItems([]);
-    setTab('order');
+    setTab('tables');
     const socket = socketRef.current;
     socket.emit('joinTable', { restaurantId: RESTAURANT_ID, tableId });
     socket.emit('fetchHistory', { restaurantId: RESTAURANT_ID, tableId });
@@ -174,7 +174,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
       clearOrder();
       showToast('Sent to kitchen');
     } catch {
-      showToast('Could not send — try again');
+      showToast('Could not send - try again');
     } finally {
       setSending(false);
     }
@@ -199,8 +199,8 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
   // Live floor alerts from socket events.
   useEffect(() => {
     const socket = socketRef.current;
-    const pushAlert = (a: Omit<WaiterAlert, 'id' | 'time' | 'state'>) => {
-      const alert: WaiterAlert = { ...a, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, time: clockTime(), state: 'live' };
+    const pushAlert = (a: Omit<WaiterAlert, 'id' | 'time' | 'createdAt' | 'state'>) => {
+      const alert: WaiterAlert = { ...a, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, time: clockTime(), createdAt: Date.now(), state: 'live' };
       setAlerts(prev => [alert, ...prev].slice(0, 30));
     };
     const onBell = (p: { tableId?: string; displayTable?: string }) => {
@@ -214,7 +214,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     const onKitchen = (p: { tableId?: string; kitchenStatus?: string; displayTable?: string }) => {
       if ((p.kitchenStatus || '').toLowerCase() !== 'ready') return;
       const label = p.displayTable || (p.tableId ? p.tableId.replace('table', 'Table ') : 'A table');
-      pushAlert({ kind: 'ready', tableId: p.tableId, title: label, message: `Order ready — bring to ${label.toLowerCase()}` });
+      pushAlert({ kind: 'ready', tableId: p.tableId, title: label, message: `Order ready - bring to ${label.toLowerCase()}` });
     };
     const onGuestEvent = (p: { tableId?: string; event?: GuestEvent | null }) => {
       if (!p?.event) return;
@@ -230,7 +230,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
         script: p.event.script
       });
       // Prominent real-time nudge so the waiter sees it immediately.
-      showToast(`${p.event.emoji} ${label} — offer a complimentary Chocolate Lava Cake`);
+      showToast(`${p.event.emoji} ${label} - offer a complimentary Chocolate Lava Cake`);
     };
     const sameTable = (a?: string | null, b?: string | null) =>
       String(a || '').toLowerCase().replace(/[^a-z0-9]/g, '') === String(b || '').toLowerCase().replace(/[^a-z0-9]/g, '');
