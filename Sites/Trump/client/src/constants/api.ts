@@ -27,6 +27,7 @@ export const ENDPOINTS = {
   menuCategories: `${API_PREFIX}/api/menu/categories`,
   menuItemAvailability: (id: number) => `${API_PREFIX}/api/menu/items/${id}/availability`,
   menuItemMedia: (id: number) => `${API_PREFIX}/api/menu/items/${id}/media`,
+  menuItemUpdate: (id: number) => `${API_PREFIX}/api/menu/items/${id}`,
   menuItemDelete: (id: number) => `${API_PREFIX}/api/menu/items/${id}`,
   menuItemBulk: `${API_PREFIX}/api/menu/items/bulk`,
   chefRecs: `${API_PREFIX}/api/menu/chef-recs`,

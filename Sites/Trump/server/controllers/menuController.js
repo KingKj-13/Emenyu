@@ -117,6 +117,22 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
       res.status(201).json({ ok: true, item });
     },
 
+    async updateItem(req, res) {
+      const service = prismaMenuService || fileService?.prismaMenu;
+      if (!service?.updateItem) return res.status(503).json({ error: 'Not available' });
+
+      const body = req.body || {};
+      if (Object.prototype.hasOwnProperty.call(body, 'name') && !String(body.name || '').trim()) {
+        return res.status(400).json({ error: 'name cannot be empty' });
+      }
+
+      const item = await service.updateItem(req.params.id, body);
+      if (!item) return res.status(500).json({ error: 'Failed to update item' });
+
+      socketService.emitMenuUpdated();
+      res.json({ ok: true, item });
+    },
+
     async toggleAvailability(req, res) {
       const { id } = req.params;
       const available = req.body?.available !== false;

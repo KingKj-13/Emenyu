@@ -198,6 +198,24 @@ export const api = {
     });
   },
 
+  updateMenuItem(id: number, patch: {
+    name?: string;
+    category?: string;
+    price?: number;
+    description?: string;
+    calories?: string;
+    allergens?: string;
+    spice?: string;
+    available?: boolean;
+    chefPick?: boolean;
+  }) {
+    return fetchJson<{ ok: boolean; item: unknown }>(ENDPOINTS.menuItemUpdate(id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+  },
+
   deleteMenuItem(id: number) {
     return fetchJson<{ ok: boolean }>(ENDPOINTS.menuItemDelete(id), { method: 'DELETE' });
   },
