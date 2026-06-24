@@ -276,10 +276,13 @@ async function startServer() {
     auth.requirePage(['owner', 'manager']),
     (req, res) => res.redirect(`${config.publicBasePath}/Admin`)
   );
+  // Retired (Phase 01B): the vanilla waiter.html is superseded by the React /Waiter
+  // app. Redirect preserves the bookmark and the same guard (a .html URL cannot
+  // render the SPA directly because React Router uses basename "/Trump").
   app.get(
     ['/waiter.html', '/Trump/waiter.html', '/trump/waiter.html'],
     auth.requirePage(['owner', 'manager', 'waiter']),
-    controllers.waiter.serveWaiterPage
+    (req, res) => res.redirect(`${config.publicBasePath}/Waiter`)
   );
   // Retired: the vanilla owner.html is superseded by the React /Owner dashboard.
   app.get(
