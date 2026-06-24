@@ -38,8 +38,7 @@ class FileService {
       this.config.directories.history,
       this.config.directories.tables,
       this.config.directories.data,
-      this.config.directories.uploads,
-      this.config.directories.frontend
+      this.config.directories.uploads
     ];
 
     for (const dir of directoryList) {

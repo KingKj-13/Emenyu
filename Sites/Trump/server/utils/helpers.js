@@ -190,7 +190,6 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
   const directories = {
     base: baseDir,
     server: path.join(baseDir, 'server'),
-    frontend: path.join(baseDir, 'frontend'),
     food: path.join(baseDir, 'food'),
     orders: path.join(baseDir, 'orders'),
     history: path.join(baseDir, 'history'),
