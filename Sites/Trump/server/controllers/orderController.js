@@ -5,7 +5,13 @@ const { tableIdFromFilename } = require('../utils/helpers');
 function createOrderController({ config, fileService, socketService, orderValidationService }) {
   return {
     serveAdminPage(req, res) {
-      res.sendFile(path.join(config.directories.base, 'admin.html'));
+      // Phase 01B: the admin console is the React SPA (client/dist). React Router
+      // (basename "/Trump") renders the /Admin route. Mirrors serveWaiterPage. The
+      // legacy admin.html fallback is retained only until it is removed in cleanup.
+      const spaIndex = path.join(config.directories.base, 'client', 'dist', 'index.html');
+      res.sendFile(spaIndex, err => {
+        if (err) res.sendFile(path.join(config.directories.base, 'admin.html'));
+      });
     },
 
     redirectRoot(req, res) {

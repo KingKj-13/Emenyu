@@ -267,10 +267,14 @@ async function startServer() {
     res.status(204).end();
   });
 
+  // Retired (Phase 01B): the vanilla admin.html is superseded by the React /Admin
+  // dashboard. Redirect preserves the old bookmark and keeps the same owner/manager
+  // guard. A .html URL cannot render the SPA directly (React Router basename "/Trump"),
+  // so we redirect to the canonical /Admin route instead of serving the SPA here.
   app.get(
     ['/admin.html', '/Trump/admin.html', '/trump/admin.html'],
     auth.requirePage(['owner', 'manager']),
-    controllers.order.serveAdminPage
+    (req, res) => res.redirect(`${config.publicBasePath}/Admin`)
   );
   app.get(
     ['/waiter.html', '/Trump/waiter.html', '/trump/waiter.html'],
