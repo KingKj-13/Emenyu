@@ -64,10 +64,20 @@ ok "snapshot ($(du -sh "$snap" | cut -f1))"
 log "2/7 npm ci --omit=dev"
 npm ci --omit=dev || die "npm ci failed"
 
-log "3/7 prisma generate"
-npx prisma generate --schema "$SCHEMA" || die "prisma generate failed"
+log "3/7 prisma generate (into Trump/node_modules — R1 fix)"
+# R1 deploy defect (Phase 03C): the schema's generator block has no explicit `output`,
+# so `prisma generate` emits the client to the @prisma/client nearest the SCHEMA file
+# (Emenyu/node_modules), NOT the one the app actually loads (Trump/node_modules) — the
+# app then runs a stale client missing new fields. Fix: generate from a Trump-LOCAL copy
+# of the canonical schema so the client lands in $APP_DIR/node_modules, then verify.
+mkdir -p prisma
+cp -f "$SCHEMA" prisma/schema.prisma || die "could not copy schema to Trump-local prisma/"
+npx prisma generate --schema prisma/schema.prisma || die "prisma generate failed"
+# Verify the app-loaded client actually has the latest models/fields (fails fast if R1 recurs):
+node -e "const {getPrisma}=require('./server/services/prismaClient'); const p=getPrisma(); p.order.findFirst({select:{clientOrderId:true}}).then(()=>{ if(!p.device||!p.shift) throw new Error('client missing device/shift'); console.log('prisma client OK (order.clientOrderId, device, shift present)'); process.exit(0);}).catch(e=>{console.error('PRISMA CLIENT VERIFY FAILED:',e.message); process.exit(1);});" \
+  || die "generated prisma client is missing expected models/fields (R1 — client in wrong node_modules)"
 
-log "4/7 prisma migrate deploy"
+log "4/7 prisma migrate deploy (canonical schema + migrations dir)"
 npx prisma migrate deploy --schema "$SCHEMA" || die "migrate deploy failed"
 
 log "5/7 client build"
