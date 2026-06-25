@@ -227,6 +227,10 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
       sessionCookieSameSite: env.TRUMP_SESSION_SAMESITE || 'Lax',
       sessionSecret: env.TRUMP_SESSION_SECRET || env.STAGING_PASS || sharedPassword,
       sessionTtlMs: 1000 * 60 * 60 * parseInteger(env.TRUMP_SESSION_TTL_HOURS, 12),
+      // Phase 04 — native token auth: short-lived Bearer access token + long-lived
+      // DB-backed refresh token (device). Web cookie auth is unchanged.
+      accessTtlMs: 1000 * 60 * parseInteger(env.TRUMP_ACCESS_TTL_MINUTES, 15),
+      refreshTtlMs: 1000 * 60 * 60 * 24 * parseInteger(env.TRUMP_REFRESH_TTL_DAYS, 30),
       users: [
         {
           username: env.TRUMP_OWNER_USER || 'owner',
@@ -459,8 +463,20 @@ function createRoleAuth(config, accountService, logger = null) {
     return readToken(token);
   }
 
+  // Phase 04 — accept a native Bearer ACCESS token (same HMAC + active-user check
+  // as the cookie, so suspension / sessionInvalidBefore revoke it too).
+  async function getBearerUser(req) {
+    const header = req.headers.authorization || '';
+    if (!header.toLowerCase().startsWith('bearer ')) {
+      return null;
+    }
+    return readToken(header.slice(7).trim());
+  }
+
   async function getRequestUser(req) {
-    return (await getSessionUser(req)) || (await readBasicUser(req, config, accountService));
+    return (await getSessionUser(req))
+      || (await getBearerUser(req))
+      || (await readBasicUser(req, config, accountService));
   }
 
   function issueSession(req, res, user) {
@@ -525,6 +541,11 @@ function createRoleAuth(config, accountService, logger = null) {
       return requireRoles(roles, { page: true });
     },
     getRequestUser,
+    // Phase 04 — mint a short-lived Bearer access token (reuses the cookie HMAC
+    // format so readToken/getBearerUser validate it identically).
+    createAccessToken(username, ttlMs) {
+      return createToken(username, Date.now() + (ttlMs || config.auth.accessTtlMs || 900000));
+    },
     // Verify a raw session token (same HMAC + active-user check as REST auth).
     // Returns the sanitized active user, or null. Used by the Socket.IO handshake.
     getUserFromToken: readToken,

@@ -30,6 +30,9 @@ const { TableOwnershipService } = require('./services/tableOwnershipService');
 const { NotificationService } = require('./services/notificationService');
 const { OperationsService } = require('./services/operationsService');
 const { createOperationsController } = require('./controllers/operationsController');
+const { registerAuthTokenRoutes } = require('./routes/authTokenRoutes');
+const { TokenService } = require('./services/tokenService');
+const { createAuthTokenController } = require('./controllers/authTokenController');
 const { registerDealRoutes } = require('./routes/dealRoutes');
 const { registerKitchenRoutes } = require('./routes/kitchenRoutes');
 const { registerMenuRoutes } = require('./routes/menuRoutes');
@@ -239,6 +242,7 @@ async function startServer() {
   const shiftService = new ShiftService({ config, logger, auditService });
   const tableOwnershipService = new TableOwnershipService({ config, logger, auditService, notificationService });
   const operationsService = new OperationsService({ config, logger, shiftService, notificationService });
+  const tokenService = new TokenService({ config, logger }); // Phase 04 — native refresh/device registry
   logger.info('nlg_mode', nlgService.status());
 
   const controllers = {
@@ -269,7 +273,8 @@ async function startServer() {
     }),
     operations: createOperationsController({
       shiftService, tableOwnershipService, notificationService, operationsService, auditService
-    })
+    }),
+    authToken: createAuthTokenController({ accountService, auth, tokenService, config, logger })
   };
   const uploadController = createUploadController(config);
 
@@ -348,6 +353,7 @@ async function startServer() {
   registerUploadRoutes(app, uploadController, auth.requireRoles(['owner', 'manager']));
   registerWaiterApiRoutes(app, controllers, auth);
   registerOperationsRoutes(app, controllers, auth);
+  registerAuthTokenRoutes(app, controllers, auth);
   registerOrderRoutes(app, controllers, auth);
 
   // SPA fallback: serve React app for all /Trump/* routes with no file extension

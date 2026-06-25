@@ -528,3 +528,26 @@ model Notification {
   @@index([restaurantId, recipientUser, readAt])
   @@index([restaurantId, source, createdAt])
 }
+
+// Phase 04 — native client device + refresh-token registry. One row per logged-in
+// device (multiple concurrent devices per user). The refresh token is opaque
+// (`<deviceId>.<secret>`); only sha256(secret) is stored. Access tokens stay
+// stateless (cookie HMAC format) and are NOT stored here. Revoking a device sets
+// revokedAt; rotation on each refresh replaces refreshTokenHash.
+model Device {
+  id               Int       @id @default(autoincrement())
+  restaurantId     String    @default("trump")
+  deviceId         String    @unique
+  username         String
+  deviceName       String    @default("")
+  platform         String    @default("")      // android | ios | desktop | web
+  refreshTokenHash String
+  refreshExpiresAt DateTime
+  lastSeenAt       DateTime  @default(now())
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([username, revokedAt])
+  @@index([restaurantId, username])
+}
