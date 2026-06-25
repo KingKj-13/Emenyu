@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, type ReactNode, type CSSProperties } from 'react';
-import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Pencil, Plus, X, Sparkles, TrendingUp } from 'lucide-react';
+import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Pencil, Plus, X, Sparkles, TrendingUp, Activity, ShieldCheck } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../hooks/useAuth';
 import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
@@ -9,8 +9,11 @@ import { formatPrice } from '../lib/menuUtils';
 import type { ChefRec, ChefRecInput, ChefRecType, ChefBeverageKind, RecommendationAnalytics, RecoTally, RecoInsightsResult, RecoInsight, BundleAdmin, BundleInput, BundleItemInput } from '../types/menu';
 import type { WaiterTask } from '../types/waiter';
 import styles from './AdminPage.module.css';
+import { NotificationBell } from '../components/operations/NotificationBell';
+import { OwnerOperations } from '../components/operations/OwnerOperations';
+import { AuditViewer } from '../components/operations/AuditViewer';
 
-type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles' | 'servicedesk';
+type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles' | 'servicedesk' | 'operations' | 'audit';
 
 interface Order {
   filename: string;
@@ -471,6 +474,10 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
       { key: 'accounts', label: 'Accounts', icon: Users },
       { key: 'chat', label: 'Chat Logs', icon: MessageSquare },
     ] },
+    { label: 'OPERATIONS', items: [
+      { key: 'operations', label: 'Operations', icon: Activity },
+      { key: 'audit', label: 'Audit Trail', icon: ShieldCheck },
+    ] },
   ];
 
   const refreshAction = (
@@ -492,6 +499,8 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top dishes, peak hours & guest ratings' },
     accounts: { eyebrow: 'STAFF', title: 'Accounts', sub: `${accounts.length} team member${accounts.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('account')}><Plus size={14} /> Add account</button> },
     chat: { eyebrow: 'AI SOMMELIER', title: 'Chat logs', sub: 'Guest conversations with the AI sommelier' },
+    operations: { eyebrow: 'OPERATIONS · LIVE', title: 'Operations', sub: 'Live floor — staff on shift, table ownership, orders & alerts', actions: refreshAction },
+    audit: { eyebrow: 'ACCOUNTABILITY', title: 'Audit trail', sub: 'Immutable record of every privileged staff action' },
   };
   const head = PAGE_HEADS[tab];
   const initials = (user?.label || user?.username || 'AD').slice(0, 2).toUpperCase();
@@ -502,7 +511,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
         <div className={styles.topChrome}>
           <div className={styles.lights}><span /><span /><span /></div>
           <div className={styles.urlPill}><span className={styles.urlDot} /> emenyu.io/admin · Trump Steakhouse</div>
-          <div className={styles.chromeRight}><NotificationButton /></div>
+          <div className={styles.chromeRight}><NotificationBell scope="all" /><NotificationButton /></div>
         </div>
         <div className={styles.body}>
           <aside className={styles.sidebar}>
@@ -574,6 +583,8 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
               )}
               {tab === 'accounts' && <AccountsList accounts={accounts} currentUsername={user?.username} onUpdateStatus={handleUpdateAccountStatus} />}
               {tab === 'chat' && <><LiveChatMonitor /><ChatLogList logs={chatLogs} /></>}
+              {tab === 'operations' && <OwnerOperations />}
+              {tab === 'audit' && <AuditViewer />}
               {tab === 'menu' && (
                 <MenuAvailabilityList
                   items={menuItems}

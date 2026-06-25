@@ -36,6 +36,10 @@ import { resolveImage } from '../lib/imageResolver';
 import { money, moneyExact } from '../lib/waiterFormat';
 import { StartShiftScreen } from './waiter/StartShiftScreen';
 import { SplitBillModal } from '../components/waiter/SplitBillModal';
+import { ShiftPanel } from '../components/operations/ShiftPanel';
+import { OwnershipPanel } from '../components/operations/OwnershipPanel';
+import { TableTimeline } from '../components/operations/TableTimeline';
+import { NotificationBell } from '../components/operations/NotificationBell';
 import type {
   CartRec,
   CartRecResponse,
@@ -142,6 +146,7 @@ function TopBar() {
         </span>
       </button>
       <div className="wv-top-actions">
+        <NotificationBell />
         <button className="wv-icon-btn" onClick={() => setTab('alerts')} aria-label="Open alerts">
           <Bell size={20} />
           {liveAlertCount > 0 && <span className="wv-badge">{liveAlertCount}</span>}
@@ -685,7 +690,34 @@ function ProfileScreen() {
         <div><span>Upsell Rate</span><b>{Math.round((perf?.upsellRate || 0) * 100)}%</b></div>
       </div>
       <button className="wv-secondary full" onClick={endShift}>End Shift</button>
+      <WaiterOpsSection />
     </main>
+  );
+}
+
+// Phase 03B — real shift lifecycle + per-table ownership/timeline (consumes the
+// Phase 03 staff-ops API). Sits below the demo profile stats.
+function WaiterOpsSection() {
+  const [tableId, setTableId] = useState('');
+  const [active, setActive] = useState('');
+  return (
+    <div style={{ marginTop: 20 }}>
+      <p className="wv-kicker">Shift &amp; ownership</p>
+      <ShiftPanel />
+      <div className="w-card" style={{ marginTop: 16 }}>
+        <span className="w-eyebrow-dim">Table ownership &amp; timeline</span>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <input className="w-field" value={tableId} onChange={e => setTableId(e.target.value)} placeholder="Table id e.g. table1" />
+          <button className="w-btn-primary" style={{ width: 'auto', padding: '0 18px' }} disabled={!tableId.trim()} onClick={() => setActive(tableId.trim())}>View</button>
+        </div>
+        {active && (
+          <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+            <OwnershipPanel tableId={active} />
+            <TableTimeline tableId={active} />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
