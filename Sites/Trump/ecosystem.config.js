@@ -24,12 +24,16 @@ module.exports = {
       time: true,
       env: {
         NODE_ENV: 'production',
-        TRUMP_HOST: process.env.TRUMP_HOST || '0.0.0.0',
+        // Bind to loopback by default: the app must only be reachable via the
+        // nginx reverse proxy. Exposing 0.0.0.0 lets the internet hit the app
+        // directly, bypassing TLS/HSTS/rate-limits (Phase 02B.1 — finding N2).
+        // Override TRUMP_HOST only for setups without a fronting proxy.
+        TRUMP_HOST: process.env.TRUMP_HOST || '127.0.0.1',
         TRUMP_PORT: process.env.TRUMP_PORT || process.env.PORT || 3012
       },
       env_production: {
         NODE_ENV: 'production',
-        TRUMP_HOST: process.env.TRUMP_HOST || '0.0.0.0',
+        TRUMP_HOST: process.env.TRUMP_HOST || '127.0.0.1',
         TRUMP_PORT: process.env.TRUMP_PORT || process.env.PORT || 3012
       }
     }
