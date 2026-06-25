@@ -123,6 +123,15 @@ function configureSecurity(app, config, logger) {
   app.disable('x-powered-by');
   app.set('trust proxy', config.security.trustProxy ? 1 : false);
 
+  // Phase 05 — controlled load-test bypass. Default OFF; only true when
+  // TRUMP_LOAD_TEST_BYPASS is explicitly set. Loudly warn so it is never left on.
+  const loadTestBypass = Boolean(config.security.loadTestBypass);
+  if (loadTestBypass) {
+    logger.warn('rate_limit_bypass_active', {
+      message: 'TRUMP_LOAD_TEST_BYPASS is ON — rate limiting is DISABLED. For controlled load testing only. NEVER use in production.'
+    });
+  }
+
   app.use((req, res, next) => {
     if (config.security.forceHttps && !req.secure && req.headers['x-forwarded-proto'] !== 'https') {
       return res.redirect(308, `https://${req.headers.host}${req.originalUrl}`);
@@ -167,7 +176,7 @@ function configureSecurity(app, config, logger) {
       standardHeaders: 'draft-8',
       legacyHeaders: false,
       skip(req) {
-        return req.method === 'GET' && (STATIC_ASSET_PATTERN.test(req.path) || req.path.endsWith('/healthz') || req.path.endsWith('/readyz'));
+        return loadTestBypass || (req.method === 'GET' && (STATIC_ASSET_PATTERN.test(req.path) || req.path.endsWith('/healthz') || req.path.endsWith('/readyz')));
       },
       handler: createRateLimitHandler(logger, 'rate_limit_general')
     })
@@ -181,6 +190,7 @@ function configureSecurity(app, config, logger) {
       standardHeaders: 'draft-8',
       legacyHeaders: false,
       skipSuccessfulRequests: true,
+      skip: () => loadTestBypass,
       handler: createRateLimitHandler(logger, 'rate_limit_auth')
     })
   );
@@ -195,7 +205,7 @@ function configureSecurity(app, config, logger) {
     standardHeaders: 'draft-8',
     legacyHeaders: false,
     skip(req) {
-      return req.method !== 'POST';
+      return loadTestBypass || req.method !== 'POST';
     },
     handler: createRateLimitHandler(logger, 'rate_limit_public_write')
   });
@@ -219,7 +229,7 @@ function configureSecurity(app, config, logger) {
       standardHeaders: 'draft-8',
       legacyHeaders: false,
       skip(req) {
-        return req.method !== 'POST';
+        return loadTestBypass || req.method !== 'POST';
       },
       handler: createRateLimitHandler(logger, 'rate_limit_chat')
     })

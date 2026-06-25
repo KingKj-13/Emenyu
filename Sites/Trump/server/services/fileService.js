@@ -102,12 +102,38 @@ class FileService {
     }
   }
 
+  // Phase 05 — source-level menu memo. MEASURED: orderValidationService.validateOrder
+  // calls loadMenu() on EVERY order to build its item index; uncached, 70 concurrent
+  // orders each re-loaded ~440 items and exhausted the Prisma transaction pool
+  // ("Unable to start a transaction in the given time"). A short TTL + single-flight
+  // collapses N concurrent loads into one. Read-only callers only (controller stringifies,
+  // validator indexes) — the cached object must not be mutated. 30s TTL bounds staleness
+  // for any menu edit that doesn't route through saveMenu().
   async loadMenu() {
-    return this.prismaMenu.loadMenu();
+    const TTL = 30 * 1000;
+    if (this._menuCacheValue && Date.now() - this._menuCacheAt <= TTL) {
+      return this._menuCacheValue;
+    }
+    if (!this._menuCachePromise) {
+      this._menuCachePromise = (async () => {
+        try {
+          const menu = await this.prismaMenu.loadMenu();
+          if (menu != null) {
+            this._menuCacheValue = menu;
+            this._menuCacheAt = Date.now();
+          }
+          return menu;
+        } finally {
+          this._menuCachePromise = null;
+        }
+      })();
+    }
+    return this._menuCachePromise;
   }
 
   async saveMenu(menuData) {
     await this.prismaMenu.saveMenu(menuData);
+    this._menuCacheValue = null; // invalidate the source memo on write
   }
 
   async loadDeals() {

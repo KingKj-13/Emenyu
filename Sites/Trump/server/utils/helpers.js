@@ -275,7 +275,11 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     security: {
       allowedOrigins,
       authRateLimitMax: parseInteger(env.TRUMP_AUTH_RATE_LIMIT_MAX, 20),
-      publicWriteRateLimitMax: parseInteger(env.TRUMP_PUBLIC_WRITE_RATE_LIMIT_MAX, isProduction ? 60 : 1000),
+      // Phase 05A — validated production limits. A whole restaurant shares ONE NAT/Wi-Fi
+      // IP, so per-IP ceilings must fit per-restaurant traffic, not per-person. Measured
+      // need: ~20 order submits/min + ~200 requests/min per restaurant at peak.
+      // Order POSTs: 300 / 15 min = 20/min. (was 60 — throttled a busy restaurant.)
+      publicWriteRateLimitMax: parseInteger(env.TRUMP_PUBLIC_WRITE_RATE_LIMIT_MAX, isProduction ? 300 : 1000),
       chatRateLimitMax: parseInteger(env.TRUMP_CHAT_RATE_LIMIT_MAX, isProduction ? 120 : 1000),
       compressionThresholdBytes: parseInteger(env.TRUMP_COMPRESSION_THRESHOLD_BYTES, 1024),
       corsCredentials: true,
@@ -284,7 +288,13 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
         reportOnly: parseBoolean(env.TRUMP_CSP_REPORT_ONLY, false)
       },
       forceHttps: parseBoolean(env.TRUMP_FORCE_HTTPS, false),
-      generalRateLimitMax: parseInteger(env.TRUMP_RATE_LIMIT_MAX, isProduction ? 600 : 2000),
+      // General per-IP: 3000 / 15 min = 200/min/restaurant (was 600 — see above). Static
+      // assets + health are already skipped, so this counts API calls only.
+      generalRateLimitMax: parseInteger(env.TRUMP_RATE_LIMIT_MAX, isProduction ? 3000 : 2000),
+      // Phase 05 — TEMPORARY, REMOVABLE load-test bypass. Default OFF. When set, the
+      // rate limiters skip (so a controlled capacity test from one IP isn't throttled).
+      // MUST NEVER be enabled in production; a startup warning is logged if it is.
+      loadTestBypass: parseBoolean(env.TRUMP_LOAD_TEST_BYPASS, false),
       hsts: isProduction && parseBoolean(env.TRUMP_HSTS_ENABLED, true),
       rateLimitWindowMs: parseInteger(env.TRUMP_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
       secureCookies: isProduction || parseBoolean(env.TRUMP_SECURE_COOKIES, false),
