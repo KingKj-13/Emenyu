@@ -150,6 +150,7 @@ function orderToDbData(order = {}, filename, kind, restaurantId) {
     covers: Math.max(0, parseInt(order.covers, 10) || 0),
     timestamp,
     sourceKind: kind,
+    clientOrderId: String(order.clientOrderId || '').trim().slice(0, 64),
     raw: {
       ...order,
       filename
@@ -294,10 +295,59 @@ class PrismaOrderService {
   async saveOrder(order, tableId, filename, kind = 'orders') {
     const targetFilename = filename || makeOrderFilename(tableId);
     const data = orderToDbData(order, targetFilename, kind, this.restaurantId);
+    const clientOrderId = data.clientOrderId;
+
+    // Phase 05A idempotency — a re-submit carrying the same clientOrderId must NOT
+    // create a second order. Fast path: return the existing order's filename.
+    if (clientOrderId) {
+      const existingByKey = await this.withPrisma(
+        'order_idem_lookup_failed',
+        async prisma => prisma.order.findFirst({
+          where: { restaurantId: this.restaurantId, clientOrderId },
+          select: { filename: true }
+        }),
+        null
+      );
+      if (existingByKey) return existingByKey.filename;
+    }
+
     return this.withPrisma(
       'order_postgres_save_failed',
       async prisma => {
-        await prisma.$transaction(async tx => {
+        // Phase 05A — retry/backoff on the transient pool/transaction-acquire error
+        // measured under burst ("Unable to start a transaction in the given time").
+        // Idempotency (above + the partial unique index) makes the retry safe.
+        const MAX_ATTEMPTS = 4;
+        for (let attempt = 1; ; attempt++) {
+          try {
+            await this._saveOrderTx(prisma, order, data, kind, targetFilename);
+            return targetFilename;
+          } catch (error) {
+            // Concurrent duplicate raced past the fast path and hit the partial
+            // unique index — resolve idempotently to the winning order's filename.
+            if (clientOrderId && error?.code === 'P2002') {
+              const winner = await prisma.order.findFirst({
+                where: { restaurantId: this.restaurantId, clientOrderId },
+                select: { filename: true }
+              });
+              if (winner) return winner.filename;
+            }
+            const transient = /transaction/i.test(error?.message || '') &&
+              /start|timeout|given time|closed/i.test(error?.message || '');
+            if (transient && attempt < MAX_ATTEMPTS) {
+              await new Promise(r => setTimeout(r, 50 * attempt * attempt)); // 50/200/450ms
+              continue;
+            }
+            throw error;
+          }
+        }
+      },
+      null
+    );
+  }
+
+  async _saveOrderTx(prisma, order, data, kind, targetFilename) {
+    await prisma.$transaction(async tx => {
           await this.ensureTable(tx, data.tableId);
           // Stamp the table's current party size (set by the waiter at seating)
           // onto the order when the payload didn't carry one. Guarded so per-cover
@@ -343,10 +393,6 @@ class PrismaOrderService {
             }
           }
         });
-        return targetFilename;
-      },
-      null
-    );
   }
 
   async listOrders(kind) {

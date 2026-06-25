@@ -201,6 +201,8 @@ function createOrderValidationService({ config, fileService, logger = null }) {
       ...source,
       table_number: tableId,
       restaurantId: config.restaurantId,
+      // Phase 05A — idempotency key: client-supplied, sanitized (string, ≤64 chars).
+      clientOrderId: String(source.clientOrderId || '').trim().slice(0, 64),
       items
     };
 

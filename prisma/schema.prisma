@@ -186,6 +186,7 @@ model Order {
   covers        Int                  @default(0)
   timestamp     DateTime             @default(now())
   sourceKind    String               @default("orders")
+  clientOrderId String               @default("")   // Phase 05A — idempotency key (empty = none)
   guestId       Int?
   guest         Guest?               @relation(fields: [guestId], references: [id])
   raw           Json?
@@ -201,6 +202,7 @@ model Order {
   @@index([restaurantId, waiterName, status])
   @@index([guestId])
   @@index([timestamp])
+  @@index([restaurantId, clientOrderId])
   @@unique([restaurantId, sourceKind, filename])
 }
 
@@ -543,6 +545,8 @@ model Device {
   platform         String    @default("")      // android | ios | desktop | web
   refreshTokenHash String
   refreshExpiresAt DateTime
+  pushToken        String    @default("")        // Phase 04B — Expo/FCM push token (empty = no push)
+  pushProvider     String    @default("")        // expo | fcm | apns | webpush
   lastSeenAt       DateTime  @default(now())
   revokedAt        DateTime?
   createdAt        DateTime  @default(now())

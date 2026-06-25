@@ -36,15 +36,28 @@ function createOrderController({ config, fileService, socketService, orderValida
 
       const { order: storedOrder, tableId } = validated;
 
+      // The order SAVE is the only critical step (idempotent + retry-safe, Phase 05A).
+      let savedFilename = null;
       try {
-        await fileService.saveOrder(storedOrder, tableId);
-        await socketService.replaceTableCart(tableId, [], { emit: true });
-        await socketService.emitTableHistory(tableId);
-        socketService.emitOrderPlaced(storedOrder);
-        return res.json({ ok: true });
+        savedFilename = await fileService.saveOrder(storedOrder, tableId);
       } catch {
         return res.status(500).json({ error: 'Save failed' });
       }
+      if (!savedFilename) {
+        return res.status(500).json({ error: 'Save failed' });
+      }
+
+      // Post-save side effects (cart clear + socket emits) are BEST-EFFORT: the order
+      // is already persisted, so a failure here must NOT return 500 (which would make
+      // the client retry and — pre-idempotency — duplicate). Swallow + continue.
+      try {
+        await socketService.replaceTableCart(tableId, [], { emit: true });
+        await socketService.emitTableHistory(tableId);
+        socketService.emitOrderPlaced(storedOrder);
+      } catch {
+        /* best-effort: order is persisted; live UI will reconcile on next sync */
+      }
+      return res.json({ ok: true });
     },
 
     async listOrders(req, res) {
