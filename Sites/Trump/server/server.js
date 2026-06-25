@@ -23,6 +23,13 @@ const { registerAnalyticsRoutes } = require('./routes/analyticsRoutes');
 const { registerRecommendationAnalyticsRoutes } = require('./routes/recommendationAnalyticsRoutes');
 const { registerRecommendationBundleRoutes } = require('./routes/recommendationBundleRoutes');
 const { registerWaiterApiRoutes } = require('./routes/waiterApiRoutes');
+const { registerOperationsRoutes } = require('./routes/operationsRoutes');
+const { AuditService } = require('./services/auditService');
+const { ShiftService } = require('./services/shiftService');
+const { TableOwnershipService } = require('./services/tableOwnershipService');
+const { NotificationService } = require('./services/notificationService');
+const { OperationsService } = require('./services/operationsService');
+const { createOperationsController } = require('./controllers/operationsController');
 const { registerDealRoutes } = require('./routes/dealRoutes');
 const { registerKitchenRoutes } = require('./routes/kitchenRoutes');
 const { registerMenuRoutes } = require('./routes/menuRoutes');
@@ -196,7 +203,8 @@ async function startServer() {
   const logger = createLogger(config);
   const fileService = new FileService(config, { logger });
   await fileService.ensureBaseFiles();
-  const accountService = new AccountService(config, { logger });
+  const auditService = new AuditService({ config, logger });
+  const accountService = new AccountService(config, { logger, auditService });
   await accountService.ensureReady();
 
   const app = express();
@@ -225,6 +233,12 @@ async function startServer() {
   const serviceRecoveryService = createServiceRecoveryService({ config });
   const floorService = createFloorService({ config });
   const waiterWorkflowService = createWaiterWorkflowService({ config, socketService });
+  // Phase 03 — staff operations services (shifts, table ownership, notification
+  // center, owner-ops snapshot) bound together by the immutable audit trail.
+  const notificationService = new NotificationService({ config, logger, socketService, auditService });
+  const shiftService = new ShiftService({ config, logger, auditService });
+  const tableOwnershipService = new TableOwnershipService({ config, logger, auditService, notificationService });
+  const operationsService = new OperationsService({ config, logger, shiftService, notificationService });
   logger.info('nlg_mode', nlgService.status());
 
   const controllers = {
@@ -252,6 +266,9 @@ async function startServer() {
       serviceRecoveryService,
       floorService,
       waiterWorkflowService
+    }),
+    operations: createOperationsController({
+      shiftService, tableOwnershipService, notificationService, operationsService, auditService
     })
   };
   const uploadController = createUploadController(config);
@@ -330,6 +347,7 @@ async function startServer() {
   registerReservationRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerUploadRoutes(app, uploadController, auth.requireRoles(['owner', 'manager']));
   registerWaiterApiRoutes(app, controllers, auth);
+  registerOperationsRoutes(app, controllers, auth);
   registerOrderRoutes(app, controllers, auth);
 
   // SPA fallback: serve React app for all /Trump/* routes with no file extension
