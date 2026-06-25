@@ -8,11 +8,12 @@ const { getPrisma } = require('./prismaClient');
 function normUser(value) { return String(value || '').trim().toLowerCase(); }
 
 class NotificationService {
-  constructor({ config, logger = null, socketService = null, auditService = null } = {}) {
+  constructor({ config, logger = null, socketService = null, auditService = null, pushDispatcher = null } = {}) {
     this.config = config;
     this.logger = logger;
     this.socket = socketService;
     this.audit = auditService;
+    this.pushDispatcher = pushDispatcher; // Phase 04B — background push (optional, non-fatal)
     this.restaurantId = config?.restaurantId || 'trump';
   }
 
@@ -28,6 +29,9 @@ class NotificationService {
         }
       });
       try { this.socket?.emitNotification?.(row); } catch { /* socket optional */ }
+      // Background push to recipients' registered devices (Phase 04B). Fire-and-
+      // forget — the Notification row is the truth; a failed push is non-fatal.
+      try { this.pushDispatcher?.dispatch?.(row); } catch { /* push optional */ }
       return row;
     } catch (error) {
       this.logger?.warn?.('notify_failed', { error: error?.message });

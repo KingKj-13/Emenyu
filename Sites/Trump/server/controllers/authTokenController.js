@@ -63,6 +63,16 @@ function createAuthTokenController({ accountService, auth, tokenService, config,
     // DELETE /api/auth/devices/:deviceId  (revoke one of my devices)
     async revokeDevice(req, res) {
       return res.json(await tokenService.revokeDevice(req.user.username, req.params.deviceId));
+    },
+
+    // PATCH /api/auth/devices/:deviceId/push-token  { pushToken, pushProvider? }
+    // (register/clear this device's push token — Phase 04B)
+    async setPushToken(req, res) {
+      const { pushToken = '', pushProvider = 'expo' } = req.body || {};
+      const out = await tokenService.setPushToken(req.user.username, req.params.deviceId, { pushToken, pushProvider });
+      if (!out.updated) return res.status(404).json({ error: 'Device not found for this account.' });
+      logger?.info('push_token_registered', { username: req.user.username, deviceId: req.params.deviceId, provider: pushProvider, cleared: !pushToken });
+      return res.json({ ok: true });
     }
   };
 }

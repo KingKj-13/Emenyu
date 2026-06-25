@@ -32,6 +32,7 @@ const { OperationsService } = require('./services/operationsService');
 const { createOperationsController } = require('./controllers/operationsController');
 const { registerAuthTokenRoutes } = require('./routes/authTokenRoutes');
 const { TokenService } = require('./services/tokenService');
+const { PushDispatcher } = require('./services/pushDispatcher');
 const { createAuthTokenController } = require('./controllers/authTokenController');
 const { registerDealRoutes } = require('./routes/dealRoutes');
 const { registerKitchenRoutes } = require('./routes/kitchenRoutes');
@@ -238,11 +239,13 @@ async function startServer() {
   const waiterWorkflowService = createWaiterWorkflowService({ config, socketService });
   // Phase 03 — staff operations services (shifts, table ownership, notification
   // center, owner-ops snapshot) bound together by the immutable audit trail.
-  const notificationService = new NotificationService({ config, logger, socketService, auditService });
+  const tokenService = new TokenService({ config, logger }); // Phase 04 — native refresh/device registry
+  // Phase 04B — background push fan-out (Expo); a non-fatal side-effect of notify().
+  const pushDispatcher = new PushDispatcher({ accountService, tokenService, config, logger });
+  const notificationService = new NotificationService({ config, logger, socketService, auditService, pushDispatcher });
   const shiftService = new ShiftService({ config, logger, auditService });
   const tableOwnershipService = new TableOwnershipService({ config, logger, auditService, notificationService });
   const operationsService = new OperationsService({ config, logger, shiftService, notificationService });
-  const tokenService = new TokenService({ config, logger }); // Phase 04 — native refresh/device registry
   logger.info('nlg_mode', nlgService.status());
 
   const controllers = {

@@ -13,6 +13,7 @@ function registerAuthTokenRoutes(app, controllers, auth) {
   app.post(alias('auth/token/revoke'), c.revoke);
   app.get(alias('auth/devices'), staff, c.listDevices);
   app.delete(alias('auth/devices/:deviceId'), staff, c.revokeDevice);
+  app.patch(alias('auth/devices/:deviceId/push-token'), staff, c.setPushToken); // Phase 04B
 }
 
 module.exports = { registerAuthTokenRoutes };

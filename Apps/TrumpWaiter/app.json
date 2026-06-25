@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Trump Waiter",
+    "slug": "trump-waiter",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "trumpwaiter",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0b0b0c",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.emenyu.trumpwaiter"
+    },
+    "android": {
+      "package": "com.emenyu.trumpwaiter",
+      "permissions": ["INTERNET", "POST_NOTIFICATIONS", "VIBRATE"]
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-notifications"
+    ],
+    "extra": {
+      "apiBaseUrl": "https://emenyu.com/Trump",
+      "restaurantId": "trump",
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
+    },
+    "_assetNotes": "Branding assets (icon.png 1024x1024, splash.png, adaptive-icon.png, notification-icon.png) and android.googleServicesFile (./google-services.json for FCM) are intentionally omitted so the project builds with Expo defaults. Add them before a Play Store release — see PACKAGING.md / APK-BUILD.md."
+  }
+}

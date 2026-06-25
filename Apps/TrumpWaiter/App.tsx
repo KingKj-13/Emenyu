@@ -1,0 +1,23 @@
+// App root — providers + navigation. Notification handler is configured once at
+// startup so foreground pushes render. The AuthProvider gates the whole tree.
+import React, { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AuthProvider } from './src/auth/AuthContext';
+import { RootNavigator } from './src/navigation/RootNavigator';
+import { configureNotificationHandler } from './src/services/push';
+
+export default function App() {
+  useEffect(() => {
+    configureNotificationHandler();
+  }, []);
+
+  return (
+    <SafeAreaProvider>
+      <AuthProvider>
+        <StatusBar style="light" />
+        <RootNavigator />
+      </AuthProvider>
+    </SafeAreaProvider>
+  );
+}

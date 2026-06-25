@@ -79,6 +79,30 @@ class TokenService {
     });
     return { revoked: r.count > 0 };
   }
+
+  // Phase 04B — register/clear the push token for one of the caller's devices.
+  // Scoped to (username, deviceId) so a device can only set its own token.
+  async setPushToken(username, deviceId, { pushToken = '', pushProvider = '' } = {}) {
+    const r = await getPrisma().device.updateMany({
+      where: { username: norm(username), deviceId, revokedAt: null },
+      data: { pushToken: String(pushToken || ''), pushProvider: String(pushProvider || ''), lastSeenAt: new Date() }
+    });
+    return { updated: r.count > 0 };
+  }
+
+  // Active, non-expired devices with a push token, for a set of usernames. Used by
+  // pushDispatcher to fan a notification out to background recipients.
+  async pushTargetsForUsernames(usernames = []) {
+    const list = (Array.isArray(usernames) ? usernames : [usernames]).map(norm).filter(Boolean);
+    if (!list.length) return [];
+    return getPrisma().device.findMany({
+      where: {
+        username: { in: list }, revokedAt: null,
+        refreshExpiresAt: { gt: new Date() }, NOT: { pushToken: '' }
+      },
+      select: { deviceId: true, username: true, platform: true, pushToken: true, pushProvider: true }
+    });
+  }
 }
 
 module.exports = { TokenService };
