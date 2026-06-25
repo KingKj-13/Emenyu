@@ -8,6 +8,7 @@ import { MenuPage } from './pages/MenuPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { Spinner } from './components/ui/Spinner';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
 import type { Role } from './types/auth';
 
@@ -40,6 +41,7 @@ function ProtectedRoute({ roles, children }: { roles: Role[]; children: ReactEle
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <AppProvider>
       <CartProvider>
         <FavoritesProvider>
@@ -92,5 +94,6 @@ export default function App() {
         </FavoritesProvider>
       </CartProvider>
     </AppProvider>
+    </ErrorBoundary>
   );
 }

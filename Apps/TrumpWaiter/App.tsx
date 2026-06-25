@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/auth/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { configureNotificationHandler } from './src/services/push';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 
 export default function App() {
   useEffect(() => {
@@ -13,11 +14,13 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <StatusBar style="light" />
-        <RootNavigator />
-      </AuthProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <StatusBar style="light" />
+          <RootNavigator />
+        </AuthProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
