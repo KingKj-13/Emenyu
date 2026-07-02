@@ -7,6 +7,10 @@ dist/
 web-build/
 expo-env.d.ts.bak
 
+# Build artifacts — APKs are published as GitHub Release assets, never committed
+*.apk
+*.aab
+
 # Native
 *.orig.*
 *.jks
