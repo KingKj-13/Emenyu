@@ -15,22 +15,27 @@ interface ScreenProps {
 }
 
 export function Screen({ children, scroll = true, refreshing, onRefresh, padded = true }: ScreenProps) {
-  const body = padded ? <View style={styles.pad}>{children}</View> : children;
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       {scroll ? (
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          // Padding + gap live on the content container so a full-height child
+          // (e.g. a centred login card) still gets the flexGrow it needs.
+          contentContainerStyle={[styles.scroll, padded && styles.pad]}
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             onRefresh ? (
               <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={theme.colors.gold} />
             ) : undefined
           }
         >
-          {body}
+          {children}
         </ScrollView>
       ) : (
-        <View style={styles.flex}>{body}</View>
+        // The body MUST stay flex:1 even when padded — otherwise a child that
+        // relies on `flex:1` + `justifyContent:'center'` (LoginScreen) collapses
+        // to the top of the screen behind the status bar.
+        <View style={[styles.flex, padded && styles.pad]}>{children}</View>
       )}
     </SafeAreaView>
   );

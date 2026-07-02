@@ -2,7 +2,7 @@
   "expo": {
     "name": "Trump Waiter",
     "slug": "trump-waiter",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "scheme": "trumpwaiter",
     "userInterfaceStyle": "dark",
@@ -22,6 +22,7 @@
     },
     "android": {
       "package": "com.emenyu.trumpwaiter",
+      "versionCode": 2,
       "permissions": [
         "INTERNET",
         "POST_NOTIFICATIONS",
@@ -30,6 +31,9 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0b0b0c"
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
       }
     },
     "plugins": [
@@ -50,6 +54,9 @@
       }
     },
     "_assetNotes": "android.googleServicesFile (./google-services.json for FCM push) is intentionally omitted — the app builds and runs with the foreground notification poll fallback. Add it plus EAS credentials when enabling push. See APK-BUILD.md.",
-    "owner": "kingkj1307"
+    "owner": "kingkj1307",
+    "updates": {
+      "url": "https://u.expo.dev/066081f0-bc31-4ed1-a1cd-67fdb6cafa9b"
+    }
   }
 }
