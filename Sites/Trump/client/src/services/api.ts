@@ -45,8 +45,8 @@ export const api = {
     return postJson<unknown>(ENDPOINTS.chat, payload);
   },
 
-  getConfig(): Promise<{ assistantName: string; brandName: string }> {
-    return fetchJson<{ assistantName: string; brandName: string }>(ENDPOINTS.config);
+  getConfig(): Promise<{ assistantName: string; brandName: string; waiterApkUrl?: string }> {
+    return fetchJson<{ assistantName: string; brandName: string; waiterApkUrl?: string }>(ENDPOINTS.config);
   },
 
   aiPairing(payload: unknown) {

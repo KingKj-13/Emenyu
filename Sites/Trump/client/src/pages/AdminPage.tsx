@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, type ReactNode, type CSSProperties } from 'react';
-import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Pencil, Plus, X, Sparkles, TrendingUp, Activity, ShieldCheck } from 'lucide-react';
+import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Pencil, Plus, X, Sparkles, TrendingUp, Activity, ShieldCheck, Copy, Check } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../hooks/useAuth';
 import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
@@ -426,7 +426,8 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
 
   async function handleCreateAccount(payload: { username: string; password: string; role: string; label: string }) {
     await api.createAccount(payload);
-    setModal(null);
+    // Deliberately NOT closing the modal: NewAccountModal switches to a success
+    // view with the waiter-app APK link + username for the manager to copy.
     const data = await api.getAccounts();
     setAccounts(data || []);
     if (tab !== 'accounts') loadTab('accounts');
@@ -2351,14 +2352,58 @@ function NewAccountModal({ currentRole, onClose, onSubmit }: {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [created, setCreated] = useState<string | null>(null);
+  const [apkUrl, setApkUrl] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    api.getConfig().then(c => { if (c?.waiterApkUrl) setApkUrl(c.waiterApkUrl); }).catch(() => { /* success view falls back to username only */ });
+  }, []);
 
   async function submit() {
     if (!/^[a-z0-9._-]{3,32}$/.test(username.trim().toLowerCase())) { setError('Username must be 3-32 chars: letters, numbers, dot, dash, underscore.'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     setBusy(true); setError('');
     try {
-      await onSubmit({ username: username.trim().toLowerCase(), password, role, label: label.trim() || username.trim() });
+      const uname = username.trim().toLowerCase();
+      await onSubmit({ username: uname, password, role, label: label.trim() || username.trim() });
+      setCreated(uname); setBusy(false);
     } catch (e) { setError((e as Error)?.message || 'Could not create the account.'); setBusy(false); }
+  }
+
+  const shareText = [
+    apkUrl ? `Download the Trump Waiter app: ${apkUrl}` : '',
+    `Username: ${created ?? ''}`,
+  ].filter(Boolean).join('\n');
+
+  async function copyShare() {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { setError('Could not copy automatically — select the text and copy it manually.'); }
+  }
+
+  if (created) {
+    return (
+      <Modal
+        title="Account created"
+        subtitle={`${role} login for ${created}`}
+        onClose={onClose}
+        footer={<>
+          <button className={styles.modalCancel} onClick={onClose}>Done</button>
+          <button className={styles.modalSubmit} onClick={copyShare}>
+            {copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy</>}
+          </button>
+        </>}
+      >
+        <label className={styles.formLabel}>Copy &amp; send to new staff
+          <textarea className={styles.formTextarea} readOnly rows={3} value={shareText} onFocus={e => e.currentTarget.select()} />
+        </label>
+        <p className={styles.modalSubtitle}>They install the app from the link, then sign in with this username and the password you set.</p>
+        {error && <p className={styles.formError}>{error}</p>}
+      </Modal>
+    );
   }
 
   return (
