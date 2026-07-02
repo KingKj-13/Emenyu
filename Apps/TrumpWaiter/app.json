@@ -7,26 +7,49 @@
     "scheme": "trumpwaiter",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0b0b0c",
-    "assetBundlePatterns": ["**/*"],
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0b0b0c"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.emenyu.trumpwaiter"
     },
     "android": {
       "package": "com.emenyu.trumpwaiter",
-      "permissions": ["INTERNET", "POST_NOTIFICATIONS", "VIBRATE"]
+      "permissions": [
+        "INTERNET",
+        "POST_NOTIFICATIONS",
+        "VIBRATE"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0b0b0c"
+      }
     },
     "plugins": [
       "expo-secure-store",
-      "expo-notifications"
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#c8a555"
+        }
+      ]
     ],
     "extra": {
       "apiBaseUrl": "https://emenyu.com/Trump",
       "restaurantId": "trump",
       "eas": {
-        "projectId": "00000000-0000-0000-0000-000000000000"
+        "projectId": "066081f0-bc31-4ed1-a1cd-67fdb6cafa9b"
       }
     },
-    "_assetNotes": "Branding assets (icon.png 1024x1024, splash.png, adaptive-icon.png, notification-icon.png) and android.googleServicesFile (./google-services.json for FCM) are intentionally omitted so the project builds with Expo defaults. Add them before a Play Store release — see PACKAGING.md / APK-BUILD.md."
+    "_assetNotes": "android.googleServicesFile (./google-services.json for FCM push) is intentionally omitted — the app builds and runs with the foreground notification poll fallback. Add it plus EAS credentials when enabling push. See APK-BUILD.md.",
+    "owner": "kingkj1307"
   }
 }
