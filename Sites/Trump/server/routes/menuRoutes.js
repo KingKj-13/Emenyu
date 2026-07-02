@@ -18,6 +18,9 @@ function registerMenuRoutes(app, controllers, adminAuth) {
   app.post(itemBulkPaths, adminAuth, controllers.menu.bulkItemAction);
   app.patch(itemAvailPaths, adminAuth, controllers.menu.toggleAvailability);
   app.patch(itemMediaPaths, adminAuth, controllers.menu.updateItemMedia);
+  // Full per-item field edit (name/price/description/calories/allergens/spice/category).
+  // Registered after the more specific :id/availability and :id/media PATCH routes.
+  app.patch(itemDeletePaths, adminAuth, controllers.menu.updateItem);
   app.delete(itemDeletePaths, adminAuth, controllers.menu.deleteItem);
 
   app.get(recommendationPaths, adminAuth, controllers.menu.getRecommendations);

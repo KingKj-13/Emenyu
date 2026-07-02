@@ -1,4 +1,4 @@
-import { X, UtensilsCrossed, Wine, Star, Beef } from 'lucide-react';
+import { X, UtensilsCrossed, Wine, Star } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import styles from './SideDrawer.module.css';
@@ -67,14 +67,6 @@ export function SideDrawer({
               <Star size={22} />
               <span>Signature Set Menus</span>
             </button>
-            <a
-              className={styles.quickTile}
-              href="/Trump/frontend/pages/butchery.html"
-              onClick={close}
-            >
-              <Beef size={22} />
-              <span>The Butchery</span>
-            </a>
           </div>
         </div>
 

@@ -10,6 +10,7 @@ const { createNlgService } = require('./nlg/nlgService');
 const { createReasonComposer } = require('./reasonComposer');
 const { createHeroPairings } = require('./heroPairings');
 const { computeOrderedTogether } = require('./marketBasket');
+const { SmartPairingEngine } = require('./smartPairingEngine');
 
 const SPECIAL_WORDS = [
   'birthday',
@@ -360,6 +361,7 @@ class AiService {
     this.nlgService = nlgService || createNlgService({ config, logger });
     this.hero = createHeroPairings({ logger });
     this.reason = createReasonComposer({ nlgService: this.nlgService, heroPairings: this.hero, logger });
+    this.smartPairings = new SmartPairingEngine(config, { logger });
 
     // Perf: the recommendation/chat path used to reload the whole menu, every
     // order + history record, the admin/chef recs and recompute popularity on
@@ -627,27 +629,40 @@ class AiService {
 
   async cartRecommendations(payload = {}) {
     const cart = this.readCart(payload);
-    const recs = await this.recommend({ cart, limit: 8, reason: payload.reason });
+    const [menuContext, recs] = await Promise.all([
+      this.getMenuContext(),
+      this.recommend({ cart, limit: 8, reason: payload.reason })
+    ]);
     const cartNames = new Set(cart.map(c => normalizeName(c.name)));
+    const csvRecs = this.smartPairings.recommend({ cart, menuContext, limit: 4 });
 
     // Phase 3C: the waiter upsell reads the SAME composed reason as the cards and
     // chat (authored hero → chef → tag-true Tier-2 → never blank). One copy source.
-    const recommendations = recs
+    const recommendations = [...csvRecs, ...recs]
       .filter(r => !cartNames.has(normalizeName(r.name)))
+      .filter((r, index, list) => list.findIndex(x => normalizeName(x.name) === normalizeName(r.name)) === index)
       .slice(0, 4)
-      .map(r => ({
+      .map(r => {
+        // Script the waiter can say out loud. Name the dish it pairs from (CSV
+        // source) and fold in the pairing reasoning when we have it.
+        const from = r.pairedWith || cart[0]?.name || 'your order';
+        const why = r.reason ? ` ${r.reason}` : '';
+        return {
         name: r.name,
         price: r.price,
         img: r.img,
         categoryType: r.categoryType,
         story: r.story || '',
         reason: r.reason || '',
+        script: `I see you have the ${from} — many guests pair it with our ${r.name}.${why}`,
         upsell: Math.round(Number(r.price) || 0),
         // Phase 4 analytics attribution.
         source_title: r.source_title || '',
         rotationGroup: r.rotationGroup || '',
-        chef: r.chef === true
-      }));
+        chef: r.chef === true,
+        relation: r.relation || ''
+        };
+      });
 
     const eventRec = null;
 

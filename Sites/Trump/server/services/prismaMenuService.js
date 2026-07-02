@@ -800,6 +800,91 @@ class PrismaMenuService {
     );
   }
 
+  // Surgical per-item update of editable scalar fields (+ optional category move).
+  // Deliberately NOT routed through saveMenu(): that path deletes & recreates every
+  // item, reassigning ids and breaking MenuItemRecommendation FKs. update() keeps the
+  // id stable. Media is owned by updateItemMedia(); availability by toggleItemAvailability().
+  async updateItem(id, patch = {}) {
+    const itemId = Number(id);
+    if (!Number.isInteger(itemId)) {
+      return null;
+    }
+
+    const data = {};
+    if (Object.prototype.hasOwnProperty.call(patch, 'name')) {
+      const name = String(patch.name || '').trim();
+      if (!name) {
+        return null;
+      }
+      data.name = name;
+      // The recommendation engine matches on normalizedName — recompute on rename.
+      data.normalizedName = normalizeName(name);
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'description')) data.description = String(patch.description || '');
+    if (Object.prototype.hasOwnProperty.call(patch, 'price')) data.price = Number(patch.price) || 0;
+    if (Object.prototype.hasOwnProperty.call(patch, 'calories')) data.calories = String(patch.calories || '');
+    if (Object.prototype.hasOwnProperty.call(patch, 'allergens')) data.allergens = String(patch.allergens || '');
+    if (Object.prototype.hasOwnProperty.call(patch, 'spice')) data.spice = String(patch.spice || '');
+    if (Object.prototype.hasOwnProperty.call(patch, 'chefPick')) data.chefPick = Boolean(patch.chefPick);
+    if (Object.prototype.hasOwnProperty.call(patch, 'popular')) data.popular = Boolean(patch.popular);
+    if (Object.prototype.hasOwnProperty.call(patch, 'available')) data.available = patch.available !== false;
+    if (Object.prototype.hasOwnProperty.call(patch, 'visible')) data.visible = patch.visible !== false;
+
+    return this.withPrisma(
+      'menu_postgres_update_item_failed',
+      async prisma => {
+        // Optional category move — resolve (or create) the target root category by
+        // title, mirroring createItem(). Tenant-scoped.
+        let categoryTitle = '';
+        if (patch.category !== undefined && String(patch.category || '').trim()) {
+          const title = String(patch.category).trim();
+          let category = await prisma.menuCategory.findFirst({
+            where: { restaurantId: this.restaurantId, parentId: null, title }
+          });
+          if (!category) {
+            const count = await prisma.menuCategory.count({ where: { restaurantId: this.restaurantId } });
+            const slug = slugify(title, `category-${count + 1}`);
+            category = await prisma.menuCategory.create({
+              data: {
+                restaurantId: this.restaurantId,
+                title,
+                slug,
+                path: `${this.restaurantId}/${slug}-${Date.now()}`,
+                sortOrder: count,
+                visible: true,
+                courseType: getCategoryType(title),
+                metadata: { storage: 'object' }
+              }
+            });
+          }
+          data.categoryId = category.id;
+          categoryTitle = category.title;
+        }
+
+        if (Object.keys(data).length === 0) {
+          return null;
+        }
+
+        // Tenant-scope the write so an admin can never edit another restaurant's
+        // item by id (defence-in-depth, matching deleteItem/bulkItemAction).
+        const result = await prisma.menuItem.updateMany({
+          where: { id: itemId, restaurantId: this.restaurantId },
+          data
+        });
+        if (result.count === 0) {
+          return null;
+        }
+
+        const updated = await prisma.menuItem.findUnique({
+          where: { id: itemId },
+          include: { category: true }
+        });
+        return dbItemToJson(updated, { includeId: true, categoryTitle: categoryTitle || updated?.category?.title || '' });
+      },
+      null
+    );
+  }
+
   async migrateFromJson({ menuData = {}, recommendations = [], popular = [] } = {}) {
     const summary = {
       categories: 0,

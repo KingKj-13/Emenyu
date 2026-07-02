@@ -45,8 +45,8 @@ export const api = {
     return postJson<unknown>(ENDPOINTS.chat, payload);
   },
 
-  getConfig(): Promise<{ assistantName: string; brandName: string }> {
-    return fetchJson<{ assistantName: string; brandName: string }>(ENDPOINTS.config);
+  getConfig(): Promise<{ assistantName: string; brandName: string; waiterApkUrl?: string }> {
+    return fetchJson<{ assistantName: string; brandName: string; waiterApkUrl?: string }>(ENDPOINTS.config);
   },
 
   aiPairing(payload: unknown) {
@@ -195,6 +195,24 @@ export const api = {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+    });
+  },
+
+  updateMenuItem(id: number, patch: {
+    name?: string;
+    category?: string;
+    price?: number;
+    description?: string;
+    calories?: string;
+    allergens?: string;
+    spice?: string;
+    available?: boolean;
+    chefPick?: boolean;
+  }) {
+    return fetchJson<{ ok: boolean; item: unknown }>(ENDPOINTS.menuItemUpdate(id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
     });
   },
 
@@ -397,5 +415,30 @@ export const api = {
   },
   setTableCovers(tableId: string, covers: number) {
     return postJson<{ ok: boolean; tableId: string; covers: number }>(ENDPOINTS.tableCovers(tableId), { covers });
+  },
+  getWaiterTasks(params: { status?: string; tableId?: string; waiterName?: string } = {}) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<import('../types/waiter').WaiterTask[]>(`${ENDPOINTS.waiterTasks}${q ? `?${q}` : ''}`);
+  },
+  createWaiterTask(payload: Partial<import('../types/waiter').WaiterTask>) {
+    return postJson<import('../types/waiter').WaiterTask>(ENDPOINTS.waiterTasks, payload);
+  },
+  acknowledgeWaiterTask(id: number | string) {
+    return postJson<import('../types/waiter').WaiterTask>(ENDPOINTS.waiterTaskAck(id), {});
+  },
+  resolveWaiterTask(id: number | string) {
+    return postJson<import('../types/waiter').WaiterTask>(ENDPOINTS.waiterTaskResolve(id), {});
+  },
+  getWaiterChatCenter() {
+    return fetchJson<import('../types/waiter').ChatConversation[]>(ENDPOINTS.waiterChatCenter);
+  },
+  analyzeWaiterChat(payload: { tableId: string; message: string; waiterName?: string }) {
+    return postJson<{ events: unknown[]; tasks: import('../types/waiter').WaiterTask[] }>(ENDPOINTS.waiterChatAnalysis, payload);
+  },
+  requestBirthdayApproval(payload: { tableId: string; waiterName?: string; itemName?: string; reason?: string }) {
+    return postJson<import('../types/waiter').WaiterTask>(ENDPOINTS.waiterBirthdayRequest, payload);
+  },
+  approveBirthday(id: number | string, approved: boolean) {
+    return postJson<import('../types/waiter').WaiterTask>(ENDPOINTS.waiterBirthdayApproval(id), { approved });
   },
 };

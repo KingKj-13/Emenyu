@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, type ReactNode, type CSSProperties } from 'react';
-import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Plus, X, Sparkles, TrendingUp } from 'lucide-react';
+import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Pencil, Plus, X, Sparkles, TrendingUp, Activity, ShieldCheck, Copy, Check } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../hooks/useAuth';
 import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
@@ -7,9 +7,13 @@ import { api } from '../services/api';
 import { Spinner } from '../components/ui/Spinner';
 import { formatPrice } from '../lib/menuUtils';
 import type { ChefRec, ChefRecInput, ChefRecType, ChefBeverageKind, RecommendationAnalytics, RecoTally, RecoInsightsResult, RecoInsight, BundleAdmin, BundleInput, BundleItemInput } from '../types/menu';
+import type { WaiterTask } from '../types/waiter';
 import styles from './AdminPage.module.css';
+import { NotificationBell } from '../components/operations/NotificationBell';
+import { OwnerOperations } from '../components/operations/OwnerOperations';
+import { AuditViewer } from '../components/operations/AuditViewer';
 
-type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles';
+type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles' | 'servicedesk' | 'operations' | 'audit';
 
 interface Order {
   filename: string;
@@ -59,12 +63,28 @@ interface AdminMenuItem {
   visible?: boolean;
   category: string;
   description?: string;
+  calories?: string;
+  allergens?: string;
+  spice?: string;
+  chefPick?: boolean;
   img?: string;
   video?: string;
   youtubeId?: string;
   imageVisible?: boolean;
   videoVisible?: boolean;
 }
+
+type ItemFormPayload = {
+  name: string;
+  category: string;
+  price: number;
+  description: string;
+  calories: string;
+  allergens: string;
+  spice: string;
+  available: boolean;
+  chefPick: boolean;
+};
 
 interface CartItem { name: string; price: number; qty?: number; quantity?: number; note?: string; }
 interface TableCartEntry { tableId: string; cart: CartItem[]; overrides: unknown[]; itemCount: number; total: number; }
@@ -105,9 +125,11 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const [recoInsights, setRecoInsights] = useState<RecoInsightsResult | null>(null);
   const [recoFilters, setRecoFilters] = useState<{ range: ReportRange; category: string; source: string; rotationGroup: string; mode: string }>({ range: '7d', category: '', source: '', rotationGroup: '', mode: '' });
   const [bundles, setBundles] = useState<BundleAdmin[]>([]);
+  const [serviceTasks, setServiceTasks] = useState<WaiterTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'item' | 'reservation' | 'deal' | 'account'>(null);
+  const [editItem, setEditItem] = useState<AdminMenuItem | null>(null);
   const [menuCategoryNames, setMenuCategoryNames] = useState<string[]>([]);
 
   async function loadTab(t: Tab) {
@@ -151,6 +173,9 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
       } else if (t === 'bundles') {
         const data = await api.getBundlesAdmin();
         setBundles((data as BundleAdmin[]) || []);
+      } else if (t === 'servicedesk') {
+        const data = await api.getWaiterTasks({ status: 'all' });
+        setServiceTasks((data as WaiterTask[]) || []);
       }
     } catch (err) {
       console.error(err);
@@ -325,12 +350,28 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     setActionLoading(null);
   }
 
-  async function openNewItem() {
-    setModal('item');
+  async function loadCategoryNames() {
     try {
       const cats = await api.getMenuCategories();
       setMenuCategoryNames((cats || []).map(c => c.title));
     } catch { setMenuCategoryNames([]); }
+  }
+
+  async function openNewItem() {
+    setEditItem(null);
+    setModal('item');
+    await loadCategoryNames();
+  }
+
+  async function openEditItem(item: AdminMenuItem) {
+    setEditItem(item);
+    setModal('item');
+    await loadCategoryNames();
+  }
+
+  function closeItemModal() {
+    setModal(null);
+    setEditItem(null);
   }
 
   async function openNewDeal() {
@@ -343,12 +384,26 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     }
   }
 
-  async function handleCreateItem(payload: { name: string; category: string; price: number; description: string; available: boolean; chefPick: boolean }) {
+  async function handleSubmitItem(payload: ItemFormPayload) {
+    if (editItem) {
+      const res = await api.updateMenuItem(editItem.dbId, payload);
+      const updated = res?.item as AdminMenuItem | undefined;
+      if (updated) setMenuItems(prev => prev.map(i => i.dbId === editItem.dbId ? { ...i, ...updated } : i));
+      closeItemModal();
+      if (tab !== 'menu') loadTab('menu');
+      return;
+    }
     const res = await api.createMenuItem(payload);
     const created = res?.item as AdminMenuItem | undefined;
     if (created) setMenuItems(prev => [...prev, created]);
-    setModal(null);
+    closeItemModal();
     if (tab !== 'menu') loadTab('menu');
+  }
+
+  async function handleUpdateAccountStatus(username: string, status: 'active' | 'suspended') {
+    await api.updateAccount(username, { status });
+    const data = await api.getAccounts();
+    setAccounts(data || []);
   }
 
   async function handleCreateReservation(payload: { name: string; phone: string; partySize: number; date: string; notes: string }) {
@@ -371,7 +426,8 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
 
   async function handleCreateAccount(payload: { username: string; password: string; role: string; label: string }) {
     await api.createAccount(payload);
-    setModal(null);
+    // Deliberately NOT closing the modal: NewAccountModal switches to a success
+    // view with the waiter-app APK link + username for the manager to copy.
     const data = await api.getAccounts();
     setAccounts(data || []);
     if (tab !== 'accounts') loadTab('accounts');
@@ -401,6 +457,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const NAV_GROUPS: { label: string; items: { key: Tab; label: string; icon: typeof ClipboardList; badge?: number }[] }[] = [
     { label: 'SERVICE', items: [
       { key: 'orders', label: 'Orders', icon: ClipboardList, badge: orders.length || undefined },
+      { key: 'servicedesk', label: 'Service Desk', icon: Bell, badge: serviceTasks.filter(t => ['open', 'acknowledged'].includes(t.status)).length || undefined },
       { key: 'history', label: 'History', icon: BookOpen },
       { key: 'tables', label: 'Tables', icon: LayoutGrid },
       { key: 'reservations', label: 'Reservations', icon: CalendarDays },
@@ -418,6 +475,10 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
       { key: 'accounts', label: 'Accounts', icon: Users },
       { key: 'chat', label: 'Chat Logs', icon: MessageSquare },
     ] },
+    { label: 'OPERATIONS', items: [
+      { key: 'operations', label: 'Operations', icon: Activity },
+      { key: 'audit', label: 'Audit Trail', icon: ShieldCheck },
+    ] },
   ];
 
   const refreshAction = (
@@ -426,6 +487,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
 
   const PAGE_HEADS: Record<Tab, { eyebrow: string; title: string; sub: string; actions?: ReactNode }> = {
     orders: { eyebrow: 'SERVICE · LIVE', title: 'Live orders', sub: `${orders.length} active ticket${orders.length !== 1 ? 's' : ''}`, actions: <><span className={styles.livePill}><span className={styles.liveDot} /> {liveCovers} live covers</span>{refreshAction}</> },
+    servicedesk: { eyebrow: 'SERVICE · LIVE', title: 'Service desk', sub: 'Approvals, manager dispatch & live floor requests', actions: <><span className={styles.livePill}><span className={styles.liveDot} /> Live</span>{refreshAction}</> },
     history: { eyebrow: 'COMPLETED', title: 'Order history', sub: `${history.length} settled order${history.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtn} onClick={exportHistoryCsv}><Download size={14} /> Export CSV</button> },
     tables: { eyebrow: 'LIVE FLOOR', title: 'Tables', sub: `${liveCovers} active cart${liveCovers !== 1 ? 's' : ''} · manager override`, actions: <><span className={styles.livePill}><span className={styles.liveDot} /> Live sync</span>{refreshAction}</> },
     reservations: { eyebrow: 'BOOKINGS', title: 'Reservations', sub: `${reservations.length} booking${reservations.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('reservation')}><Plus size={14} /> New booking</button> },
@@ -438,6 +500,8 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top dishes, peak hours & guest ratings' },
     accounts: { eyebrow: 'STAFF', title: 'Accounts', sub: `${accounts.length} team member${accounts.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('account')}><Plus size={14} /> Add account</button> },
     chat: { eyebrow: 'AI SOMMELIER', title: 'Chat logs', sub: 'Guest conversations with the AI sommelier' },
+    operations: { eyebrow: 'OPERATIONS · LIVE', title: 'Operations', sub: 'Live floor — staff on shift, table ownership, orders & alerts', actions: refreshAction },
+    audit: { eyebrow: 'ACCOUNTABILITY', title: 'Audit trail', sub: 'Immutable record of every privileged staff action' },
   };
   const head = PAGE_HEADS[tab];
   const initials = (user?.label || user?.username || 'AD').slice(0, 2).toUpperCase();
@@ -448,7 +512,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
         <div className={styles.topChrome}>
           <div className={styles.lights}><span /><span /><span /></div>
           <div className={styles.urlPill}><span className={styles.urlDot} /> emenyu.io/admin · Trump Steakhouse</div>
-          <div className={styles.chromeRight}><NotificationButton /></div>
+          <div className={styles.chromeRight}><NotificationBell scope="all" /><NotificationButton /></div>
         </div>
         <div className={styles.body}>
           <aside className={styles.sidebar}>
@@ -518,8 +582,10 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
                   onDelete={f => handleDelete('history', f)}
                 />
               )}
-              {tab === 'accounts' && <AccountsList accounts={accounts} />}
-              {tab === 'chat' && <ChatLogList logs={chatLogs} />}
+              {tab === 'accounts' && <AccountsList accounts={accounts} currentUsername={user?.username} onUpdateStatus={handleUpdateAccountStatus} />}
+              {tab === 'chat' && <><LiveChatMonitor /><ChatLogList logs={chatLogs} /></>}
+              {tab === 'operations' && <OwnerOperations />}
+              {tab === 'audit' && <AuditViewer />}
               {tab === 'menu' && (
                 <MenuAvailabilityList
                   items={menuItems}
@@ -527,6 +593,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
                   selected={menuSelected}
                   bulkLoading={menuBulkLoading}
                   onToggle={handleToggleAvailability}
+                  onEdit={openEditItem}
                   onDelete={handleDeleteItem}
                   onSelect={id => setMenuSelected(prev => {
                     const s = new Set(prev);
@@ -631,13 +698,16 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
                   onDelete={handleDeleteBundle}
                 />
               )}
+              {tab === 'servicedesk' && (
+                <ServiceDeskPanel tasks={serviceTasks} onChange={setServiceTasks} />
+              )}
                 </>
               )}
             </div>
           </main>
         </div>
       </div>
-      {modal === 'item' && <NewItemModal categories={menuCategoryNames} onClose={() => setModal(null)} onSubmit={handleCreateItem} />}
+      {modal === 'item' && <NewItemModal categories={menuCategoryNames} item={editItem} onClose={closeItemModal} onSubmit={handleSubmitItem} />}
       {modal === 'reservation' && <NewReservationModal defaultDate={reservationDate} onClose={() => setModal(null)} onSubmit={handleCreateReservation} />}
       {modal === 'deal' && <NewDealModal menuItems={menuItems} onClose={() => setModal(null)} onSubmit={handleCreateDeal} />}
       {modal === 'account' && <NewAccountModal currentRole={user?.role} onClose={() => setModal(null)} onSubmit={handleCreateAccount} />}
@@ -715,20 +785,113 @@ function OrderList({ orders, actionLoading, isHistory = false, onComplete, onDel
   );
 }
 
-function AccountsList({ accounts }: { accounts: unknown[] }) {
+function AccountsList({ accounts, currentUsername, onUpdateStatus }: {
+  accounts: unknown[];
+  currentUsername?: string;
+  onUpdateStatus: (username: string, status: 'active' | 'suspended') => Promise<void>;
+}) {
   if (accounts.length === 0) return <div className={styles.emptyState}><p>No accounts found</p></div>;
   return (
     <div className={styles.accountList}>
       {(accounts as Array<{ username: string; role: string; label?: string; status?: string }>).map((acc, i) => (
-        <div key={i} className={styles.accountRow}>
-          <span className={styles.accName}>{acc.label || acc.username}</span>
-          <span className={styles.accUsername}>@{acc.username}</span>
-          <span className={styles.accRole}>{acc.role}</span>
-          <span className={`${styles.accStatus} ${acc.status === 'suspended' ? styles.suspended : ''}`}>
-            {acc.status || 'active'}
-          </span>
-        </div>
+        <AccountRow key={acc.username || i} acc={acc} isSelf={acc.username === currentUsername} onUpdateStatus={onUpdateStatus} />
       ))}
+    </div>
+  );
+}
+
+// Suspend / re-activate a staff account (parity with the retired vanilla admin).
+// Calls the existing PATCH /api/auth/accounts/:username — no backend change. The
+// account list returned by the server already excludes owners and accounts the
+// actor cannot manage, so every listed row is actionable (self is still guarded).
+function AccountRow({ acc, isSelf, onUpdateStatus }: {
+  acc: { username: string; role: string; label?: string; status?: string };
+  isSelf: boolean;
+  onUpdateStatus: (username: string, status: 'active' | 'suspended') => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const suspended = acc.status === 'suspended';
+  async function toggle() {
+    const next = suspended ? 'active' : 'suspended';
+    if (next === 'suspended' && !confirm(`Suspend @${acc.username}? They will be signed out and unable to log in until reactivated.`)) return;
+    setBusy(true);
+    try { await onUpdateStatus(acc.username, next); }
+    catch { alert('Could not update the account.'); }
+    finally { setBusy(false); }
+  }
+  return (
+    <div className={styles.accountRow}>
+      <span className={styles.accName}>{acc.label || acc.username}</span>
+      <span className={styles.accUsername}>@{acc.username}</span>
+      <span className={styles.accRole}>{acc.role}</span>
+      <span className={`${styles.accStatus} ${suspended ? styles.suspended : ''}`}>{acc.status || 'active'}</span>
+      {!isSelf && (
+        <button className={styles.actionBtn} onClick={toggle} disabled={busy} style={{ marginLeft: 'auto' }}>
+          {busy ? <Spinner size={12} /> : suspended ? 'Activate' : 'Suspend'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// Live customer-chat + waiter-call monitor — restores the vanilla admin's "Current
+// Chat" visibility. Reuses the existing global `newChatLog` broadcast and the
+// admin-room `waiterCallAlert` event. No new backend events, no polling, no DB.
+function LiveChatMonitor() {
+  const [live, setLive] = useState<Array<{ tableId?: string; timestamp?: string; message?: string; reply?: string; is_special?: boolean }>>([]);
+  const [alerts, setAlerts] = useState<Array<{ displayTable?: string; message?: string; timestamp?: string; type?: string }>>([]);
+
+  useEffect(() => {
+    let active = true;
+    let cleanup = () => {};
+    import('../services/socket').then(({ getSocket }) => {
+      if (!active) return;
+      const socket = getSocket();
+      socket.emit('joinAdmin', { restaurantId: 'trump' });
+      const onChat = (log: { tableId?: string; timestamp?: string; message?: string; reply?: string; is_special?: boolean }) =>
+        setLive(prev => [log, ...prev].slice(0, 30));
+      const onAlert = (a: { displayTable?: string; message?: string; timestamp?: string; type?: string }) =>
+        setAlerts(prev => [a, ...prev].slice(0, 15));
+      socket.on('newChatLog', onChat);
+      socket.on('waiterCallAlert', onAlert);
+      cleanup = () => { socket.off('newChatLog', onChat); socket.off('waiterCallAlert', onAlert); };
+    });
+    return () => { active = false; cleanup(); };
+  }, []);
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 8px #4ade80' }} />
+        <strong style={{ fontSize: 13, letterSpacing: '0.04em', textTransform: 'uppercase', opacity: 0.8 }}>Live activity</strong>
+      </div>
+      {alerts.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+          {alerts.map((a, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, padding: '8px 10px', borderRadius: 8, background: 'rgba(198,162,75,0.12)', border: '1px solid rgba(198,162,75,0.3)' }}>
+              <Bell size={14} style={{ color: '#c6a24b', flexShrink: 0 }} />
+              <span>{a.message || `${a.displayTable || 'A table'} called a waiter.`}</span>
+              {a.timestamp && <span style={{ marginLeft: 'auto', opacity: 0.6 }}>{a.timestamp}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+      {live.length === 0 ? (
+        <div className={styles.emptyState}><p>Waiting for live customer chat — new questions appear here in real time.</p></div>
+      ) : (
+        <div className={styles.chatLogList}>
+          {live.map((log, i) => (
+            <div key={i} className={styles.chatLog}>
+              <div className={styles.chatLogMeta}>
+                <span>{log.tableId || 'Unknown'}{log.is_special ? ' ⭐' : ''}</span>
+                {log.timestamp && <span>{log.timestamp}</span>}
+              </div>
+              {log.message && <p className={styles.chatLogMsg}><strong>Q:</strong> {log.message}</p>}
+              {log.reply && <p className={styles.chatLogReply}><strong>A:</strong> {log.reply}</p>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1056,12 +1219,13 @@ function extractYouTubeId(value: string) {
   );
 }
 
-function MenuAvailabilityList({ items, togglingId, selected, bulkLoading, onToggle, onDelete, onSelect, onBulkAction, onMediaChange }: {
+function MenuAvailabilityList({ items, togglingId, selected, bulkLoading, onToggle, onEdit, onDelete, onSelect, onBulkAction, onMediaChange }: {
   items: AdminMenuItem[];
   togglingId: number | null;
   selected: Set<number>;
   bulkLoading: boolean;
   onToggle: (item: AdminMenuItem) => void;
+  onEdit: (item: AdminMenuItem) => void;
   onDelete: (item: AdminMenuItem) => void;
   onSelect: (id: number) => void;
   onBulkAction: (action: 'hide' | 'show' | 'delete') => void;
@@ -1128,6 +1292,14 @@ function MenuAvailabilityList({ items, togglingId, selected, bulkLoading, onTogg
                   aria-label={item.available ? `Mark ${item.name} as sold out` : `Mark ${item.name} as available`}
                 >
                   {togglingId === item.dbId ? <Spinner size={12} /> : item.available ? 'Available' : 'Sold Out'}
+                </button>
+                <button
+                  className={styles.itemDeleteBtn}
+                  onClick={() => onEdit(item)}
+                  aria-label={`Edit ${item.name}`}
+                  title="Edit item"
+                >
+                  <Pencil size={12} />
                 </button>
                 <button
                   className={styles.itemDeleteBtn}
@@ -1946,17 +2118,26 @@ function Modal({ title, subtitle, onClose, children, footer, wide = false }: {
   );
 }
 
-function NewItemModal({ categories, onClose, onSubmit }: {
+// Create AND edit a menu item. In edit mode the form is prefilled from `item` and
+// submission PATCHes the existing row (preserving its id / chef-rec links); in create
+// mode it POSTs a new item. One form, no duplicated validation. Media is managed
+// separately in the menu list (MenuItemMediaControls).
+function NewItemModal({ categories, item, onClose, onSubmit }: {
   categories: string[];
+  item?: AdminMenuItem | null;
   onClose: () => void;
-  onSubmit: (payload: { name: string; category: string; price: number; description: string; available: boolean; chefPick: boolean }) => Promise<void>;
+  onSubmit: (payload: ItemFormPayload) => Promise<void>;
 }) {
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
-  const [price, setPrice] = useState('');
-  const [description, setDescription] = useState('');
-  const [available, setAvailable] = useState(true);
-  const [chefPick, setChefPick] = useState(false);
+  const isEdit = !!item;
+  const [name, setName] = useState(item?.name || '');
+  const [category, setCategory] = useState(item?.category || '');
+  const [price, setPrice] = useState(item ? String(item.price ?? '') : '');
+  const [description, setDescription] = useState(item?.description || '');
+  const [calories, setCalories] = useState(item?.calories || '');
+  const [allergens, setAllergens] = useState(item?.allergens || '');
+  const [spice, setSpice] = useState(item?.spice || '');
+  const [available, setAvailable] = useState(item ? item.available !== false : true);
+  const [chefPick, setChefPick] = useState(item ? !!item.chefPick : false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -1964,18 +2145,28 @@ function NewItemModal({ categories, onClose, onSubmit }: {
     if (!name.trim() || !category.trim()) { setError('Name and category are required.'); return; }
     setBusy(true); setError('');
     try {
-      await onSubmit({ name: name.trim(), category: category.trim(), price: Number(price) || 0, description: description.trim(), available, chefPick });
-    } catch { setError('Could not create the item.'); setBusy(false); }
+      await onSubmit({
+        name: name.trim(),
+        category: category.trim(),
+        price: Number(price) || 0,
+        description: description.trim(),
+        calories: calories.trim(),
+        allergens: allergens.trim(),
+        spice: spice.trim(),
+        available,
+        chefPick,
+      });
+    } catch { setError(isEdit ? 'Could not save the item.' : 'Could not create the item.'); setBusy(false); }
   }
 
   return (
     <Modal
-      title="New menu item"
-      subtitle="Add a dish to the live menu"
+      title={isEdit ? 'Edit menu item' : 'New menu item'}
+      subtitle={isEdit ? 'Update this dish on the live menu' : 'Add a dish to the live menu'}
       onClose={onClose}
       footer={<>
         <button className={styles.modalCancel} onClick={onClose} disabled={busy}>Cancel</button>
-        <button className={styles.modalSubmit} onClick={submit} disabled={busy}>{busy ? <Spinner size={13} /> : 'Create item'}</button>
+        <button className={styles.modalSubmit} onClick={submit} disabled={busy}>{busy ? <Spinner size={13} /> : (isEdit ? 'Save changes' : 'Create item')}</button>
       </>}
     >
       <label className={styles.formLabel}>Name
@@ -1990,6 +2181,15 @@ function NewItemModal({ categories, onClose, onSubmit }: {
       </label>
       <label className={styles.formLabel}>Description
         <textarea className={styles.formTextarea} value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Optional" />
+      </label>
+      <label className={styles.formLabel}>Calories
+        <input className={styles.formInput} value={calories} onChange={e => setCalories(e.target.value)} placeholder="e.g. 850 kcal (optional)" />
+      </label>
+      <label className={styles.formLabel}>Allergens
+        <input className={styles.formInput} value={allergens} onChange={e => setAllergens(e.target.value)} placeholder="e.g. gluten, dairy (optional)" />
+      </label>
+      <label className={styles.formLabel}>Spice level
+        <input className={styles.formInput} value={spice} onChange={e => setSpice(e.target.value)} placeholder="e.g. 0–3 (optional)" />
       </label>
       <div className={styles.formToggles}>
         <label className={styles.formCheck}><input type="checkbox" checked={available} onChange={e => setAvailable(e.target.checked)} /> Available now</label>
@@ -2152,14 +2352,58 @@ function NewAccountModal({ currentRole, onClose, onSubmit }: {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [created, setCreated] = useState<string | null>(null);
+  const [apkUrl, setApkUrl] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    api.getConfig().then(c => { if (c?.waiterApkUrl) setApkUrl(c.waiterApkUrl); }).catch(() => { /* success view falls back to username only */ });
+  }, []);
 
   async function submit() {
     if (!/^[a-z0-9._-]{3,32}$/.test(username.trim().toLowerCase())) { setError('Username must be 3-32 chars: letters, numbers, dot, dash, underscore.'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     setBusy(true); setError('');
     try {
-      await onSubmit({ username: username.trim().toLowerCase(), password, role, label: label.trim() || username.trim() });
+      const uname = username.trim().toLowerCase();
+      await onSubmit({ username: uname, password, role, label: label.trim() || username.trim() });
+      setCreated(uname); setBusy(false);
     } catch (e) { setError((e as Error)?.message || 'Could not create the account.'); setBusy(false); }
+  }
+
+  const shareText = [
+    apkUrl ? `Download the Trump Waiter app: ${apkUrl}` : '',
+    `Username: ${created ?? ''}`,
+  ].filter(Boolean).join('\n');
+
+  async function copyShare() {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { setError('Could not copy automatically — select the text and copy it manually.'); }
+  }
+
+  if (created) {
+    return (
+      <Modal
+        title="Account created"
+        subtitle={`${role} login for ${created}`}
+        onClose={onClose}
+        footer={<>
+          <button className={styles.modalCancel} onClick={onClose}>Done</button>
+          <button className={styles.modalSubmit} onClick={copyShare}>
+            {copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy</>}
+          </button>
+        </>}
+      >
+        <label className={styles.formLabel}>Copy &amp; send to new staff
+          <textarea className={styles.formTextarea} readOnly rows={3} value={shareText} onFocus={e => e.currentTarget.select()} />
+        </label>
+        <p className={styles.modalSubtitle}>They install the app from the link, then sign in with this username and the password you set.</p>
+        {error && <p className={styles.formError}>{error}</p>}
+      </Modal>
+    );
   }
 
   return (
@@ -2190,6 +2434,142 @@ function NewAccountModal({ currentRole, onClose, onSubmit }: {
       </div>
       {error && <p className={styles.formError}>{error}</p>}
     </Modal>
+  );
+}
+
+// Manager → waiter dispatch presets (S10). Each creates a WaiterTask the waiter
+// app surfaces instantly in its Alerts Center via the `waiterTaskCreated` socket.
+const DISPATCH_ACTIONS: { type: string; title: string; message: string; priority: number }[] = [
+  { type: 'manager_visit', title: 'Visit Table', message: 'Manager has asked you to visit this table.', priority: 2 },
+  { type: 'complaint', title: 'Handle Complaint', message: 'Guest complaint — please handle promptly.', priority: 1 },
+  { type: 'vip', title: 'VIP Guest', message: 'VIP guest at this table — give priority service.', priority: 1 },
+  { type: 'special_request', title: 'Special Request', message: 'There is a special request at this table.', priority: 2 },
+  { type: 'priority', title: 'Priority Service', message: 'Priority service required at this table.', priority: 1 },
+];
+
+function deskTableNum(tableId?: string) {
+  return String(tableId || '').replace(/^table/i, '') || '?';
+}
+
+// S12 (manager side) + S10. Pending birthday-dessert approvals, manager dispatch
+// presets, and the live floor-request queue, all in one console tab. Stays live
+// via the admin socket room (managerApprovalRequested / waiterTask* events).
+function ServiceDeskPanel({ tasks, onChange }: { tasks: WaiterTask[]; onChange: (t: WaiterTask[]) => void }) {
+  const [table, setTable] = useState('1');
+  const [busy, setBusy] = useState<number | string | null>(null);
+
+  const reload = useCallback(() => {
+    api.getWaiterTasks({ status: 'all' }).then(d => onChange((d as WaiterTask[]) || [])).catch(() => {});
+  }, [onChange]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let cleanup = () => {};
+    import('../services/socket').then(({ getSocket }) => {
+      if (cancelled) return;
+      const socket = getSocket();
+      socket.emit('joinAdmin', { restaurantId: 'trump' });
+      const onEvt = () => reload();
+      socket.on('managerApprovalRequested', onEvt);
+      socket.on('waiterTaskCreated', onEvt);
+      socket.on('waiterTaskUpdated', onEvt);
+      cleanup = () => {
+        socket.off('managerApprovalRequested', onEvt);
+        socket.off('waiterTaskCreated', onEvt);
+        socket.off('waiterTaskUpdated', onEvt);
+      };
+    });
+    return () => { cancelled = true; cleanup(); };
+  }, [reload]);
+
+  const approvals = tasks.filter(t => t.type === 'birthday_approval' && t.status === 'open');
+  const openTasks = tasks
+    .filter(t => ['open', 'acknowledged'].includes(t.status) && t.type !== 'birthday_approval')
+    .sort((a, b) => a.priority - b.priority);
+
+  async function decide(id: number, approved: boolean) {
+    setBusy(id);
+    try { await api.approveBirthday(id, approved); reload(); } catch {}
+    setBusy(null);
+  }
+  async function dispatch(action: typeof DISPATCH_ACTIONS[number]) {
+    const tableId = `table${parseInt(table, 10) || 1}`;
+    setBusy(action.type);
+    try {
+      await api.createWaiterTask({ tableId, type: action.type, title: action.title, message: action.message, priority: action.priority });
+      reload();
+    } catch {}
+    setBusy(null);
+  }
+  async function resolve(id: number) {
+    setBusy(id);
+    try { await api.resolveWaiterTask(id); reload(); } catch {}
+    setBusy(null);
+  }
+
+  const card: CSSProperties = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 16, marginBottom: 12 };
+  const sectionTitle: CSSProperties = { fontSize: 13, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--color-sand)', opacity: 0.7, margin: '22px 0 10px' };
+
+  return (
+    <div>
+      {/* ── Pending approvals (S12) ── */}
+      <div style={sectionTitle}>Pending approvals</div>
+      {approvals.length === 0 ? (
+        <div className={styles.emptyState}><p>No approvals waiting.</p></div>
+      ) : approvals.map(t => (
+        <div key={t.id} style={{ ...card, borderColor: 'rgba(198,162,75,0.4)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontWeight: 600, color: '#c6a24b' }}>🎂 {t.title} · Table {deskTableNum(t.tableId)}</div>
+              <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>{t.message}</div>
+              <div style={{ fontSize: 12, opacity: 0.55, marginTop: 4 }}>Requested by {t.waiterName || t.requestedBy || 'waiter'}</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className={`${styles.resvBtn} ${styles.resvBtnConfirm}`} disabled={busy === t.id} onClick={() => decide(t.id, true)}>Approve</button>
+              <button className={`${styles.resvBtn} ${styles.resvBtnCancel}`} disabled={busy === t.id} onClick={() => decide(t.id, false)}>Reject</button>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* ── Manager → waiter dispatch (S10) ── */}
+      <div style={sectionTitle}>Send to waiter</div>
+      <div style={card}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <span style={{ fontSize: 14, opacity: 0.8 }}>Table</span>
+          <input
+            value={table}
+            onChange={e => setTable(e.target.value.replace(/[^0-9]/g, ''))}
+            inputMode="numeric"
+            style={{ width: 80, padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.25)', color: 'inherit', fontSize: 16 }}
+          />
+        </label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {DISPATCH_ACTIONS.map(a => (
+            <button key={a.type} className={styles.actionBtn} disabled={busy === a.type} onClick={() => dispatch(a)}>
+              {a.title}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Live floor requests (S7/S10) ── */}
+      <div style={sectionTitle}>Floor requests ({openTasks.length})</div>
+      {openTasks.length === 0 ? (
+        <div className={styles.emptyState}><p>No open requests.</p></div>
+      ) : openTasks.map(t => (
+        <div key={t.id} style={{ ...card, borderColor: t.priority <= 1 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.08)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontWeight: 600 }}>{t.title}{t.tableId ? ` · Table ${deskTableNum(t.tableId)}` : ''}</div>
+              <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>{t.message}</div>
+              <div style={{ fontSize: 12, opacity: 0.55, marginTop: 4 }}>{t.status.toUpperCase()} · P{t.priority}</div>
+            </div>
+            <button className={styles.actionBtn} disabled={busy === t.id} onClick={() => resolve(t.id)}>Resolve</button>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

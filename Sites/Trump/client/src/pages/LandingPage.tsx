@@ -2,7 +2,6 @@ import { useEffect, type CSSProperties, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
-import { BASE_PATH } from '../constants/api';
 import styles from './LandingPage.module.css';
 
 const sec = (t: string, s: string) => `/${t}/menu?section=${encodeURIComponent(s)}`;
@@ -82,8 +81,6 @@ const CATEGORIES: Category[] = [
   { key: 'sushi', label: 'Sushi & Sashimi', sub: 'From the sea', glow: 'rgba(58, 112, 152, 0.34)', icon: I.sushi, to: t => sec(t, 'Sushi') },
 ];
 
-const BUTCHERY_HREF = `${BASE_PATH}/frontend/pages/butchery.html`;
-
 export function LandingPage() {
   const { tableId: paramTableId } = useParams<{ tableId: string }>();
   const navigate = useNavigate();
@@ -141,9 +138,6 @@ export function LandingPage() {
           ))}
         </div>
 
-        <p className={styles.footer}>
-          <a className={styles.butchery} href={BUTCHERY_HREF}>Butchery · cuts to take home</a>
-        </p>
       </div>
     </div>
   );

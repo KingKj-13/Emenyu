@@ -2,7 +2,7 @@
 import type { MenuItem } from './menu';
 
 export type WaiterRole = 'Head Waiter' | 'Server' | 'Runner';
-export type WaiterTab = 'floor' | 'order' | 'menu' | 'coach' | 'today' | 'cartrec';
+export type WaiterTab = 'home' | 'tables' | 'alerts' | 'chat' | 'profile';
 
 export interface GuestEvent {
   type: string;
@@ -21,6 +21,7 @@ export interface CartRec {
   reason: string;
   upsell: number;
   script?: string;
+  relation?: string;
   complimentary?: boolean;
   // Phase 4 analytics attribution.
   source_title?: string;
@@ -59,6 +60,7 @@ export interface FloorTable {
   displayName: string;
   status: TableStatusKind;
   spend: number;
+  seatedMinutes?: number | null;
   orderCount: number;
   guests: number | null;
   waiter: string | null;
@@ -180,6 +182,9 @@ export interface Performance {
   upsellRate: number;
   upsellOffered: number;
   upsellAccepted: number;
+  upsellRevenue: number;
+  guestRating: number | null;
+  ratingCount: number;
   salesByCourse: CourseSlice[];
   vsAverage: number | null;
 }
@@ -248,13 +253,40 @@ export type SpeechTone = 'casual' | 'professional' | 'luxury' | 'short' | 'upsel
 
 export interface WaiterAlert {
   id: string;
-  kind: 'bell' | 'ready' | 'manager' | 'event';
+  kind: 'bell' | 'ready' | 'manager' | 'event' | 'complaint' | 'vip' | 'birthday';
   tableId?: string;
   title: string;
   message: string;
   time: string;
+  createdAt: number;
   state: 'live' | 'responded' | 'dismissed';
   emoji?: string;
   action?: string;
   script?: string;
+}
+
+export interface WaiterTask {
+  id: number;
+  tableId: string;
+  waiterName: string;
+  type: string;
+  title: string;
+  message: string;
+  priority: number;
+  status: string;
+  payload?: Record<string, unknown>;
+  requestedBy?: string;
+  approvedBy?: string;
+  dueAt?: string | null;
+  acknowledgedAt?: string | null;
+  resolvedAt?: string | null;
+  createdAt: string;
+}
+
+export interface ChatConversation {
+  tableId: string;
+  lastMessage: string;
+  timestamp: string;
+  priority: number;
+  events: Array<{ type: string; label: string }>;
 }

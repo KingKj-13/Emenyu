@@ -63,21 +63,35 @@ class SocketService {
 
     // Handshake authentication. The connection is always allowed (guests scan a
     // QR code without logging in), but we attach the authenticated staff identity
-    // from the signed session cookie when present. Per-event handlers then enforce
-    // role/table authorization. The cookie rides the same-origin handshake
-    // automatically (HttpOnly, SameSite=Lax).
+    // when present. Two credential sources, in order:
+    //   1. Web cookie — rides the same-origin handshake automatically (HttpOnly,
+    //      SameSite=Lax). UNCHANGED behaviour for browser clients.
+    //   2. Phase 04B — Bearer ACCESS token in handshake.auth.token (or ?token=),
+    //      for native clients that have no cookie jar. Same HMAC + active-user
+    //      check as REST (auth.getUserFromToken), so suspension revokes it too.
+    // Per-event handlers then enforce role/table authorization.
     this.io.use(async (socket, next) => {
       socket.data.user = null;
       socket.data.tables = new Set();
 
       try {
+        let user = null;
         if (this.auth?.authenticateCookieHeader) {
-          const user = await this.auth.authenticateCookieHeader(socket.handshake?.headers?.cookie || '');
-          if (user) {
-            socket.data.user = user;
-          }
+          user = await this.auth.authenticateCookieHeader(socket.handshake?.headers?.cookie || '');
         } else {
           this.logger?.warn('socket_auth_unconfigured', { socketId: socket.id });
+        }
+
+        if (!user && this.auth?.getUserFromToken) {
+          const token = socket.handshake?.auth?.token || socket.handshake?.query?.token || '';
+          if (token) {
+            user = await this.auth.getUserFromToken(String(token));
+            if (user) socket.data.authVia = 'bearer';
+          }
+        }
+
+        if (user) {
+          socket.data.user = user;
         }
       } catch (error) {
         this.logger?.warn('socket_auth_error', { socketId: socket.id, error: error?.message });
@@ -150,6 +164,19 @@ class SocketService {
 
   getKitchenRoom() {
     return `${this.config.restaurantId}:kitchen`;
+  }
+
+  // Per-user room (Phase 04B) — lets notifications target a specific staff member
+  // (e.g. a table transfer) regardless of which device/socket they are on.
+  getUserRoom(username) {
+    return `${this.config.restaurantId}:user:${normalizeId(username)}`;
+  }
+
+  getRoleRoom(role) {
+    if (role === 'waiter') return this.getWaiterRoom();
+    if (role === 'kitchen') return this.getKitchenRoom();
+    if (role === 'owner' || role === 'manager') return this.getAdminRoom();
+    return null;
   }
 
   // ─── Table state management ───────────────────────────────────────────────────
@@ -363,6 +390,34 @@ class SocketService {
     }
   }
 
+  // Phase 04B — live delivery of a Notification row to the right staff. Mirrors the
+  // notificationService recipient rules so the in-app bell updates instantly without
+  // polling. Background/offline delivery is handled separately by pushDispatcher.
+  //   recipientUser set            -> that user's room
+  //   recipientRole set (no user)  -> that role's room
+  //   both empty (broadcast)       -> all staff rooms
+  emitNotification(row) {
+    if (!this.io || !row) return;
+    const event = 'notification';
+    const recipientUser = String(row.recipientUser || '').trim();
+    const recipientRole = String(row.recipientRole || '').trim();
+
+    let target;
+    if (recipientUser) {
+      target = this.io.to(this.getUserRoom(recipientUser));
+    } else if (recipientRole) {
+      const room = this.getRoleRoom(recipientRole);
+      target = room ? this.io.to(room) : null;
+    } else {
+      target = this.io
+        .to(this.getAdminRoom())
+        .to(this.getWaiterRoom())
+        .to(this.getKitchenRoom());
+    }
+
+    target?.emit(event, { restaurantId: this.config.restaurantId, notification: row });
+  }
+
   // Real-time special-occasion alert for staff (waiter + admin/owner consoles).
   emitGuestEvent(payload = {}) {
     if (!this.io) return;
@@ -380,6 +435,14 @@ class SocketService {
   // ─── Connection handler ───────────────────────────────────────────────────────
 
   async handleConnection(socket) {
+    // Authenticated staff auto-join their personal room so targeted notifications
+    // (Phase 04B) reach them without an explicit join handshake. Additive — does
+    // not change guest behaviour or any existing room logic.
+    const connectedUser = socket.data.user;
+    if (connectedUser?.username) {
+      socket.join(this.getUserRoom(connectedUser.username));
+    }
+
     socket.on('joinTable', async payload => {
       await this.handleJoinTable(socket, payload);
     });

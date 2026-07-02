@@ -1,0 +1,31 @@
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts.bak
+
+# Build artifacts — APKs are published as GitHub Release assets, never committed
+*.apk
+*.aab
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Secrets / Firebase
+google-services.json
+GoogleService-Info.plist
+
+# Metro
+.metro-health-check*
+
+# Misc
+*.log
+.DS_Store

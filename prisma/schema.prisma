@@ -186,6 +186,7 @@ model Order {
   covers        Int                  @default(0)
   timestamp     DateTime             @default(now())
   sourceKind    String               @default("orders")
+  clientOrderId String               @default("")   // Phase 05A — idempotency key (empty = none)
   guestId       Int?
   guest         Guest?               @relation(fields: [guestId], references: [id])
   raw           Json?
@@ -201,6 +202,7 @@ model Order {
   @@index([restaurantId, waiterName, status])
   @@index([guestId])
   @@index([timestamp])
+  @@index([restaurantId, clientOrderId])
   @@unique([restaurantId, sourceKind, filename])
 }
 
@@ -268,20 +270,28 @@ model ActiveCartState {
 }
 
 model WaiterAssignment {
-  id           Int       @id @default(autoincrement())
-  restaurantId String    @default("trump")
-  tableId      String
-  table        Table     @relation(fields: [restaurantId, tableId], references: [restaurantId, tableId])
-  waiterName   String
-  socketId     String    @default("")
-  status       String    @default("active")
-  assignedAt   DateTime  @default(now())
-  releasedAt   DateTime?
-  metadata     Json?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id             Int       @id @default(autoincrement())
+  restaurantId   String    @default("trump")
+  tableId        String
+  table          Table     @relation(fields: [restaurantId, tableId], references: [restaurantId, tableId])
+  waiterName     String
+  socketId       String    @default("")
+  status         String    @default("active")
+  assignedAt     DateTime  @default(now())
+  releasedAt     DateTime?
+  // Phase 03 — table ownership transfer/takeover/reassign trail. Each ownership
+  // change inserts a new row (releasing the prior active one); the rows for a
+  // tableId ordered by assignedAt ARE the ownership history.
+  changeType     String    @default("assign")   // assign | transfer | takeover | reassign | release
+  assignedBy     String    @default("")          // who performed the change (self/manager/system)
+  previousWaiter String    @default("")
+  reason         String    @default("")
+  metadata       Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([restaurantId, tableId, status])
+  @@index([restaurantId, tableId, assignedAt])
   @@index([restaurantId, waiterName])
   @@index([socketId])
 }
@@ -324,6 +334,31 @@ model UpsellEvent {
 
   @@index([restaurantId, waiterName, createdAt])
   @@index([restaurantId, accepted])
+}
+
+model WaiterTask {
+  id           Int       @id @default(autoincrement())
+  restaurantId String    @default("trump")
+  tableId      String    @default("")
+  waiterName   String    @default("")
+  type         String
+  title        String
+  message      String    @default("")
+  priority     Int       @default(3)
+  status       String    @default("open")
+  payload      Json?
+  requestedBy  String    @default("system")
+  approvedBy   String    @default("")
+  dueAt        DateTime?
+  acknowledgedAt DateTime?
+  resolvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([restaurantId, status, priority, createdAt])
+  @@index([restaurantId, tableId, status])
+  @@index([restaurantId, waiterName, status])
+  @@index([type])
 }
 
 // Phase 4: recommendation lifecycle analytics. One row per event
@@ -421,4 +456,102 @@ model PushSubscription {
   updatedAt    DateTime @updatedAt
 
   @@index([restaurantId, userRole])
+}
+
+// Phase 03 — staff shift lifecycle (operational tracking only; NO payroll/scheduling).
+// One ACTIVE shift per username is enforced in shiftService (ended shifts share the
+// username, so it is a service-level invariant, not a DB unique). ordersHandled /
+// revenueHandled / responseMetrics are recomputed from orders + tasks over the shift
+// window on read and snapshotted on end.
+model Shift {
+  id              Int       @id @default(autoincrement())
+  restaurantId    String    @default("trump")
+  username        String
+  role            String    @default("waiter")
+  status          String    @default("active")   // active | ended
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  startedBy       String    @default("")          // self | <manager> | system
+  endedBy         String    @default("")
+  endReason       String    @default("")
+  assignedTables  Json?                            // snapshot of tables owned during the shift
+  ordersHandled   Int       @default(0)
+  revenueHandled  Float     @default(0)
+  responseMetrics Json?                            // { avgResponseSec, callsHandled, tasksResolved }
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([restaurantId, status, startedAt])
+  @@index([restaurantId, username, status])
+}
+
+// Phase 03 — immutable operational audit trail. Append-only (no updatedAt). Every
+// privileged mutation (shift start/end, table reassign/transfer/takeover, account
+// create/suspend, notification ack) writes exactly one row via auditService.
+model AuditLog {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("trump")
+  actor        String   @default("system")
+  actorRole    String   @default("")
+  action       String                              // e.g. shift.started | table.reassigned | account.suspended
+  targetType   String   @default("")               // table | account | shift | notification | order
+  targetId     String   @default("")
+  summary      String   @default("")
+  reason       String   @default("")
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([restaurantId, createdAt])
+  @@index([restaurantId, action])
+  @@index([restaurantId, actor])
+  @@index([restaurantId, targetType, targetId])
+}
+
+// Phase 03 — unified notification center. Sources: customer waiter-calls, reservation
+// events, staff reassignment, table transfer, AI warnings, system alerts. read/unread
+// is driven by readAt (null = unread). recipientRole "" = all staff; recipientUser ""
+// = role-wide.
+model Notification {
+  id            Int       @id @default(autoincrement())
+  restaurantId  String    @default("trump")
+  source        String                              // waiter_call | reservation | reassignment | table_transfer | ai_warning | system
+  title         String
+  body          String    @default("")
+  priority      Int       @default(3)               // 1 (urgent) .. 5 (low)
+  recipientRole String    @default("")              // "" = all staff | owner | manager | waiter | kitchen
+  recipientUser String    @default("")              // "" = role-wide | specific username
+  tableId       String    @default("")
+  readAt        DateTime?
+  metadata      Json?
+  createdAt     DateTime  @default(now())
+
+  @@index([restaurantId, recipientRole, readAt, createdAt])
+  @@index([restaurantId, recipientUser, readAt])
+  @@index([restaurantId, source, createdAt])
+}
+
+// Phase 04 — native client device + refresh-token registry. One row per logged-in
+// device (multiple concurrent devices per user). The refresh token is opaque
+// (`<deviceId>.<secret>`); only sha256(secret) is stored. Access tokens stay
+// stateless (cookie HMAC format) and are NOT stored here. Revoking a device sets
+// revokedAt; rotation on each refresh replaces refreshTokenHash.
+model Device {
+  id               Int       @id @default(autoincrement())
+  restaurantId     String    @default("trump")
+  deviceId         String    @unique
+  username         String
+  deviceName       String    @default("")
+  platform         String    @default("")      // android | ios | desktop | web
+  refreshTokenHash String
+  refreshExpiresAt DateTime
+  pushToken        String    @default("")        // Phase 04B — Expo/FCM push token (empty = no push)
+  pushProvider     String    @default("")        // expo | fcm | apns | webpush
+  lastSeenAt       DateTime  @default(now())
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([username, revokedAt])
+  @@index([restaurantId, username])
 }

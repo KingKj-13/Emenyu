@@ -18,7 +18,8 @@ function createWaiterApiController(deps) {
     opportunityService,
     waiterAnalyticsService,
     serviceRecoveryService,
-    floorService
+    floorService,
+    waiterWorkflowService
   } = deps;
   const restaurantId = config?.restaurantId || 'trump';
   const KINDS = nlgService.KINDS;
@@ -196,6 +197,85 @@ function createWaiterApiController(deps) {
         res.json({ ok: true });
       } catch {
         res.status(200).json({ ok: false });
+      }
+    },
+
+    async listTasks(req, res) {
+      try {
+        res.json(await waiterWorkflowService.listTasks({
+          status: req.query.status || 'open',
+          tableId: req.query.tableId || '',
+          waiterName: req.query.waiterName || '',
+          limit: req.query.limit || 80
+        }));
+      } catch {
+        res.json([]);
+      }
+    },
+
+    async createTask(req, res) {
+      try {
+        const task = await waiterWorkflowService.createTask({
+          ...req.body,
+          requestedBy: req.user?.username || req.body?.requestedBy || 'staff'
+        });
+        res.status(201).json(task);
+      } catch {
+        res.status(500).json({ error: 'Failed to create waiter task' });
+      }
+    },
+
+    async ackTask(req, res) {
+      try {
+        res.json(await waiterWorkflowService.updateTask(req.params.id, { status: 'acknowledged' }));
+      } catch {
+        res.status(500).json({ error: 'Failed to acknowledge task' });
+      }
+    },
+
+    async resolveTask(req, res) {
+      try {
+        res.json(await waiterWorkflowService.updateTask(req.params.id, { status: 'resolved' }));
+      } catch {
+        res.status(500).json({ error: 'Failed to resolve task' });
+      }
+    },
+
+    async getChatCenter(req, res) {
+      try {
+        res.json(await waiterWorkflowService.chatCenter());
+      } catch {
+        res.json([]);
+      }
+    },
+
+    async analyzeChat(req, res) {
+      try {
+        res.json(await waiterWorkflowService.analyzeMessage(req.body || {}));
+      } catch {
+        res.json({ events: [], tasks: [] });
+      }
+    },
+
+    async requestBirthdayApproval(req, res) {
+      try {
+        res.status(201).json(await waiterWorkflowService.requestBirthdayApproval({
+          ...req.body,
+          waiterName: req.body?.waiterName || req.user?.label || req.user?.username || 'waiter'
+        }));
+      } catch {
+        res.status(500).json({ error: 'Failed to request birthday approval' });
+      }
+    },
+
+    async approveBirthday(req, res) {
+      try {
+        res.json(await waiterWorkflowService.approveBirthday(req.params.id, {
+          approved: req.body?.approved !== false,
+          managerName: req.user?.label || req.user?.username || 'manager'
+        }));
+      } catch {
+        res.status(500).json({ error: 'Failed to update birthday approval' });
       }
     },
 

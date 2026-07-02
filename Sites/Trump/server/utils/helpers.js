@@ -190,7 +190,6 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
   const directories = {
     base: baseDir,
     server: path.join(baseDir, 'server'),
-    frontend: path.join(baseDir, 'frontend'),
     food: path.join(baseDir, 'food'),
     orders: path.join(baseDir, 'orders'),
     history: path.join(baseDir, 'history'),
@@ -217,6 +216,10 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     // Phase 3B: the chatbot's display name (Donald). Surfaced to the client via
     // GET /api/config so the SPA stops hardcoding "Trump AI".
     assistantName: env.TRUMP_ASSISTANT_NAME || 'Donald',
+    // Waiter-app APK download link ("latest" GitHub release asset), surfaced to the
+    // Admin UI via GET /api/config so managers can hand it to new staff on account
+    // creation. See docs/final-product/phase-04b/APK-BUILD.md for the release rule.
+    waiterApkUrl: env.TRUMP_WAITER_APK_URL || 'https://github.com/KingKj-13/Emenyu/releases/latest/download/trump-waiter.apk',
     host: env.TRUMP_HOST || env.HOST || '0.0.0.0',
     port,
     admin: {
@@ -228,6 +231,10 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
       sessionCookieSameSite: env.TRUMP_SESSION_SAMESITE || 'Lax',
       sessionSecret: env.TRUMP_SESSION_SECRET || env.STAGING_PASS || sharedPassword,
       sessionTtlMs: 1000 * 60 * 60 * parseInteger(env.TRUMP_SESSION_TTL_HOURS, 12),
+      // Phase 04 — native token auth: short-lived Bearer access token + long-lived
+      // DB-backed refresh token (device). Web cookie auth is unchanged.
+      accessTtlMs: 1000 * 60 * parseInteger(env.TRUMP_ACCESS_TTL_MINUTES, 15),
+      refreshTtlMs: 1000 * 60 * 60 * 24 * parseInteger(env.TRUMP_REFRESH_TTL_DAYS, 30),
       users: [
         {
           username: env.TRUMP_OWNER_USER || 'owner',
@@ -272,7 +279,11 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     security: {
       allowedOrigins,
       authRateLimitMax: parseInteger(env.TRUMP_AUTH_RATE_LIMIT_MAX, 20),
-      publicWriteRateLimitMax: parseInteger(env.TRUMP_PUBLIC_WRITE_RATE_LIMIT_MAX, isProduction ? 60 : 1000),
+      // Phase 05A — validated production limits. A whole restaurant shares ONE NAT/Wi-Fi
+      // IP, so per-IP ceilings must fit per-restaurant traffic, not per-person. Measured
+      // need: ~20 order submits/min + ~200 requests/min per restaurant at peak.
+      // Order POSTs: 300 / 15 min = 20/min. (was 60 — throttled a busy restaurant.)
+      publicWriteRateLimitMax: parseInteger(env.TRUMP_PUBLIC_WRITE_RATE_LIMIT_MAX, isProduction ? 300 : 1000),
       chatRateLimitMax: parseInteger(env.TRUMP_CHAT_RATE_LIMIT_MAX, isProduction ? 120 : 1000),
       compressionThresholdBytes: parseInteger(env.TRUMP_COMPRESSION_THRESHOLD_BYTES, 1024),
       corsCredentials: true,
@@ -281,7 +292,13 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
         reportOnly: parseBoolean(env.TRUMP_CSP_REPORT_ONLY, false)
       },
       forceHttps: parseBoolean(env.TRUMP_FORCE_HTTPS, false),
-      generalRateLimitMax: parseInteger(env.TRUMP_RATE_LIMIT_MAX, isProduction ? 600 : 2000),
+      // General per-IP: 3000 / 15 min = 200/min/restaurant (was 600 — see above). Static
+      // assets + health are already skipped, so this counts API calls only.
+      generalRateLimitMax: parseInteger(env.TRUMP_RATE_LIMIT_MAX, isProduction ? 3000 : 2000),
+      // Phase 05 — TEMPORARY, REMOVABLE load-test bypass. Default OFF. When set, the
+      // rate limiters skip (so a controlled capacity test from one IP isn't throttled).
+      // MUST NEVER be enabled in production; a startup warning is logged if it is.
+      loadTestBypass: parseBoolean(env.TRUMP_LOAD_TEST_BYPASS, false),
       hsts: isProduction && parseBoolean(env.TRUMP_HSTS_ENABLED, true),
       rateLimitWindowMs: parseInteger(env.TRUMP_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
       secureCookies: isProduction || parseBoolean(env.TRUMP_SECURE_COOKIES, false),
@@ -460,8 +477,20 @@ function createRoleAuth(config, accountService, logger = null) {
     return readToken(token);
   }
 
+  // Phase 04 — accept a native Bearer ACCESS token (same HMAC + active-user check
+  // as the cookie, so suspension / sessionInvalidBefore revoke it too).
+  async function getBearerUser(req) {
+    const header = req.headers.authorization || '';
+    if (!header.toLowerCase().startsWith('bearer ')) {
+      return null;
+    }
+    return readToken(header.slice(7).trim());
+  }
+
   async function getRequestUser(req) {
-    return (await getSessionUser(req)) || (await readBasicUser(req, config, accountService));
+    return (await getSessionUser(req))
+      || (await getBearerUser(req))
+      || (await readBasicUser(req, config, accountService));
   }
 
   function issueSession(req, res, user) {
@@ -526,6 +555,11 @@ function createRoleAuth(config, accountService, logger = null) {
       return requireRoles(roles, { page: true });
     },
     getRequestUser,
+    // Phase 04 — mint a short-lived Bearer access token (reuses the cookie HMAC
+    // format so readToken/getBearerUser validate it identically).
+    createAccessToken(username, ttlMs) {
+      return createToken(username, Date.now() + (ttlMs || config.auth.accessTtlMs || 900000));
+    },
     // Verify a raw session token (same HMAC + active-user check as REST auth).
     // Returns the sanitized active user, or null. Used by the Socket.IO handshake.
     getUserFromToken: readToken,

@@ -1,0 +1,25 @@
+# EAS build uploads the whole git repo (Apps/TrumpWaiter is built from a monorepo
+# subdirectory). NOTE: when .easignore exists, EAS uses it INSTEAD of .gitignore —
+# so dependency/build dirs must be re-listed here.
+node_modules
+.expo
+.git
+.claude
+
+# Repo areas unrelated to the waiter app (~300 MB of restaurant site content).
+/Sites
+/docs
+/prisma
+/scripts
+/shared
+QA_FINDINGS_2026-07-01.md
+menu_master.json
+
+# Secrets never leave the machine.
+.env
+.env.*
+*.pem
+*.key
+*.jks
+*.keystore
+google-services.json

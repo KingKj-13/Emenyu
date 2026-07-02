@@ -23,6 +23,17 @@ const { registerAnalyticsRoutes } = require('./routes/analyticsRoutes');
 const { registerRecommendationAnalyticsRoutes } = require('./routes/recommendationAnalyticsRoutes');
 const { registerRecommendationBundleRoutes } = require('./routes/recommendationBundleRoutes');
 const { registerWaiterApiRoutes } = require('./routes/waiterApiRoutes');
+const { registerOperationsRoutes } = require('./routes/operationsRoutes');
+const { AuditService } = require('./services/auditService');
+const { ShiftService } = require('./services/shiftService');
+const { TableOwnershipService } = require('./services/tableOwnershipService');
+const { NotificationService } = require('./services/notificationService');
+const { OperationsService } = require('./services/operationsService');
+const { createOperationsController } = require('./controllers/operationsController');
+const { registerAuthTokenRoutes } = require('./routes/authTokenRoutes');
+const { TokenService } = require('./services/tokenService');
+const { PushDispatcher } = require('./services/pushDispatcher');
+const { createAuthTokenController } = require('./controllers/authTokenController');
 const { registerDealRoutes } = require('./routes/dealRoutes');
 const { registerKitchenRoutes } = require('./routes/kitchenRoutes');
 const { registerMenuRoutes } = require('./routes/menuRoutes');
@@ -41,6 +52,7 @@ const { createOpportunityService } = require('./services/opportunityService');
 const { createWaiterAnalyticsService } = require('./services/waiterAnalyticsService');
 const { createServiceRecoveryService } = require('./services/serviceRecoveryService');
 const { createFloorService } = require('./services/floorService');
+const { createWaiterWorkflowService } = require('./services/waiterWorkflowService');
 const { AccountService } = require('./services/accountService');
 const { FileService } = require('./services/fileService');
 const { SocketService } = require('./services/socketService');
@@ -195,7 +207,8 @@ async function startServer() {
   const logger = createLogger(config);
   const fileService = new FileService(config, { logger });
   await fileService.ensureBaseFiles();
-  const accountService = new AccountService(config, { logger });
+  const auditService = new AuditService({ config, logger });
+  const accountService = new AccountService(config, { logger, auditService });
   await accountService.ensureReady();
 
   const app = express();
@@ -223,10 +236,20 @@ async function startServer() {
   const waiterAnalyticsService = createWaiterAnalyticsService({ config });
   const serviceRecoveryService = createServiceRecoveryService({ config });
   const floorService = createFloorService({ config });
+  const waiterWorkflowService = createWaiterWorkflowService({ config, socketService });
+  // Phase 03 — staff operations services (shifts, table ownership, notification
+  // center, owner-ops snapshot) bound together by the immutable audit trail.
+  const tokenService = new TokenService({ config, logger }); // Phase 04 — native refresh/device registry
+  // Phase 04B — background push fan-out (Expo); a non-fatal side-effect of notify().
+  const pushDispatcher = new PushDispatcher({ accountService, tokenService, config, logger });
+  const notificationService = new NotificationService({ config, logger, socketService, auditService, pushDispatcher });
+  const shiftService = new ShiftService({ config, logger, auditService });
+  const tableOwnershipService = new TableOwnershipService({ config, logger, auditService, notificationService });
+  const operationsService = new OperationsService({ config, logger, shiftService, notificationService });
   logger.info('nlg_mode', nlgService.status());
 
   const controllers = {
-    ai: createAiController({ aiService, config }),
+    ai: createAiController({ aiService, config, waiterWorkflowService }),
     analytics: createAnalyticsController({ config }),
     recommendationAnalytics: createRecommendationAnalyticsController({ recommendationEventService, prismaMenuService: fileService.prismaMenu }),
     recommendationBundle: createRecommendationBundleController({ recommendationBundleService, socketService }),
@@ -248,8 +271,13 @@ async function startServer() {
       opportunityService,
       waiterAnalyticsService,
       serviceRecoveryService,
-      floorService
-    })
+      floorService,
+      waiterWorkflowService
+    }),
+    operations: createOperationsController({
+      shiftService, tableOwnershipService, notificationService, operationsService, auditService
+    }),
+    authToken: createAuthTokenController({ accountService, auth, tokenService, config, logger })
   };
   const uploadController = createUploadController(config);
 
@@ -264,15 +292,22 @@ async function startServer() {
     res.status(204).end();
   });
 
+  // Retired (Phase 01B): the vanilla admin.html is superseded by the React /Admin
+  // dashboard. Redirect preserves the old bookmark and keeps the same owner/manager
+  // guard. A .html URL cannot render the SPA directly (React Router basename "/Trump"),
+  // so we redirect to the canonical /Admin route instead of serving the SPA here.
   app.get(
     ['/admin.html', '/Trump/admin.html', '/trump/admin.html'],
     auth.requirePage(['owner', 'manager']),
-    controllers.order.serveAdminPage
+    (req, res) => res.redirect(`${config.publicBasePath}/Admin`)
   );
+  // Retired (Phase 01B): the vanilla waiter.html is superseded by the React /Waiter
+  // app. Redirect preserves the bookmark and the same guard (a .html URL cannot
+  // render the SPA directly because React Router uses basename "/Trump").
   app.get(
     ['/waiter.html', '/Trump/waiter.html', '/trump/waiter.html'],
     auth.requirePage(['owner', 'manager', 'waiter']),
-    controllers.waiter.serveWaiterPage
+    (req, res) => res.redirect(`${config.publicBasePath}/Waiter`)
   );
   // Retired: the vanilla owner.html is superseded by the React /Owner dashboard.
   app.get(
@@ -320,6 +355,8 @@ async function startServer() {
   registerReservationRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
   registerUploadRoutes(app, uploadController, auth.requireRoles(['owner', 'manager']));
   registerWaiterApiRoutes(app, controllers, auth);
+  registerOperationsRoutes(app, controllers, auth);
+  registerAuthTokenRoutes(app, controllers, auth);
   registerOrderRoutes(app, controllers, auth);
 
   // SPA fallback: serve React app for all /Trump/* routes with no file extension

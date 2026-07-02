@@ -1,0 +1,92 @@
+drink,description
+CASTLE - South Africa,"A crisp South African lager brewed for easy drinking, with a clean malt taste and moderate bitterness."
+CASTLE LITE - South Africa,"A lighter South African lager with a clean, refreshing taste and lower body than a standard lager."
+STELLA ARTOIS - Belgium,"A Belgian lager known for a smooth malt base, gentle hop bitterness, and a dry finish."
+HEINEKEN - Netherlands,"A Dutch lager with a balanced, mildly bitter taste and a clean, refreshing finish."
+WINDHOEK - Namibia,"A Namibian lager with a clean, smooth profile and a crisp finish."
+CARLING BLACK LABEL,A full-bodied South African lager with a stronger malt character and a bolder beer flavor.
+CASTLE LAGER,A classic South African lager with a straightforward malty taste and crisp finish.
+CASTLE LITE,"A lighter South African lager with a clean, refreshing taste and lower body than a standard lager."
+CASTLE DOUBLE MALT,"A malt-forward South African beer with a richer, sweeter body and deeper caramel notes."
+FLYING FISH LEMON,A flavored beer with a light lager base and bright lemon-citrus notes.
+FLYING FISH DRY APPLE,"A fruity beer with crisp apple notes and a light, refreshing finish."
+CORONA - Mexico,"A light Mexican lager with a mild hop character and a refreshing, easy-drinking profile."
+AMSTEL - Netherlands,A smooth Dutch lager with balanced malt sweetness and gentle bitterness.
+HEINEKEN SILVER - Netherlands,A lighter-style Heineken lager with a softer taste and crisp finish.
+BUDWEISER - USA,"An American lager with a light body, mild malt sweetness, and a clean finish."
+CORONA NON-ALCOHOLIC 0.0,"A non-alcoholic beer with a light, crisp taste and refreshing lager character."
+HEINEKEN 0.0,"A non-alcoholic lager with mild malt flavor and a clean, refreshing finish."
+SAVANNA LEMON - NON-ALCOHOLIC,"A non-alcoholic cider-style drink with bright lemon flavor and a fizzy, refreshing finish."
+BRUTAL FRUIT LITCHI SECHE,"A fruity alcoholic cider with sweet litchi notes and a sparkling, crisp finish."
+BERNINI BLUSH,"A sparkling flavored drink with light fruit sweetness and a soft, refreshing profile."
+HUNTERS DRY,"A dry cider with crisp apple flavor and a clean, tart finish."
+HUNTERS GOLD,"A sweeter cider with ripe apple flavor and a smooth, fruity finish."
+SAVANNA DRY,"A dry apple cider with a crisp, tart, lightly sparkling taste."
+SAVANNA LIGHT,A lighter cider with fresh apple flavor and a more delicate sweetness.
+LOXTONIA CRISPY APPLE CIDER,A sparkling cider with fresh apple flavor and a crisp finish.
+LOXTONIA STONE FRUIT CIDER,"A cider flavored with stone fruit notes, giving it a sweeter, juicier profile."
+COKE,"A cola-flavored soft drink with caramel sweetness, citrus notes, and gentle fizz."
+LEMONADE - Schweppes,A sweet lemon-flavored mixer with a bright citrus taste and sparkling finish.
+DRY LEMON - Schweppes,"A lightly sweetened lemon soda with a drier, sharper citrus profile."
+TONIC WATER - Schweppes,"A carbonated mixer with quinine bitterness and a clean, slightly citrusy taste."
+TONIC WATER - Schweppes Sugar Free,
+GINGER ALE - Schweppes,"A ginger-flavored soft drink with mild spice, sweetness, and carbonation."
+PINK TONIC - Schweppes,A fruity tonic with soft berry and citrus notes layered over quinine bitterness.
+GRAPEFRUIT TONIC - Schweppes,A citrus tonic with tart grapefruit flavor and a bitter-fresh finish.
+TOMATO COCKTAIL,"A savory tomato juice drink with a lightly seasoned, tangy flavor."
+RED BULL,A sweet energy drink with a bold citrus-berry style flavor and a fizzy kick.
+RED BULL - Sugar Free,"A sugar-free energy drink with the same bright, sharp energy-drink flavor."
+RED BULL - Red Edition,A berry-flavored energy drink with a sweeter fruit profile and sparkling finish.
+MOT CHANDON BRUT,"A Champagne-style sparkling wine from the Champagne region of France, made for bright bubbles, crisp citrus, and toasty notes."
+MOT CHANDON NECTAR,"A sweeter Champagne from France with ripe fruit, soft richness, and lively bubbles."
+MOT CHANDON BRUT ROS,"A rosé Champagne with fresh berry notes, light toastiness, and fine bubbles."
+VEUVE CLICQUOT BRUT,"A classic Champagne from France with a dry style, citrus freshness, and a brioche-like finish."
+VEUVE CLICQUOT ROS,"A pink Champagne with red-berry flavor, gentle acidity, and elegant bubbles."
+VEUVE CLICQUOT RICH,"A sweeter-style Champagne with ripe fruit flavors and a softer, rounder finish."
+BOLLINGER SPECIAL CUVEE BRUT,"A fuller-bodied Champagne from France with rich yeast, apple, and toasted bread notes."
+DOM PERIGNON BLANC,"A prestige Champagne from France, known for fine bubbles, citrus, stone fruit, and a silky finish."
+DOM PERIGNON ROSE,"A prestige rosé Champagne with berry fruit, spice, and a refined sparkling texture."
+ARMAND DE BRIGNAC GOLD ACE OF SPADES,"A luxury Champagne with rich fruit, creamy texture, and polished bubbles."
+ARMAND DE BRIGNAC BRUT ROS ACE OF SPADES,"A luxury rosé Champagne with bright berry notes and a smooth, elegant finish."
+LORMARINS BRUT CLASSIQUE,"A South African Cap Classique sparkling wine with crisp apple, citrus, and toast notes."
+LORMARINS BRUT CLASSIQUE ROS,A South African rosé sparkling wine with red-fruit notes and bright bubbles.
+PIERRE JOURDAN BELLE NECTAR,"A sweeter South African sparkling wine with floral aromas, ripe fruit, and soft bubbles."
+KRONE NIGHT NECTAR DEMI-SEC,A demi-sec sparkling wine with a noticeable sweetness and fresh fruit flavor.
+PONGRCZ ROS,A South African sparkling rosé with strawberry and cranberry notes and lively fizz.
+PONGRCZ NOBLE NECTAR,"A sweeter sparkling wine with ripe fruit, floral notes, and a soft finish."
+DA LUCA PROSECCO,"An Italian sparkling wine from Veneto with light apple, pear, and floral flavors."
+DA LUCA ROS PROSECCO,"A rosy Italian sparkling wine with fresh berry notes and a crisp, bubbly finish."
+SAUVIGNON BLANC,"A white wine style usually sharp and refreshing, with citrus, green fruit, and herb-like notes."
+BLACK CHENIN BLANC,"A Chenin Blanc style with ripe apple, pear, and honeyed fruit character."
+CHARDONNAY,A white wine that can taste crisp and citrusy or rich and buttery depending on how it is made.
+SEMI-SWEET AND OTHER WHITES,"A group of white wines that lean softer and fruitier, often with tropical fruit and floral notes."
+PINOTAGE,"A South African red grape style with dark fruit, smoke, and earthy notes."
+MERLOT,"A smooth red wine with plum, red berry, and soft chocolate-like notes."
+CABERNET SAUVIGNON,"A bold red wine with blackcurrant, dark cherry, and firm tannins."
+SHIRAZ,"A spicy red wine with blackberry, plum, pepper, and clove flavors."
+PINOT NOIR,"A lighter red wine with cherry, raspberry, and earthy flavors."
+RED BLENDS,"A mixed red wine style that combines grapes for layered dark fruit, spice, and a balanced finish."
+MEERLUST RED,"A blended red wine with dark fruit, spice, and a rounded, elegant structure."
+CORAVIN SELECTION,"These are premium wines poured by the glass using a preservation system, so the remaining bottle stays fresh longer."
+RUST EN VREDE ESTATE SHIRAZ,"A rich Stellenbosch Shiraz with dark berries, plum, pepper, and oak spice."
+WARWICK BLUE LADY CABERNET SAUVIGNON,"A Cabernet Sauvignon with blackcurrant, cassis, tobacco, and a long smooth finish."
+SIMONSIG THE GARLAND CABERNET SAUVIGNON,"A full-bodied Cabernet with blackberry, cassis, dark chocolate, and oak spice."
+TOKARA DIRECTORS RESERVE RED,"A polished red blend with dark cherry, plum, blackcurrant, and fine tannins."
+LAVENIR SINGLE BLOCK PINOTAGE,"A bold Pinotage with black cherry, plum, spice, and a long finish."
+RUPERT ROTHSCHILD BARON EDMOND,"A Bordeaux-style blend with dark berries, plum, cedar, and spice."
+LE RICHE CABERNET SAUVIGNON RESERVE,"A powerful Cabernet with blackcurrant, dark chocolate, cedar, and firm tannins."
+MULLINEUX OLD VINES WHITE,"A textured white blend with stone fruit, citrus, honey, and soft spice."
+PAUL CLVER SEVEN FLAGS PINOT NOIR,"An elegant Pinot Noir with red cherry, strawberry, floral notes, and silky tannins."
+SHANNON MOUNT BULLET,"A soft Merlot with plum, black cherry, chocolate, and tobacco notes."
+ALLE BLEUE LAMOUR TOUJOURS,"A rich red blend with blackcurrant, dark chocolate, spice, and smooth tannins."
+DE WETSHOF BATELEUR CHARDONNAY,"A fresh Chardonnay with citrus, peach, light oak, and vanilla notes."
+SARONSBERG FULL CIRCLE,"A Rhône-style red blend with dark berries, plum, spice, and a full finish."
+MUSCAT,"A sweet, floral wine style with grape-like fruit and perfumed aromas."
+DRAUGHTS,"Draft beer served fresh from the tap, usually colder and lighter on the palate than bottled beer."
+COCKTAILS,"Mixed drinks made by combining spirits, liqueurs, juices, and mixers in balanced recipes."
+TEA,"A hot or iced drink made by steeping tea leaves, usually light, fragrant, and refreshing."
+COFFEE,"A brewed drink made from roasted coffee beans, with a bold, bitter, aromatic flavor."
+GIN AND TONIC,"A classic mixed drink made with gin, tonic water, and usually lime; crisp, bitter, and refreshing."
+WHISKEY SOUR,"A cocktail made with whiskey, citrus, and sweetener, often shaken for a bright, tangy taste."
+MARGARITA,"A tequila cocktail mixed with citrus and orange liqueur, usually salty, tart, and refreshing."
+MOJITO,"A mint and lime rum cocktail with sweetness, soda water, and a fresh, cooling taste."

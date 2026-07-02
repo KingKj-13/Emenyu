@@ -64,9 +64,10 @@ function sanitizeAccount(account) {
 }
 
 class AccountService {
-  constructor(config, { logger = null } = {}) {
+  constructor(config, { logger = null, auditService = null } = {}) {
     this.config = config;
     this.logger = logger;
+    this.audit = auditService; // Phase 03 — optional audit trail for staff mutations
     this.filePath = config.files.accounts;
     this.accounts = null;
     this.prismaAuth = new PrismaAuthService({ logger });
@@ -299,6 +300,11 @@ class AccountService {
     accounts.push(account);
     accounts.sort((left, right) => left.username.localeCompare(right.username));
     await this.writeAccounts(accounts);
+    await this.audit?.record({
+      actor: actor?.username || actor?.role || 'system', actorRole: actor?.role || '',
+      action: 'account.created', targetType: 'account', targetId: username,
+      summary: `Created ${role} account "${username}"`
+    });
     return sanitizeAccount(account);
   }
 
@@ -355,6 +361,17 @@ class AccountService {
     }
 
     await this.writeAccounts(accounts);
+    if (this.audit) {
+      let action = 'account.updated';
+      if (patch.status === 'suspended') action = 'account.suspended';
+      else if (patch.status === 'active') action = 'account.activated';
+      else if (typeof patch.password === 'string' && patch.password.length > 0) action = 'account.password_reset';
+      await this.audit.record({
+        actor: actor?.username || actor?.role || 'system', actorRole: actor?.role || '',
+        action, targetType: 'account', targetId: cleanUsername,
+        summary: `${action.split('.')[1]} account "${cleanUsername}"`
+      });
+    }
     return sanitizeAccount(account);
   }
 
