@@ -24,6 +24,32 @@ gh release create waiter-v<version> path/to/trump-waiter.apk --target master \
 gh release upload waiter-v<version> path/to/trump-waiter.apk --clobber
 ```
 
+## Over-the-air updates (EAS Update) — added v1.0.1
+
+The app ships with `expo-updates` (channel `preview`, runtimeVersion policy `appVersion`).
+Once a staff device has **v1.0.1 or newer installed**, JS/asset fixes reach it over the air
+on next launch — **no reinstall**:
+
+```bash
+cd Apps/TrumpWaiter
+eas update --branch preview -m "what changed"
+```
+
+Constraints:
+- OTA covers **JS + assets only**. Native changes (new native modules, `app.json` native
+  config, an Expo SDK upgrade, permissions) still require a **new APK build + reinstall**.
+- An OTA update only lands on builds whose runtimeVersion matches. With the `appVersion`
+  policy, that means updates published while `version` is `1.0.1` reach `1.0.1` installs.
+  Bumping `version` starts a new runtime → publish a new APK for that version.
+- Enabling `expo-updates` was itself a native change, so **v1.0.0 → v1.0.1 needed one
+  reinstall**; every JS fix after v1.0.1 is OTA.
+
+### Version history
+| Version | versionCode | EAS build | Notes |
+|---|---|---|---|
+| 1.0.0 | 1 | 121d908b | first APK; no OTA |
+| 1.0.1 | 2 | c3c50ad9 | fixes blank-login layout (Screen flex); adds expo-updates/OTA |
+
 ---
 
 ## Build configuration (committed)
