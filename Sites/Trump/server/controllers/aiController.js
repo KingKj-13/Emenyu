@@ -3,7 +3,11 @@ function createAiController({ aiService, config = {}, waiterWorkflowService = nu
     // Public client config (Phase 3B): lets the SPA render the assistant's name
     // (Donald) from server config instead of hardcoding "Trump AI".
     getConfig(req, res) {
-      res.json({ assistantName: config.assistantName || 'Donald', brandName: config.brandName || 'Trump' });
+      res.json({
+        assistantName: config.assistantName || 'Donald',
+        brandName: config.brandName || 'Trump',
+        waiterApkUrl: config.waiterApkUrl || '',
+      });
     },
 
     async chat(req, res) {

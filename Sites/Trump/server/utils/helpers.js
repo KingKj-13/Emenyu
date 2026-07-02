@@ -216,6 +216,10 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     // Phase 3B: the chatbot's display name (Donald). Surfaced to the client via
     // GET /api/config so the SPA stops hardcoding "Trump AI".
     assistantName: env.TRUMP_ASSISTANT_NAME || 'Donald',
+    // Waiter-app APK download link ("latest" GitHub release asset), surfaced to the
+    // Admin UI via GET /api/config so managers can hand it to new staff on account
+    // creation. See docs/final-product/phase-04b/APK-BUILD.md for the release rule.
+    waiterApkUrl: env.TRUMP_WAITER_APK_URL || 'https://github.com/KingKj-13/Emenyu/releases/latest/download/trump-waiter.apk',
     host: env.TRUMP_HOST || env.HOST || '0.0.0.0',
     port,
     admin: {
