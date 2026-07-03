@@ -82,6 +82,17 @@ function createStaticOptions(config) {
         res.type('video/mp4');
       } else if (/\.webm$/i.test(filePath)) {
         res.type('video/webm');
+      } else if (/\.jpg$/i.test(filePath)) {
+        try {
+          const fs = require('fs');
+          const fd = fs.openSync(filePath, 'r');
+          const buffer = Buffer.alloc(4);
+          fs.readSync(fd, buffer, 0, 4, 0);
+          fs.closeSync(fd);
+          if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+            res.type('image/png');
+          }
+        } catch(e) {}
       }
 
       if (/[\\/]sw\.js$/i.test(filePath)) {
@@ -279,7 +290,7 @@ async function startServer() {
     }),
     authToken: createAuthTokenController({ accountService, auth, tokenService, config, logger })
   };
-  const uploadController = createUploadController(config);
+  const uploadController = createUploadController(config, { logger });
 
   app.use(createRequestLogger(logger));
   configureSecurity(app, config, logger);
