@@ -220,6 +220,11 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     // Admin UI via GET /api/config so managers can hand it to new staff on account
     // creation. See docs/final-product/phase-04b/APK-BUILD.md for the release rule.
     waiterApkUrl: env.TRUMP_WAITER_APK_URL || 'https://github.com/KingKj-13/Emenyu/releases/latest/download/trump-waiter.apk',
+    // Latest waiter-app version. The native app compares its installed version to
+    // this on launch and shows a dismissible "Update available" banner (linking to
+    // waiterApkUrl) when older. Bump via env TRUMP_WAITER_LATEST_VERSION when you
+    // publish a new APK — no code deploy needed. Keep in step with app.json version.
+    waiterLatestVersion: env.TRUMP_WAITER_LATEST_VERSION || '1.0.1',
     host: env.TRUMP_HOST || env.HOST || '0.0.0.0',
     port,
     admin: {

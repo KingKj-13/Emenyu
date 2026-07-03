@@ -29,6 +29,9 @@ export const EP = {
   notificationAck: (id: number) => `/api/notifications/${id}/ack`,
   notificationsAckAll: '/api/notifications/ack-all',
 
+  // --- public config (assistant name, APK url, latest version) — no auth ---
+  config: '/api/config',
+
   // --- menu (read) ---
   menu: '/api/menu',
 

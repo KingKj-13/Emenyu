@@ -7,6 +7,7 @@ function createAiController({ aiService, config = {}, waiterWorkflowService = nu
         assistantName: config.assistantName || 'Donald',
         brandName: config.brandName || 'Trump',
         waiterApkUrl: config.waiterApkUrl || '',
+        waiterLatestVersion: config.waiterLatestVersion || '',
       });
     },
 
