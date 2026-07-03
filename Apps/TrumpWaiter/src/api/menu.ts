@@ -18,18 +18,26 @@ function toItem(raw: RawItem): MenuItem | null {
     name: String(name),
     price: typeof priceRaw === 'number' ? priceRaw : Number(priceRaw) || undefined,
     category: (raw.category ?? raw.categoryName) as string | undefined,
+    subcategory: (raw.subcategory ?? raw.subCategory) as string | undefined,
+    categoryType: (raw.categoryType ?? raw.category_type) as string | undefined,
     description: (raw.description ?? raw.desc) as string | undefined,
+    img: (raw.img ?? raw.image ?? raw.imageUrl) as string | undefined,
     available: raw.available !== false && raw.visible !== false
   };
 }
 
 function flatten(payload: unknown): MenuItem[] {
   const out: MenuItem[] = [];
-  const pushAll = (arr: unknown) => {
+  // `categoryTitle` (when known) is stamped onto items lacking their own category
+  // so the Add-Item browser can group/filter reliably.
+  const pushAll = (arr: unknown, categoryTitle?: string) => {
     if (Array.isArray(arr)) {
       for (const r of arr) {
         const item = toItem(r as RawItem);
-        if (item) out.push(item);
+        if (item) {
+          if (!item.category && categoryTitle) item.category = categoryTitle;
+          out.push(item);
+        }
       }
     }
   };
@@ -41,12 +49,13 @@ function flatten(payload: unknown): MenuItem[] {
     if (Array.isArray(obj.items)) pushAll(obj.items);
     if (Array.isArray(obj.categories)) {
       for (const c of obj.categories as Record<string, unknown>[]) {
-        pushAll(c.items);
+        const title = (c.title ?? c.name ?? c.category) as string | undefined;
+        pushAll(c.items, title);
       }
     }
     // Fallback: object keyed by category → array of items.
     if (!out.length) {
-      for (const v of Object.values(obj)) pushAll(v);
+      for (const [key, v] of Object.entries(obj)) pushAll(v, key);
     }
   }
   return out;

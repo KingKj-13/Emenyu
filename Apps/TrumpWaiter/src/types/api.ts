@@ -52,12 +52,16 @@ export interface StoredSession {
   user: AuthUser;
 }
 
-// Minimal menu item shape (the app only needs to read/quote, not mutate).
+// Menu item shape (the app reads to browse/quote/add-to-cart, never mutates —
+// the owner edits the menu on the web). Category fields power the Add-Item browser.
 export interface MenuItem {
   id: string | number;
   name: string;
   price?: number;
   category?: string;
+  subcategory?: string;
+  categoryType?: string;
   description?: string;
+  img?: string;
   available?: boolean;
 }
