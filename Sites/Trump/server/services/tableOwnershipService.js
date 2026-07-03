@@ -46,6 +46,15 @@ class TableOwnershipService {
     const w = norm(waiterName);
     if (!t || !w) { const e = new Error('tableId and waiterName are required'); e.statusCode = 400; throw e; }
 
+    // WaiterAssignment has an FK to Table(restaurantId, tableId); assigning an
+    // unknown table would otherwise surface as a raw Prisma FK 500 that also
+    // leaks the constraint name. Validate up front → clean 404.
+    const table = await getPrisma().table.findUnique({
+      where: { restaurantId_tableId: { restaurantId: this.restaurantId, tableId: t } },
+      select: { tableId: true }
+    });
+    if (!table) { const e = new Error(`Unknown table: ${t}`); e.statusCode = 404; throw e; }
+
     const current = await this.getOwner(t);
     const previousWaiter = current?.waiterName || '';
     if (current && previousWaiter.toLowerCase() === w.toLowerCase()) return current; // no-op: already owner
