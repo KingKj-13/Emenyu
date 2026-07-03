@@ -66,6 +66,11 @@ tables/
 *brain_memory.json
 *menu_embeddings.pkl
 
+# Full-resolution image originals (~3GB) kept by scripts/optimize-images-oneoff.js,
+# and the generated thumbnail set — media ships to the box via rsync/tar, not git.
+Sites/Trump/Images/_originals/
+Sites/Trump/Images/thumbnails/
+
 # Video files (too large for GitHub)
 *.mp4
 *.mov
