@@ -3,8 +3,7 @@ import { X, Heart, Plus, Minus, ShoppingCart, ChevronLeft } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
-import { resolveImage, resolveVideo, resolveYouTubeEmbed } from '../../lib/imageResolver';
-import { BASE_PATH } from '../../constants/api';
+import { resolveImage, resolveVideo, resolveYouTubeEmbed, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import { api } from '../../services/api';
 import type { MenuItem } from '../../types/menu';
@@ -138,7 +137,7 @@ export function ItemModal({
 
   if (!item) return null;
 
-  const imgSrc = imgError ? `${BASE_PATH}/Images/Tomahawk.jpg` : resolveImage(item);
+  const imgSrc = imgError ? FALLBACK_IMAGE : resolveImage(item);
   const videoSrc = videoError ? null : resolveVideo(item);
   const youtubeSrc = videoError ? null : resolveYouTubeEmbed(item, playMedia);
 

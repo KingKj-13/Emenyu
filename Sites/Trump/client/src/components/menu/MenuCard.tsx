@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, memo } from 'react';
 import { Heart, Plus, Star, Sparkles, Wine } from 'lucide-react';
-import { resolveImage } from '../../lib/imageResolver';
-import { BASE_PATH } from '../../constants/api';
+import { resolveImage, resolveThumbnail, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import type { MenuItem } from '../../types/menu';
 import styles from './MenuCard.module.css';
@@ -18,13 +17,17 @@ interface MenuCardProps {
 export const MenuCard = memo(function MenuCard({
   item, isFavorite, onFavoriteToggle, onAddToCart, onClick, onPairingClick
 }: MenuCardProps) {
-  const [imgError, setImgError] = useState(false);
+  // Cards load the 300px thumbnail; if it's missing fall back to the full
+  // image, then to the brand fallback (step 0 → 1 → 2).
+  const [imgStep, setImgStep] = useState(0);
   const cardRef = useRef<HTMLElement | null>(null);
-  const imgSrc = imgError ? `${BASE_PATH}/Images/Tomahawk.jpg` : resolveImage(item);
+  const thumbSrc = resolveThumbnail(item);
+  const fullSrc = resolveImage(item);
+  const imgSrc = imgStep === 0 ? thumbSrc : imgStep === 1 && fullSrc !== thumbSrc ? fullSrc : FALLBACK_IMAGE;
   const soldOut = item.available === false;
 
   useEffect(() => {
-    setImgError(false);
+    setImgStep(0);
   }, [item.name]);
 
   return (
@@ -44,7 +47,10 @@ export const MenuCard = memo(function MenuCard({
             alt={item.name}
             className={styles.image}
             loading="lazy"
-            onError={() => setImgError(true)}
+            decoding="async"
+            width={600}
+            height={400}
+            onError={() => setImgStep(step => (step < 2 ? step + 1 : step))}
           />
         )}
         <div className={styles.imageTint} />

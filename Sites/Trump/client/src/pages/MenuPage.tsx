@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
+import { preload } from 'react-dom';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSocketEvent } from '../hooks/useSocket';
 import { AppShell } from '../components/layout/AppShell';
@@ -20,7 +21,7 @@ import { useFavorites } from '../hooks/useFavorites';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { useApp } from '../context/AppContext';
 import { buildMenuSections, flattenMenu, normalizeName } from '../lib/menuUtils';
-import { resolveImage } from '../lib/imageResolver';
+import { resolveImage, resolveThumbnail } from '../lib/imageResolver';
 import { FOOD_CHAPTERS } from '../constants/chapters';
 import type { MenuItem } from '../types/menu';
 import styles from './MenuPage.module.css';
@@ -93,6 +94,16 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   }, [menuData, activeFilters, searchQuery, sectionFilter]);
 
   const allItems = useMemo(() => flattenMenu(menuData), [menuData]);
+
+  // Warm the first-screen card images: preload the first section's leading
+  // thumbnails so the top of the menu paints immediately (the rest lazy-load).
+  useEffect(() => {
+    const firstItems = sections[0]?.items?.slice(0, 6) ?? [];
+    for (const item of firstItems) {
+      const src = resolveThumbnail(item);
+      if (src) preload(src, { as: 'image' });
+    }
+  }, [sections]);
 
   const scrolledSectionRef = useRef<string | null>(null);
   useEffect(() => {

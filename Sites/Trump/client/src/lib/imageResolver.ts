@@ -218,6 +218,10 @@ export function isVideoEligible(item: MenuItem): boolean {
   return !isDrinkItem(item) || isCocktailItem(item);
 }
 
+// Universal fallback — a file that actually exists in the current Images set
+// (the 2026-07 menu rework removed the old Tomahawk.jpg/Cheese Cake.jpg files).
+export const FALLBACK_IMAGE = `${BASE_PATH}/Images/trumps.jpg`;
+
 function demoImageFor(item: MenuItem): string {
   const text = mediaText(item);
   const compact = normalizedMediaText(item);
@@ -229,8 +233,7 @@ function demoImageFor(item: MenuItem): string {
     }
   }
 
-  if (isDessertItem(item)) return `${BASE_PATH}/Images/Cheese Cake.jpg`;
-  return `${BASE_PATH}/Images/Tomahawk.jpg`;
+  return FALLBACK_IMAGE;
 }
 
 function demoVideoFor(item: MenuItem): string | null {
@@ -267,7 +270,10 @@ function demoVideoFor(item: MenuItem): string | null {
 
 export function resolveImage(item: MenuItem): string {
   if (item.imageVisible === false) return '';
-  if (isDrinkItem(item)) return demoImageFor(item);
+  // Drinks with a real photo (wine bottles, cocktails — the 2026-07 menu set)
+  // use it like any other item; the curated drink-fallback map only serves
+  // items that have no explicit image.
+  if (isDrinkItem(item) && !(item.img && item.img.trim())) return demoImageFor(item);
 
   const raw = item.img;
   if (raw && raw.trim()) {
@@ -287,6 +293,20 @@ export function resolveImage(item: MenuItem): string {
   }
 
   return demoImageFor(item);
+}
+
+// 300px card thumbnail for a resolved image URL. The one-off optimizer and the
+// upload pipeline both emit Images/thumbnails/<stem>.webp and
+// uploads/thumbnails/<stem>.webp next to every full-size asset; anything that
+// doesn't follow that layout just uses its full image. Callers should fall
+// back to resolveImage() output onError (thumbnails are derived, not
+// guaranteed).
+export function resolveThumbnail(item: MenuItem): string {
+  const full = resolveImage(item);
+  const match = full.match(/^(\/(?:Trump|trump)\/(?:Images|uploads))\/([^/]+)\.(?:jpe?g|png|webp)$/i);
+  if (!match) return full;
+  const stem = match[2];
+  return `${match[1]}/thumbnails/${stem}.webp`;
 }
 
 export function resolveVideo(item: MenuItem): string | null {
