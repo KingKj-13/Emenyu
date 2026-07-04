@@ -72,9 +72,12 @@ function createWaiterApiController(deps) {
       const tableId = getCanonicalTableId(req.params.tableId);
       try {
         const cart = await buildTableCart(tableId);
-        const [guestIntel, opportunity, tableInfo] = await Promise.all([
-          guestService.getGuestIntel({ tableId }),
-          opportunityService.getOpportunity({ cart }),
+        // Phase 1 (Recommendation Brain): guestIntel feeds the opportunity's own
+        // recommend() call (favourite boost / allergy exclusion), so it must
+        // resolve before getOpportunity runs, not alongside it.
+        const guestIntel = await guestService.getGuestIntel({ tableId });
+        const [opportunity, tableInfo] = await Promise.all([
+          opportunityService.getOpportunity({ cart, guestIntel }),
           getTableInfo(tableId)
         ]);
         const pitch = await nlgService.phrase({
@@ -93,10 +96,8 @@ function createWaiterApiController(deps) {
       const { tableId, dishName, tone } = req.body || {};
       try {
         const cart = tableId ? await buildTableCart(tableId) : (req.body?.cart || []);
-        const [opportunity, guestIntel] = await Promise.all([
-          opportunityService.getOpportunity({ cart }),
-          tableId ? guestService.getGuestIntel({ tableId }) : Promise.resolve({ present: false })
-        ]);
+        const guestIntel = tableId ? await guestService.getGuestIntel({ tableId }) : { present: false };
+        const opportunity = await opportunityService.getOpportunity({ cart, guestIntel });
         const suggestion = opportunity.suggestedItem;
         const dish = dishName
           ? { name: dishName }
@@ -116,6 +117,8 @@ function createWaiterApiController(deps) {
           tableId: tableId ? getCanonicalTableId(tableId) : null,
           suggestion,
           expectedRevenue: opportunity.increase,
+          expectedValue: opportunity.expectedValue,
+          replacement: opportunity.replacement || null,
           successRate: Math.round((opportunity.probability || 0) * 100),
           sayToTable,
           whyItWorks,

@@ -4,7 +4,7 @@
 // also looks right inside the waiter theme.
 import { useState } from 'react';
 import { Plus, Sparkles, Play } from 'lucide-react';
-import { resolveImage, resolveAssetPath, resolveVideo } from '../../lib/imageResolver';
+import { resolveImage, resolveAssetPath, resolveVideo, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import type { MenuItem } from '../../types/menu';
 import styles from './RecommendationCard.module.css';
@@ -22,6 +22,12 @@ export interface RecommendationItem {
   chef?: boolean;
   rotationGroup?: string;
   dbId?: number;
+  // Phase 1 (Recommendation Brain) — not yet rendered by this card (no UI
+  // redesign this phase); typed here so callers can read them without `any`.
+  confidence?: number;
+  expectedValue?: number;
+  netRevenueIncrease?: number;
+  replacement?: { name: string; previousPrice: number } | null;
 }
 
 interface Props {
@@ -38,8 +44,6 @@ interface Props {
   youChoice?: boolean;  // marks the dish whose modal is currently open
   playable?: boolean;   // poster-first, tap-to-play video (never autoplays/eager-loads)
 }
-
-const FALLBACK_IMAGE = resolveAssetPath('Images/Tomahawk.jpg');
 
 // A RecommendationItem carries only the fields the engine returns; project it onto
 // the MenuItem shape the image/video resolvers expect (categoryType drives both the

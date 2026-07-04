@@ -18,6 +18,7 @@ const classifier = require('../server/services/categoryClassifier');
 const { createRecommendationRules } = require('../server/services/recommendationRules');
 const { createRotationService } = require('../server/services/rotationService');
 const nlu = require('../server/services/chatbotNlu');
+const scoring = require('../server/services/recommendationScoring');
 
 const results = [];
 let section = '';
@@ -122,6 +123,34 @@ const rules = createRecommendationRules({ config: { reco: { maxBeverages: 1, enf
   check('Algorithmic starter still dropped at closing', !keptNames(kept).includes('Snails'), `kept: ${keptNames(kept).join(', ')}`);
 }
 
+// Phase 1 (Recommendation Brain) — Replacement Logic: a same-kind beverage
+// candidate tagged isReplacement passes R4 (it's a swap, not an addition), and
+// does NOT count toward the beverage cap; an ordinary same-kind candidate
+// (no isReplacement flag) is still blocked exactly as before (no regression).
+{
+  const cart = [{ name: 'House Shiraz', categoryType: 'WINE', beverageKind: 'WINE' }];
+  const cands = [
+    { item: { name: 'Reserve Cabernet', categoryType: 'WINE' }, score: 60, beverageKind: 'WINE', isReplacement: true },
+    { item: { name: 'Another Shiraz', categoryType: 'WINE' }, score: 55, beverageKind: 'WINE' } // no isReplacement flag
+  ];
+  const { kept } = rules.applyCategorySafety(cands, cart);
+  check('isReplacement candidate passes R4 (upgrade, not addition)', keptNames(kept).includes('Reserve Cabernet'), `kept: ${keptNames(kept).join(', ') || 'none'}`);
+  check('non-replacement same-kind candidate still blocked by R4 (no regression)', !keptNames(kept).includes('Another Shiraz'), `kept: ${keptNames(kept).join(', ') || 'none'}`);
+}
+// isReplacement is NOT a free pass against R2 — it only excuses R4/R1 (same-kind
+// "already in cart" + the cap-count). If a cocktail is already primary in this
+// same batch, a wine tagged isReplacement is still blocked from joining it.
+{
+  const cart = [{ name: 'House Shiraz', categoryType: 'WINE', beverageKind: 'WINE' }];
+  const cands = [
+    { item: { name: 'Margarita', categoryType: 'DRINK' }, score: 90, beverageKind: 'COCKTAIL' },
+    { item: { name: 'Reserve Cabernet', categoryType: 'WINE' }, score: 60, beverageKind: 'WINE', isReplacement: true }
+  ];
+  const { kept } = rules.applyCategorySafety(cands, cart);
+  const kinds = kept.filter(c => ['WINE', 'DRINK'].includes(c.item.categoryType)).map(c => c.beverageKind);
+  check('isReplacement does not bypass R2: same-batch cocktail still blocks a wine replacement', !(kinds.includes('WINE') && kinds.includes('COCKTAIL')), `kinds: ${kinds.join(', ')}`);
+}
+
 // Chef beverage primacy still applies — chef wine + algorithmic cocktail never co-appear.
 {
   const cart = [{ name: 'Ribeye', categoryType: 'MAIN' }];
@@ -208,6 +237,98 @@ intentPhrases.forEach(p => {
 {
   const n = nlu.normalize('something spicy pls');
   check('chat-speak: "something spicy pls" keeps "spicy"', n.tokens.includes('spicy'), `tokens=[${n.tokens.join(', ')}]`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+group('5. Recommendation Brain scoring (Phase 1: confidence, expected value, replacement, tier weights)');
+
+// Confidence bands by source tier.
+eq('chef candidate -> confidence 0.92', scoring.baseConfidence({ chef: true }), 0.92);
+eq('score>=1000 (hero) -> confidence 0.9', scoring.baseConfidence({ score: 1200 }), 0.9);
+eq('score>=200 (tag-match) -> confidence 0.8', scoring.baseConfidence({ score: 250 }), 0.8);
+eq('score>=84 (perfect-pairing) -> confidence 0.72', scoring.baseConfidence({ score: 90 }), 0.72);
+eq('score>=60 (course completion) -> confidence 0.62', scoring.baseConfidence({ score: 70 }), 0.62);
+eq('low score (popular/backfill) -> confidence 0.5', scoring.baseConfidence({ score: 10 }), 0.5);
+
+// Guest-aware confidence: favourite boost, VIP nudge, no guest = unchanged.
+{
+  const guestIntel = { present: true, favorites: { wine: 'House Shiraz' }, topItems: [], vip: false };
+  const boosted = scoring.guestAdjustedConfidence(0.6, { name: 'House Shiraz' }, guestIntel);
+  check('guest favourite match boosts confidence', boosted > 0.6, `got=${boosted}`);
+  const vipGuest = { present: true, favorites: {}, topItems: [], vip: true };
+  const vipBoosted = scoring.guestAdjustedConfidence(0.6, { name: 'Something Else' }, vipGuest);
+  check('VIP guest gets a small confidence nudge', vipBoosted > 0.6 && vipBoosted < boosted, `got=${vipBoosted}`);
+  check('no guestIntel -> confidence unchanged', scoring.guestAdjustedConfidence(0.6, { name: 'X' }, null) === 0.6);
+}
+
+// Allergy/avoid hard-exclusion signal.
+{
+  const guestIntel = { present: true, allergies: 'shellfish, nuts', avoids: [] };
+  check('allergy match detected (shellfish in prawns dish)', scoring.isAllergyMatch({ name: 'Garlic Prawns', searchText: 'garlic prawns shellfish' }, guestIntel));
+  check('no allergy match for an unrelated dish', !scoring.isAllergyMatch({ name: 'Ribeye Steak', searchText: 'ribeye steak beef' }, guestIntel));
+}
+
+// Replacement-aware expected value — the brief's own worked examples.
+{
+  // Wine A (R210 in cart) -> Wine B (R255 candidate) must report a +R45 increase, NOT +R255.
+  const menuByName = new Map([
+    ['wine a', { name: 'Wine A', categoryType: 'WINE' }],
+  ]);
+  const cart = [{ name: 'Wine A', price: 210 }];
+  const target = scoring.findReplacementTarget({ name: 'Wine B', categoryType: 'WINE' }, cart, menuByName);
+  check('replacement target found (same-role wine swap)', target && target.name === 'Wine A' && target.price === 210, JSON.stringify(target));
+  const increase = scoring.netRevenueIncrease(255, target);
+  eq('Wine A (R210) -> Wine B (R255) reports +R45, not +R255', increase, 45);
+
+  // Pure add: a STARTER/side candidate with a MAIN already in the cart shares no
+  // role with anything present, so there is no replacement target — full price.
+  const noTarget = scoring.findReplacementTarget(
+    { name: 'Loaded Fries', categoryType: 'STARTER' },
+    [{ name: 'Ribeye', price: 320, categoryType: 'MAIN' }],
+    new Map()
+  );
+  check('no same-role cart item -> no replacement target (pure add)', noTarget === null, JSON.stringify(noTarget));
+  const pureAddIncrease = scoring.netRevenueIncrease(55, noTarget);
+  eq('pure add (no replacement target) reports full price', pureAddIncrease, 55);
+
+  // Expected Value = confidence x net revenue increase — the brief's own example math.
+  const wineEV = Number((0.05 * 450).toFixed(2));
+  eq('Expected Value: 5% x R450 = R22.50', wineEV, 22.5);
+  const friesEV = Number((0.8 * 55).toFixed(2));
+  eq('Expected Value: 80% x R55 = R44', friesEV, 44);
+  check('higher-EV Loaded Fries outranks lower-EV Wine upgrade', friesEV > wineEV);
+}
+
+// Dessert under-order promotion: a course ordered less than the others gets a
+// higher tier weight so a strong dessert candidate can still win on final score.
+{
+  const orderRecords = [
+    { items: [{ name: 'Ribeye' }, { name: 'House Shiraz' }] },
+    { items: [{ name: 'Ribeye' }, { name: 'House Shiraz' }] },
+    { items: [{ name: 'Calamari' }, { name: 'Ribeye' }] },
+    { items: [{ name: 'Malva Pudding' }] }, // dessert attached to only 1/4 orders
+  ];
+  const menuByName = new Map([
+    ['ribeye', { name: 'Ribeye', categoryType: 'MAIN' }],
+    ['house shiraz', { name: 'House Shiraz', categoryType: 'WINE' }],
+    ['calamari', { name: 'Calamari', categoryType: 'STARTER' }],
+    ['malva pudding', { name: 'Malva Pudding', categoryType: 'DESSERT' }],
+  ]);
+  const weights = scoring.tierWeights(orderRecords, menuByName);
+  check('dessert tier weight promoted above its base 0.7 when under-ordered', weights.DESSERT > 0.7, `weights=${JSON.stringify(weights)}`);
+  check('wine keeps priority-1 base weight (1.0)', weights.WINE === 1.0, `weights=${JSON.stringify(weights)}`);
+  check('priority order preserved as a prior: wine >= main >= starter', weights.WINE >= weights.MAIN && weights.MAIN >= weights.STARTER);
+}
+
+// scoreCandidate end-to-end: chef gets the highest confidence, non-chef candidates
+// get a finalScore usable for ranking.
+{
+  const weights = { WINE: 1.0, MAIN: 0.9, STARTER: 0.8, DESSERT: 0.9, DRINK: 0.85 };
+  const chefCand = { item: { name: 'Chef Pinotage', categoryType: 'WINE', price: 180 }, chef: true, score: 1100 };
+  const scored = scoring.scoreCandidate({ candidate: chefCand, cart: [], menuByName: new Map(), guestIntel: null, weights });
+  eq('chef candidate scored with confidence 0.92', scored.confidence, 0.92);
+  check('pure-add chef candidate: expectedValue = confidence x price', Math.abs(scored.expectedValue - Number((0.92 * 180).toFixed(2))) < 0.01, JSON.stringify(scored));
+  check('no replacement target for a pure add', scored.replacement === null);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

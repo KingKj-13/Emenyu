@@ -94,10 +94,20 @@ function createRecommendationRules({ config = {}, logger = null } = {}) {
 
       if (!reason && isBeverage) {
         const kind = bevKindOf(cand, type);
-        // R4: don't recommend a beverage of a kind already on the table.
-        if (cartKinds.has(kind)) reason = 'beverage:already-in-cart';
-        // R1/R3: total beverage cap.
-        else if (beveragesKept >= maxBeverages) reason = 'beverage:max-reached';
+        // Phase 1 (Recommendation Brain) — Replacement Logic: a candidate the
+        // engine has identified as a same-role UPGRADE of something already in
+        // the cart (cand.isReplacement === true, set by aiService.recommend()
+        // via recommendationScoring.findReplacementTarget) swaps the existing
+        // pour rather than adding a second one. Only R4 ("already in cart") and
+        // R1's cap-COUNTING treat it specially — R2 (never wine+cocktail) and R3
+        // (no secondary headline) are ALWAYS enforced, replacement or not, since
+        // those protect what ends up on the table, not how it got there.
+        const isReplacement = cand.isReplacement === true;
+        // R4: don't recommend a beverage of a kind already on the table — unless
+        // it's an upgrade replacement of that exact kind.
+        if (cartKinds.has(kind) && !isReplacement) reason = 'beverage:already-in-cart';
+        // R1/R3: total beverage cap (a replacement doesn't consume a cap slot).
+        else if (!isReplacement && beveragesKept >= maxBeverages) reason = 'beverage:max-reached';
         // R2 + one-primary: only one primary beverage; never wine+cocktail.
         else if (PRIMARY_BEVERAGES.has(kind) && primaryKept) reason = 'beverage:second-primary';
         // R3: a soft/hot beverage must not headline (no primary yet) unless closing
@@ -106,7 +116,7 @@ function createRecommendationRules({ config = {}, logger = null } = {}) {
         else if (kind === 'SOFT' && isWaterish(cand.item) && !primaryKept && stage !== 'CLOSING') reason = 'beverage:water-headline';
 
         if (!reason) {
-          beveragesKept += 1;
+          if (!isReplacement) beveragesKept += 1;
           if (PRIMARY_BEVERAGES.has(kind)) primaryKept = true;
         }
       }

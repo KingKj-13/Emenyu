@@ -33,6 +33,18 @@ function check(name, pass, detail) { results.push({ section, name, pass: !!pass,
   check('"whats good here" → recommendation', cls('whats good here').type === 'recommendation');
   check('"wats gud" → recommendation (typo)', cls('wats gud').type === 'recommendation');
 
+  // Phase 1 (Recommendation Brain): finer occasionDetail alongside the coarse
+  // occasion bucket above — the bucket must stay unchanged (existing tag-match/
+  // archetype consumers depend on it), occasionDetail is additive.
+  check('"it\'s her birthday tonight" → occasion=celebration (unchanged) + occasionDetail=birthday', cls("it's her birthday tonight").slots.occasion === 'celebration' && cls("it's her birthday tonight").slots.occasionDetail === 'birthday');
+  check('"our wedding anniversary" → occasionDetail=anniversary', cls('our wedding anniversary').slots.occasionDetail === 'anniversary');
+  check('"just graduated, celebrating" → occasionDetail=graduation', cls('just graduated, celebrating').slots.occasionDetail === 'graduation');
+  check('"a client dinner tonight" → occasionDetail=business_dinner', cls('a client dinner tonight').slots.occasionDetail === 'business_dinner');
+  check('"watching the rugby" → occasionDetail=sports_night', cls('watching the rugby').slots.occasionDetail === 'sports_night');
+  check('"date night for two" → occasionDetail=date', cls('date night for two').slots.occasionDetail === 'date');
+  check('"just an engagement party" → occasionDetail=celebration (generic fallback)', cls('just an engagement party').slots.occasionDetail === 'celebration');
+  check('no occasion words → occasionDetail is null', cls('something spicy please').slots.occasionDetail === null);
+
   // ── 2. Tag scoring (pure, against metadata.tags) ────────────────────────────
   group('2. Tag scoring (intent slots × item tags)');
   const spicy = { kind: 'FOOD', course: 'MAIN', spice: 2, richness: 1, protein: ['chicken'], occasion: ['sharing'] };
@@ -85,6 +97,30 @@ function check(name, pass, detail) { results.push({ section, name, pass: !!pass,
   check('session lastWine = the red (NEDERBURG CABERNET)', ctx.lastWine && ctx.lastWine.name === 'NEDERBURG CABERNET', `lastWine=${ctx.lastWine && ctx.lastWine.name}`);
   const cartCtx = chatSession.build([], fixtureCtx, [{ name: 'SEARED SALMON' }]);
   check('cart item becomes the anchor', cartCtx.anchorDish && cartCtx.anchorDish.name === 'SEARED SALMON', `anchor=${cartCtx.anchorDish && cartCtx.anchorDish.name}`);
+
+  // ── 4b. Phase 1: "one suggestion at a time, wait if ignored" (stateless) ────
+  group('4b. Recommendation Brain — ignored-suggestion cooldown (derived from history)');
+  const ignoredHistory = [
+    { role: 'user', content: "what's good here" },
+    { role: 'assistant', content: 'I would steer you toward the SEARED SALMON.' },
+    { role: 'user', content: 'actually tell me about your hours' },
+  ];
+  const ignoredCtx = chatSession.build(ignoredHistory, fixtureCtx, []);
+  check('an ignored suggestion (not added, guest moved on) is flagged', ignoredCtx.ignoredNames.includes('SEARED SALMON'), `ignoredNames=${JSON.stringify(ignoredCtx.ignoredNames)}`);
+
+  const acceptedHistory = [
+    { role: 'user', content: "what's good here" },
+    { role: 'assistant', content: 'I would steer you toward the SEARED SALMON.' },
+  ];
+  const acceptedCtx = chatSession.build(acceptedHistory, fixtureCtx, [{ name: 'SEARED SALMON' }]);
+  check('a suggestion the guest added to cart is NOT flagged as ignored', !acceptedCtx.ignoredNames.includes('SEARED SALMON'), `ignoredNames=${JSON.stringify(acceptedCtx.ignoredNames)}`);
+
+  const midTurnHistory = [
+    { role: 'user', content: "what's good here" },
+    { role: 'assistant', content: 'I would steer you toward the SEARED SALMON.' },
+  ];
+  const midTurnCtx = chatSession.build(midTurnHistory, fixtureCtx, []);
+  check('no newer user message yet (still mid-turn) -> nothing flagged as ignored', midTurnCtx.ignoredNames.length === 0, `ignoredNames=${JSON.stringify(midTurnCtx.ignoredNames)}`);
 
   // ── 5. Phase 3C: authored hero pairings (Commit A) ──────────────────────────
   group('5. Authored hero pairings');

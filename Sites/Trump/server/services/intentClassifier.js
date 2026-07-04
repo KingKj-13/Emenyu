@@ -34,6 +34,22 @@ const OCCASION_MAP = [
   ['group', /\b(big group|large group|whole table|group booking|platter for|for the whole)\b/],
 ];
 
+// Phase 1 (Recommendation Brain): finer-grained occasion detection, layered
+// ON TOP of OCCASION_MAP above — slots.occasion (the coarse bucket) keeps
+// driving the existing tag-match/archetype boost in aiService unchanged;
+// slots.occasionDetail adds the specific occasion for waiter scripts and the
+// chatbot's own follow-up questions (birthday/anniversary/etc). Order matters:
+// more specific buckets are checked before the generic "celebration" fallback.
+const OCCASION_DETAIL_MAP = [
+  ['birthday', /\b(birthday|bday|born day)\b/],
+  ['anniversary', /\b(anniversary|years together|wedding anniversary)\b/],
+  ['graduation', /\b(graduation|graduated|graduating|degree|diploma)\b/],
+  ['business_dinner', /\b(business dinner|client dinner|work dinner|colleagues|business meeting|client meeting|work function|corporate|with the team|the boss)\b/],
+  ['sports_night', /\b(football|soccer|rugby|cricket|the game|the match|world cup|watching the game|match night)\b/],
+  ['date', /\b(date night|date|romantic|just the two|for two|impress)\b/],
+  ['celebration', /\b(celebrat|engagement|promotion|special occasion|milestone|achievement)\b/],
+];
+
 const PAIRING_RE = /\b(pair|pairs|pairing|go with|goes with|with this|with my|wine for|drink for|what wine|what goes)\b/;
 const SWAP_RE = /\b(instead|rather have|swap|change to|actually)\b/;
 const INFO_RE = /\b(hours|opening|closing|book a table|booking|reserve|reservation|parking|wifi|wi-fi|corkage|address|located|location|allerg|halal)\b/;
@@ -42,7 +58,7 @@ const OFFTOPIC_RE = /\b(stock|share price|weather|the news|bitcoin|crypto|presid
 function classify(message) {
   const norm = nlu.normalize(message);
   const text = ` ${norm.normalized} `;
-  const slots = { proteinWanted: [], spice: false, body: null, dietary: [], occasion: null };
+  const slots = { proteinWanted: [], spice: false, body: null, dietary: [], occasion: null, occasionDetail: null };
 
   for (const [p, re] of PROTEIN_MAP) if (re.test(text)) slots.proteinWanted.push(p);
   if (SPICE_RE.test(text)) slots.spice = true;
@@ -50,6 +66,7 @@ function classify(message) {
   else if (HEARTY_RE.test(text)) slots.body = 'full';
   for (const [d, re] of DIETARY_MAP) if (re.test(text) && !slots.dietary.includes(d)) slots.dietary.push(d);
   for (const [o, re] of OCCASION_MAP) if (re.test(text)) { slots.occasion = o; break; }
+  for (const [o, re] of OCCASION_DETAIL_MAP) if (re.test(text)) { slots.occasionDetail = o; break; }
 
   // Precedence: swap → pairing → occasion → dietary → attribute → recommendation → info → off-topic.
   let type = 'none';

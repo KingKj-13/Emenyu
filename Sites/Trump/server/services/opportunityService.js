@@ -1,6 +1,9 @@
 // Revenue Opportunity Engine — deterministic. Wraps aiService.recommend() (no AI here).
-// Turns the current cart into a structured "best next action" with a probability,
-// derived purely from the recommendation source/category. Wording added by nlg layer.
+// Turns the current cart into a structured "best next action". Phase 1
+// (Recommendation Brain): probability/increase are no longer computed here —
+// aiService.recommend() already scores every candidate (confidence +
+// replacement-aware expected value) via recommendationScoring.js, so this
+// service just reads those fields off the best candidate. One source of truth.
 
 function quantity(item = {}) {
   return Number(item.qty || item.quantity || 1) || 1;
@@ -8,19 +11,6 @@ function quantity(item = {}) {
 
 function cartTotal(cart = []) {
   return cart.reduce((sum, item) => sum + (Number(item.price) || 0) * quantity(item), 0);
-}
-
-// Conversion likelihood keyed off the deterministic recommendation source + course.
-function probabilityFor(source, categoryType) {
-  const s = String(source || '').toLowerCase();
-  if (s.includes('people also ordered')) return 0.78;
-  if (s.includes('perfect') || s.includes('pairing')) return 0.82;
-  if (s.includes('sweet finish') || categoryType === 'DESSERT') return 0.74;
-  if (categoryType === 'WINE') return 0.8;
-  if (categoryType === 'DRINK') return 0.7;
-  if (s.includes('start')) return 0.66;
-  if (s.includes('popular')) return 0.6;
-  return 0.62;
 }
 
 function actionLabel(categoryType, name = '') {
@@ -34,11 +24,11 @@ function actionLabel(categoryType, name = '') {
 }
 
 function createOpportunityService({ config, aiService }) {
-  async function getOpportunity({ cart = [] } = {}) {
+  async function getOpportunity({ cart = [], guestIntel = null } = {}) {
     const currentBill = Number(cartTotal(cart).toFixed(2));
     let recs = [];
     try {
-      recs = await aiService.recommend({ cart, limit: 6 });
+      recs = await aiService.recommend({ cart, limit: 6, guestIntel });
     } catch {
       recs = [];
     }
@@ -58,15 +48,20 @@ function createOpportunityService({ config, aiService }) {
 
     const best = recs[0];
     const price = Number(best.price) || 0;
-    const probability = probabilityFor(best.source_title, best.categoryType);
-    const potentialBill = Number((currentBill + price).toFixed(2));
+    // Phase 1: read the brain's own confidence + replacement-aware increase —
+    // never recompute a second probability model for the same recommendation.
+    const probability = Number(best.confidence) || 0;
+    const increase = Number(best.netRevenueIncrease ?? price);
+    const potentialBill = Number((currentBill + increase).toFixed(2));
 
     return {
       hasOpportunity: true,
       currentBill,
       potentialBill,
-      increase: Number(price.toFixed(2)),
+      increase: Number(increase.toFixed(2)),
       probability,
+      expectedValue: Number(best.expectedValue) || 0,
+      replacement: best.replacement || null,
       bestAction: actionLabel(best.categoryType, best.name),
       suggestedItem: {
         name: best.name,
@@ -81,7 +76,9 @@ function createOpportunityService({ config, aiService }) {
         price: Number(r.price) || 0,
         img: r.img,
         categoryType: r.categoryType,
-        source: r.source_title
+        source: r.source_title,
+        confidence: r.confidence,
+        expectedValue: r.expectedValue
       }))
     };
   }

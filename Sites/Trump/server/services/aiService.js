@@ -11,6 +11,7 @@ const { createReasonComposer } = require('./reasonComposer');
 const { createHeroPairings } = require('./heroPairings');
 const { computeOrderedTogether } = require('./marketBasket');
 const { SmartPairingEngine } = require('./smartPairingEngine');
+const scoring = require('./recommendationScoring');
 
 const SPECIAL_WORDS = [
   'birthday',
@@ -442,6 +443,16 @@ class AiService {
     });
   }
 
+  // Phase 1 (Recommendation Brain): course-attach-rate-derived tier weights
+  // (dessert promoted when measurably under-ordered vs the other courses).
+  // Cached alongside popularity — same inputs, same refresh cadence.
+  getTierWeights() {
+    return this._cached('tierWeights', async () => {
+      const [menuContext, orderRecords] = await Promise.all([this.getMenuContext(), this.getOrderRecords()]);
+      return scoring.tierWeights(orderRecords, menuContext.byName);
+    });
+  }
+
   async chat(payload = {}) {
     const requestBody = {
       ...payload,
@@ -501,7 +512,8 @@ class AiService {
         reason: nlu.tokens.join(' '),
         tableId: requestBody.tableId,
         deviceId: payload.deviceId,
-        menuContext
+        menuContext,
+        excludeNames: session.ignoredNames
       });
       // Phase 3B: when there's a cart, make the lead a cart-aware cross-sell.
       const cartLead = this.cartAwareLead(cart, suggestions);
@@ -520,6 +532,7 @@ class AiService {
       const suggestions = await this.recommend({
         cart,
         limit: 4,
+        excludeNames: session.ignoredNames,
         intent,
         reason: nlu.tokens.join(' '),
         tableId: requestBody.tableId,
@@ -585,8 +598,38 @@ class AiService {
       }
     }
 
+    // Phase 1 (Recommendation Brain): occasion detection from a CART SIGNAL, not
+    // just words — a guest adding a sparkling/Champagne pour without having said
+    // anything about an occasion is the brief's own example. Ask once per
+    // conversation (derived from history, no new state) and only when the guest
+    // hasn't already told us the occasion this turn.
+    if (!intent.slots.occasion && !intent.slots.occasionDetail) {
+      const occasionPrompt = this.celebratoryOccasionPrompt(cart, menuContext, payload.history);
+      if (occasionPrompt) {
+        responseData = { ...responseData, reply: `${occasionPrompt} ${responseData.reply || ''}`.trim() };
+      }
+    }
+
     await this.appendChatLog(requestBody, responseData);
     return responseData;
+  }
+
+  // Phase 1 (Recommendation Brain): last cart line resolves to a sparkling/
+  // Champagne pour, and we haven't already asked this conversation.
+  celebratoryOccasionPrompt(cart, menuContext, history) {
+    if (!Array.isArray(cart) || cart.length === 0) return null;
+    const last = cart[cart.length - 1];
+    const resolved = fuzzyFindItem(menuContext, last?.name) || last;
+    const text = `${resolved?.name || ''} ${resolved?.category || ''} ${resolved?.subcategory || ''}`.toLowerCase();
+    const isCelebratory = resolved?.categoryType === 'WINE' && /champagne|sparkling|cap classique|\bmcc\b|prosecco/.test(text);
+    if (!isCelebratory) return null;
+
+    const alreadyAsked = (Array.isArray(history) ? history : []).some(
+      msg => msg?.role === 'assistant' && typeof msg.content === 'string' && /celebrating something/i.test(msg.content)
+    );
+    if (alreadyAsked) return null;
+
+    return 'Are you celebrating something tonight?';
   }
 
   // ── Exclusion ("no X") handling ───────────────────────────────────────────
@@ -631,7 +674,7 @@ class AiService {
     const cart = this.readCart(payload);
     const [menuContext, recs] = await Promise.all([
       this.getMenuContext(),
-      this.recommend({ cart, limit: 8, reason: payload.reason })
+      this.recommend({ cart, limit: 8, reason: payload.reason, guestIntel: payload.guestIntel })
     ]);
     const cartNames = new Set(cart.map(c => normalizeName(c.name)));
     const csvRecs = this.smartPairings.recommend({ cart, menuContext, limit: 4 });
@@ -647,6 +690,10 @@ class AiService {
         // source) and fold in the pairing reasoning when we have it.
         const from = r.pairedWith || cart[0]?.name || 'your order';
         const why = r.reason ? ` ${r.reason}` : '';
+        // Phase 1 (Recommendation Brain): the "uplift" a waiter is coached to
+        // expect must be the replacement-aware delta, not the new item's full
+        // price — a same-role swap (e.g. Wine A -> Wine B) only nets the difference.
+        const netIncrease = r.netRevenueIncrease ?? r.price;
         return {
         name: r.name,
         price: r.price,
@@ -655,7 +702,10 @@ class AiService {
         story: r.story || '',
         reason: r.reason || '',
         script: `I see you have the ${from} — many guests pair it with our ${r.name}.${why}`,
-        upsell: Math.round(Number(r.price) || 0),
+        upsell: Math.max(0, Math.round(Number(netIncrease) || 0)),
+        confidence: r.confidence,
+        expectedValue: r.expectedValue,
+        replacement: r.replacement || null,
         // Phase 4 analytics attribution.
         source_title: r.source_title || '',
         rotationGroup: r.rotationGroup || '',
@@ -942,6 +992,14 @@ class AiService {
     if (s.body === 'full') return 'For a hearty plate —';
     if ((s.dietary || []).includes('vegan')) return 'Plant-based picks —';
     if ((s.dietary || []).length) return 'Vegetarian-friendly —';
+    // Phase 1 (Recommendation Brain): occasionDetail is a refinement of the
+    // coarse `occasion` bucket below — check it first so a stated birthday/
+    // anniversary/etc gets a specific lead rather than the generic one.
+    if (s.occasionDetail === 'birthday') return 'Happy birthday to someone at the table — let’s make it special —';
+    if (s.occasionDetail === 'anniversary') return 'Congratulations on the anniversary — for a memorable toast —';
+    if (s.occasionDetail === 'graduation') return 'Congratulations on the graduation — a fitting way to celebrate —';
+    if (s.occasionDetail === 'business_dinner') return 'For a polished business dinner —';
+    if (s.occasionDetail === 'sports_night') return 'Perfect for match night —';
     if (s.occasion === 'sharing') return 'Great for the table —';
     if (s.occasion === 'celebration') return "Let's make it special —";
     if (s.occasion === 'date') return 'For a memorable evening —';
@@ -1065,6 +1123,11 @@ class AiService {
 
     const cartNames = cart.map(item => normalizeName(item.name));
     const seen = new Set(cartNames);
+    // Phase 1 (Recommendation Brain): "wait before suggesting something else" —
+    // chatSession derives which names the guest just ignored (suggested last turn,
+    // not added, not asked about again); recommend() simply excludes them from
+    // this turn's candidates rather than tracking any new state itself.
+    (Array.isArray(payload.excludeNames) ? payload.excludeNames : []).forEach(name => seen.add(normalizeName(name)));
     const candidates = [];
 
     const addCandidate = (item, source, score, extra = {}) => {
@@ -1166,6 +1229,18 @@ class AiService {
         beverageKind: ct === 'WINE' ? 'WINE' : ct === 'DRINK' ? classifier.beverageKind(match || c.name) : 'NONE'
       };
     });
+    // Phase 1 (Recommendation Brain) — Replacement Logic: tag beverage candidates
+    // that are a same-role UPGRADE of something already in the cart (same
+    // categoryType/beverageKind) so the category-safety rules below treat them as
+    // a swap, not an addition (R4/R1 exist to stop beverage PILE-UP, not to block
+    // a guest trading up their current pour). Food-course candidates are untouched
+    // — R5/R7 already handle those via the chef bypass.
+    candidates.forEach(candidate => {
+      const ct = candidate.item?.categoryType || classifier.categoryType(candidate.item);
+      if (ct === 'WINE' || ct === 'DRINK') {
+        candidate.isReplacement = Boolean(scoring.findReplacementTarget(candidate.item, cart, menuContext.byName));
+      }
+    });
     const { ordered } = this.rotation.rotate(candidates, payload);
     const { kept } = this.rules.applyCategorySafety(ordered, enrichedCart);
 
@@ -1178,6 +1253,30 @@ class AiService {
       const filtered = kept.filter(candidate => dietaryOk(candidate.item, wantDiet));
       if (filtered.length) finalKept = filtered;
     }
+
+    // Phase 1 (Recommendation Brain): guest-aware hard exclusion — an allergy/avoid
+    // match never surfaces, regardless of how well it otherwise scores.
+    const guestIntel = payload.guestIntel && payload.guestIntel.present ? payload.guestIntel : null;
+    if (guestIntel) {
+      const safeKept = finalKept.filter(candidate => !scoring.isAllergyMatch(candidate.item, guestIntel));
+      if (safeKept.length) finalKept = safeKept;
+    }
+
+    // Phase 1 (Recommendation Brain): confidence + replacement-aware expected
+    // value, then re-rank by (expectedValue × course tier weight) — Wine > Main >
+    // Side > Dessert as a PRIOR, not a hard gate, so a high-EV dessert (measurably
+    // under-ordered) can still outrank a low-EV wine. Chef recommendations keep
+    // their existing "always wins" position — only the non-chef tail is re-ranked.
+    const tierWeightMap = await this.getTierWeights();
+    const scored = finalKept.map(candidate => ({
+      candidate,
+      brain: scoring.scoreCandidate({ candidate, cart, menuByName: menuContext.byName, guestIntel, weights: tierWeightMap })
+    }));
+    const chefScored = scored.filter(s => s.candidate.chef === true);
+    const restScored = scored
+      .filter(s => s.candidate.chef !== true)
+      .sort((a, b) => b.brain.finalScore - a.brain.finalScore);
+    finalKept = [...chefScored, ...restScored].map(s => ({ ...s.candidate, brain: s.brain }));
 
     // Phase 3C: ONE copy source. Compose every result's reason via reasonComposer
     // (authored hero → chef → tag-true Tier-2 → never-blank), anchored to the
@@ -1194,6 +1293,14 @@ class AiService {
         : (pub.categoryType === 'WINE' ? 'WINE' : pub.categoryType === 'DRINK' ? classifier.beverageKind(candidate.item) : 'NONE');
       if (candidate.reason) pub.reason = candidate.reason;
       pub.chef = candidate.chef === true;
+      // Phase 1 (Recommendation Brain): confidence score, replacement-aware
+      // expected value, and what (if anything) this recommendation would replace.
+      if (candidate.brain) {
+        pub.confidence = candidate.brain.confidence;
+        pub.expectedValue = candidate.brain.expectedValue;
+        pub.netRevenueIncrease = candidate.brain.netRevenueIncrease;
+        pub.replacement = candidate.brain.replacement;
+      }
       // Phase 4: carry the rotation group through so analytics can attribute
       // impressions/clicks to the group the engine drew from.
       pub.rotationGroup = candidate.rotationGroup || '';

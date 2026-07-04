@@ -15,6 +15,31 @@ function itemsInText(text, sortedItems) {
   return sortedItems.filter(item => compact.includes(normalizeName(item.name)));
 }
 
+// Phase 1 (Recommendation Brain): "one suggestion at a time, wait if ignored".
+// Derived the same stateless way as everything else here — no new persistence,
+// just reading the assistant's OWN last turn from the history the client already
+// sends. If the assistant's last reply named suggestions and the guest's newest
+// message didn't add any of them to the cart or ask for more, those names are
+// "recently ignored" and recommend() should avoid leading with them again.
+function lastAssistantSuggestions(history, sorted) {
+  const list = Array.isArray(history) ? history : [];
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    const msg = list[i];
+    if (msg && msg.role === 'assistant' && typeof msg.content === 'string') {
+      return itemsInText(msg.content, sorted).map(item => item.name);
+    }
+  }
+  return [];
+}
+
+function hasNewerUserMessageSince(history) {
+  const list = Array.isArray(history) ? history : [];
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    if (list[i] && list[i].role === 'assistant') return i < list.length - 1;
+  }
+  return false;
+}
+
 // history: [{ role: 'user'|'assistant', content: string }] (oldest → newest).
 function build(history = [], menuContext = {}, cart = []) {
   const items = (menuContext && Array.isArray(menuContext.items)) ? menuContext.items : [];
@@ -39,12 +64,19 @@ function build(history = [], menuContext = {}, cart = []) {
   const lastWine = reversed.find(item => item.categoryType === 'WINE') || null;
   const lastDrink = reversed.find(item => ['WINE', 'DRINK'].includes(item.categoryType)) || null;
 
+  const cartNames = new Set((Array.isArray(cart) ? cart : []).map(line => normalizeName(line && line.name)));
+  const suggestedNames = lastAssistantSuggestions(history, sorted);
+  const ignoredNames = hasNewerUserMessageSince(history)
+    ? suggestedNames.filter(name => !cartNames.has(normalizeName(name)))
+    : [];
+
   return {
     anchorDish,
     lastWine,
     lastDrink,
     lastCourse: mentioned.length ? mentioned[mentioned.length - 1].categoryType : null,
     mentioned: mentioned.map(item => item.name),
+    ignoredNames,
   };
 }
 

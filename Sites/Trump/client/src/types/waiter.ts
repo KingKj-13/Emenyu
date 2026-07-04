@@ -12,6 +12,13 @@ export interface GuestEvent {
   script?: string;
 }
 
+// Phase 1 (Recommendation Brain): what a recommendation would replace in the
+// current cart (a same-role swap), used to explain a price delta.
+export interface RecommendationReplacement {
+  name: string;
+  previousPrice: number;
+}
+
 export interface CartRec {
   name: string;
   price: number;
@@ -27,6 +34,10 @@ export interface CartRec {
   source_title?: string;
   rotationGroup?: string;
   chef?: boolean;
+  // Phase 1 (Recommendation Brain).
+  confidence?: number;
+  expectedValue?: number;
+  replacement?: RecommendationReplacement | null;
 }
 
 export interface CartRecResponse {
@@ -107,6 +118,9 @@ export interface SuggestedItem {
   categoryType?: string;
   source?: string;
   reason?: string;
+  // Phase 1 (Recommendation Brain).
+  confidence?: number;
+  expectedValue?: number;
 }
 
 export interface Opportunity {
@@ -118,6 +132,9 @@ export interface Opportunity {
   bestAction: string | null;
   suggestedItem: SuggestedItem | null;
   alternatives: SuggestedItem[];
+  // Phase 1 (Recommendation Brain).
+  expectedValue?: number;
+  replacement?: RecommendationReplacement | null;
 }
 
 export interface TableInfo {
@@ -142,6 +159,9 @@ export interface CoachResponse {
   sayToTable: string;
   whyItWorks: string;
   alternatives: SuggestedItem[];
+  // Phase 1 (Recommendation Brain).
+  expectedValue?: number;
+  replacement?: RecommendationReplacement | null;
 }
 
 export interface SommelierResponse {
