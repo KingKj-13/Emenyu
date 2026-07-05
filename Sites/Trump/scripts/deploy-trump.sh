@@ -52,6 +52,15 @@ die() { echo -e "\n${c_err}[deploy FAILED]${c_off} $*" >&2; echo "Rollback: $0 r
 
 cd "$APP_DIR" || die "APP_DIR $APP_DIR missing"
 
+# 0/7 — Fail FAST if .env was ever clobbered by a code sync (a workstation .env
+# accidentally included in a tar/rsync push silently overwrites prod's
+# DATABASE_URL/secrets with local dev values — the app keeps running on its
+# already-loaded env until the next restart, which then can't reach the DB).
+# Catch this before burning disk/time on npm ci, not just at the R1 prisma
+# verify step later. Incident: 2026-07-05, see docs/project-progress/.
+grep -q '^DATABASE_URL=' "$APP_DIR/.env" 2>/dev/null \
+  || die ".env is missing DATABASE_URL — it may have been overwritten by a code sync that didn't exclude .env. Do NOT proceed; restore .env from the last known-good deploy snapshot's .env.bak before retrying."
+
 log "1/7 pre-deploy snapshot -> $snap"
 mkdir -p "$snap"
 sudo -u postgres pg_dump -Fc "$DB_NAME" > "$snap/$DB_NAME-$ts.dump" || die "pre-deploy DB dump failed"
