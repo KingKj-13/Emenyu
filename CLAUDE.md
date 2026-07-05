@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-Emenyu is a multi-restaurant SaaS platform. Four restaurants are implemented: **Trump** (production-grade modular Node.js), **Greek**, **Imli**, and **AlPescatore** (all legacy monolithic Express + vanilla JS). Trump is the primary codebase; the other three are reference/demo sites.
+Emenyu is a restaurant SaaS platform. **Trump** (production-grade modular Node.js) is the only active restaurant. Three legacy reference sites (**Greek**, **Imli**, **AlPescatore** — monolithic Express + vanilla JS) were retired 2026-07-05; see `docs/project-progress/` for the retirement report. Their code and production data were fully backed up before removal.
 
-The shared Prisma schema (root `prisma/`) supports all restaurants via a `restaurantId` field, but only Trump actively uses PostgreSQL. The legacy sites still use JSON file storage and MongoDB.
+The shared Prisma schema (root `prisma/`) supports multiple restaurants via a `restaurantId` field, but only Trump is deployed and only Trump actively uses PostgreSQL.
 
 ---
 
@@ -56,16 +56,7 @@ npx prisma generate --schema prisma/schema.prisma
 npm run auth:migrate
 npm run menu:migrate
 npm run orders:migrate
-
-# One-time data migrations (legacy sites)
-npm run menu:migrate:greek
-npm run menu:migrate:imli
-npm run menu:migrate:alpescatore
 ```
-
-### Legacy sites
-
-Each of Greek/Imli/AlPescatore has its own `server.js`. No build step. Just `node server.js` inside the site directory.
 
 ---
 
@@ -146,10 +137,6 @@ Four endpoints, all require manager/owner role:
 - `GET /Trump/api/analytics/hours` — 24h distribution
 
 All accept `?from=YYYY-MM-DD&to=YYYY-MM-DD` query params.
-
-### Legacy sites (Greek/Imli/AlPescatore)
-
-Each is a single `server.js` (1000–1200 LOC) + monolithic HTML files. Menu data is in `food/*.json`. Python chatbot is spawned as a child process (`josh_enterprise/`). No TypeScript, no build step. Do not attempt to apply Trump's architecture patterns to these sites — keep changes local and minimal.
 
 ---
 
