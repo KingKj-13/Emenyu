@@ -139,6 +139,12 @@
 .wv-primary:disabled { opacity: 0.45; box-shadow: none; }
 .wv-primary:active:not(:disabled) { transform: scale(0.985); }
 .wv-primary.sticky { position: sticky; bottom: 8px; margin-top: 16px; }
+.wv-all-sent {
+  width: 100%; min-height: 46px; border-radius: 14px; font-weight: 600; font-size: 13px;
+  color: var(--w-text2); background: var(--w-surface2); border: 1px solid var(--w-border);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.wv-all-sent.sticky { position: sticky; bottom: 8px; margin-top: 16px; }
 .wv-secondary {
   min-height: 46px; padding: 0 16px; border-radius: 12px; font-weight: 600;
   color: var(--w-text); background: var(--w-surface2); border: 1px solid var(--w-border);
@@ -258,6 +264,11 @@
 .wv-item-tile > svg:last-child { color: var(--w-gold); flex: 0 0 auto; }
 .wv-item-thumb { width: 52px; height: 52px; flex: 0 0 52px; border-radius: 10px; overflow: hidden; display: grid; place-items: center; background: var(--w-surface2); color: var(--w-text3); }
 .wv-item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.wv-item-monogram {
+  width: 100%; height: 100%; display: grid; place-items: center;
+  font-family: var(--w-font-display); font-size: 20px; font-weight: 700;
+  color: var(--w-gold); background: var(--w-surface3);
+}
 
 /* ── Tables: mini rail ───────────────────────────────────────────────────── */
 .wv-mini-table-rail { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 10px; -webkit-overflow-scrolling: touch; }
@@ -268,7 +279,9 @@
 }
 .wv-mini-table-rail button.active { border-color: var(--w-gold); background: var(--w-surface2); }
 .wv-mini-table-rail b { display: block; font-family: var(--w-font-display); font-size: 18px; }
-.wv-mini-table-rail small { font-size: 9px; color: var(--w-text3); text-transform: uppercase; }
+/* --w-text3 reads as near-invisible at 9px against the navy rail background —
+   bump to --w-text2 so EMPTY/status captions stay legible at arm's length. */
+.wv-mini-table-rail small { font-size: 10px; color: var(--w-text2); text-transform: uppercase; }
 
 /* ── Page titles (alerts/chat/profile) ───────────────────────────────────── */
 .wv-page-title { margin-bottom: 16px; }
@@ -311,6 +324,8 @@
 .wv-profile-grid > div { background: var(--w-surface); border: 1px solid var(--w-border); border-radius: var(--w-radius-sm); padding: 16px; }
 .wv-profile-grid span { display: block; font-size: 11px; color: var(--w-text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
 .wv-profile-grid b { font-family: var(--w-font-display); font-size: 26px; }
+.wv-rating-value { display: inline-flex; align-items: center; gap: 5px; }
+.wv-rating-value svg { color: var(--w-gold); }
 
 /* ── Toast ───────────────────────────────────────────────────────────────── */
 .wv-toast {
@@ -335,4 +350,79 @@
 }
 @media (min-width: 1000px) {
   .wv-item-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ── Phase 2: live-update badge ──────────────────────────────────────────── */
+.wv-update-dot {
+  position: absolute; top: 10px; right: 10px; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--w-red); box-shadow: 0 0 0 3px rgba(224,85,95,0.25);
+  animation: wv-pulse 1.8s ease-in-out infinite;
+}
+.wv-table-card { position: relative; }
+.wv-mini-table-rail button { position: relative; }
+.wv-mini-table-rail .wv-update-dot { top: 4px; right: 4px; }
+
+/* ── Phase 2: table-overview intelligence (occasion + estimated value) ──── */
+.wv-card-intel { display: flex; flex-wrap: wrap; gap: 6px; }
+.wv-occasion-chip, .wv-ev-chip {
+  font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; white-space: nowrap;
+}
+.wv-occasion-chip { color: var(--w-purple); background: rgba(185,138,208,0.14); }
+.wv-ev-chip { color: var(--w-green); background: rgba(126,214,138,0.12); }
+.wv-intel-summary { color: var(--w-text2); font-size: 13px; margin: 2px 0 12px; line-height: 1.4; }
+.wv-occasion-prompt {
+  margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; font-size: 13px;
+  color: var(--w-purple); background: rgba(185,138,208,0.1); border: 1px solid rgba(185,138,208,0.25);
+}
+
+/* ── Phase 2: recommendation status + confidence/EV/tone ─────────────────── */
+.wv-status-chip {
+  margin-left: auto; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--w-text2); background: rgba(255,255,255,0.08);
+}
+.wv-status-chip.st-accepted { color: var(--w-green); background: rgba(126,214,138,0.14); }
+.wv-status-chip.st-declined { color: var(--w-red); background: rgba(224,85,95,0.14); }
+.wv-status-chip.st-ignored { color: var(--w-amber); background: rgba(201,162,75,0.14); }
+.wv-rec-metrics { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.wv-metric-chip {
+  font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+  color: var(--w-blue); background: rgba(90,169,196,0.12); border: 1px solid rgba(90,169,196,0.25);
+}
+.wv-tone-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.wv-tone-tabs button {
+  flex: 1; min-height: 34px; border-radius: 10px; font-size: 12px; font-weight: 600;
+  color: var(--w-text2); background: var(--w-surface2); border: 1px solid var(--w-border);
+}
+.wv-tone-tabs button.active { color: #1a1407; background: var(--w-gold-grad); border-color: transparent; }
+.wv-ai-actions { display: flex; align-items: center; gap: 8px; }
+/* .wv-ai-foot button's gold styling is meant for "Add To Cart" only — the
+   decline button (.wv-plain-icon) needs its own, more specific reset so it
+   reads as a muted secondary action, not a second gold button. */
+.wv-ai-foot .wv-plain-icon {
+  min-height: 40px; width: 40px; padding: 0; color: var(--w-text3);
+  background: var(--w-surface2); border: 1px solid var(--w-border);
+}
+.wv-ai-foot .wv-plain-icon:active { color: var(--w-red); border-color: var(--w-red); }
+
+/* ── Phase 2: per-seat breakdown ──────────────────────────────────────────── */
+.wv-seat-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.wv-seat-card { background: var(--w-surface2); border: 1px solid var(--w-border); border-radius: var(--w-radius-sm); padding: 12px; }
+.wv-seat-card b { display: block; font-family: var(--w-font-display); font-size: 15px; margin-bottom: 6px; }
+.wv-seat-course { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; font-size: 12px; }
+.wv-seat-course span { color: var(--w-gold-bright); font-weight: 600; flex: 0 0 auto; }
+.wv-seat-course small { color: var(--w-text2); text-align: right; }
+
+/* ── Phase 2: menu item poster-first tap-to-play video ───────────────────── */
+.wv-item-video { width: 100%; height: 100%; object-fit: cover; }
+.wv-item-playbtn {
+  position: absolute; bottom: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center; color: #1a1407; background: var(--w-gold-grad); cursor: pointer;
+}
+.wv-item-thumb { position: relative; }
+
+@media (min-width: 700px) {
+  .wv-seat-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1000px) {
+  .wv-seat-grid { grid-template-columns: repeat(3, 1fr); }
 }

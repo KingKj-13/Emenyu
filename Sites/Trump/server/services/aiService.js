@@ -679,29 +679,62 @@ class AiService {
     const cartNames = new Set(cart.map(c => normalizeName(c.name)));
     const csvRecs = this.smartPairings.recommend({ cart, menuContext, limit: 4 });
 
+    // Phase 2.5 (Hospitality Intelligence): the same food/wine cart anchors
+    // recommend() resolves internally for pairingReason() — recomputed here
+    // (cheap, cart is tiny) so upsellScript can build the SAME tag-driven WHY
+    // clause for its Professional/Friendly/Luxury scripts, not a separate one.
+    const anchorDish = cart
+      .map(c => fuzzyFindItem(menuContext, c.name))
+      .find(m => m && !['WINE', 'DRINK'].includes(m.categoryType)) || null;
+    const anchorWine = cart
+      .map(c => fuzzyFindItem(menuContext, c.name))
+      .find(m => m && m.categoryType === 'WINE') || null;
+
     // Phase 3C: the waiter upsell reads the SAME composed reason as the cards and
     // chat (authored hero → chef → tag-true Tier-2 → never blank). One copy source.
-    const recommendations = [...csvRecs, ...recs]
+    const candidates = [...csvRecs, ...recs]
       .filter(r => !cartNames.has(normalizeName(r.name)))
       .filter((r, index, list) => list.findIndex(x => normalizeName(x.name) === normalizeName(r.name)) === index)
-      .slice(0, 4)
-      .map(r => {
-        // Script the waiter can say out loud. Name the dish it pairs from (CSV
-        // source) and fold in the pairing reasoning when we have it.
-        const from = r.pairedWith || cart[0]?.name || 'your order';
-        const why = r.reason ? ` ${r.reason}` : '';
-        // Phase 1 (Recommendation Brain): the "uplift" a waiter is coached to
-        // expect must be the replacement-aware delta, not the new item's full
-        // price — a same-role swap (e.g. Wine A -> Wine B) only nets the difference.
-        const netIncrease = r.netRevenueIncrease ?? r.price;
-        return {
+      .slice(0, 4);
+
+    // Phase 2 (Waiter Experience): the waiter picks a delivery style per guest —
+    // reuse the SAME nlgService/templateNlgProvider tones already built for the
+    // AI Table Coach (postCoach), not a second wording system. "Friendly" maps to
+    // the existing 'casual' tone (there is no separate 'friendly' tone).
+    const recommendations = await Promise.all(candidates.map(async r => {
+      // Script the waiter can say out loud. Name the dish it pairs from (CSV
+      // source) and fold in the pairing reasoning when we have it.
+      const from = r.pairedWith || cart[0]?.name || 'your order';
+      const why = r.reason ? ` ${r.reason}` : '';
+      // Phase 1 (Recommendation Brain): the "uplift" a waiter is coached to
+      // expect must be the replacement-aware delta, not the new item's full
+      // price — a same-role swap (e.g. Wine A -> Wine B) only nets the difference.
+      const netIncrease = r.netRevenueIncrease ?? r.price;
+      const isBev = ['WINE', 'DRINK'].includes(r.categoryType);
+      const anchor = isBev ? anchorDish : (anchorWine || anchorDish);
+      const scriptData = {
+        suggestedItem: { name: r.name, price: r.price, categoryType: r.categoryType, tags: r.tags },
+        forItem: anchor ? { name: anchor.name, categoryType: anchor.categoryType, tags: anchor.tags } : null
+      };
+      const [professional, friendly, luxury] = await Promise.all([
+        this.nlgService.phrase({ kind: this.nlgService.KINDS.UPSELL_SCRIPT, tone: 'professional', data: scriptData }),
+        this.nlgService.phrase({ kind: this.nlgService.KINDS.UPSELL_SCRIPT, tone: 'casual', data: scriptData }),
+        this.nlgService.phrase({ kind: this.nlgService.KINDS.UPSELL_SCRIPT, tone: 'luxury', data: scriptData })
+      ]);
+      const fallbackScript = `I see you have the ${from} — many guests pair it with our ${r.name}.${why}`;
+      return {
         name: r.name,
         price: r.price,
         img: r.img,
         categoryType: r.categoryType,
         story: r.story || '',
         reason: r.reason || '',
-        script: `I see you have the ${from} — many guests pair it with our ${r.name}.${why}`,
+        script: fallbackScript,
+        scripts: {
+          professional: professional || fallbackScript,
+          friendly: friendly || fallbackScript,
+          luxury: luxury || fallbackScript
+        },
         upsell: Math.max(0, Math.round(Number(netIncrease) || 0)),
         confidence: r.confidence,
         expectedValue: r.expectedValue,
@@ -711,13 +744,18 @@ class AiService {
         rotationGroup: r.rotationGroup || '',
         chef: r.chef === true,
         relation: r.relation || ''
-        };
-      });
+      };
+    }));
+
+    // Phase 2: expose the same cart-signal occasion detection chat() already
+    // uses (Champagne/sparkling in cart, no words needed) so the waiter UI can
+    // show an occasion badge without a second detector.
+    const occasionPrompt = this.celebratoryOccasionPrompt(cart, menuContext, payload.history);
 
     const eventRec = null;
 
     const potentialUplift = recommendations.reduce((sum, r) => sum + r.upsell, 0);
-    return { recommendations, eventRec, potentialUplift };
+    return { recommendations, eventRec, potentialUplift, occasionPrompt: occasionPrompt || null };
   }
 
   // Phase 3C: waiter-only "ordered together" — counted co-occurrence over real
@@ -1000,6 +1038,7 @@ class AiService {
     if (s.occasionDetail === 'graduation') return 'Congratulations on the graduation — a fitting way to celebrate —';
     if (s.occasionDetail === 'business_dinner') return 'For a polished business dinner —';
     if (s.occasionDetail === 'sports_night') return 'Perfect for match night —';
+    if (s.occasionDetail === 'family_dinner') return 'Great for a family dinner —';
     if (s.occasion === 'sharing') return 'Great for the table —';
     if (s.occasion === 'celebration') return "Let's make it special —";
     if (s.occasion === 'date') return 'For a memorable evening —';
@@ -1284,6 +1323,13 @@ class AiService {
     const sourceDish = cart
       .map(c => fuzzyFindItem(menuContext, c.name))
       .find(m => m && !['WINE', 'DRINK'].includes(m.categoryType)) || null;
+    // Recommendation Brain V2: for a dessert suggestion specifically, reference
+    // BOTH what's already on the table (the dish AND the wine), not just one
+    // anchor — "you've chosen seafood pasta and a Sauvignon Blanc, so..." reads
+    // as an experienced waiter's observation, not a single-item lookup.
+    const cartWine = cart
+      .map(c => fuzzyFindItem(menuContext, c.name))
+      .find(m => m && m.categoryType === 'WINE') || null;
 
     const out = [];
     for (const candidate of finalKept.slice(0, recommendationLimit)) {
@@ -1304,7 +1350,7 @@ class AiService {
       // Phase 4: carry the rotation group through so analytics can attribute
       // impressions/clicks to the group the engine drew from.
       pub.rotationGroup = candidate.rotationGroup || '';
-      pub.reason = await this.reason.pairingReason(pub, sourceDish);
+      pub.reason = await this.reason.pairingReason(pub, sourceDish, { cartWine });
       out.push(pub);
     }
     return out;

@@ -1735,7 +1735,7 @@
       "drink_type": "white",
       "tier": "hero",
       "axis": "authored",
-      "reason": "The sweetness and creamy texture need a pairing that feels indulgent enough to sit beside them comfortably."
+      "reason": "The sweetness and creamy texture need a pairing that feels rich enough to sit beside them comfortably."
     },
     {
       "dish": "Trio of Ice Cream",
@@ -1744,7 +1744,61 @@
       "drink_type": "beer",
       "tier": "strong",
       "axis": "authored",
-      "reason": "The sweetness and creamy texture need a pairing that feels indulgent enough to sit beside them comfortably."
+      "reason": "The sweetness and creamy texture need a pairing that feels rich enough to sit beside them comfortably."
+    },
+    {
+      "dish": "BBQ / Peri-Peri Beef Burger",
+      "category": "Burger",
+      "drink": "Margarita",
+      "drink_type": "cocktail",
+      "tier": "strong",
+      "axis": "spice-cool",
+      "reason": "The Margarita's citrus and salt cut straight through the peri-peri heat and the char, resetting your palate for the next bite."
+    },
+    {
+      "dish": "Cheese Burger",
+      "category": "Burger",
+      "drink": "Cosmopolitan",
+      "drink_type": "cocktail",
+      "tier": "strong",
+      "axis": "acid-lift",
+      "reason": "A Cosmopolitan's cranberry tartness and citrus snap slice through the melted cheese and beef fat instead of getting lost in it."
+    },
+    {
+      "dish": "Firecracker Chicken Wings",
+      "category": "Starter",
+      "drink": "Mojito",
+      "drink_type": "cocktail",
+      "tier": "hero",
+      "axis": "spice-cool",
+      "reason": "Fresh mint and lime in a Mojito are the classic cooling foil for firecracker heat — it refreshes rather than fights the chilli."
+    },
+    {
+      "dish": "Trumps Rainbow Reloaded",
+      "category": "Sushi",
+      "drink": "Cucumber and Mint G&T",
+      "drink_type": "cocktail",
+      "tier": "strong",
+      "axis": "acid-lift",
+      "reason": "The cucumber and mint keep this G&T crisp and clean, mirroring the roll's fresh, delicate flavours rather than overpowering them."
+    },
+    {
+      "dish": "Falklands Calamari",
+      "category": "Seafood",
+      "drink": "Pink Grapefruit and Rosemary G&T",
+      "drink_type": "cocktail",
+      "tier": "strong",
+      "axis": "acid-lift",
+      "reason": "Grapefruit's bitter-citrus edge and a whisper of rosemary lift the calamari without masking its delicate, briny sweetness."
+    },
+    {
+      "dish": "Seared Salmon",
+      "category": "Seafood",
+      "drink": "Fruit Daiquiri - Strawberry",
+      "drink_type": "cocktail",
+      "tier": "strong",
+      "axis": "fruit-echo",
+      "reason": "A Strawberry Daiquiri's bright fruit and gentle sweetness play well against seared salmon's richness without overwhelming it."
     }
   ],
   "occasions": [
@@ -1817,5 +1871,92 @@
       ],
       "note": "A platter to share + a couple of bottles of an easy SA red."
     }
+  ],
+  "dishNotes": [
+    {
+      "dish": "Ribeye",
+      "cookingMethod": "char-grilled over open flame",
+      "story": "Cut in-house from the rib section, so it keeps the fat cap and marbling running right through the eye of the steak."
+    },
+    {
+      "dish": "Fillet",
+      "cookingMethod": "char-grilled over open flame",
+      "story": "The leanest, most tender cut on the menu — almost no connective tissue, so it's cut thicker to stay juicy over the flame."
+    },
+    {
+      "dish": "Sirloin",
+      "cookingMethod": "char-grilled over open flame",
+      "story": "A firmer bite than fillet with a proper edge of fat, which is exactly what gives it that deep, savoury char."
+    },
+    {
+      "dish": "Rump",
+      "cookingMethod": "char-grilled over open flame",
+      "story": "Full-flavoured and well-worked, which is why it holds up best of all the cuts to a hard sear."
+    },
+    {
+      "dish": "T-Bone",
+      "cookingMethod": "char-grilled over open flame",
+      "story": "Two cuts in one — fillet on one side of the bone, sirloin on the other — so it's a taste of both in a single steak."
+    },
+    {
+      "dish": "Tomahawk",
+      "cookingMethod": "char-grilled over open flame, bone-in",
+      "story": "Cut with the full rib bone left on for presentation and flavour — it's the showpiece cut on the grill."
+    },
+    {
+      "dish": "Wagyu Ribeye",
+      "cookingMethod": "char-grilled over open flame",
+      "story": "Intensely marbled — the fat renders through the meat as it cooks, so it eats noticeably richer and softer than a standard ribeye."
+    },
+    {
+      "dish": "Wagyu Fillet",
+      "cookingMethod": "char-grilled over open flame",
+      "story": "Wagyu's marbling on the menu's already-gentlest cut — buttery texture with none of the usual fillet leanness."
+    },
+    {
+      "dish": "Wagyu Sirloin",
+      "cookingMethod": "char-grilled over open flame",
+      "story": "Sirloin's firm bite, softened by Wagyu marbling running through it."
+    },
+    {
+      "dish": "Wagyu Rump",
+      "cookingMethod": "char-grilled over open flame",
+      "story": "The rump's depth of flavour, carried by Wagyu's signature buttery fat."
+    }
+  ],
+  "upgrades": [
+    {
+      "from": "Ribeye",
+      "to": "Wagyu Ribeye",
+      "note": "for noticeably richer marbling and a more buttery finish"
+    },
+    {
+      "from": "Fillet",
+      "to": "Wagyu Fillet",
+      "note": "the same gentle cut, softened further by Wagyu's marbling"
+    },
+    {
+      "from": "Sirloin",
+      "to": "Wagyu Sirloin",
+      "note": "the same firm bite, with Wagyu's marbling carrying it further"
+    },
+    {
+      "from": "Rump",
+      "to": "Wagyu Rump",
+      "note": "the same full flavour, elevated by Wagyu's fat"
+    },
+    {
+      "from": "Tomahawk",
+      "to": "Wagyu Ribeye",
+      "note": "if you'd like the marbling of Wagyu in a more manageable portion"
+    }
+  ],
+  "sauceUpgrades": [
+    { "forDish": "Ribeye", "sauce": "Mushroom Truffle Butter", "note": "melts over the hot steak and rounds out the char with an earthy, buttery finish" },
+    { "forDish": "Fillet", "sauce": "Creamy Mushroom Sauce", "note": "a gentle sauce that won't overpower fillet's own delicate flavour" },
+    { "forDish": "Sirloin", "sauce": "Three Peppercorn Sauce", "note": "classic with sirloin's firmer bite and deeper flavour" },
+    { "forDish": "Rump", "sauce": "Garlic & Sage Butter", "note": "a simple, savoury finish that lets the rump's own flavour lead" },
+    { "forDish": "Tomahawk", "sauce": "Mushroom Truffle Butter", "note": "a showpiece sauce for a showpiece cut" },
+    { "forDish": "Wagyu Ribeye", "sauce": "Mushroom Truffle Butter", "note": "doubles down on the richness — truffle and Wagyu fat both lean into umami" }
   ]
 }

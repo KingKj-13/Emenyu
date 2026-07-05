@@ -99,12 +99,22 @@ function createHeroPairings({ logger = null, file = path.join(__dirname, '..', '
       .filter(Boolean);
   }
 
-  // The authored reason for (source dish × target bottle's varietal), or null.
+  // The authored reason for a (dish × bottle varietal) pair, or null. Direction-
+  // agnostic: works whether the dish is passed as sourceItem or targetItem (a
+  // guest may add the wine first and ask what food goes with it, or add the
+  // dish first and ask what wine goes with it — the authored line reads the
+  // same either way, so both call directions should resolve it).
   function reasonFor(sourceItem, targetItem) {
     if (!ready || !sourceItem || !targetItem) return null;
-    const d = dishFor(sourceItem.name, sourceItem.tags || {});
+    let d = dishFor(sourceItem.name, sourceItem.tags || {});
+    let bottleItem = targetItem;
+    if (!d) {
+      // Try the other direction: targetItem is the dish, sourceItem is the bottle.
+      d = dishFor(targetItem.name, targetItem.tags || {});
+      bottleItem = sourceItem;
+    }
     if (!d) return null;
-    const tvk = bottleVarietal(targetItem);
+    const tvk = bottleVarietal(bottleItem);
     if (!tvk) return null;
     const match = d.varietals.find(v => v.key === tvk);
     return match ? match.reason : null;
@@ -131,7 +141,35 @@ function createHeroPairings({ logger = null, file = path.join(__dirname, '..', '
     return { leadWith: occasion.lead_with || [], drinkKeys: (occasion.drink || []).map(varietalKey).filter(Boolean), note: occasion.note || '' };
   }
 
-  return { ready, dishFor, preferredVarietals, reasonFor, bottlesOfVarietal, itemsForDishName, archetypeFor, varietalKey: bottleVarietal, occasions };
+  // Recommendation Brain V2 — dish-level narrative facts (cooking method, story)
+  // and premium-upgrade/sauce-upgrade mappings, keyed by the same hero dish name
+  // dishFor() resolves to. Additive to the existing wine/beer/cocktail pairing
+  // data above; never fabricated — every {from,to}/{forDish,sauce} references a
+  // real Trump menu item.
+  const dishNotesByName = new Map((ready ? (data.dishNotes || []) : []).map(d => [d.dish, d]));
+  const upgradesByName = new Map((ready ? (data.upgrades || []) : []).map(u => [u.from, u]));
+  const sauceUpgradesByName = new Map((ready ? (data.sauceUpgrades || []) : []).map(s => [s.forDish, s]));
+
+  function dishNoteFor(itemName, itemTags = {}) {
+    const d = dishFor(itemName, itemTags);
+    if (!d) return null;
+    return dishNotesByName.get(d.dish) || null;
+  }
+  function upgradeFor(itemName, itemTags = {}) {
+    const d = dishFor(itemName, itemTags);
+    if (!d) return null;
+    return upgradesByName.get(d.dish) || null;
+  }
+  function sauceUpgradeFor(itemName, itemTags = {}) {
+    const d = dishFor(itemName, itemTags);
+    if (!d) return null;
+    return sauceUpgradesByName.get(d.dish) || null;
+  }
+
+  return {
+    ready, dishFor, preferredVarietals, reasonFor, bottlesOfVarietal, itemsForDishName, archetypeFor, varietalKey: bottleVarietal, occasions,
+    dishNoteFor, upgradeFor, sauceUpgradeFor
+  };
 }
 
 module.exports = { createHeroPairings, varietalKey };

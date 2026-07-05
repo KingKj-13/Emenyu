@@ -1,8 +1,45 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Bell } from 'lucide-react';
 import { opsApi } from '../../services/opsApi';
 import type { NotificationRow } from '../../types/operations';
 
 const PRIORITY_LABEL: Record<number, string> = { 1: 'Urgent', 2: 'High', 3: 'Normal', 4: 'Low', 5: 'Info' };
+
+// Phase 2 (Waiter Experience): group the existing notification list by its
+// existing `source` field — no new notification-generation logic, just
+// friendlier presentation of what's already there.
+const GROUP_LABEL: Record<string, string> = {
+  waiter_call: 'Waiter Call',
+  reservation: 'Reservation',
+  reassignment: 'Manager Call',
+  table_transfer: 'Table Transfer',
+  ai_warning: 'New Recommendation',
+  system: 'System',
+};
+function groupFor(n: NotificationRow): string {
+  const text = `${n.title} ${n.body}`.toLowerCase();
+  if (text.includes('birthday')) return 'Birthday';
+  if (text.includes('anniversary')) return 'Anniversary';
+  if (text.includes('kitchen') || text.includes('ready')) return 'Kitchen Ready';
+  if (text.includes('payment') || text.includes('bill')) return 'Payment';
+  return GROUP_LABEL[n.source] || (n.source ? n.source.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Other');
+}
+
+// Preserves the existing newest-first order from the API within each group;
+// groups are ordered by their most-recent item so an urgent new group surfaces first.
+function groupEntries(items: NotificationRow[]): [string, NotificationRow[]][] {
+  const groups = new Map<string, NotificationRow[]>();
+  items.forEach(n => {
+    const key = groupFor(n);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(n);
+  });
+  return [...groups.entries()].sort((a, b) => {
+    const at = new Date(a[1][0]?.createdAt || 0).getTime();
+    const bt = new Date(b[1][0]?.createdAt || 0).getTime();
+    return bt - at;
+  });
+}
 
 function timeAgo(iso: string): string {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -49,8 +86,8 @@ export function NotificationBell({ scope }: { scope?: 'all' }) {
   return (
     <div style={{ position: 'relative' }}>
       <button onClick={() => setOpen(o => !o)} aria-label="Notifications"
-        style={{ position: 'relative', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 20, color: 'inherit', lineHeight: 1 }}>
-        <span aria-hidden>🔔</span>
+        style={{ position: 'relative', display: 'grid', placeItems: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', lineHeight: 1 }}>
+        <Bell size={20} aria-hidden />
         {unread > 0 && (
           <span style={{ position: 'absolute', top: -4, right: -6, background: '#d4373a', color: '#fff', borderRadius: 10, fontSize: 10, minWidth: 16, height: 16, lineHeight: '16px', textAlign: 'center', padding: '0 4px', fontWeight: 700 }}>
             {unread > 99 ? '99+' : unread}
@@ -66,20 +103,25 @@ export function NotificationBell({ scope }: { scope?: 'all' }) {
           </div>
           {loading && <div style={{ padding: 16, opacity: .6 }}>Loading…</div>}
           {!loading && items.length === 0 && <div style={{ padding: 16, opacity: .6 }}>You're all caught up.</div>}
-          {items.map(n => (
-            <div key={n.id} style={{ padding: '10px 14px', borderBottom: '1px solid #ffffff0d', background: n.readAt ? 'transparent' : '#cda85f10', display: 'flex', gap: 8 }}>
-              <span style={{ width: 8, height: 8, marginTop: 6, borderRadius: 8, background: n.priority <= 2 ? '#d4373a' : '#cda85f', flex: '0 0 auto', opacity: n.readAt ? .3 : 1 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>{n.title}</span>
-                  <span style={{ fontSize: 10, opacity: .5, whiteSpace: 'nowrap' }}>{timeAgo(n.createdAt)}</span>
+          {!loading && groupEntries(items).map(([group, groupItems]) => (
+            <div key={group}>
+              <div style={{ padding: '8px 14px 4px', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', opacity: .5 }}>{group}</div>
+              {groupItems.map(n => (
+                <div key={n.id} style={{ padding: '10px 14px', borderBottom: '1px solid #ffffff0d', background: n.readAt ? 'transparent' : '#cda85f10', display: 'flex', gap: 8 }}>
+                  <span style={{ width: 8, height: 8, marginTop: 6, borderRadius: 8, background: n.priority <= 2 ? '#d4373a' : '#cda85f', flex: '0 0 auto', opacity: n.readAt ? .3 : 1 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>{n.title}</span>
+                      <span style={{ fontSize: 10, opacity: .5, whiteSpace: 'nowrap' }}>{timeAgo(n.createdAt)}</span>
+                    </div>
+                    {n.body && <div style={{ fontSize: 12, opacity: .75, marginTop: 2 }}>{n.body}</div>}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, opacity: .5, textTransform: 'uppercase', letterSpacing: '.06em' }}>{PRIORITY_LABEL[n.priority] || n.priority}</span>
+                      {!n.readAt && <button onClick={() => ack(n.id)} style={{ background: 'transparent', border: 'none', color: '#cda85f', cursor: 'pointer', fontSize: 11 }}>Mark read</button>}
+                    </div>
+                  </div>
                 </div>
-                {n.body && <div style={{ fontSize: 12, opacity: .75, marginTop: 2 }}>{n.body}</div>}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, alignItems: 'center' }}>
-                  <span style={{ fontSize: 10, opacity: .5, textTransform: 'uppercase', letterSpacing: '.06em' }}>{n.source} · {PRIORITY_LABEL[n.priority] || n.priority}</span>
-                  {!n.readAt && <button onClick={() => ack(n.id)} style={{ background: 'transparent', border: 'none', color: '#cda85f', cursor: 'pointer', fontSize: 11 }}>Mark read</button>}
-                </div>
-              </div>
+              ))}
             </div>
           ))}
         </div>

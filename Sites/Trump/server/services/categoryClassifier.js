@@ -39,7 +39,9 @@ function categoryType(input) {
   if (/\b(starter|meze|tapas|soup|antipasti)/.test(text)) return 'STARTER';
   if (/\b(dessert|sweet|cake|ice ?cream|baklava|pudding|brownie|gelato)/.test(text)) return 'DESSERT';
 
-  if (/\b(steak|burger|beef|lamb|pork|chicken|rib|grill|wagyu|fillet|sirloin|rump|tomahawk|schnitzel|seafood|prawn|calamari|squid|mussel|kingklip|hake|salmon|sole|fish|sushi|sashimi|pasta|wrap|platter|side|wings|biltong|chop|veg|salad|curry|main)/.test(text)) {
+  // "side" (as in a side dish) must not match "Side Car" — a named cocktail,
+  // not food. Same false-positive family as the "steak"/"tea" guard above.
+  if (/\b(steak|burger|beef|lamb|pork|chicken|rib|grill|wagyu|fillet|sirloin|rump|tomahawk|schnitzel|seafood|prawn|calamari|squid|mussel|kingklip|hake|salmon|sole|fish|sushi|sashimi|pasta|wrap|platter|side(?!\s*car)|wings|biltong|chop|veg|salad|curry|main)/.test(text)) {
     return 'MAIN';
   }
 

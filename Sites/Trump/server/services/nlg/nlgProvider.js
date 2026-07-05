@@ -20,9 +20,11 @@ const KINDS = Object.freeze({
 // Delivery styles surfaced as the "speech options" buttons.
 const TONES = Object.freeze(['casual', 'professional', 'luxury', 'short', 'upsell']);
 
+// Phase 2.5 (Hospitality Intelligence): "Friendly" (= 'casual' in this tone
+// list — there's no separate 'friendly' entry) is the product default tone.
 function normalizeTone(tone) {
   const t = String(tone || '').toLowerCase();
-  return TONES.includes(t) ? t : 'professional';
+  return TONES.includes(t) ? t : 'casual';
 }
 
 // Abstract base. A provider implements `phrase()` and reports `available`.

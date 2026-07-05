@@ -10,6 +10,7 @@ import {
   LogOut,
   MessageCircle,
   Minus,
+  Play,
   Plus,
   Receipt,
   Search,
@@ -17,6 +18,7 @@ import {
   ShieldAlert,
   Sparkles,
   SplitSquareHorizontal,
+  Star,
   Trash2,
   User,
   UtensilsCrossed,
@@ -32,7 +34,7 @@ import { api } from '../services/api';
 import { getSocket } from '../services/socket';
 import { RESTAURANT_ID } from '../constants/api';
 import { buildMenuSections, flattenMenu } from '../lib/menuUtils';
-import { resolveImage } from '../lib/imageResolver';
+import { resolveImage, resolveVideo } from '../lib/imageResolver';
 import { money, moneyExact } from '../lib/waiterFormat';
 import { StartShiftScreen } from './waiter/StartShiftScreen';
 import { SplitBillModal } from '../components/waiter/SplitBillModal';
@@ -46,7 +48,9 @@ import type {
   ChatConversation,
   FloorState,
   FloorTable,
+  GuestEvent,
   Performance,
+  RecommendationStatus,
   TableIntel,
   WaiterAlert,
   WaiterTab,
@@ -104,6 +108,45 @@ function statusCopy(status: TableStatus) {
   }[status];
 }
 
+// Phase 2 (Waiter Experience): "Estimated Additional Value" + occasion on the
+// table overview reuse the SAME per-table opportunity the AI Table Coach
+// already computes (Phase 1's aiService.recommend() -> opportunityService),
+// fetched only for the waiter's own assigned/non-empty tables (a handful),
+// not the whole floor — keeps this instant rather than firing 30 calls.
+function useTableIntelMap(tableIds: string[]) {
+  const [byTable, setByTable] = useState<Record<string, TableIntel>>({});
+  const key = tableIds.join(',');
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(tableIds.map(id => api.getTableIntel(id).then(intel => [id, intel] as const).catch(() => null)))
+      .then(results => {
+        if (cancelled) return;
+        const next: Record<string, TableIntel> = {};
+        results.forEach(r => { if (r) next[r[0]] = r[1]; });
+        setByTable(next);
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return byTable;
+}
+
+// One-line narrative combining what's already loaded (occasion + best
+// opportunity + guest count) — composed client-side, not a new backend call.
+function tableIntelSummary(table: FloorTable, intel: TableIntel | undefined, event?: GuestEvent): string {
+  const parts: string[] = [];
+  if (event?.label) parts.push(`${event.label}.`);
+  const opp = intel?.opportunity;
+  if (opp?.hasOpportunity && opp.suggestedItem) {
+    const action = opp.bestAction ? opp.bestAction : `Recommend the ${opp.suggestedItem.name}`;
+    parts.push(`${action}.`);
+  }
+  if (!parts.length) {
+    parts.push(table.guests ? `${table.guests} guests seated, no live opportunity yet.` : 'No live opportunity yet.');
+  }
+  return parts.join(' ');
+}
+
 function useFloorAndTasks() {
   const { alerts } = useWaiter();
   const [floor, setFloor] = useState<FloorState | null>(null);
@@ -134,7 +177,7 @@ function useFloorAndTasks() {
 }
 
 function TopBar() {
-  const { shift, liveAlertCount, setTab } = useWaiter();
+  const { shift, setTab } = useWaiter();
   const { logout } = useAuth();
   return (
     <div className="wv-topbar">
@@ -146,11 +189,10 @@ function TopBar() {
         </span>
       </button>
       <div className="wv-top-actions">
+        {/* Floor alerts (guest calls, food ready) are one tap away via the
+            Alerts bottom-nav item, which already carries this badge — a second
+            bell here duplicated it. This one is the general notification center. */}
         <NotificationBell />
-        <button className="wv-icon-btn" onClick={() => setTab('alerts')} aria-label="Open alerts">
-          <Bell size={20} />
-          {liveAlertCount > 0 && <span className="wv-badge">{liveAlertCount}</span>}
-        </button>
         <button className="wv-icon-btn" onClick={() => { if (confirm('Sign out of the waiter app?')) logout(); }} aria-label="Sign out">
           <LogOut size={19} />
         </button>
@@ -176,9 +218,13 @@ function BottomNav() {
   );
 }
 
-function TableCard({ table, status, onOpen }: { table: FloorTable; status: TableStatus; onOpen: () => void }) {
+function TableCard({ table, status, intel, event, hasUpdate, onOpen }: {
+  table: FloorTable; status: TableStatus; intel?: TableIntel; event?: GuestEvent; hasUpdate?: boolean; onOpen: () => void;
+}) {
+  const ev = intel?.opportunity?.hasOpportunity ? (intel.opportunity.expectedValue ?? intel.opportunity.increase) : 0;
   return (
     <button className={`wv-table-card st-${status}`} onClick={onOpen}>
+      {hasUpdate && <span className="wv-update-dot" aria-label="New activity" />}
       <div className="wv-card-top">
         <span className="wv-table-no">Table {table.number}</span>
         <span className="wv-status-pill">{statusCopy(status)}</span>
@@ -188,6 +234,12 @@ function TableCard({ table, status, onOpen }: { table: FloorTable; status: Table
         <span><Clock size={14} /> {seatedLabel(table.seatedMinutes)}</span>
         <b>{table.spend ? money(table.spend) : 'R0'}</b>
       </div>
+      {(event?.label || ev > 0) && (
+        <div className="wv-card-intel">
+          {event?.label && <span className="wv-occasion-chip">{event.emoji} {event.label}</span>}
+          {ev > 0 && <span className="wv-ev-chip">+{money(ev)} potential</span>}
+        </div>
+      )}
       <div className="wv-next-action">
         {status === 'ready' ? 'Run food now' : status === 'calling' ? 'Respond to guest' : status === 'birthday' ? 'Request dessert approval' : status === 'manager' ? 'Check manager note' : 'Open table'}
       </div>
@@ -196,7 +248,7 @@ function TableCard({ table, status, onOpen }: { table: FloorTable; status: Table
 }
 
 function HomeScreen() {
-  const { shift, selectTable, setTab } = useWaiter();
+  const { shift, selectTable, setTab, events, unseenTableUpdates } = useWaiter();
   const { floor, tasks, alerts } = useFloorAndTasks();
   const tables = floor?.tables || [];
   const myTables = tables.filter(t => shift.section.includes(t.number));
@@ -207,6 +259,10 @@ function HomeScreen() {
     return rank[as] - rank[bs] || (b.seatedMinutes || 0) - (a.seatedMinutes || 0);
   });
   const next = ranked.find(t => statusForTable(t, alerts, tasks) !== 'empty');
+  const activeTableIds = useMemo(() => ranked.filter(t => statusForTable(t, alerts, tasks) !== 'empty').map(t => t.tableId), [ranked, alerts, tasks]);
+  const intelByTable = useTableIntelMap(activeTableIds);
+  const nextIntel = next ? intelByTable[next.tableId] : undefined;
+  const nextEvent = next ? events[next.tableId] : undefined;
 
   return (
     <main className="wv-screen">
@@ -216,6 +272,7 @@ function HomeScreen() {
           <>
             <h1>Table {next.number}</h1>
             <p>{statusCopy(statusForTable(next, alerts, tasks))} - {next.guests || 0} guests - {money(next.spend || 0)}</p>
+            <p className="wv-intel-summary">{tableIntelSummary(next, nextIntel, nextEvent)}</p>
             <button className="wv-primary" onClick={() => selectTable(next.tableId)}>Open table</button>
           </>
         ) : (
@@ -238,7 +295,15 @@ function HomeScreen() {
       </div>
       <div className="wv-table-list">
         {ranked.map(table => (
-          <TableCard key={table.tableId} table={table} status={statusForTable(table, alerts, tasks)} onOpen={() => selectTable(table.tableId)} />
+          <TableCard
+            key={table.tableId}
+            table={table}
+            status={statusForTable(table, alerts, tasks)}
+            intel={intelByTable[table.tableId]}
+            event={events[table.tableId]}
+            hasUpdate={unseenTableUpdates.has(table.tableId)}
+            onOpen={() => selectTable(table.tableId)}
+          />
         ))}
         {!ranked.length && <p className="wv-empty">No assigned tables found for this shift.</p>}
       </div>
@@ -279,21 +344,108 @@ function Timeline({ status, placed }: { status?: string; placed: number }) {
   );
 }
 
-function AiRecommendationPanel({ recs, onAdd }: { recs: CartRec[]; onAdd: (rec: CartRec) => void }) {
+const TONE_TABS: { key: keyof NonNullable<CartRec['scripts']>; label: string }[] = [
+  { key: 'professional', label: 'Professional' },
+  { key: 'friendly', label: 'Friendly' },
+  { key: 'luxury', label: 'Luxury' },
+];
+
+const STATUS_LABEL: Record<RecommendationStatus, string> = {
+  pending: 'Pending', suggested: 'Suggested', accepted: 'Accepted', declined: 'Declined', ignored: 'Ignored',
+};
+
+// Phase 2 (Waiter Experience): every rec here already carries confidence/
+// expectedValue/replacement (Phase 1) plus professional/friendly/luxury
+// scripts (server-composed via the existing nlgService, see aiService.js
+// cartRecommendations()) — this panel only presents what's already computed.
+function AiRecommendationPanel({ recs, onAdd, onDecline, statusByName }: {
+  recs: CartRec[]; onAdd: (rec: CartRec) => void; onDecline: (rec: CartRec) => void; statusByName: Record<string, RecommendationStatus>;
+}) {
+  const [tone, setTone] = useState<keyof NonNullable<CartRec['scripts']>>('friendly');
   const rec = recs[0];
   if (!rec) return <p className="wv-empty">Add an item to the cart for live AI recommendations.</p>;
+  const status = statusByName[rec.name] || 'suggested';
+  const script = rec.scripts?.[tone] || rec.script || `Many guests enjoy this with ${rec.name}.`;
+  const isSettled = status === 'accepted' || status === 'declined';
+
   return (
     <section className="wv-ai-card">
       <div className="wv-ai-head">
         <Sparkles size={18} />
         <span>AI Recommendation</span>
+        <span className={`wv-status-chip st-${status}`}>{STATUS_LABEL[status]}</span>
       </div>
       <h3>{rec.name}</h3>
       <p>{rec.reason || 'Best available pairing for this cart.'}</p>
-      <blockquote>{rec.script || `Many guests enjoy this with ${rec.name}.`}</blockquote>
+      <div className="wv-rec-metrics">
+        {typeof rec.confidence === 'number' && <span className="wv-metric-chip">Confidence {Math.round(rec.confidence * 100)}%</span>}
+        {typeof rec.expectedValue === 'number' && rec.expectedValue > 0 && <span className="wv-metric-chip">EV {moneyExact(rec.expectedValue)}</span>}
+        {rec.replacement && <span className="wv-metric-chip">Upgrade from {rec.replacement.name}</span>}
+      </div>
+      {rec.scripts && (
+        <div className="wv-tone-tabs" role="tablist" aria-label="Delivery style">
+          {TONE_TABS.map(t => (
+            <button key={t.key} role="tab" aria-selected={tone === t.key} className={tone === t.key ? 'active' : ''} onClick={() => setTone(t.key)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <blockquote>{script}</blockquote>
       <div className="wv-ai-foot">
         <b>+{money(rec.upsell || rec.price || 0)}</b>
-        <button onClick={() => onAdd(rec)}><Plus size={16} /> Add To Cart</button>
+        {!isSettled && (
+          <div className="wv-ai-actions">
+            <button className="wv-plain-icon" onClick={() => onDecline(rec)} aria-label="Decline recommendation"><Trash2 size={15} /></button>
+            <button onClick={() => onAdd(rec)}><Plus size={16} /> Add To Cart</button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// Phase 2 (Waiter Experience): heuristic per-seat presentation of the ONE
+// shared table cart (no schema change — no per-guest cart data exists). Items
+// are round-robin-assigned to seats purely for display, grouped into
+// drinks/mains/desserts by categoryType where known.
+function roughCourse(categoryType?: string): 'Drinks' | 'Mains' | 'Desserts' | 'Other' {
+  const t = (categoryType || '').toUpperCase();
+  if (t === 'WINE' || t === 'DRINK') return 'Drinks';
+  if (t === 'MAIN') return 'Mains';
+  if (t === 'DESSERT') return 'Desserts';
+  return 'Other';
+}
+
+function SeatBreakdown({ table, lines }: { table: FloorTable; lines: { name: string; quantity: number; categoryType?: string }[] }) {
+  const seatCount = Math.max(1, Math.min(table.guests || 1, 12));
+  if (seatCount <= 1 || lines.length === 0) return null;
+  const seats: { name: string; quantity: number; categoryType?: string }[][] = Array.from({ length: seatCount }, () => []);
+  lines.forEach((line, i) => seats[i % seatCount].push(line));
+
+  return (
+    <section className="wv-panel">
+      <div className="wv-panel-title"><Users size={17} /> Per Seat</div>
+      <div className="wv-seat-grid">
+        {seats.map((seatLines, i) => {
+          const byCourse: Record<string, string[]> = {};
+          seatLines.forEach(l => {
+            const course = roughCourse(l.categoryType);
+            (byCourse[course] ||= []).push(`${l.quantity}x ${l.name}`);
+          });
+          return (
+            <div className="wv-seat-card" key={i}>
+              <b>Seat {i + 1}</b>
+              {seatLines.length === 0 && <small className="wv-muted">No items yet</small>}
+              {(['Drinks', 'Mains', 'Desserts', 'Other'] as const).filter(c => byCourse[c]?.length).map(c => (
+                <div key={c} className="wv-seat-course">
+                  <span>{c}</span>
+                  <small>{byCourse[c].join(', ')}</small>
+                </div>
+              ))}
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -333,6 +485,7 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
   const [intel, setIntel] = useState<TableIntel | null>(null);
   const [recData, setRecData] = useState<CartRecResponse | null>(null);
   const [requestingBirthday, setRequestingBirthday] = useState(false);
+  const [statusByName, setStatusByName] = useState<Record<string, RecommendationStatus>>({});
   const event = selectedTableId ? events[selectedTableId] : undefined;
   const cartSig = useMemo(() => order.map(line => `${line.name}:${line.quantity}`).join('|'), [order]);
 
@@ -343,15 +496,38 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
 
   useEffect(() => {
     api.cartRecommendations({ cart: order.map(line => ({ name: line.name, price: line.price, qty: line.quantity })), event: event?.type || null })
-      .then(setRecData)
+      .then(data => {
+        setRecData(data);
+        const top = data?.recommendations?.[0];
+        if (top) setStatusByName(prev => (prev[top.name] ? prev : { ...prev, [top.name]: 'suggested' }));
+      })
       .catch(() => setRecData(null));
   }, [cartSig, event?.type, order]);
+
+  // Phase 2 (Waiter Experience): a suggested recommendation that sits untouched
+  // for a while is "ignored" — reuses the same status chip, no separate system.
+  useEffect(() => {
+    const top = recData?.recommendations?.[0];
+    if (!top) return;
+    const timer = setTimeout(() => {
+      setStatusByName(prev => (prev[top.name] === 'suggested' ? { ...prev, [top.name]: 'ignored' } : prev));
+    }, 45_000);
+    return () => clearTimeout(timer);
+  }, [recData]);
 
   function addRec(rec: CartRec) {
     addToOrder(rec);
     showToast(`Added ${rec.name}`);
+    setStatusByName(prev => ({ ...prev, [rec.name]: 'accepted' }));
     if (selectedTableId) {
       api.recordUpsell({ waiterName: shift.name, tableId: selectedTableId, suggestedItem: rec.name, accepted: true, source: rec.source_title || 'cart-rec', value: rec.price }).catch(() => {});
+    }
+  }
+
+  function declineRec(rec: CartRec) {
+    setStatusByName(prev => ({ ...prev, [rec.name]: 'declined' }));
+    if (selectedTableId) {
+      api.recordUpsell({ waiterName: shift.name, tableId: selectedTableId, suggestedItem: rec.name, accepted: false, source: rec.source_title || 'cart-rec', value: 0 }).catch(() => {});
     }
   }
 
@@ -415,6 +591,7 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
       <section className="wv-panel">
         <div className="wv-panel-title"><User size={17} /> Guest Insights</div>
         <InsightTags intel={intel} event={event} />
+        {recData?.occasionPrompt && <p className="wv-occasion-prompt">🥂 {recData.occasionPrompt}</p>}
         {event?.type === 'birthday' && (
           <button className="wv-secondary full" onClick={requestBirthday} disabled={requestingBirthday}>
             <Gift size={16} /> {requestingBirthday ? 'Requesting...' : 'Request Complimentary Dessert'}
@@ -422,7 +599,9 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
         )}
       </section>
 
-      <AiRecommendationPanel recs={recData?.recommendations || []} onAdd={addRec} />
+      <SeatBreakdown table={table} lines={[...placedItems, ...order]} />
+
+      <AiRecommendationPanel recs={recData?.recommendations || []} onAdd={addRec} onDecline={declineRec} statusByName={statusByName} />
       <RevenuePanel currentSpend={table.spend + orderTotal} recs={recData?.recommendations || []} />
 
       <div className="wv-quick-actions">
@@ -434,10 +613,52 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
         <button onClick={() => setTab('chat')}><MessageCircle size={17} /> View Chat</button>
       </div>
 
-      <button className="wv-primary sticky" disabled={order.length === 0 || sending} onClick={sendToKitchen}>
-        <Send size={16} /> {sending ? 'Sending...' : 'Send To Kitchen'}
-      </button>
+      {order.length > 0 ? (
+        <button className="wv-primary sticky" disabled={sending} onClick={sendToKitchen}>
+          <Send size={16} /> {sending ? 'Sending...' : 'Send To Kitchen'}
+        </button>
+      ) : placedItems.length > 0 ? (
+        <div className="wv-all-sent sticky"><Check size={15} /> All items sent to kitchen</div>
+      ) : null}
     </div>
+  );
+}
+
+// Falls back to a monogram tile (dish initial on tinted navy) instead of a
+// broken-image square whenever resolveImage() can't produce a real photo, or
+// the photo it names 404s — this screen was ~95% broken thumbnails before.
+// Phase 2 (Waiter Experience): poster-first, tap-to-play video — the SAME
+// pattern as the customer menu's RecommendationCard journey variant. The
+// <video> element only mounts after a tap; it never autoplays or eager-loads.
+function AddItemThumb({ item }: { item: MenuItem }) {
+  const [errored, setErrored] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const src = resolveImage(item);
+  const videoSrc = resolveVideo(item);
+
+  if (playing && videoSrc) {
+    return <video className="wv-item-video" src={videoSrc} muted playsInline autoPlay loop onError={() => setPlaying(false)} />;
+  }
+  return (
+    <>
+      {!src || errored ? (
+        <span className="wv-item-monogram">{(item.name || '?').trim().charAt(0).toUpperCase()}</span>
+      ) : (
+        <img src={src} alt="" loading="lazy" onError={() => setErrored(true)} />
+      )}
+      {videoSrc && (
+        <span
+          className="wv-item-playbtn"
+          role="button"
+          tabIndex={0}
+          aria-label={`Play ${item.name} video`}
+          onClick={e => { e.stopPropagation(); setPlaying(true); }}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setPlaying(true); } }}
+        >
+          <Play size={12} fill="currentColor" />
+        </span>
+      )}
+    </>
   );
 }
 
@@ -483,7 +704,7 @@ function AddItems({ onDone }: { onDone: () => void }) {
       <div className="wv-item-grid">
         {items.map((item: MenuItem) => (
           <button key={item.name} className="wv-item-tile" onClick={() => { addToOrder(item); showToast(`Added ${item.name}`); }}>
-            <span className="wv-item-thumb">{item.img ? <img src={resolveImage(item)} alt="" loading="lazy" /> : <UtensilsCrossed size={24} />}</span>
+            <span className="wv-item-thumb"><AddItemThumb item={item} /></span>
             <span>
               <b>{item.name}</b>
               <small>{money(item.price)}</small>
@@ -499,7 +720,7 @@ function AddItems({ onDone }: { onDone: () => void }) {
 }
 
 function TablesScreen() {
-  const { selectedTableId, selectTable } = useWaiter();
+  const { selectedTableId, selectTable, unseenTableUpdates } = useWaiter();
   const { floor, tasks, alerts } = useFloorAndTasks();
   const [subView, setSubView] = useState<TableSubView>('details');
   const [query, setQuery] = useState('');
@@ -522,6 +743,7 @@ function TablesScreen() {
       <div className="wv-mini-table-rail">
         {filtered.map(table => (
           <button key={table.tableId} className={table.tableId === selectedTableId ? 'active' : ''} onClick={() => selectTable(table.tableId)}>
+            {unseenTableUpdates.has(table.tableId) && <span className="wv-update-dot" aria-label="New activity" />}
             <b>{table.number}</b>
             <small>{statusCopy(statusForTable(table, alerts, tasks))}</small>
           </button>
@@ -686,7 +908,7 @@ function ProfileScreen() {
         <div><span>Revenue Generated</span><b>{money(perf?.salesDriven || 0)}</b></div>
         <div><span>Upsells Accepted</span><b>{perf?.upsellAccepted ?? 0}</b></div>
         <div><span>Additional Revenue</span><b>{money(perf?.upsellRevenue || 0)}</b></div>
-        <div><span>Guest Rating</span><b>{perf?.guestRating != null ? `${perf.guestRating}★` : '—'}</b></div>
+        <div><span>Guest Rating</span><b className="wv-rating-value">{perf?.guestRating != null ? <>{perf.guestRating}<Star size={15} fill="currentColor" /></> : '—'}</b></div>
         <div><span>Upsell Rate</span><b>{Math.round((perf?.upsellRate || 0) * 100)}%</b></div>
       </div>
       <button className="wv-secondary full" onClick={endShift}>End Shift</button>

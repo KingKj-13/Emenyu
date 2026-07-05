@@ -60,6 +60,11 @@ interface WaiterContextValue {
 
   toast: string | null;
   showToast: (msg: string) => void;
+
+  // Phase 2 (Waiter Experience): tables with activity the waiter hasn't seen
+  // yet, WITHOUT interrupting whichever table they're currently viewing —
+  // shown as a small badge, cleared the moment that table is opened.
+  unseenTableUpdates: Set<string>;
 }
 
 const WaiterContext = createContext<WaiterContextValue>(null!);
@@ -89,6 +94,14 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
   const [placedItems, setPlacedItems] = useState<{ name: string; price: number; quantity: number }[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [unseenTableUpdates, setUnseenTableUpdates] = useState<Set<string>>(new Set());
+
+  const markTableUpdated = useCallback((tableId?: string | null) => {
+    if (!tableId) return;
+    // Don't badge the table the waiter is already looking at — they'll see the change directly.
+    if (tableId === selectedTableRef.current) return;
+    setUnseenTableUpdates(prev => (prev.has(tableId) ? prev : new Set(prev).add(tableId)));
+  }, []);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -115,6 +128,8 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     setOrder([]);
     setPlacedItems([]);
     setTab('tables');
+    // Opening a table is the "refresh immediately" moment — clear its badge.
+    setUnseenTableUpdates(prev => (prev.has(tableId) ? (() => { const next = new Set(prev); next.delete(tableId); return next; })() : prev));
     const socket = socketRef.current;
     socket.emit('joinTable', { restaurantId: RESTAURANT_ID, tableId });
     socket.emit('fetchHistory', { restaurantId: RESTAURANT_ID, tableId });
@@ -215,11 +230,16 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
       if ((p.kitchenStatus || '').toLowerCase() !== 'ready') return;
       const label = p.displayTable || (p.tableId ? p.tableId.replace('table', 'Table ') : 'A table');
       pushAlert({ kind: 'ready', tableId: p.tableId, title: label, message: `Order ready - bring to ${label.toLowerCase()}` });
+      markTableUpdated(p.tableId);
+    };
+    const onWaiterTaskCreated = (p: { task?: { tableId?: string } }) => {
+      markTableUpdated(p?.task?.tableId);
     };
     const onGuestEvent = (p: { tableId?: string; event?: GuestEvent | null }) => {
       if (!p?.event) return;
       const label = p.tableId ? p.tableId.replace('table', 'Table ') : 'A table';
       setEvents(prev => ({ ...prev, [String(p.tableId)]: p.event as GuestEvent }));
+      markTableUpdated(p.tableId);
       pushAlert({
         kind: 'event',
         tableId: p.tableId,
@@ -247,9 +267,10 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
           .map(h => ({ name: String(h.name), price: Number(h.price) || 0, quantity: Number(h.quantity ?? h.qty) || 1 }))
       );
     };
-    const onOrderPlaced = () => {
+    const onOrderPlaced = (p?: { tableId?: string }) => {
       const tid = selectedTableRef.current;
       if (tid) socket.emit('fetchHistory', { restaurantId: RESTAURANT_ID, tableId: tid });
+      markTableUpdated(p?.tableId);
     };
     // On (re)connect — e.g. after a server restart — re-join the waiter/admin
     // rooms and the selected table so notifications and cart sync keep working.
@@ -272,6 +293,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     socket.on('syncCart', onSyncCart);
     socket.on('syncHistory', onSyncHistory);
     socket.on('orderPlaced', onOrderPlaced);
+    socket.on('waiterTaskCreated', onWaiterTaskCreated);
     return () => {
       socket.off('connect', onConnect);
       socket.off('incomingWaiterCall', onBell);
@@ -281,8 +303,9 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
       socket.off('syncCart', onSyncCart);
       socket.off('syncHistory', onSyncHistory);
       socket.off('orderPlaced', onOrderPlaced);
+      socket.off('waiterTaskCreated', onWaiterTaskCreated);
     };
-  }, [seedGuestLines, showToast]);
+  }, [seedGuestLines, showToast, markTableUpdated]);
 
   const liveAlertCount = alerts.filter(a => a.state === 'live').length;
 
@@ -297,7 +320,8 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
       notes, setTableNotes,
       alerts, liveAlertCount, respondAlert, dismissAlert,
       events, placedItems,
-      toast, showToast
+      toast, showToast,
+      unseenTableUpdates
     }}>
       {children}
     </WaiterContext.Provider>

@@ -95,7 +95,7 @@ class ShiftService {
           waiterName: { equals: username, mode: 'insensitive' },
           timestamp: { gte: from, lte: to }
         },
-        select: { total: true }
+        select: { total: true, tip: true }
       });
       let tasksResolved = 0;
       try {
@@ -107,14 +107,20 @@ class ShiftService {
           }
         });
       } catch { /* WaiterTask optional */ }
+      // Phase 2 (Waiter Experience) — tips are already on Order.tip, just never
+      // surfaced. Folded into the existing responseMetrics Json column (no schema
+      // change) so it also survives onto the ended-shift summary, not just the
+      // live status.
+      const tipsHandled = Math.round(orders.reduce((s, o) => s + (Number(o.tip) || 0), 0) * 100) / 100;
       return {
         ordersHandled: orders.length,
         revenueHandled: Math.round(orders.reduce((s, o) => s + (Number(o.total) || 0), 0) * 100) / 100,
-        responseMetrics: { tasksResolved }
+        tipsHandled,
+        responseMetrics: { tasksResolved, tipsHandled }
       };
     } catch (error) {
       this.logger?.warn?.('shift_metrics_failed', { error: error?.message });
-      return { ordersHandled: 0, revenueHandled: 0, responseMetrics: {} };
+      return { ordersHandled: 0, revenueHandled: 0, tipsHandled: 0, responseMetrics: {} };
     }
   }
 }

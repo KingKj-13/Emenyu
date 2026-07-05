@@ -33,14 +33,75 @@ function createReasonComposer({ nlgService = null, heroPairings = null, logger =
     return `A natural match for${s}.`;
   }
 
+  // Recommendation Brain V2 — layer the dish's own story/cooking-method and,
+  // where one exists, a premium-upgrade nudge onto the base hero reason. Turns
+  // a single sommelier clause into the kind of 2-3 sentence narrative an
+  // experienced waiter would actually say, using only real dishes/prices
+  // authored in trump_hero_pairings.json's dishNotes/upgrades/sauceUpgrades —
+  // never fabricated, and skipped entirely for the ~100 dishes without this
+  // extra knowledge (they just get the existing hero/Tier-2 reason, unchanged).
+  function foodSideOf(target, source) {
+    const isBev = it => ['WINE', 'DRINK'].includes((it && it.categoryType || '').toUpperCase());
+    if (target && !isBev(target)) return target;
+    if (source && !isBev(source)) return source;
+    return null;
+  }
+
+  function upgradeNudge(dish) {
+    if (!heroPairings || !heroPairings.ready || !dish || !dish.name) return '';
+    const upgrade = typeof heroPairings.upgradeFor === 'function' ? heroPairings.upgradeFor(dish.name, dish.tags || {}) : null;
+    if (upgrade && lc(upgrade.to) !== lc(dish.name)) {
+      return `If you'd like something even more memorable, I'd suggest upgrading to the ${upgrade.to} — ${upgrade.note}.`;
+    }
+    const sauce = typeof heroPairings.sauceUpgradeFor === 'function' ? heroPairings.sauceUpgradeFor(dish.name, dish.tags || {}) : null;
+    if (sauce) {
+      return `Ask for the ${sauce.sauce} on the side — ${sauce.note}.`;
+    }
+    return '';
+  }
+
+  function narrativeExtras(target, source) {
+    const dish = foodSideOf(target, source);
+    if (!dish || !heroPairings || !heroPairings.ready) return '';
+    const note = typeof heroPairings.dishNoteFor === 'function' ? heroPairings.dishNoteFor(dish.name, dish.tags || {}) : null;
+    const parts = [];
+    if (note && note.story) parts.push(note.story);
+    const nudge = upgradeNudge(dish);
+    if (nudge) parts.push(nudge);
+    return parts.join(' ');
+  }
+
+  // Recommendation Brain V2 — a dessert suggestion that references BOTH what's
+  // already on the table (the main dish AND the wine), not just one anchor.
+  // Uses the item's own metadata.tags (richness/sweetness — already enriched by
+  // scripts/enrich-menu-tags.js) to decide the light-vs-indulgent framing, so
+  // this works for any dessert, not just ones with authored hero copy.
+  function dessertNarrative(target, source, cartWine) {
+    if ((target.categoryType || '').toUpperCase() !== 'DESSERT' || !source || !cartWine) return null;
+    const richness = Number(target.tags?.richness);
+    const isLight = Number.isFinite(richness) ? richness <= 1 : /lemon|sorbet|fruit|berry/i.test(target.name || '');
+    const closing = isLight
+      ? `${target.name} keeps things light rather than heavy after the ${source.name.toLowerCase()}.`
+      : `${target.name} is a properly rich way to close out the ${source.name.toLowerCase()} and ${cartWine.name.toLowerCase()}.`;
+    return `You've chosen ${source.name} and a ${cartWine.name} — ${closing}`;
+  }
+
   // The per-item reason shown on cards / chat / waiter for `target`, optionally
   // paired to an anchor dish `source`. tone: 'short' | 'professional' | 'luxury' | …
-  async function pairingReason(target = {}, source = null, { tone = 'professional' } = {}) {
+  async function pairingReason(target = {}, source = null, { tone = 'casual', cartWine = null } = {}) {
+    // Dessert + full table context (dish + wine) — checked first since it's the
+    // most specific, most narrative-rich case when both anchors are available.
+    const dessertLine = dessertNarrative(target, source, cartWine);
+    if (dessertLine) return dessertLine;
+
     // Tier 1a — AUTHORED HERO: the curated dish × varietal line (renders for any
     // bottle of that varietal). One source for cards, chat and the waiter.
     if (heroPairings && heroPairings.ready && source) {
       const hero = heroPairings.reasonFor(source, target);
-      if (hero) return hero;
+      if (hero) {
+        const extras = narrativeExtras(target, source);
+        return extras ? `${hero} ${extras}` : hero;
+      }
     }
     // Tier 1b — chef per-pair authored reason wins verbatim.
     if (typeof target.reason === 'string' && target.reason.trim()) {

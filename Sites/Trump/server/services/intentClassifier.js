@@ -47,6 +47,7 @@ const OCCASION_DETAIL_MAP = [
   ['business_dinner', /\b(business dinner|client dinner|work dinner|colleagues|business meeting|client meeting|work function|corporate|with the team|the boss)\b/],
   ['sports_night', /\b(football|soccer|rugby|cricket|the game|the match|world cup|watching the game|match night)\b/],
   ['date', /\b(date night|date|romantic|just the two|for two|impress)\b/],
+  ['family_dinner', /\b(family dinner|with (my |the )?(family|kids|parents)|family gathering|family celebration)\b/],
   ['celebration', /\b(celebrat|engagement|promotion|special occasion|milestone|achievement)\b/],
 ];
 

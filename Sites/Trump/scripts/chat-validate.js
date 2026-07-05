@@ -139,6 +139,30 @@ function check(name, pass, detail) { results.push({ section, name, pass: !!pass,
   check('reasonComposer: hero tier beats chef reason', (await composerH.pairingReason({ name: 'HeroCab', categoryType: 'WINE', reason: 'chef line' }, { name: 'RIBEYE 380g' })) === 'HERO LINE');
   check('reasonComposer: falls to chef when no hero', (await composerH.pairingReason({ name: 'Other', categoryType: 'WINE', reason: 'chef line' }, { name: 'RIBEYE 380g' })) === 'chef line');
 
+  // ── 6. Recommendation Brain V2 — narrative composition (dish notes, upgrades, multi-anchor) ──
+  group('6. Recommendation Brain V2 — sommelier narrative + multi-anchor dessert reasoning');
+  const realComposer = createReasonComposer({ heroPairings: heroSvc });
+  const ribeyeTarget = { name: 'RIBEYE 380g', categoryType: 'MAIN', tags: { protein: ['beef'] } };
+  const cabSource = { name: 'Durbanville Hills Cabernet', category: 'CABERNET SAUVIGNON', categoryType: 'WINE' };
+  const ribeyeNarrative = await realComposer.pairingReason(ribeyeTarget, cabSource);
+  check('V2: wine-added-first direction resolves the hero pairing (not just dish-first)', /firm tannin|backbone/i.test(ribeyeNarrative), `got="${ribeyeNarrative}"`);
+  check('V2: narrative includes the dish story clause', /cut in-house/i.test(ribeyeNarrative), `got="${ribeyeNarrative}"`);
+  check('V2: narrative includes a real premium-upgrade nudge (Wagyu Ribeye, a real menu item)', /Wagyu Ribeye/.test(ribeyeNarrative), `got="${ribeyeNarrative}"`);
+
+  const cheesecakeTarget = { name: 'Lemon Cheesecake', categoryType: 'DESSERT', tags: { richness: 1 } };
+  const pastaSource = { name: 'Seafood Pasta', categoryType: 'MAIN' };
+  const sauvBlancWine = { name: 'Sauvignon Blanc', categoryType: 'WINE' };
+  const dessertNarrative = await realComposer.pairingReason(cheesecakeTarget, pastaSource, { cartWine: sauvBlancWine });
+  check('V2: dessert reason references BOTH cart anchors (dish AND wine)', /Seafood Pasta/.test(dessertNarrative) && /Sauvignon Blanc/.test(dessertNarrative), `got="${dessertNarrative}"`);
+  check('V2: light dessert (richness<=1) framed as "light rather than heavy"', /light rather than heavy/i.test(dessertNarrative), `got="${dessertNarrative}"`);
+
+  const chocCakeTarget = { name: 'Death By Chocolate Cake', categoryType: 'DESSERT', tags: { richness: 3 } };
+  const richDessertNarrative = await realComposer.pairingReason(chocCakeTarget, pastaSource, { cartWine: sauvBlancWine });
+  check('V2: rich dessert (richness=3) framed as properly rich, not "light"', /properly rich/i.test(richDessertNarrative) && !/light rather than heavy/i.test(richDessertNarrative), `got="${richDessertNarrative}"`);
+
+  const noWineNarrative = await realComposer.pairingReason(cheesecakeTarget, pastaSource, {});
+  check('V2: no dessert multi-anchor line when there is no cart wine (falls through normally)', !/You've chosen/.test(noWineNarrative), `got="${noWineNarrative}"`);
+
   // ── Report ──────────────────────────────────────────────────────────────────
   const failed = results.filter(r => !r.pass);
   if (process.argv.includes('--json')) {

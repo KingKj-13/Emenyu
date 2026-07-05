@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { opsApi } from '../../services/opsApi';
 import type { ShiftStatus, ShiftRow } from '../../types/operations';
+import { formatCurrency } from '../../lib/currency';
+import { useWaiter } from '../../context/WaiterContext';
 
 function fmtDuration(fromIso: string): string {
   const s = Math.max(0, Math.floor((Date.now() - new Date(fromIso).getTime()) / 1000));
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
   return `${h}h ${String(m).padStart(2, '0')}m`;
 }
-const money = (n: number) => 'R' + (Math.round((n || 0) * 100) / 100).toLocaleString('en-ZA');
+const money = (n: number) => formatCurrency(n);
 
 // Phase 03B — waiter shift control: start / live timer / end + end-of-shift summary.
 // Consumes /api/shift/me, /shift/start, /shift/end only.
 export function ShiftPanel() {
+  const { shift: waiterShift } = useWaiter();
   const [status, setStatus] = useState<ShiftStatus | null>(null);
   const [summary, setSummary] = useState<ShiftRow | null>(null);
   const [busy, setBusy] = useState(false);
@@ -53,8 +56,19 @@ export function ShiftPanel() {
             <Metric label="On duty" value={fmtDuration(shift.startedAt)} />
             <Metric label="Orders" value={String(status?.ordersHandled ?? shift.ordersHandled ?? 0)} />
             <Metric label="Revenue" value={money(status?.revenueHandled ?? shift.revenueHandled ?? 0)} />
+            <Metric label="Tips" value={money(status?.tipsHandled ?? status?.responseMetrics?.tipsHandled ?? 0)} />
             <Metric label="Tasks" value={String(status?.responseMetrics?.tasksResolved ?? 0)} />
           </div>
+          {waiterShift.section.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <span className="w-eyebrow-dim">Current tables</span>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                {waiterShift.section.map(n => (
+                  <span key={n} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 999, background: '#ffffff0d', border: '1px solid #ffffff1a' }}>{n}</span>
+                ))}
+              </div>
+            </div>
+          )}
           <button className="w-btn-primary" style={{ marginTop: 18 }} disabled={busy} onClick={end}>
             {busy ? 'Ending…' : 'End shift'}
           </button>
@@ -74,6 +88,7 @@ export function ShiftPanel() {
           <div style={{ display: 'flex', gap: 18, marginTop: 10, flexWrap: 'wrap' }}>
             <Metric label="Orders handled" value={String(summary.ordersHandled)} />
             <Metric label="Revenue handled" value={money(summary.revenueHandled)} />
+            <Metric label="Tips handled" value={money(summary.responseMetrics?.tipsHandled ?? 0)} />
             <Metric label="Tasks resolved" value={String(summary.responseMetrics?.tasksResolved ?? 0)} />
           </div>
         </div>

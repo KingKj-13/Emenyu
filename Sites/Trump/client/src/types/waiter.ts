@@ -19,6 +19,16 @@ export interface RecommendationReplacement {
   previousPrice: number;
 }
 
+// Phase 2 (Waiter Experience): three delivery styles for the same recommendation.
+// "friendly" is served from the existing 'casual' NLG tone (no separate tone exists).
+export interface RecommendationScripts {
+  professional: string;
+  friendly: string;
+  luxury: string;
+}
+
+export type RecommendationStatus = 'pending' | 'suggested' | 'accepted' | 'declined' | 'ignored';
+
 export interface CartRec {
   name: string;
   price: number;
@@ -28,6 +38,7 @@ export interface CartRec {
   reason: string;
   upsell: number;
   script?: string;
+  scripts?: RecommendationScripts;
   relation?: string;
   complimentary?: boolean;
   // Phase 4 analytics attribution.
@@ -43,6 +54,9 @@ export interface CartRec {
 export interface CartRecResponse {
   recommendations: CartRec[];
   eventRec: CartRec | null;
+  // Phase 2 — cart-signal occasion detection (e.g. Champagne added), same
+  // detector the customer chatbot already uses.
+  occasionPrompt?: string | null;
   potentialUplift: number;
 }
 
