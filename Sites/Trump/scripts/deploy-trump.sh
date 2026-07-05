@@ -64,8 +64,12 @@ grep -q '^DATABASE_URL=' "$APP_DIR/.env" 2>/dev/null \
 log "1/7 pre-deploy snapshot -> $snap"
 mkdir -p "$snap"
 sudo -u postgres pg_dump -Fc "$DB_NAME" > "$snap/$DB_NAME-$ts.dump" || die "pre-deploy DB dump failed"
+# Images/ and Video/ are static assets never touched by a code deploy — including
+# them here (incident 2026-07-05) made every snapshot ~4.4GB on a 24GB disk,
+# repeatedly starving npm ci/prisma generate of the space they need. Media has
+# its own backup path (backup-trump.sh); this snapshot is for CODE rollback only.
 tar -czf "$snap/app-$ts.tar.gz" --exclude node_modules --exclude client/node_modules \
-    --exclude client/dist -C "$APP_DIR" . 2>/dev/null || true
+    --exclude client/dist --exclude Images --exclude Video -C "$APP_DIR" . 2>/dev/null || true
 cp -a "$APP_DIR/.env" "$snap/.env.bak" 2>/dev/null || true
 cp -a "$APP_DIR/ecosystem.config.js" "$snap/ecosystem.config.js.bak" 2>/dev/null || true
 ok "snapshot ($(du -sh "$snap" | cut -f1))"
