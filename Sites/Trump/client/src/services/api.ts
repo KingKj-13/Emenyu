@@ -416,6 +416,9 @@ export const api = {
   setTableCovers(tableId: string, covers: number) {
     return postJson<{ ok: boolean; tableId: string; covers: number }>(ENDPOINTS.tableCovers(tableId), { covers });
   },
+  completeTable(tableId: string) {
+    return postJson<{ ok: boolean; tableId: string; completedOrders: number }>(ENDPOINTS.completeTable(tableId), {});
+  },
   getWaiterTasks(params: { status?: string; tableId?: string; waiterName?: string } = {}) {
     const q = new URLSearchParams(params as Record<string, string>).toString();
     return fetchJson<import('../types/waiter').WaiterTask[]>(`${ENDPOINTS.waiterTasks}${q ? `?${q}` : ''}`);

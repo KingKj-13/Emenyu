@@ -371,6 +371,36 @@ function createWaiterApiController(deps) {
       }
     },
 
+    // Mark a table's whole visit done: every currently-active order for the
+    // table moves to history (the exact same status transition kitchenController
+    // already performs per-order when food is marked "served" -- this just
+    // applies it to the whole table at once, from the waiter side) and the
+    // live cart is cleared. floorService then naturally reports the table as
+    // "empty" (no active orders, no cart) with no new status value invented.
+    async completeTable(req, res) {
+      const tableId = getCanonicalTableId(req.params.tableId);
+      const actor = resolveWaiter(req);
+      try {
+        const db = getPrisma();
+        const activeOrders = await db.order.findMany({
+          where: { restaurantId, tableId, status: 'active' },
+          select: { filename: true }
+        });
+
+        for (const order of activeOrders) {
+          await fileService.moveOrder('orders', 'history', order.filename, actor).catch(() => {});
+        }
+        await fileService.saveTableCart(tableId, []).catch(() => {});
+
+        socketService.emitOrderUpdated();
+        await socketService.emitTableHistory(tableId).catch(() => {});
+
+        res.json({ ok: true, tableId, completedOrders: activeOrders.length });
+      } catch {
+        res.status(500).json({ error: 'Failed to complete table' });
+      }
+    },
+
     nlgStatus(req, res) {
       res.json(nlgService.status());
     }

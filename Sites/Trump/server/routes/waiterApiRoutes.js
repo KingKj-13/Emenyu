@@ -40,6 +40,7 @@ function registerWaiterApiRoutes(app, controllers, auth) {
   app.get(alias('guests/:id'), waiterAuth, c.getGuest);
   app.post(alias('waiter/table/:tableId/seat-guest'), waiterAuth, c.seatGuest);
   app.post(alias('waiter/table/:tableId/covers'), waiterAuth, c.setTableCovers);
+  app.post(alias('waiter/table/:tableId/complete'), waiterAuth, c.completeTable);
 
   // NLG status (handy for verifying template vs LLM mode)
   app.get(alias('waiter/nlg-status'), waiterAuth, c.nlgStatus);

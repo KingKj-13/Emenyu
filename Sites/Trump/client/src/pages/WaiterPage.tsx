@@ -486,6 +486,7 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
   const [recData, setRecData] = useState<CartRecResponse | null>(null);
   const [requestingBirthday, setRequestingBirthday] = useState(false);
   const [statusByName, setStatusByName] = useState<Record<string, RecommendationStatus>>({});
+  const [completing, setCompleting] = useState(false);
   const event = selectedTableId ? events[selectedTableId] : undefined;
   const cartSig = useMemo(() => order.map(line => `${line.name}:${line.quantity}`).join('|'), [order]);
 
@@ -528,6 +529,24 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
     setStatusByName(prev => ({ ...prev, [rec.name]: 'declined' }));
     if (selectedTableId) {
       api.recordUpsell({ waiterName: shift.name, tableId: selectedTableId, suggestedItem: rec.name, accepted: false, source: rec.source_title || 'cart-rec', value: 0 }).catch(() => {});
+    }
+  }
+
+  // Waiter-side "this table's whole visit is done" -- moves every active
+  // order to history and clears the live cart (server: completeTable), so
+  // floorService naturally reports the table as free for the next booking.
+  async function completeTable() {
+    if (!selectedTableId || completing) return;
+    if (!window.confirm(`Mark Table ${table.number} as complete? This clears the bill and frees the table for new guests.`)) return;
+    setCompleting(true);
+    try {
+      await api.completeTable(selectedTableId);
+      showToast(`Table ${table.number} marked complete`);
+      setTab('tables');
+    } catch {
+      showToast('Could not complete the table — please try again');
+    } finally {
+      setCompleting(false);
     }
   }
 
@@ -611,6 +630,11 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
           <ShieldAlert size={17} /> Call Manager
         </button>
         <button onClick={() => setTab('chat')}><MessageCircle size={17} /> View Chat</button>
+        {(placedItems.length > 0 || table.spend > 0) && (
+          <button onClick={completeTable} disabled={completing}>
+            <Check size={17} /> {completing ? 'Completing...' : 'Complete Order'}
+          </button>
+        )}
       </div>
 
       {order.length > 0 ? (
