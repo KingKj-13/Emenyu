@@ -1,0 +1,47 @@
+name: luxury_tablet
+description: "EMenu Luxury Edition — Premium Customer Tablet Experience (Landscape 11-13\")"
+version: 1.0.0+1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  google_fonts: ^6.1.0
+  video_player: ^2.8.2
+  flutter_cache_manager: ^3.3.1
+  web_socket_channel: ^2.4.1
+  http: ^1.6.0
+  provider: ^6.1.1
+  shared_preferences: ^2.2.2
+  path_provider: ^2.1.6
+  open_filex: ^4.4.0
+  flutter_riverpod: 2.5.1
+  riverpod_annotation: 2.3.5
+  drift: ^2.19.1+1
+  sqlite3_flutter_libs: ^0.6.0+eol
+  path: ^1.9.1
+  riverpod: 2.5.1
+  crypto: ^3.0.7
+  go_router: ^17.3.0
+
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  riverpod_generator: 2.4.0
+  build_runner: ^2.4.13
+  drift_dev: ^2.19.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/luxury_menu.json
+    - assets/images/
+    - assets/videos/
+
