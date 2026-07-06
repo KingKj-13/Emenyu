@@ -23,6 +23,21 @@ interface ChatPanelProps {
   onItemClick?: (item: ChatSuggestionItem) => void;
 }
 
+// Bolds any menu-item name (from this message's own suggestion cards) that
+// appears in the assistant's reply, so "why not add our PRAWN & CALAMARI?"
+// reads with the dish name standing out rather than as flat plain text.
+function highlightDishNames(content: string, names: string[]) {
+  const clean = [...new Set(names.filter(Boolean))].sort((a, b) => b.length - a.length);
+  if (!clean.length) return content;
+  const pattern = new RegExp(`(${clean.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+  const parts = content.split(pattern);
+  return parts.map((part, i) => (
+    clean.some(n => n.toLowerCase() === part.toLowerCase())
+      ? <span key={i} className={styles.dishName}>{part}</span>
+      : <span key={i}>{part}</span>
+  ));
+}
+
 const SUGGESTED_PROMPTS = [
   "Can you suggest a wine for tonight?",
   "What's the chef's recommendation tonight?",
@@ -64,7 +79,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
           // screen), so guests saw a notification but no recommendation. Build
           // the actual chat message here, the moment the new suggestion is
           // found, so it's already waiting by the time the guest opens the panel.
-          const shown = recs.slice(0, 3);
+          const shown = recs.slice(0, 1);
           // Always name what was just added and what's being suggested, even
           // when the Brain's own `reason` is a generic dish hook rather than a
           // full "I noticed you've gone with X..." pairing sentence -- a
@@ -117,12 +132,13 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
       const history = messages.map(m => ({ role: m.role, content: m.content }));
       // Phase 3B: send the live cart so Donald can do cart-aware cross-sell.
       const res = await api.chat({ message: content, history, tableId, cart: cartItems }) as ChatResponse;
+      const shown = (res.suggestions || []).slice(0, 1);
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: res.reply || 'Sorry, I had trouble responding.',
-        suggestions: res.suggestions || []
+        suggestions: shown
       }]);
-      if (res.suggestions?.length) trackImpressions(res.suggestions, CHAT_RECO_CTX);
+      if (shown.length) trackImpressions(shown, CHAT_RECO_CTX);
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'I\'m having a moment — please try again shortly.' }]);
     } finally {
@@ -222,7 +238,9 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
               {messages.map((msg, i) => (
                 <div key={i}>
                   <div className={`${styles.message} ${msg.role === 'user' ? styles.userMsg : styles.assistantMsg}`}>
-                    {msg.content}
+                    {msg.role === 'assistant'
+                      ? highlightDishNames(msg.content, (msg.suggestions || []).map(s => s.name))
+                      : msg.content}
                   </div>
                   {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && (
                     <div className={styles.suggestionCards}>
@@ -230,6 +248,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
                         <RecommendationCard
                           key={j}
                           variant="compact"
+                          large
                           item={item as RecommendationItem}
                           showReason
                           premium={item.rotationGroup?.startsWith('upgrade:')}

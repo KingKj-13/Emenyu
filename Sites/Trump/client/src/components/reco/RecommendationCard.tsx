@@ -50,6 +50,7 @@ interface Props {
   // candidate) — never rendered from item.replacement alone.
   onReplace?: () => void;
   premium?: boolean; // "Premium" badge (e.g. the Wagyu upgrade nudge)
+  large?: boolean;   // bigger image/text for a single-card context (e.g. chat, one card at a time)
 }
 
 // A RecommendationItem carries only the fields the engine returns; project it onto
@@ -87,6 +88,7 @@ export function RecommendationCard({
   playable,
   onReplace,
   premium,
+  large,
 }: Props) {
   const [playing, setPlaying] = useState(false);
   const src = imageFor(item);
@@ -184,7 +186,7 @@ export function RecommendationCard({
   const tagText = item.chef ? "Chef's pick" : item.source_title;
 
   return (
-    <div className={`${styles.card} ${styles[variant]} ${item.chef ? styles.chef : ''}`}>
+    <div className={`${styles.card} ${styles[variant]} ${item.chef ? styles.chef : ''} ${large ? styles.large : ''}`}>
       <button type="button" className={styles.main} onClick={onOpen} aria-label={`View ${item.name}`}>
         {src ? (
           <img

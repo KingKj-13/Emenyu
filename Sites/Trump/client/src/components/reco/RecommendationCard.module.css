@@ -109,6 +109,17 @@
 .compact .info { padding: 6px 8px; }
 .compact .addBtn { margin: 0 6px 6px; padding: 4px 0; border-radius: 20px; }
 
+/* Chat shows one card at a time, not a horizontal strip -- it can afford to
+   be much bigger than the cart drawer's side-by-side compact cards. */
+.compact.large { width: 100%; max-width: 260px; }
+.compact.large .img, .compact.large .imgPh { height: 150px; }
+.compact.large .info { padding: 10px 12px; gap: 4px; }
+.compact.large .name { font-size: 16px; -webkit-line-clamp: 3; }
+.compact.large .reason { font-size: 13.5px; line-height: 1.45; }
+.compact.large .price { font-size: 15px; }
+.compact.large .tag { font-size: 10.5px; }
+.compact.large .addBtn { padding: 8px 0; font-size: 13px; }
+
 /* ── detailed: horizontal row (pairing modal) ── */
 .detailed { flex-direction: column; }
 .detailed .main { flex-direction: row; align-items: stretch; gap: 10px; }

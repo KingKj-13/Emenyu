@@ -172,8 +172,13 @@
   max-width: 88%;
   padding: 8px 12px;
   border-radius: 8px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.dishName {
+  font-weight: 700;
+  color: var(--color-gold, #c6a24b);
 }
 
 .userMsg {
@@ -210,7 +215,7 @@
 
   .message {
     max-width: 92%;
-    font-size: 12px;
+    font-size: 14px;
   }
 }
 
