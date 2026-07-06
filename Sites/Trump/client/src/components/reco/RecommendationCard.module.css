@@ -110,15 +110,26 @@
 .compact .addBtn { margin: 0 6px 6px; padding: 4px 0; border-radius: 20px; }
 
 /* Chat shows one card at a time, not a horizontal strip -- it can afford to
-   be much bigger than the cart drawer's side-by-side compact cards. */
-.compact.large { width: 100%; max-width: 260px; }
-.compact.large .img, .compact.large .imgPh { height: 150px; }
-.compact.large .info { padding: 10px 12px; gap: 4px; }
-.compact.large .name { font-size: 16px; -webkit-line-clamp: 3; }
-.compact.large .reason { font-size: 13.5px; line-height: 1.45; }
-.compact.large .price { font-size: 15px; }
-.compact.large .tag { font-size: 10.5px; }
-.compact.large .addBtn { padding: 8px 0; font-size: 13px; }
+   be much bigger than the cart drawer's side-by-side compact cards, with a
+   warm gold glow around the dish photo so it reads as the one thing to look
+   at rather than another small thumbnail in a row. */
+/* Glow goes on the card itself, not the (clipped, overflow:hidden) image
+   inside it -- a child's box-shadow would be cut off at the card's own edge. */
+.compact.large {
+  width: 100%;
+  max-width: 320px;
+  box-shadow: 0 0 40px 8px rgba(198, 162, 75, 0.5);
+}
+.compact.large .img, .compact.large .imgPh {
+  height: 190px;
+  box-shadow: 0 0 0 1px rgba(198, 162, 75, 0.4) inset;
+}
+.compact.large .info { padding: 12px 14px; gap: 5px; }
+.compact.large .name { font-size: 18px; -webkit-line-clamp: 3; }
+.compact.large .reason { font-size: 14.5px; line-height: 1.45; }
+.compact.large .price { font-size: 16px; }
+.compact.large .tag { font-size: 11px; }
+.compact.large .addBtn { padding: 9px 0; font-size: 14px; }
 
 /* ── detailed: horizontal row (pairing modal) ── */
 .detailed { flex-direction: column; }
