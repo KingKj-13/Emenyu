@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luxury_tablet/core/sync/asset_pipeline.dart';
 import 'package:luxury_tablet/core/theme/theme.dart';
+import 'package:luxury_tablet/core/utils/media_url.dart';
 
 class LuxuryImage extends ConsumerWidget {
   final String path;
@@ -32,6 +34,22 @@ class LuxuryImage extends ConsumerWidget {
         width: width,
         height: height,
         errorBuilder: (_, __, ___) => Container(color: LuxuryColors.warmDarkBrown),
+      );
+    }
+
+    // The local filesystem cache (dart:io / path_provider) doesn't exist on
+    // web — go straight to the network there instead of through the pipeline.
+    if (kIsWeb) {
+      return Image.network(
+        resolveMediaUrl(path),
+        fit: fit,
+        width: width,
+        height: height,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(color: LuxuryColors.backgroundDarkest, width: width, height: height);
+        },
+        errorBuilder: (_, __, ___) => Container(color: LuxuryColors.warmDarkBrown, width: width, height: height),
       );
     }
 

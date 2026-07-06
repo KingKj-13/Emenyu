@@ -95,8 +95,8 @@ class SyncEngine {
                     description: itemMap['description'] ?? '',
                     price: (itemMap['price'] ?? 0).toDouble(),
                     chefPick: drift.Value(itemMap['chef_pick'] ?? false),
-                    heroImage: drift.Value(itemMap['hero_image_path'] ?? ''),
-                    heroVideo: drift.Value(itemMap['hero_video_path'] ?? ''),
+                    heroImage: drift.Value(_firstNonEmpty(itemMap['hero_image_path'], itemMap['image_path'])),
+                    heroVideo: drift.Value(_firstNonEmpty(itemMap['hero_video_path'], itemMap['video_path'])),
                     ingredientStory: drift.Value(itemMap['ingredient_story'] ?? ''),
                     originStory: drift.Value(itemMap['origin_story'] ?? ''),
                     chefStory: drift.Value(itemMap['chef_story'] ?? ''),
@@ -118,5 +118,13 @@ class SyncEngine {
       _isSyncing = false;
     }
   }
+}
+
+/// Prefers authored luxury editorial media; falls back to the shared
+/// Trump image/video when no luxury-specific content has been authored yet.
+String _firstNonEmpty(dynamic primary, dynamic fallback) {
+  final p = primary as String?;
+  if (p != null && p.isNotEmpty) return p;
+  return (fallback as String?) ?? '';
 }
 

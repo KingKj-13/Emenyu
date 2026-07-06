@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:luxury_tablet/core/theme/theme.dart';
+import 'package:luxury_tablet/core/utils/media_url.dart';
 import 'package:luxury_tablet/core/widgets/cinematic_pan.dart';
 import 'package:luxury_tablet/core/widgets/luxury_image.dart';
 
@@ -50,7 +51,7 @@ class _LivingPhotographState extends State<LivingPhotograph> {
   Future<void> _initVideo() async {
     if (widget.videoUrl.isEmpty) return;
 
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+    _controller = VideoPlayerController.networkUrl(Uri.parse(resolveMediaUrl(widget.videoUrl)));
     try {
       await _controller!.initialize();
       if (!mounted) return;
