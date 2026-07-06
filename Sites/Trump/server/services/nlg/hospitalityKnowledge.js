@@ -30,9 +30,15 @@ const isBevCat = it => ['WINE', 'DRINK'].includes(lc(it && it.categoryType).toUp
 // ── Cooking method (derived, never stored) ──────────────────────────────────
 // A short, concrete phrase for how the dish is actually prepared, inferred from
 // tags already on the item. Returns '' when nothing confident can be said.
+// Condiments/enhancements (sauce/butter/dressing add-ons) inherit their root
+// category's course/protein tags (e.g. a steak-enhancement butter reads as
+// course=MAIN, protein=beef) but aren't cooked themselves -- never given a
+// cooking-method line.
+const CONDIMENT_RE = /\b(sauce|butter|dressing|dip|chutney|relish|glaze)\b/;
 function cookingMethodFor(item = {}) {
   const tags = item.tags || {};
   const nameL = lc(item.name);
+  if (CONDIMENT_RE.test(nameL)) return '';
   const course = tags.course;
   const protein = tags.protein || [];
   const texture = tags.texture || [];
@@ -57,6 +63,7 @@ function cookingMethodFor(item = {}) {
 function signatureFor(item = {}) {
   const nameL = lc(item.name);
   const tags = item.tags || {};
+  if (CONDIMENT_RE.test(nameL)) return false;
   if (/wagyu|tomahawk|signature|trumps |the king|kings platter/.test(nameL)) return true;
   return tags.richness === 3 && tags.course === 'MAIN';
 }
@@ -317,4 +324,21 @@ function foodPairClauseFor({ target, source, tone = 'friendly' }) {
   return `A popular add-on alongside the ${sourceName}.`;
 }
 
-module.exports = { cookingMethodFor, signatureFor, splitDishDrink, whyClauseFor, foodPairClauseFor };
+// ── Conversation tips (derived) ─────────────────────────────────────────────
+// A short, true, tag-gated aside a waiter might casually drop when talking
+// about a dish -- never a fabricated fact about a SPECIFIC item, only what
+// its own tags already say. Covers every item with tags (all 439), not a
+// hand-authored list.
+function conversationTipFor(item = {}) {
+  const tags = item.tags || {};
+  if (tags.spice >= 3) return "Fair warning, it's the spiciest thing on the menu.";
+  if ((tags.occasion || []).includes('sharing')) return "It's a popular one for the table to share.";
+  if (signatureFor(item)) return "It's one of our signature dishes.";
+  if (tags.richness === 3 && tags.course === 'MAIN') return "It's on the richer side, built for a proper appetite.";
+  if (tags.course === 'DESSERT' && tags.sweetness === 3) return "Guests usually split this one, it's properly sweet.";
+  if (tags.drinkType === 'sparkling') return "Good one if the table's celebrating anything tonight.";
+  if ((tags.dietary || []).includes('vegan')) return "Fully plant-based, if that matters to the table.";
+  return '';
+}
+
+module.exports = { cookingMethodFor, signatureFor, splitDishDrink, whyClauseFor, foodPairClauseFor, conversationTipFor };

@@ -155,6 +155,39 @@ function scoreCandidate({ candidate, cart = [], menuByName = new Map(), guestInt
   };
 }
 
+// Phase 3 (Dining Concierge): the guest's dining journey is a fixed hospitality
+// sequence, not "whichever course happens to be empty" — nothing selected -> a
+// drink, drink -> starter/main, food -> wine, wine+main -> a premium upgrade
+// (once, never repeated), then dessert, then coffee, then a digestif, then STOP.
+// Pure function: given what's already in the cart (+ whether an upgrade has
+// already been offered this session, from the SAME excludeNames memory
+// recommend() already uses), returns the single next stage — never invents a
+// second recommendation system, just orders the existing course-completion
+// candidates the engine already knows how to build.
+function resolveItems(cart = [], menuByName = new Map()) {
+  return cart.map(line => resolveCartLine(line, menuByName)).filter(it => it && it.name);
+}
+
+function nextJourneyStage(cart = [], menuByName = new Map(), { upgradeOffered = false, upgradeAvailable = false } = {}) {
+  const items = resolveItems(cart, menuByName);
+  const typeOf = it => it.categoryType || classifier.categoryType(it);
+  const hasDrink = items.some(it => ['WINE', 'DRINK'].includes(typeOf(it)));
+  const hasFood = items.some(it => ['MAIN', 'STARTER', 'SUSHI'].includes(typeOf(it)));
+  const hasWine = items.some(it => typeOf(it) === 'WINE');
+  const hasDessert = items.some(it => typeOf(it) === 'DESSERT');
+  const hasCoffee = items.some(it => classifier.beverageKind(it) === 'HOT');
+  const hasDigestif = items.some(it => ['spirit', 'port', 'amarula'].includes(it.tags?.drinkType));
+
+  if (!hasDrink) return 'drink';
+  if (!hasFood) return 'food';
+  if (!hasWine) return 'wine';
+  if (upgradeAvailable && !upgradeOffered) return 'upgrade';
+  if (!hasDessert) return 'dessert';
+  if (!hasCoffee) return 'coffee';
+  if (!hasDigestif) return 'digestif';
+  return 'done';
+}
+
 module.exports = {
   clamp01,
   baseConfidence,
@@ -163,5 +196,6 @@ module.exports = {
   findReplacementTarget,
   netRevenueIncrease,
   tierWeights,
-  scoreCandidate
+  scoreCandidate,
+  nextJourneyStage
 };

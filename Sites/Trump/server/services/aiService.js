@@ -1246,7 +1246,7 @@ class AiService {
     this.addPeopleAlsoOrdered(cartNames, menuContext, orderRecords, addCandidate);
     this.addPerfectPairings(cartNames, menuContext, addCandidate);
     this.addFoodPairings(cartNames, menuContext, addCandidate);
-    this.addCourseCompletions(cartNames, menuContext, addCandidate, popularity);
+    this.addCourseCompletions(cartNames, menuContext, addCandidate, popularity, seen);
     this.addPopularCandidates(menuContext, popularity, addCandidate);
 
     if (payload.reason) {
@@ -1311,7 +1311,13 @@ class AiService {
       candidate,
       brain: scoring.scoreCandidate({ candidate, cart, menuByName: menuContext.byName, guestIntel, weights: tierWeightMap })
     }));
-    const chefScored = scored.filter(s => s.candidate.chef === true);
+    // Phase 3 (Dining Concierge): chef-tier candidates now come from two
+    // sources (curated chefRecs AND the journey's own upgrade nudge) that can
+    // both apply to the same dish, so this tier needs its OWN priority order
+    // instead of relying on insertion order -- sorted by the same `score` every
+    // chef candidate already carries (chefRecs' 1000+priority band; the
+    // journey upgrade's score is set to compete on the same scale below).
+    const chefScored = scored.filter(s => s.candidate.chef === true).sort((a, b) => b.candidate.score - a.candidate.score);
     const restScored = scored
       .filter(s => s.candidate.chef !== true)
       .sort((a, b) => b.brain.finalScore - a.brain.finalScore);
@@ -1532,36 +1538,80 @@ class AiService {
       });
   }
 
-  addCourseCompletions(cartNames, menuContext, addCandidate, popularity) {
-    const cartTypes = new Set(
-      cartNames
-        .map(name => menuContext.byName.get(name))
-        .filter(Boolean)
-        .map(item => item.categoryType)
+  // Phase 3 (Dining Concierge): ONE clear "next best decision" per turn, driven
+  // by scoring.nextJourneyStage — not a scattershot fill of every empty course.
+  // Still reuses the exact same candidate pipeline (addCandidate -> Brain
+  // scoring -> category-safety rules) that every other source here uses; this
+  // just decides WHICH course gets the strongest push this turn, and stops
+  // pushing anything once the journey (drink -> food -> wine -> upgrade ->
+  // dessert -> coffee -> digestif) is complete, per product spec.
+  addCourseCompletions(cartNames, menuContext, addCandidate, popularity, seen = new Set()) {
+    const cartItems = cartNames.map(name => menuContext.byName.get(name)).filter(Boolean);
+    const cartTypes = new Set(cartItems.map(item => item.categoryType));
+    const mainDish = cartItems.find(it => ['MAIN', 'STARTER', 'SUSHI'].includes(it.categoryType)) || null;
+
+    const upgrade = mainDish && this.hero && this.hero.ready
+      ? this.hero.upgradeFor(mainDish.name, mainDish.tags || {})
+      : null;
+    const upgradeItem = upgrade ? fuzzyFindItem(menuContext, upgrade.to) : null;
+    const upgradeAvailable = Boolean(upgradeItem && normalizeName(upgradeItem.name) !== normalizeName(mainDish?.name));
+    const upgradeOffered = !upgradeAvailable || seen.has(normalizeName(upgradeItem.name));
+
+    const stage = scoring.nextJourneyStage(
+      cartNames.map(name => ({ name })),
+      menuContext.byName,
+      { upgradeAvailable, upgradeOffered }
     );
 
-    [
-      { key: 'STARTER', title: 'Start with a starter', score: 76 },
-      { key: 'WINE', title: 'Wine pairing', score: 74 },
-      { key: 'DRINK', title: 'Cellar pairing', score: 72 },
-      { key: 'DESSERT', title: 'Sweet finish', score: 66 }
-    ].forEach(suggestion => {
-      if (cartTypes.has(suggestion.key)) {
-        return;
-      }
+    if (stage === 'done') {
+      return; // journey complete -- stop recommending, per product spec.
+    }
 
-      const options = [...(menuContext.categorized[suggestion.key] || [])].sort(
-        (left, right) => (popularity.get(normalizeName(right.name)) || 0) - (popularity.get(normalizeName(left.name)) || 0)
-      );
-      // Rotate wine/drink completions by cart so it isn't always the same bottle.
-      const pool = options.slice(0, Math.min(5, options.length));
-      const choice = (suggestion.key === 'WINE' || suggestion.key === 'DRINK') && pool.length > 1
-        ? pool[this.hashString(cartNames.join('|')) % pool.length]
-        : options[0];
-      if (choice) {
-        addCandidate(choice, suggestion.title, suggestion.score);
+    if (stage === 'upgrade') {
+      if (upgradeItem) {
+        // A same-role swap of the main already in the cart -- reuses the exact
+        // Phase 1 Replacement Logic (isReplacement -> price-delta EV, bypasses
+        // R5's "no second main", surfaces as "Replace X" on the card) rather
+        // than a second, parallel "this is an upgrade" mechanism.
+        // Also chef:true -- a curated upgrade nudge, not an algorithmic guess,
+        // so it earns the SAME guaranteed-prominent placement every other
+        // chef pairing gets (existing "chef always wins" ordering), rather
+        // than competing on raw EV against everything else in the rest tier.
+        addCandidate(upgradeItem, "Premium upgrade", 1150, {
+          rotationGroup: `upgrade:${normalizeName(mainDish.name)}`,
+          isReplacement: true,
+          chef: true,
+          // Tier 1b (reasonComposer): an explicit candidate.reason wins verbatim
+          // over the generic tag-driven fallback, reusing heroPairings' own
+          // upgrade note rather than inventing a second copy of it.
+          reason: `If you'd like something even more memorable, I'd suggest the ${upgrade.to} — ${upgrade.note}.`
+        });
       }
-    });
+      return;
+    }
+
+    const pickFrom = (pool, title, score, filterFn) => {
+      let options = [...pool].filter(item => !cartTypes.has(item.categoryType) || item.categoryType === 'DRINK');
+      if (filterFn) options = options.filter(filterFn);
+      options.sort((left, right) => (popularity.get(normalizeName(right.name)) || 0) - (popularity.get(normalizeName(left.name)) || 0));
+      const top = options.slice(0, Math.min(5, options.length));
+      const choice = top.length > 1 ? top[this.hashString(cartNames.join('|') + title) % top.length] : top[0];
+      if (choice) addCandidate(choice, title, score);
+    };
+
+    if (stage === 'food') {
+      pickFrom([...(menuContext.categorized.STARTER || []), ...(menuContext.categorized.MAIN || [])], 'Start with a starter or main', 78);
+    } else if (stage === 'wine') {
+      pickFrom(menuContext.categorized.WINE || [], 'Wine pairing', 76);
+    } else if (stage === 'drink') {
+      pickFrom([...(menuContext.categorized.WINE || []), ...(menuContext.categorized.DRINK || [])], 'To start, something to drink', 74);
+    } else if (stage === 'dessert') {
+      pickFrom(menuContext.categorized.DESSERT || [], 'Sweet finish', 66);
+    } else if (stage === 'coffee') {
+      pickFrom(menuContext.categorized.DRINK || [], 'Coffee to finish', 60, item => classifier.beverageKind(item) === 'HOT');
+    } else if (stage === 'digestif') {
+      pickFrom(menuContext.categorized.DRINK || [], 'An after-dinner drink', 56, item => ['spirit', 'port', 'amarula'].includes(item.tags?.drinkType));
+    }
   }
 
   // Phase 3A: score every menu item against the chat intent's slots using the

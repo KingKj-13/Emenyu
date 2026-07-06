@@ -28,7 +28,7 @@ const { createReasonComposer } = require('../server/services/reasonComposer');
 const RESTAURANT_ID = process.env.TRUMP_RESTAURANT_ID || 'trump';
 const WRITE_REPORT = process.argv.includes('--report');
 const JSON_OUT = process.argv.includes('--json');
-const SAMPLE_SIZE = 120;
+const SAMPLE_SIZE = 150; // Phase 3 (Dining Concierge): "randomly review at least 150 menu items"
 const BANNED = /\b(exquisite|indulgent|symphony|journey|luxurious experience)\b/i;
 const TONES = ['casual', 'professional', 'luxury'];
 

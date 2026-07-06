@@ -84,7 +84,12 @@ function createRecommendationRules({ config = {}, logger = null } = {}) {
       const chef = cand.chef === true;
       let reason = null;
 
-      if (enforceStage && !chef) {
+      // Phase 1 (Recommendation Brain) Replacement Logic applies here too: a
+      // premium-upgrade candidate (cand.isReplacement === true) swaps the main
+      // already in the cart rather than adding a second one, so R5 shouldn't
+      // block it — same bypass pattern as the beverage rules below.
+      const isMainReplacement = cand.isReplacement === true;
+      if (enforceStage && !chef && !isMainReplacement) {
         // R5: no starter once the table is closing (dessert in cart).
         if (type === 'STARTER' && stage === 'CLOSING') reason = 'stage:no-starter-at-closing';
         // R5: no second main from the algorithm when the cart already has a main,

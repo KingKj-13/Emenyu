@@ -15,29 +15,22 @@ function itemsInText(text, sortedItems) {
   return sortedItems.filter(item => compact.includes(normalizeName(item.name)));
 }
 
-// Phase 1 (Recommendation Brain): "one suggestion at a time, wait if ignored".
-// Derived the same stateless way as everything else here — no new persistence,
-// just reading the assistant's OWN last turn from the history the client already
-// sends. If the assistant's last reply named suggestions and the guest's newest
-// message didn't add any of them to the cart or ask for more, those names are
-// "recently ignored" and recommend() should avoid leading with them again.
-function lastAssistantSuggestions(history, sorted) {
+// Phase 3 (Dining Concierge): "never repeatedly recommend the same thing" needs
+// memory of the WHOLE conversation, not just the immediately-preceding turn —
+// a dish suggested three messages ago and never added should stay excluded too.
+// Still fully stateless (derived from the history the client already sends),
+// still the same underlying signal (suggested, then never added to cart).
+function allIgnoredNames(history, sorted, cartNames) {
   const list = Array.isArray(history) ? history : [];
-  for (let i = list.length - 1; i >= 0; i -= 1) {
-    const msg = list[i];
-    if (msg && msg.role === 'assistant' && typeof msg.content === 'string') {
-      return itemsInText(msg.content, sorted).map(item => item.name);
+  const ignored = new Set();
+  list.forEach((msg, idx) => {
+    if (msg && msg.role === 'assistant' && typeof msg.content === 'string' && idx < list.length - 1) {
+      itemsInText(msg.content, sorted).forEach(item => {
+        if (!cartNames.has(normalizeName(item.name))) ignored.add(item.name);
+      });
     }
-  }
-  return [];
-}
-
-function hasNewerUserMessageSince(history) {
-  const list = Array.isArray(history) ? history : [];
-  for (let i = list.length - 1; i >= 0; i -= 1) {
-    if (list[i] && list[i].role === 'assistant') return i < list.length - 1;
-  }
-  return false;
+  });
+  return [...ignored];
 }
 
 // history: [{ role: 'user'|'assistant', content: string }] (oldest → newest).
@@ -65,10 +58,7 @@ function build(history = [], menuContext = {}, cart = []) {
   const lastDrink = reversed.find(item => ['WINE', 'DRINK'].includes(item.categoryType)) || null;
 
   const cartNames = new Set((Array.isArray(cart) ? cart : []).map(line => normalizeName(line && line.name)));
-  const suggestedNames = lastAssistantSuggestions(history, sorted);
-  const ignoredNames = hasNewerUserMessageSince(history)
-    ? suggestedNames.filter(name => !cartNames.has(normalizeName(name)))
-    : [];
+  const ignoredNames = allIgnoredNames(history, sorted, cartNames);
 
   return {
     anchorDish,

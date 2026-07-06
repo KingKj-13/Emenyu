@@ -3,7 +3,7 @@
 // layout; colours use guest tokens with hardcoded gold/cream fallbacks so the card
 // also looks right inside the waiter theme.
 import { useState } from 'react';
-import { Plus, Sparkles, Play } from 'lucide-react';
+import { Plus, Sparkles, Play, Repeat, Crown } from 'lucide-react';
 import { resolveImage, resolveAssetPath, resolveVideo, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import type { MenuItem } from '../../types/menu';
@@ -43,6 +43,13 @@ interface Props {
   slotLabel?: string;   // course label shown top-left, data-driven (e.g. "Starter")
   youChoice?: boolean;  // marks the dish whose modal is currently open
   playable?: boolean;   // poster-first, tap-to-play video (never autoplays/eager-loads)
+  // Phase 3 (Dining Concierge) — "Replace X" swaps a same-role item already in
+  // the cart (Phase 1 Replacement Logic: item.replacement) instead of adding a
+  // second one. Only passed by callers that trust the replacement is a genuine
+  // same-course swap (e.g. the wine list, or an explicit premium-upgrade
+  // candidate) — never rendered from item.replacement alone.
+  onReplace?: () => void;
+  premium?: boolean; // "Premium" badge (e.g. the Wagyu upgrade nudge)
 }
 
 // A RecommendationItem carries only the fields the engine returns; project it onto
@@ -78,6 +85,8 @@ export function RecommendationCard({
   slotLabel,
   youChoice,
   playable,
+  onReplace,
+  premium,
 }: Props) {
   const [playing, setPlaying] = useState(false);
   const src = imageFor(item);
@@ -194,10 +203,11 @@ export function RecommendationCard({
           <div className={styles.imgPh} />
         )}
         <div className={styles.info}>
-          {tagText && (
+          {(tagText || premium) && (
             <span className={styles.tag}>
               {item.chef && <Sparkles size={10} className={styles.tagIcon} />}
               {tagText}
+              {premium && <span className={styles.premiumTag}><Crown size={10} className={styles.tagIcon} />Premium</span>}
             </span>
           )}
           <span className={styles.name}>{item.name}</span>
@@ -209,7 +219,17 @@ export function RecommendationCard({
           {note && <span className={styles.note}>“{note}”</span>}
         </div>
       </button>
-      {onAdd && price > 0 && (
+      {onReplace && item.replacement && price > 0 ? (
+        <button
+          type="button"
+          className={styles.addBtn}
+          aria-label={`Replace ${item.replacement.name} with ${item.name}`}
+          onClick={e => { e.stopPropagation(); onReplace(); }}
+        >
+          <Repeat size={variant === 'compact' ? 12 : 15} />
+          {variant !== 'compact' && <span>Replace</span>}
+        </button>
+      ) : onAdd && price > 0 && (
         <button
           type="button"
           className={styles.addBtn}

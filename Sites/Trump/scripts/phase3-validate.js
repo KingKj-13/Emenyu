@@ -19,6 +19,7 @@ const { createRecommendationRules } = require('../server/services/recommendation
 const { createRotationService } = require('../server/services/rotationService');
 const nlu = require('../server/services/chatbotNlu');
 const scoring = require('../server/services/recommendationScoring');
+const { normalizeName } = require('../server/utils/helpers');
 
 const results = [];
 let section = '';
@@ -329,6 +330,33 @@ eq('low score (popular/backfill) -> confidence 0.5', scoring.baseConfidence({ sc
   eq('chef candidate scored with confidence 0.92', scored.confidence, 0.92);
   check('pure-add chef candidate: expectedValue = confidence x price', Math.abs(scored.expectedValue - Number((0.92 * 180).toFixed(2))) < 0.01, JSON.stringify(scored));
   check('no replacement target for a pure add', scored.replacement === null);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 3 (Dining Concierge): the fixed hospitality journey stage machine.
+{
+  group('6. Dining journey stage (nothing -> drink -> food -> wine -> upgrade -> dessert -> coffee -> digestif -> done)');
+  const items = [
+    { name: 'HOUSE LAGER', categoryType: 'DRINK', tags: {} },
+    { name: 'RIBEYE', categoryType: 'MAIN', tags: {} },
+    { name: 'RED WINE', categoryType: 'WINE', tags: {} },
+    { name: 'CHEESECAKE', categoryType: 'DESSERT', tags: {} },
+    { name: 'CAPPUCCINO', categoryType: 'DRINK', tags: {} },
+    { name: 'AMARULA', categoryType: 'DRINK', tags: { drinkType: 'amarula' } },
+  ];
+  const byName = new Map(items.map(i => [normalizeName(i.name), i]));
+  const cartOf = (...names) => names.map(name => ({ name }));
+  const stage = (cart, opts) => scoring.nextJourneyStage(cart, byName, opts);
+
+  eq('nothing selected -> drink', stage(cartOf()), 'drink');
+  eq('drink only -> food', stage(cartOf('HOUSE LAGER')), 'food');
+  eq('drink + food, no wine yet -> wine', stage(cartOf('HOUSE LAGER', 'RIBEYE')), 'wine');
+  eq('wine + main, upgrade available and not yet offered -> upgrade', stage(cartOf('RED WINE', 'RIBEYE'), { upgradeAvailable: true, upgradeOffered: false }), 'upgrade');
+  eq('wine + main, upgrade already offered -> dessert', stage(cartOf('RED WINE', 'RIBEYE'), { upgradeAvailable: true, upgradeOffered: true }), 'dessert');
+  eq('wine + main, no upgrade exists for this dish -> dessert', stage(cartOf('RED WINE', 'RIBEYE'), { upgradeAvailable: false }), 'dessert');
+  eq('wine + main + dessert -> coffee', stage(cartOf('RED WINE', 'RIBEYE', 'CHEESECAKE')), 'coffee');
+  eq('...+ coffee -> digestif', stage(cartOf('RED WINE', 'RIBEYE', 'CHEESECAKE', 'CAPPUCCINO')), 'digestif');
+  eq('...+ digestif -> done (journey complete, stop recommending)', stage(cartOf('RED WINE', 'RIBEYE', 'CHEESECAKE', 'CAPPUCCINO', 'AMARULA')), 'done');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

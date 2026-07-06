@@ -124,8 +124,21 @@ class TemplateNlgProvider extends NlgProvider {
       if (why) return why;
     }
 
-    // Never-blank fallback — no anchor to reason from.
+    // Never-blank fallback — no anchor to reason from. A guest's very first
+    // "what's good here?" hits this path (empty cart) far more often than any
+    // other case, so it needs its OWN honest, anchor-free lines rather than a
+    // template built around a "{forName}" that doesn't exist yet.
     const cat = (item.categoryType || '').toUpperCase();
+    if (!source) {
+      if (cat === 'WINE') {
+        const notes = flavorNotes(item.name);
+        return `${notes[0].toUpperCase()}${notes.slice(1)}.`;
+      }
+      if (cat === 'DRINK') return 'A great glass to start the evening.';
+      if (cat === 'DESSERT') return 'A popular way to close out a meal here.';
+      if (cat === 'STARTER') return 'A good way to open the table.';
+      return 'One of the plates guests come back for.';
+    }
     if (cat === 'WINE') {
       const notes = flavorNotes(item.name);
       return `${notes[0].toUpperCase()}${notes.slice(1)} — a confident pour with the ${forName}.`;
@@ -243,7 +256,11 @@ class TemplateNlgProvider extends NlgProvider {
     const hook = dishHook(item.name, item.description);
     const badge = item.chefPick ? "It's a chef's pick" : item.popular ? "It's one of tonight's favourites" : "It's a plate guests rave about";
     if (tone === 'short') return `${item.name} — ${hook}.`;
-    return `${item.name} is ${hook}. ${badge}, and it carries the table beautifully.`;
+    // Phase 3 (Dining Concierge): a tag-driven conversation tip, when the item's
+    // own tags support one -- true of any item, not just the hero-tier dishes.
+    const tip = hospitality.conversationTipFor(item);
+    const tipLine = tip ? ` ${tip}` : '';
+    return `${item.name} is ${hook}. ${badge}, and it carries the table beautifully.${tipLine}`;
   }
 
   // Phase 2.5 (Hospitality Intelligence): reuses the SAME tag-driven WHY

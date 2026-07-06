@@ -20,6 +20,26 @@
   box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 0 20px rgba(198,162,75,0.15);
 }
 
+/* Phase 3 (Dining Concierge): a quiet gold pulse when the concierge has a new
+   suggestion -- never covers the screen, never opens the panel on its own,
+   clears the moment the guest opens chat. */
+.notifyDot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-gold, #c6a24b);
+  box-shadow: 0 0 0 2px var(--blue-black, #041b2c);
+  animation: notifyPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes notifyPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.6; }
+}
+
 /* Call-waiter bell, stacked directly above the AI launcher */
 .callBell {
   position: fixed;
@@ -46,6 +66,9 @@
   bottom: calc(166px + env(safe-area-inset-bottom));
   right: 84px;
   z-index: var(--z-chat);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 9px 14px;
   border-radius: 999px;
   background: linear-gradient(160deg, var(--color-gold-soft, #e2c880), var(--color-gold, #c8a555));
@@ -64,6 +87,17 @@
   line-height: 1;
   color: var(--color-gold);
   text-shadow: 0 0 12px rgba(198, 162, 75, 0.35);
+}
+
+/* Scrim so the sheet reads as a layer above the menu instead of floating
+   over content it visually competes with (e.g. the category pills). */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 205;
+  background: rgba(0,15,24,0.55);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
 }
 
 .panel {
@@ -114,20 +148,23 @@
   margin-top: 12px;
 }
 
+/* Navy + gold hairline, matching the rest of the palette — this was the one
+   flat light-gray surface in the customer app. */
 .suggestion {
   padding: 7px 12px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(198,162,75,0.07);
+  border: 1px solid rgba(198,162,75,0.24);
   border-radius: var(--radius-card);
   color: var(--color-sand);
   font-size: 12px;
   text-align: left;
   cursor: pointer;
-  transition: border-color 160ms ease, color 160ms ease;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
 }
 
 .suggestion:hover {
-  border-color: rgba(198,162,75,0.3);
+  border-color: rgba(198,162,75,0.45);
+  background: rgba(198,162,75,0.13);
   color: var(--color-cream);
 }
 

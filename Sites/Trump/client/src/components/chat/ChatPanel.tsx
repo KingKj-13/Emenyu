@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Send, Sparkles, Bell } from 'lucide-react';
+import { X, Send, Sparkles, Bell, Check } from 'lucide-react';
 import { api } from '../../services/api';
 import { getSocket } from '../../services/socket';
 import { RESTAURANT_ID } from '../../constants/api';
 import { useApp } from '../../context/AppContext';
 import { useCart } from '../../context/CartContext';
 import { RecommendationCard, type RecommendationItem } from '../reco/RecommendationCard';
-import { trackImpressions, trackClick } from '../../lib/recoAnalytics';
+import { trackImpressions, trackClick, trackAccepted } from '../../lib/recoAnalytics';
 import type { ChatSuggestionItem, ChatResponse } from '../../types/menu';
 import styles from './ChatPanel.module.css';
 
@@ -33,17 +33,38 @@ const SUGGESTED_PROMPTS = [
 
 export function ChatPanel({ onItemClick }: ChatPanelProps) {
   const { chatOpen, setChatOpen, tableId } = useApp();
-  const { items: cartItems } = useCart();
+  const { items: cartItems, addItem, removeAt } = useCart();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [waiterCalled, setWaiterCalled] = useState(false);
   // Phase 3B: the assistant's display name (Donald) comes from server config.
   const [assistantName, setAssistantName] = useState('Donald');
+  // Phase 3 (Dining Concierge): a quiet gold badge on the chat icon when the
+  // Brain has a new next-best suggestion for this cart -- never opens the
+  // panel itself, never repeats once shown for the same suggestion.
+  const [hasUnseenSuggestion, setHasUnseenSuggestion] = useState(false);
+  const lastNotifiedName = useRef<string | null>(null);
 
   useEffect(() => {
     api.getConfig().then(c => { if (c?.assistantName) setAssistantName(c.assistantName); }).catch(() => { /* keep default */ });
   }, []);
+
+  useEffect(() => {
+    if (chatOpen) { setHasUnseenSuggestion(false); return; }
+    if (!cartItems.length) return;
+    const timer = window.setTimeout(async () => {
+      try {
+        const recs = await api.getRecommendations({ cart: cartItems }) as ChatSuggestionItem[];
+        const top = recs?.[0]?.name || null;
+        if (top && top !== lastNotifiedName.current) {
+          lastNotifiedName.current = top;
+          setHasUnseenSuggestion(true);
+        }
+      } catch { /* stay quiet -- a missed badge is not worth surfacing an error for */ }
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [cartItems, chatOpen]);
 
   function callWaiter() {
     getSocket().emit('callWaiter', { restaurantId: RESTAURANT_ID, tableId });
@@ -87,6 +108,32 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
     }
   }
 
+  // Phase 3 (Dining Concierge): "Add to Cart" straight from the chat card, no
+  // detour through the item modal. Reuses the same CartContext every other
+  // add-to-cart path in the app already uses.
+  function addFromChat(item: ChatSuggestionItem) {
+    addItem({ name: item.name, price: item.price, img: item.img, description: item.description, source: 'guest' });
+    trackAccepted(item, CHAT_RECO_CTX);
+  }
+
+  // A same-role swap (Phase 1 Replacement Logic: item.replacement). Only
+  // trusted for beverages/desserts (the reliable case since Phase 1) or an
+  // explicit premium-upgrade candidate (rotationGroup "upgrade:*") -- MAIN
+  // otherwise mixes in sides/sauces the shared classifier also buckets as
+  // MAIN, which would misread as "replace the steak with the chips".
+  function canReplace(item: ChatSuggestionItem): boolean {
+    if (!item.replacement) return false;
+    if (item.rotationGroup?.startsWith('upgrade:')) return true;
+    return ['WINE', 'DRINK', 'DESSERT'].includes(item.categoryType || '');
+  }
+
+  function replaceFromChat(item: ChatSuggestionItem) {
+    if (!item.replacement) return;
+    const oldIndex = cartItems.findIndex(c => c.name === item.replacement!.name);
+    if (oldIndex >= 0) removeAt(oldIndex);
+    addFromChat(item);
+  }
+
   return (
     <>
       {!chatOpen && (
@@ -94,7 +141,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
           <Bell size={20} />
         </button>
       )}
-      {waiterCalled && <div className={styles.calledPill} role="status">Waiter notified ✓</div>}
+      {waiterCalled && <div className={styles.calledPill} role="status"><Check size={13} strokeWidth={3} /> Waiter notified</div>}
 
       <button
         className={styles.launcher}
@@ -103,7 +150,21 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
         aria-expanded={chatOpen}
       >
         {chatOpen ? <X size={20} /> : <span className={styles.aiBadge}>AI</span>}
+        {!chatOpen && hasUnseenSuggestion && <span className={styles.notifyDot} aria-hidden="true" />}
       </button>
+
+      <AnimatePresence>
+        {chatOpen && (
+          <motion.div
+            className={styles.backdrop}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setChatOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {chatOpen && (
@@ -148,7 +209,11 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
                           key={j}
                           variant="compact"
                           item={item as RecommendationItem}
+                          showReason
+                          premium={item.rotationGroup?.startsWith('upgrade:')}
                           onOpen={() => { trackClick(item as RecommendationItem, CHAT_RECO_CTX); onItemClick?.(item); }}
+                          onAdd={() => addFromChat(item)}
+                          onReplace={canReplace(item) ? () => replaceFromChat(item) : undefined}
                         />
                       ))}
                     </div>
