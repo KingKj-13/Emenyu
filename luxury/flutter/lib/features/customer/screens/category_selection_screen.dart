@@ -6,6 +6,7 @@ import 'package:luxury_tablet/core/theme/theme.dart';
 import 'package:luxury_tablet/core/widgets/cinematic_pan.dart';
 import 'package:luxury_tablet/core/widgets/luxury_image.dart';
 import 'package:luxury_tablet/core/utils/image_preloader.dart';
+import 'package:luxury_tablet/core/utils/swipe_gesture.dart';
 
 class CategorySelectionScreen extends StatefulWidget {
   const CategorySelectionScreen({super.key});
@@ -55,6 +56,25 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  void _handleSwipe(DragEndDetails details) {
+    switch (detectSwipe(details)) {
+      case SwipeDirection.up:
+        if (_selectedIndex < _categories.length - 1) {
+          setState(() => _selectedIndex++);
+        }
+        break;
+      case SwipeDirection.down:
+        if (_selectedIndex > 0) {
+          setState(() => _selectedIndex--);
+        }
+        break;
+      case SwipeDirection.left:
+      case SwipeDirection.right:
+      case SwipeDirection.none:
+        break;
     }
   }
 
@@ -115,7 +135,10 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
 
     return Scaffold(
       backgroundColor: LuxuryColors.backgroundDarkest,
-      body: FadeTransition(
+      body: GestureDetector(
+        onPanEnd: _handleSwipe,
+        behavior: HitTestBehavior.opaque,
+        child: FadeTransition(
         opacity: _fadeAnimation,
         child: Stack(
           fit: StackFit.expand,
@@ -195,8 +218,11 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Logo
-                          Row(
+                          // Logo — tap to return to the entry screen
+                          GestureDetector(
+                            onTap: () => Navigator.popUntil(context, (route) => route.isFirst),
+                            behavior: HitTestBehavior.opaque,
+                            child: Row(
                             children: [
                               const Icon(
                                 Icons.workspace_premium_outlined,
@@ -212,6 +238,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                                 ),
                               ),
                             ],
+                            ),
                           ),
                           const SizedBox(height: 50),
 
@@ -389,6 +416,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
               ],
             ),
           ],
+        ),
         ),
       ),
     );

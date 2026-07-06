@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:luxury_tablet/core/theme/theme.dart';
+import 'package:luxury_tablet/core/utils/media_url.dart';
+import 'package:luxury_tablet/core/utils/swipe_gesture.dart';
 import 'package:luxury_tablet/features/customer/widgets/bottom_nav_bar.dart';
 import 'package:luxury_tablet/core/widgets/living_photograph.dart';
 import 'package:luxury_tablet/features/customer/widgets/story_renderer.dart';
@@ -23,39 +25,104 @@ class ItemDetailScreen extends StatefulWidget {
 class _ItemDetailScreenState extends State<ItemDetailScreen> {
   bool _isFavorited = false;
   bool _isFullScreenImage = false;
+  late dynamic _currentItem;
+  late List<dynamic> _siblingItems;
 
-  String get _itemName => widget.item['name'] as String? ?? '';
+  @override
+  void initState() {
+    super.initState();
+    _currentItem = widget.item;
+    _siblingItems = _findSiblingItems();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _preloadSiblings());
+  }
+
+  /// The dish list of whichever category the opened dish belongs to —
+  /// swiping should stay within that category.
+  List<dynamic> _findSiblingItems() {
+    for (final category in widget.categories) {
+      final items = (category['items'] as List<dynamic>?) ?? [];
+      if (items.any((i) => i['id'] == widget.item['id'])) return items;
+    }
+    return [widget.item];
+  }
+
+  void _precache(String? path) {
+    if (path == null || path.isEmpty || !mounted) return;
+    final provider = path.startsWith('assets/')
+        ? AssetImage(path) as ImageProvider
+        : NetworkImage(resolveMediaUrl(path));
+    precacheImage(provider, context).catchError((_) {});
+  }
+
+  void _preloadSiblings() {
+    for (final item in _siblingItems) {
+      _precache(item['heroImage'] as String?);
+    }
+  }
+
+  void _goToItem(int delta) {
+    final index = _siblingItems.indexOf(_currentItem);
+    final next = index + delta;
+    if (next < 0 || next >= _siblingItems.length) return;
+    setState(() => _currentItem = _siblingItems[next]);
+  }
+
+  void _handleSwipe(DragEndDetails details) {
+    switch (detectSwipe(details)) {
+      case SwipeDirection.left:
+        _goToItem(1);
+        break;
+      case SwipeDirection.right:
+        _goToItem(-1);
+        break;
+      case SwipeDirection.up:
+      case SwipeDirection.down:
+      case SwipeDirection.none:
+        break;
+    }
+  }
+
+  String get _itemName => _currentItem['name'] as String? ?? '';
   String get _originText {
-    final origin = widget.item['origin'];
+    final origin = _currentItem['origin'];
     if (origin == null) return '';
     return '${origin['region']}, ${origin['country']}';
   }
 
-  bool get _isChefPick => widget.item['chefPick'] as bool? ?? false;
-  int get _price => widget.item['price'] as int? ?? 0;
-  String get _heroImage => widget.item['heroImage'] as String? ?? '';
-  String get _heroVideo => widget.item['heroVideo'] as String? ?? '';
+  bool get _isChefPick => _currentItem['chefPick'] as bool? ?? false;
+  int get _price => _currentItem['price'] as int? ?? 0;
+  String get _heroImage => _currentItem['heroImage'] as String? ?? '';
+  String get _heroVideo => _currentItem['heroVideo'] as String? ?? '';
   String get _description =>
-      widget.item['editorialDescription'] as String? ?? '';
+      _currentItem['editorialDescription'] as String? ?? '';
   String get _ingredientStory =>
-      widget.item['ingredientStory'] as String? ?? '';
-  String get _chefStory => widget.item['chefStory'] as String? ?? '';
+      _currentItem['ingredientStory'] as String? ?? '';
+  String get _chefStory => _currentItem['chefStory'] as String? ?? '';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: LuxuryColors.backgroundDarkest,
-      body: Stack(
+      body: GestureDetector(
+        onPanEnd: _handleSwipe,
+        behavior: HitTestBehavior.opaque,
+        child: Stack(
         fit: StackFit.expand,
         children: [
           // ═══════════════════════════════════════════════
-          // BACKGROUND — Full Bleed Hero Image
+          // BACKGROUND — Full Bleed Hero Image (fades between dishes)
           // ═══════════════════════════════════════════════
-          LivingPhotograph(
-            imageUrl: _heroImage,
-            videoUrl: _heroVideo,
-            borderRadius: 0,
-            showPlayButton: !_isFullScreenImage,
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 280),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            child: LivingPhotograph(
+              key: ValueKey(_currentItem['id']),
+              imageUrl: _heroImage,
+              videoUrl: _heroVideo,
+              borderRadius: 0,
+              showPlayButton: !_isFullScreenImage,
+            ),
           ),
 
           // ═══════════════════════════════════════════════
@@ -252,7 +319,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           showDialog(
                             context: context,
                             builder: (context) => PairingDialog(
-                              baseItem: widget.item,
+                              baseItem: _currentItem,
                               categories: widget.categories,
                             ),
                           );
@@ -318,6 +385,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
