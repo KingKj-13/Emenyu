@@ -65,7 +65,20 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
           // the actual chat message here, the moment the new suggestion is
           // found, so it's already waiting by the time the guest opens the panel.
           const shown = recs.slice(0, 3);
-          const introLine = top.reason || `I'd suggest the ${top.name}.`;
+          // Always name what was just added and what's being suggested, even
+          // when the Brain's own `reason` is a generic dish hook rather than a
+          // full "I noticed you've gone with X..." pairing sentence -- a
+          // proactive nudge should never read like it forgot what's in the cart.
+          const lastAdded = cartItems[cartItems.length - 1]?.name;
+          const why = top.reason ? ` ${top.reason}` : '';
+          // Strip a trailing size/quantity ("380g", "±450g", "700ml") before
+          // checking for a mention -- the Brain's own narrative says "the
+          // ribeye's intensity", never "the ribeye 380g's intensity".
+          const lastAddedCore = lastAdded?.replace(/\s*±?\d+\s*(g|ml|kg|l|pce|pcs?)?\.?$/i, '').trim();
+          const mentionsLastAdded = lastAddedCore && top.reason?.toLowerCase().includes(lastAddedCore.toLowerCase());
+          const introLine = lastAdded && !mentionsLastAdded
+            ? `I see you've added ${lastAdded} to the cart — why not add our ${top.name}?${why}`
+            : (top.reason || `I'd suggest the ${top.name}.`);
           setMessages(prev => [...prev, { role: 'assistant', content: introLine, suggestions: shown }]);
           trackImpressions(shown, CHAT_RECO_CTX);
           setHasUnseenSuggestion(true);
