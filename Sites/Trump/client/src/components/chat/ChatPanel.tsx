@@ -56,12 +56,21 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
     const timer = window.setTimeout(async () => {
       try {
         const recs = await api.getRecommendations({ cart: cartItems }) as ChatSuggestionItem[];
-        const top = recs?.[0]?.name || null;
-        if (top && top !== lastNotifiedName.current) {
-          lastNotifiedName.current = top;
+        const top = recs?.[0] || null;
+        if (top?.name && top.name !== lastNotifiedName.current) {
+          lastNotifiedName.current = top.name;
+          // Bug fix: the badge alone never put anything in the conversation --
+          // opening the chat found `messages` unchanged (still the welcome
+          // screen), so guests saw a notification but no recommendation. Build
+          // the actual chat message here, the moment the new suggestion is
+          // found, so it's already waiting by the time the guest opens the panel.
+          const shown = recs.slice(0, 3);
+          const introLine = top.reason || `I'd suggest the ${top.name}.`;
+          setMessages(prev => [...prev, { role: 'assistant', content: introLine, suggestions: shown }]);
+          trackImpressions(shown, CHAT_RECO_CTX);
           setHasUnseenSuggestion(true);
         }
-      } catch { /* stay quiet -- a missed badge is not worth surfacing an error for */ }
+      } catch { /* stay quiet -- a missed suggestion is not worth surfacing an error for */ }
     }, 700);
     return () => window.clearTimeout(timer);
   }, [cartItems, chatOpen]);
