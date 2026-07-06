@@ -468,6 +468,7 @@ function RevenuePanel({ currentSpend, recs }: { currentSpend: number; recs: Cart
 function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () => void }) {
   const {
     selectedTableId,
+    selectTable,
     order,
     placedItems,
     events,
@@ -542,7 +543,13 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
     try {
       await api.completeTable(selectedTableId);
       showToast(`Table ${table.number} marked complete`);
-      setTab('tables');
+      // Bug fix: setTab('tables') alone doesn't change `selectedTableId`, so
+      // TableDetails kept rendering the same table with its now-stale
+      // order/placedItems (the table looked "complete" on the server but
+      // still showed its old items on screen). Re-select the same table --
+      // exactly what tapping it from the table list already does -- to reset
+      // local state and re-fetch, which now correctly comes back empty.
+      selectTable(selectedTableId);
     } catch {
       showToast('Could not complete the table — please try again');
     } finally {

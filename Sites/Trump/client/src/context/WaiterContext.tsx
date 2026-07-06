@@ -227,7 +227,18 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
       pushAlert({ kind: 'manager', title: 'Manager', message: p.message || 'Manager called you to the front' });
     };
     const onKitchen = (p: { tableId?: string; kitchenStatus?: string; displayTable?: string }) => {
-      if ((p.kitchenStatus || '').toLowerCase() !== 'ready') return;
+      const status = (p.kitchenStatus || '').toLowerCase();
+      // Bug fix: "served" moves the order off the kitchen queue (active ->
+      // history) and the server already emits a fresh syncHistory for the
+      // table room, but this handler only ever re-fetched on "ready" -- if the
+      // waiter's socket wasn't (still) in that exact table's room, placedItems
+      // never refreshed, so a served order kept showing on the waiter's screen
+      // long after it vanished from the kitchen. Explicitly re-fetch history
+      // here too, the same way onOrderPlaced already does.
+      if (status === 'served' && sameTable(p.tableId, selectedTableRef.current)) {
+        socket.emit('fetchHistory', { restaurantId: RESTAURANT_ID, tableId: p.tableId });
+      }
+      if (status !== 'ready') return;
       const label = p.displayTable || (p.tableId ? p.tableId.replace('table', 'Table ') : 'A table');
       pushAlert({ kind: 'ready', tableId: p.tableId, title: label, message: `Order ready - bring to ${label.toLowerCase()}` });
       markTableUpdated(p.tableId);
