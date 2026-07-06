@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:luxury_tablet/features/customer/screens/main_experience_screen.dart';
 import 'package:luxury_tablet/core/theme/theme.dart';
 import 'package:luxury_tablet/core/widgets/cinematic_pan.dart';
+import 'package:luxury_tablet/core/widgets/luxury_image.dart';
 import 'package:luxury_tablet/core/utils/image_preloader.dart';
 
 class CategorySelectionScreen extends StatefulWidget {
@@ -126,15 +127,12 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
               CinematicPan(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 500),
-                  child: Image.asset(
-                    firstItemImage,
+                  child: LuxuryImage(
                     key: ValueKey(firstItemImage),
+                    path: firstItemImage,
                     fit: BoxFit.cover,
                     width: double.infinity,
                     height: double.infinity,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: LuxuryColors.warmDarkBrown,
-                    ),
                   ),
                 ),
               ),

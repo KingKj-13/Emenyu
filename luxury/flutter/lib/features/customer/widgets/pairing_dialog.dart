@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:luxury_tablet/core/theme/theme.dart';
+import 'package:luxury_tablet/core/widgets/luxury_image.dart';
 import 'dart:ui';
 import 'dart:math';
 
@@ -94,10 +95,9 @@ class PairingDialog extends StatelessWidget {
                     ).createShader(rect);
                   },
                   blendMode: BlendMode.dstIn,
-                  child: Image.asset(
-                    pairedItem['heroImage'],
+                  child: LuxuryImage(
+                    path: pairedItem['heroImage'] as String? ?? '',
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(color: LuxuryColors.warmDarkBrown),
                   ),
                 ),
               ),
