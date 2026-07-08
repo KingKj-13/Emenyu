@@ -212,6 +212,14 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     publicBasePath,
     publicOrigin,
     tableCount: parseInteger(env.TRUMP_TABLE_COUNT, 30),
+    // Luxury dining tables share the same restaurant/login/order pipeline as
+    // standard tables — they're just numbered in a reserved high range
+    // (luxuryTableBase+1 .. luxuryTableBase+luxuryTableCount) so every place
+    // that already validates "table<N> where N is 1..tableCount" needs no
+    // changes; only the luxury-aware range check and the waiter UI treat
+    // them differently (display as L1, L2, ... sorted to the top).
+    luxuryTableCount: parseInteger(env.TRUMP_LUXURY_TABLE_COUNT, 6),
+    luxuryTableBase: parseInteger(env.TRUMP_LUXURY_TABLE_BASE, 900),
     brandName: env.TRUMP_BRAND_NAME || 'Trump',
     // Phase 3B: the chatbot's display name (Donald). Surfaced to the client via
     // GET /api/config so the SPA stops hardcoding "Trump AI".

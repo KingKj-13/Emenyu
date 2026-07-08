@@ -91,10 +91,12 @@ export interface FloorTable {
   waiter: string | null;
   vip: boolean;
   guestName: string | null;
+  isLuxury: boolean;
 }
 
 export interface FloorState {
   tableCount: number;
+  luxuryTableCount: number;
   counts: { seated: number; cooking: number; ready: number; empty: number };
   tables: FloorTable[];
 }

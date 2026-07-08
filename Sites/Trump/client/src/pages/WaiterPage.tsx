@@ -223,10 +223,13 @@ function TableCard({ table, status, intel, event, hasUpdate, onOpen }: {
 }) {
   const ev = intel?.opportunity?.hasOpportunity ? (intel.opportunity.expectedValue ?? intel.opportunity.increase) : 0;
   return (
-    <button className={`wv-table-card st-${status}`} onClick={onOpen}>
+    <button className={`wv-table-card st-${status} ${table.isLuxury ? 'wv-luxury' : ''}`} onClick={onOpen}>
       {hasUpdate && <span className="wv-update-dot" aria-label="New activity" />}
       <div className="wv-card-top">
-        <span className="wv-table-no">Table {table.number}</span>
+        <span className="wv-table-no">
+          {table.isLuxury && <Sparkles size={12} className="wv-luxury-badge" />}
+          {table.isLuxury ? table.displayName : `Table ${table.number}`}
+        </span>
         <span className="wv-status-pill">{statusCopy(status)}</span>
       </div>
       <div className="wv-table-meta">
@@ -270,7 +273,7 @@ function HomeScreen() {
         <p className="wv-kicker">Next best action</p>
         {next ? (
           <>
-            <h1>Table {next.number}</h1>
+            <h1>{next.isLuxury ? next.displayName : `Table ${next.number}`}</h1>
             <p>{statusCopy(statusForTable(next, alerts, tasks))} - {next.guests || 0} guests - {money(next.spend || 0)}</p>
             <p className="wv-intel-summary">{tableIntelSummary(next, nextIntel, nextEvent)}</p>
             <button className="wv-primary" onClick={() => selectTable(next.tableId)}>Open table</button>
@@ -358,10 +361,12 @@ const STATUS_LABEL: Record<RecommendationStatus, string> = {
 // expectedValue/replacement (Phase 1) plus professional/friendly/luxury
 // scripts (server-composed via the existing nlgService, see aiService.js
 // cartRecommendations()) — this panel only presents what's already computed.
-function AiRecommendationPanel({ recs, onAdd, onDecline, statusByName }: {
-  recs: CartRec[]; onAdd: (rec: CartRec) => void; onDecline: (rec: CartRec) => void; statusByName: Record<string, RecommendationStatus>;
+function AiRecommendationPanel({ recs, onAdd, onDecline, statusByName, isLuxury }: {
+  recs: CartRec[]; onAdd: (rec: CartRec) => void; onDecline: (rec: CartRec) => void; statusByName: Record<string, RecommendationStatus>; isLuxury?: boolean;
 }) {
-  const [tone, setTone] = useState<keyof NonNullable<CartRec['scripts']>>('friendly');
+  // Luxury tables default to the luxury delivery style; the waiter can still
+  // switch tabs manually for a given table.
+  const [tone, setTone] = useState<keyof NonNullable<CartRec['scripts']>>(isLuxury ? 'luxury' : 'friendly');
   const rec = recs[0];
   if (!rec) return <p className="wv-empty">Add an item to the cart for live AI recommendations.</p>;
   const status = statusByName[rec.name] || 'suggested';
@@ -497,14 +502,18 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
   }, [selectedTableId]);
 
   useEffect(() => {
-    api.cartRecommendations({ cart: order.map(line => ({ name: line.name, price: line.price, qty: line.quantity })), event: event?.type || null })
+    api.cartRecommendations({
+      cart: order.map(line => ({ name: line.name, price: line.price, qty: line.quantity })),
+      event: event?.type || null,
+      mode: table.isLuxury ? 'luxury' : 'standard',
+    })
       .then(data => {
         setRecData(data);
         const top = data?.recommendations?.[0];
         if (top) setStatusByName(prev => (prev[top.name] ? prev : { ...prev, [top.name]: 'suggested' }));
       })
       .catch(() => setRecData(null));
-  }, [cartSig, event?.type, order]);
+  }, [cartSig, event?.type, order, table.tableId, table.isLuxury]);
 
   // Phase 2 (Waiter Experience): a suggested recommendation that sits untouched
   // for a while is "ignored" — reuses the same status chip, no separate system.
@@ -571,11 +580,11 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
   }
 
   return (
-    <div className="wv-detail">
+    <div className={`wv-detail ${table.isLuxury ? 'wv-luxury-mode' : ''}`}>
       <header className="wv-detail-head">
         <div>
-          <p className="wv-kicker">Table Details</p>
-          <h1>Table {table.number}</h1>
+          <p className="wv-kicker">{table.isLuxury ? 'Luxury Table' : 'Table Details'}</p>
+          <h1>{table.isLuxury ? table.displayName : `Table ${table.number}`}</h1>
         </div>
         <span className={`wv-status-pill st-${statusForTable(table, [], [])}`}>{statusCopy(statusForTable(table, [], []))}</span>
       </header>
@@ -627,7 +636,14 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
 
       <SeatBreakdown table={table} lines={[...placedItems, ...order]} />
 
-      <AiRecommendationPanel recs={recData?.recommendations || []} onAdd={addRec} onDecline={declineRec} statusByName={statusByName} />
+      <AiRecommendationPanel
+        key={table.tableId}
+        recs={recData?.recommendations || []}
+        onAdd={addRec}
+        onDecline={declineRec}
+        statusByName={statusByName}
+        isLuxury={table.isLuxury}
+      />
       <RevenuePanel currentSpend={table.spend + orderTotal} recs={recData?.recommendations || []} />
 
       <div className="wv-quick-actions">
@@ -757,7 +773,9 @@ function TablesScreen() {
   const [query, setQuery] = useState('');
   const tables = floor?.tables || [];
   const selected = tables.find(table => table.tableId === selectedTableId) || tables.find(t => t.status !== 'empty') || tables[0];
-  const filtered = query ? tables.filter(table => String(table.number).includes(query)) : tables;
+  const filtered = query
+    ? tables.filter(table => String(table.number).includes(query) || table.displayName.toLowerCase().includes(query.toLowerCase()))
+    : tables;
 
   useEffect(() => {
     if (!selectedTableId && selected) selectTable(selected.tableId);
@@ -769,13 +787,17 @@ function TablesScreen() {
     <main className="wv-screen">
       <label className="wv-search compact">
         <Search size={16} />
-        <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Jump to table" inputMode="numeric" />
+        <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Jump to table (e.g. 5 or L1)" inputMode="text" />
       </label>
       <div className="wv-mini-table-rail">
         {filtered.map(table => (
-          <button key={table.tableId} className={table.tableId === selectedTableId ? 'active' : ''} onClick={() => selectTable(table.tableId)}>
+          <button
+            key={table.tableId}
+            className={`${table.tableId === selectedTableId ? 'active' : ''} ${table.isLuxury ? 'wv-luxury' : ''}`}
+            onClick={() => selectTable(table.tableId)}
+          >
             {unseenTableUpdates.has(table.tableId) && <span className="wv-update-dot" aria-label="New activity" />}
-            <b>{table.number}</b>
+            <b>{table.isLuxury ? table.displayName : table.number}</b>
             <small>{statusCopy(statusForTable(table, alerts, tasks))}</small>
           </button>
         ))}

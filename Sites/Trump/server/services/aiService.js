@@ -692,10 +692,21 @@ class AiService {
 
     // Phase 3C: the waiter upsell reads the SAME composed reason as the cards and
     // chat (authored hero → chef → tag-true Tier-2 → never blank). One copy source.
-    const candidates = [...csvRecs, ...recs]
+    let merged = [...csvRecs, ...recs]
       .filter(r => !cartNames.has(normalizeName(r.name)))
-      .filter((r, index, list) => list.findIndex(x => normalizeName(x.name) === normalizeName(r.name)) === index)
-      .slice(0, 4);
+      .filter((r, index, list) => list.findIndex(x => normalizeName(x.name) === normalizeName(r.name)) === index);
+
+    // Luxury tables: surface chef-picks and higher-priced items first, so the
+    // 4-item cut favours the premium end of the menu rather than whatever
+    // scored highest for the general (price-agnostic) standard-table pipeline.
+    if (payload.mode === 'luxury') {
+      merged = [...merged].sort((a, b) => {
+        const chefDelta = (b.chef === true ? 1 : 0) - (a.chef === true ? 1 : 0);
+        return chefDelta || (Number(b.price) || 0) - (Number(a.price) || 0);
+      });
+    }
+
+    const candidates = merged.slice(0, 4);
 
     // Phase 2 (Waiter Experience): the waiter picks a delivery style per guest —
     // reuse the SAME nlgService/templateNlgProvider tones already built for the

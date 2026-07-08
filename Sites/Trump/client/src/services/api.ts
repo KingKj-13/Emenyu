@@ -380,7 +380,7 @@ export const api = {
     return postJson<import('../types/waiter').OrderedTogetherResponse>(ENDPOINTS.orderedTogether, payload);
   },
 
-  cartRecommendations(payload: { cart?: unknown[]; event?: string | null; reason?: string }) {
+  cartRecommendations(payload: { cart?: unknown[]; event?: string | null; reason?: string; mode?: 'standard' | 'luxury' }) {
     return postJson<import('../types/waiter').CartRecResponse>(ENDPOINTS.cartRecommendations, payload);
   },
   sommelier(payload: { dish?: string; cart?: unknown[]; tone?: string }) {

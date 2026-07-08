@@ -130,6 +130,19 @@
   padding-top: 8px; border-top: 1px dashed var(--w-border);
 }
 
+/* ── Luxury tables — distinct from the app's baseline gold accent ──────────── */
+.wv-table-card.wv-luxury {
+  border-left-color: var(--w-purple);
+  background: linear-gradient(135deg, rgba(185,138,208,0.08), var(--w-surface) 55%);
+  box-shadow: 0 0 0 1px rgba(185,138,208,0.18);
+}
+.wv-luxury-badge { color: var(--w-purple); margin-right: 6px; vertical-align: -1px; }
+.wv-mini-table-rail button.wv-luxury {
+  border-color: var(--w-purple);
+  background: linear-gradient(135deg, rgba(185,138,208,0.14), var(--w-surface2) 60%);
+}
+.wv-mini-table-rail button.wv-luxury b { color: var(--w-purple); }
+
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
 .wv-primary {
   width: 100%; min-height: 52px; border-radius: 14px; font-weight: 700; font-size: 16px;
@@ -156,6 +169,12 @@
 .wv-detail { display: flex; flex-direction: column; gap: 14px; }
 .wv-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .wv-detail-head h1 { font-family: var(--w-font-display); font-size: 30px; margin: 0; }
+.wv-detail.wv-luxury-mode {
+  margin: -12px; padding: 12px; border-radius: var(--w-radius);
+  background: linear-gradient(180deg, rgba(185,138,208,0.07), transparent 220px);
+}
+.wv-detail.wv-luxury-mode .wv-kicker { color: var(--w-purple); }
+.wv-detail.wv-luxury-mode .wv-panel-title { color: var(--w-purple); }
 .wv-table-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .wv-table-facts > div {
   background: var(--w-surface); border: 1px solid var(--w-border); border-radius: var(--w-radius-sm);
