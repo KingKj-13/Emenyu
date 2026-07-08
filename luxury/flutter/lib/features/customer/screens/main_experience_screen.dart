@@ -288,8 +288,8 @@ class _MainExperienceScreenState extends ConsumerState<MainExperienceScreen> {
                       // LEFT SIDEBAR — quick-jump list
                       Container(
                         width: 220,
-                        decoration: const BoxDecoration(
-                          border: Border(right: BorderSide(color: LuxuryColors.warmDarkBrown, width: 0.5)),
+                        decoration: BoxDecoration(
+                          border: Border(right: BorderSide(color: Colors.white.withOpacity(0.12), width: 0.5)),
                         ),
                         child: ListView.builder(
                           controller: _scrollController,

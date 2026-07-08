@@ -71,8 +71,10 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
           setState(() => _selectedIndex--);
         }
         break;
-      case SwipeDirection.left:
       case SwipeDirection.right:
+        _navigateToBrowse(_selectedIndex);
+        break;
+      case SwipeDirection.left:
       case SwipeDirection.none:
         break;
     }
@@ -203,10 +205,10 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                 // LEFT PANEL — Category list (floating)
                 Container(
                   width: 280,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     border: Border(
                       right: BorderSide(
-                        color: LuxuryColors.warmDarkBrown, 
+                        color: Colors.white.withOpacity(0.12),
                         width: 0.5
                       ),
                     ),
@@ -336,9 +338,12 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                   ),
                 ),
 
-                // RIGHT PANEL — Category info (floating)
+                // RIGHT PANEL — Category info (floating), tap anywhere to browse
                 Expanded(
-                  child: Padding(
+                  child: GestureDetector(
+                    onTap: () => _navigateToBrowse(_selectedIndex),
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
                     padding: const EdgeInsets.only(
                       left: 50,
                       right: 50,
@@ -375,41 +380,40 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                                 ),
                               ),
                               const SizedBox(height: 28),
-                              // EXPLORE COLLECTION button
-                              GestureDetector(
-                                onTap: () => _navigateToBrowse(_selectedIndex),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 14,
+                              // EXPLORE COLLECTION button (tap handled by the
+                              // panel-wide GestureDetector above)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: LuxuryColors.brushedBronze,
+                                    width: 1.5,
                                   ),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: LuxuryColors.brushedBronze,
-                                      width: 1.5,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'EXPLORE COLLECTION',
+                                      style: LuxuryTypography.buttonPrimary,
                                     ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'EXPLORE COLLECTION',
-                                        style: LuxuryTypography.buttonPrimary,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      const Icon(
-                                        Icons.arrow_forward,
-                                        color: LuxuryColors.white,
-                                        size: 16,
-                                      ),
-                                    ],
-                                  ),
+                                    const SizedBox(width: 10),
+                                    const Icon(
+                                      Icons.arrow_forward,
+                                      color: LuxuryColors.white,
+                                      size: 16,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ],
+                    ),
                     ),
                   ),
                 ),

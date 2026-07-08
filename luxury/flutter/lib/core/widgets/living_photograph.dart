@@ -64,8 +64,8 @@ class _LivingPhotographState extends State<LivingPhotograph> {
 
       _controller!.addListener(_videoListener);
 
-      // Start 3-second delay timer before autoplaying
-      _startTimer = Timer(const Duration(seconds: 3), () {
+      // Start delay timer before autoplaying
+      _startTimer = Timer(const Duration(milliseconds: 700), () {
         if (mounted && _isVideoInitialized && !_playedOnce) {
           _controller!.play();
           setState(() {
