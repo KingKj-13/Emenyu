@@ -59,6 +59,8 @@ export function CartDrawer() {
       price: item.price,
       img: resolveImage(item),
       description: item.description || '',
+      categoryType: item.categoryType,
+      beverageKind: item.beverageKind,
     });
     setTab('cart');
   }

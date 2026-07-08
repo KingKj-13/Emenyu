@@ -35,6 +35,8 @@ function normalizeItem(item: Partial<CartItem>): CartItem {
     img: item.img || '',
     description: item.description || '',
     source: item.source ?? 'guest',
+    categoryType: item.categoryType,
+    beverageKind: item.beverageKind,
   };
 }
 

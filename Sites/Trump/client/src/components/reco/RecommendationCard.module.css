@@ -76,6 +76,17 @@
   line-height: 1.35;
 }
 
+/* Phase 5 (AI Concierge): natural-language confidence stand-in — never a
+   raw percentage/score, just a quiet, small gold label. */
+.confidence {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-gold, #c6a24b);
+  opacity: 0.85;
+  margin-top: 1px;
+}
+
 .bottomRow { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
 .price { font-size: 12px; font-weight: 700; color: var(--color-gold, #c6a24b); }
 .uplift {

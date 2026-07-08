@@ -298,6 +298,8 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
       price: item.price,
       img: resolveImage(item),
       description: item.description || '',
+      categoryType: item.categoryType,
+      beverageKind: item.beverageKind,
     });
   }
 
@@ -308,6 +310,8 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
         price: item.price,
         img: resolveImage(item),
         description: item.description || '',
+        categoryType: item.categoryType,
+        beverageKind: item.beverageKind,
         qty: 1,
         note,
       });

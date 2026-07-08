@@ -184,6 +184,7 @@ export interface ChatSuggestionItem {
   category?: string;
   subcategory?: string;
   categoryType?: string;
+  beverageKind?: string;
   source_title?: string;
   // Phase 3 (Dining Concierge) -- same fields cartRecommendations()/recommend()
   // already return; the chat card can now show WHY and offer Replace/Premium.

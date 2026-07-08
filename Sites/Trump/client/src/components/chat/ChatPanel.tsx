@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, Send, Sparkles, Bell, Check } from 'lucide-react';
 import { api } from '../../services/api';
@@ -8,43 +8,57 @@ import { useApp } from '../../context/AppContext';
 import { useCart } from '../../context/CartContext';
 import { RecommendationCard, type RecommendationItem } from '../reco/RecommendationCard';
 import { trackImpressions, trackClick, trackAccepted } from '../../lib/recoAnalytics';
+import { useConciergeTiming, type TriggerReason } from '../../hooks/useConciergeTiming';
+import { requestNotificationPermissionOnce, showConciergeNotification } from '../../lib/browserNotify';
+import { getContextChips } from './conciergeChips';
+import { QuickActionMenu } from './QuickActionMenu';
 import type { ChatSuggestionItem, ChatResponse } from '../../types/menu';
 import styles from './ChatPanel.module.css';
 
 const CHAT_RECO_CTX = { mode: 'customer', source: 'chat' } as const;
+// How long an acceptance keeps proactive nudges paused ("stop recommending,
+// do NOT immediately recommend something else" — scenario 4).
+const POST_ACCEPT_PAUSE_MS = 8000;
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   suggestions?: ChatSuggestionItem[];
+  proactive?: boolean;
 }
 
 interface ChatPanelProps {
   onItemClick?: (item: ChatSuggestionItem) => void;
 }
 
-// Bolds any menu-item name (from this message's own suggestion cards) that
-// appears in the assistant's reply, so "why not add our PRAWN & CALAMARI?"
-// reads with the dish name standing out rather than as flat plain text.
-function highlightDishNames(content: string, names: string[]) {
-  const clean = [...new Set(names.filter(Boolean))].sort((a, b) => b.length - a.length);
-  if (!clean.length) return content;
-  const pattern = new RegExp(`(${clean.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+// Keyword categories highlighted in the concierge's own reply text (gold),
+// in addition to this message's own suggestion-card names. Presentation only
+// — never changes what's recommended, only how the reply text reads.
+const CATEGORY_WORDS = [
+  'cabernet', 'shiraz', 'merlot', 'pinotage', 'chardonnay', 'sauvignon blanc', 'chenin', 'rosé', 'rose',
+  'champagne', 'cap classique', 'mcc', 'prosecco', 'wine',
+  'castle lager', 'castle lite', 'windhoek', 'savanna', 'hansa', 'lager', 'cider', 'beer',
+  'margarita', 'mojito', 'martini', 'old fashioned', 'espresso martini', 'cocktail',
+  'ribeye', 'rib-eye', 'fillet', 'sirloin', 'rump', 'tomahawk', 'wagyu', 'steak',
+  'malva pudding', 'cheesecake', 'dessert',
+  "chef's pick", "chef's special", "chef's favourite", "chef's recommendation",
+  'premium upgrade',
+];
+
+function highlightKeywords(content: string, names: string[]) {
+  const exact = [...new Set(names.filter(Boolean))];
+  const all = [...new Set([...exact, ...CATEGORY_WORDS])].sort((a, b) => b.length - a.length);
+  if (!all.length) return content;
+  const escaped = all.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const pattern = new RegExp(`(${escaped.join('|')})`, 'gi');
+  const lowerSet = new Set(all.map(n => n.toLowerCase()));
   const parts = content.split(pattern);
   return parts.map((part, i) => (
-    clean.some(n => n.toLowerCase() === part.toLowerCase())
+    lowerSet.has(part.toLowerCase())
       ? <span key={i} className={styles.dishName}>{part}</span>
       : <span key={i}>{part}</span>
   ));
 }
-
-const SUGGESTED_PROMPTS = [
-  "Can you suggest a wine for tonight?",
-  "What's the chef's recommendation tonight?",
-  "I'm celebrating a birthday — what do you suggest?",
-  "What's the best steak on the menu?",
-  "What are the vegetarian options?",
-];
 
 export function ChatPanel({ onItemClick }: ChatPanelProps) {
   const { chatOpen, setChatOpen, tableId } = useApp();
@@ -53,55 +67,85 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [waiterCalled, setWaiterCalled] = useState(false);
-  // Phase 3B: the assistant's display name (Donald) comes from server config.
-  const [assistantName, setAssistantName] = useState('Donald');
+  // Phase 5 (AI Concierge): the assistant's display name comes from server
+  // config; default matches the rebrand so there's no flash of an old name.
+  const [assistantName, setAssistantName] = useState('🍷 Your Sommelier');
   // Phase 3 (Dining Concierge): a quiet gold badge on the chat icon when the
-  // Brain has a new next-best suggestion for this cart -- never opens the
-  // panel itself, never repeats once shown for the same suggestion.
+  // concierge has a new suggestion — never opens the panel itself, never
+  // repeats once shown for the same suggestion.
   const [hasUnseenSuggestion, setHasUnseenSuggestion] = useState(false);
-  const lastNotifiedName = useRef<string | null>(null);
+  // Phase 5: briefly highlights the latest suggestion card when the guest
+  // arrives via a clicked browser notification.
+  const [flashLatest, setFlashLatest] = useState(false);
+  const [justAccepted, setJustAccepted] = useState(false);
+
+  const shownItemNamesRef = useRef<Set<string>>(new Set());
+  const chatOpenRef = useRef(chatOpen);
+  chatOpenRef.current = chatOpen;
 
   useEffect(() => {
     api.getConfig().then(c => { if (c?.assistantName) setAssistantName(c.assistantName); }).catch(() => { /* keep default */ });
   }, []);
 
+  // Phase 5 (AI Concierge): fetch a proactive recommendation from Recommendation
+  // Engine V2 for the given scenario and present it — presentation/timing only,
+  // the engine still decides WHAT to recommend (api.getRecommendations).
+  const triggerProactiveRecommendation = useCallback(async ({ reason }: { reason: TriggerReason }) => {
+    try {
+      const recs = await api.getRecommendations({
+        cart: cartItems,
+        proactive: true,
+        ...(reason === 'dessert' ? { reason: 'dessert' } : {}),
+      }) as ChatSuggestionItem[];
+      const top = (recs || []).find(r => r?.name && !shownItemNamesRef.current.has(r.name)) || null;
+      if (!top?.name) return;
+      shownItemNamesRef.current.add(top.name);
+
+      const shown = [top];
+      const lastAdded = cartItems[cartItems.length - 1]?.name;
+      const why = top.reason ? ` ${top.reason}` : '';
+      const lastAddedCore = lastAdded?.replace(/\s*±?\d+\s*(g|ml|kg|l|pce|pcs?)?\.?$/i, '').trim();
+      const mentionsLastAdded = Boolean(lastAddedCore && top.reason?.toLowerCase().includes(lastAddedCore.toLowerCase()));
+
+      let introLine: string;
+      if (reason === 'dessert') {
+        introLine = top.reason || `For dessert, might I suggest the ${top.name}?`;
+      } else if (reason === 'upgrade') {
+        introLine = top.reason || `If you'd like something even more special, I'd suggest the ${top.name}.`;
+      } else if (lastAdded && !mentionsLastAdded) {
+        introLine = `I see you've added ${lastAdded} to the cart — why not add our ${top.name}?${why}`;
+      } else {
+        introLine = top.reason || `I'd suggest the ${top.name}.`;
+      }
+
+      setMessages(prev => [...prev, { role: 'assistant', content: introLine, suggestions: shown, proactive: true }]);
+      trackImpressions(shown, CHAT_RECO_CTX);
+      setHasUnseenSuggestion(true);
+
+      // Never notify while the chat window is already open.
+      if (!chatOpenRef.current) {
+        void requestNotificationPermissionOnce();
+        const body = introLine.length > 90 ? `${top.name} — a recommendation for your table.` : introLine;
+        showConciergeNotification(body, () => {
+          setChatOpen(true);
+          setFlashLatest(true);
+          window.setTimeout(() => setFlashLatest(false), 2200);
+        });
+      }
+    } catch { /* a missed proactive nudge is not worth surfacing an error for */ }
+  }, [cartItems, setChatOpen]);
+
+  const { recordIgnored } = useConciergeTiming({
+    cartItems,
+    chatOpen,
+    paused: justAccepted,
+    onTrigger: triggerProactiveRecommendation,
+  });
+  void recordIgnored; // context-key gating already prevents repeats; kept for call-site legibility
+
   useEffect(() => {
-    if (chatOpen) { setHasUnseenSuggestion(false); return; }
-    if (!cartItems.length) return;
-    const timer = window.setTimeout(async () => {
-      try {
-        const recs = await api.getRecommendations({ cart: cartItems }) as ChatSuggestionItem[];
-        const top = recs?.[0] || null;
-        if (top?.name && top.name !== lastNotifiedName.current) {
-          lastNotifiedName.current = top.name;
-          // Bug fix: the badge alone never put anything in the conversation --
-          // opening the chat found `messages` unchanged (still the welcome
-          // screen), so guests saw a notification but no recommendation. Build
-          // the actual chat message here, the moment the new suggestion is
-          // found, so it's already waiting by the time the guest opens the panel.
-          const shown = recs.slice(0, 1);
-          // Always name what was just added and what's being suggested, even
-          // when the Brain's own `reason` is a generic dish hook rather than a
-          // full "I noticed you've gone with X..." pairing sentence -- a
-          // proactive nudge should never read like it forgot what's in the cart.
-          const lastAdded = cartItems[cartItems.length - 1]?.name;
-          const why = top.reason ? ` ${top.reason}` : '';
-          // Strip a trailing size/quantity ("380g", "±450g", "700ml") before
-          // checking for a mention -- the Brain's own narrative says "the
-          // ribeye's intensity", never "the ribeye 380g's intensity".
-          const lastAddedCore = lastAdded?.replace(/\s*±?\d+\s*(g|ml|kg|l|pce|pcs?)?\.?$/i, '').trim();
-          const mentionsLastAdded = lastAddedCore && top.reason?.toLowerCase().includes(lastAddedCore.toLowerCase());
-          const introLine = lastAdded && !mentionsLastAdded
-            ? `I see you've added ${lastAdded} to the cart — why not add our ${top.name}?${why}`
-            : (top.reason || `I'd suggest the ${top.name}.`);
-          setMessages(prev => [...prev, { role: 'assistant', content: introLine, suggestions: shown }]);
-          trackImpressions(shown, CHAT_RECO_CTX);
-          setHasUnseenSuggestion(true);
-        }
-      } catch { /* stay quiet -- a missed suggestion is not worth surfacing an error for */ }
-    }, 700);
-    return () => window.clearTimeout(timer);
-  }, [cartItems, chatOpen]);
+    if (chatOpen) setHasUnseenSuggestion(false);
+  }, [chatOpen]);
 
   function callWaiter() {
     getSocket().emit('callWaiter', { restaurantId: RESTAURANT_ID, tableId });
@@ -117,9 +161,14 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
     }
   }, [chatOpen]);
 
+  // Phase 5 (AI Concierge): "scroll to the latest message" on open — the panel
+  // unmounts on close (AnimatePresence), so a fresh mount always starts
+  // scrolled to the top; re-scroll every time it opens, not only when new
+  // messages arrive while it's already open.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!chatOpen) return;
+    endRef.current?.scrollIntoView({ behavior: 'auto' });
+  }, [chatOpen, messages]);
 
   async function sendMessage(text: string) {
     const content = text.trim();
@@ -130,9 +179,9 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
     setLoading(true);
     try {
       const history = messages.map(m => ({ role: m.role, content: m.content }));
-      // Phase 3B: send the live cart so Donald can do cart-aware cross-sell.
       const res = await api.chat({ message: content, history, tableId, cart: cartItems }) as ChatResponse;
       const shown = (res.suggestions || []).slice(0, 1);
+      shown.forEach(s => { if (s?.name) shownItemNamesRef.current.add(s.name); });
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: res.reply || 'Sorry, I had trouble responding.',
@@ -150,8 +199,13 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
   // detour through the item modal. Reuses the same CartContext every other
   // add-to-cart path in the app already uses.
   function addFromChat(item: ChatSuggestionItem) {
-    addItem({ name: item.name, price: item.price, img: item.img, description: item.description, source: 'guest' });
+    addItem({ name: item.name, price: item.price, img: item.img, description: item.description, source: 'guest', categoryType: item.categoryType, beverageKind: item.beverageKind });
     trackAccepted(item, CHAT_RECO_CTX);
+    // Scenario 4: record acceptance, stop recommending — do not immediately
+    // suggest anything else, even if the cart's new state would otherwise
+    // qualify for a fresh proactive nudge.
+    setJustAccepted(true);
+    window.setTimeout(() => setJustAccepted(false), POST_ACCEPT_PAUSE_MS);
   }
 
   // A same-role swap (Phase 1 Replacement Logic: item.replacement). Only
@@ -172,6 +226,9 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
     addFromChat(item);
   }
 
+  const chips = getContextChips(cartItems);
+  const lastMessageIndex = messages.length - 1;
+
   return (
     <>
       {!chatOpen && (
@@ -187,7 +244,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
         aria-label={chatOpen ? 'Close concierge chat' : 'Open concierge chat'}
         aria-expanded={chatOpen}
       >
-        {chatOpen ? <X size={20} /> : <span className={styles.aiBadge}>AI</span>}
+        {chatOpen ? <X size={20} /> : <span className={styles.aiBadge} aria-hidden="true">🍷</span>}
         {!chatOpen && hasUnseenSuggestion && <span className={styles.notifyDot} aria-hidden="true" />}
       </button>
 
@@ -224,14 +281,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
             <div className={styles.messages} aria-live="polite" aria-atomic="false">
               {messages.length === 0 && (
                 <div className={styles.welcome}>
-                  <p>Hello! I'm {assistantName} — your personal dining assistant. How can I help you tonight?</p>
-                  <div className={styles.suggestions}>
-                    {SUGGESTED_PROMPTS.map((p, i) => (
-                      <button key={i} className={styles.suggestion} onClick={() => sendMessage(p)}>
-                        {p}
-                      </button>
-                    ))}
-                  </div>
+                  <p>Good evening — I'm {assistantName}. How may I assist your table tonight?</p>
                 </div>
               )}
 
@@ -239,11 +289,11 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
                 <div key={i}>
                   <div className={`${styles.message} ${msg.role === 'user' ? styles.userMsg : styles.assistantMsg}`}>
                     {msg.role === 'assistant'
-                      ? highlightDishNames(msg.content, (msg.suggestions || []).map(s => s.name))
+                      ? highlightKeywords(msg.content, (msg.suggestions || []).map(s => s.name))
                       : msg.content}
                   </div>
                   {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && (
-                    <div className={styles.suggestionCards}>
+                    <div className={`${styles.suggestionCards} ${flashLatest && i === lastMessageIndex ? styles.flash : ''}`}>
                       {msg.suggestions.map((item, j) => (
                         <RecommendationCard
                           key={j}
@@ -270,10 +320,23 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
               <div ref={endRef} />
             </div>
 
+            {/* Phase 5 (AI Concierge): ongoing, context-aware suggestion chips —
+                never empty, updates as the cart/conversation changes. */}
+            {!loading && chips.length > 0 && (
+              <div className={styles.chipRow} role="list" aria-label="Suggested questions">
+                {chips.map(chip => (
+                  <button key={chip.label} type="button" className={styles.chip} role="listitem" onClick={() => sendMessage(chip.message)}>
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <form
               className={styles.inputRow}
               onSubmit={e => { e.preventDefault(); sendMessage(input); }}
             >
+              <QuickActionMenu onSelect={sendMessage} disabled={loading} />
               <input
                 ref={inputRef}
                 type="text"

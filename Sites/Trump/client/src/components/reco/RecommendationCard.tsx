@@ -53,6 +53,17 @@ interface Props {
   large?: boolean;   // bigger image/text for a single-card context (e.g. chat, one card at a time)
 }
 
+// Phase 5 (AI Concierge): a natural-language stand-in for the raw confidence
+// number the engine returns — never show a percentage or score to a guest.
+// Deliberately says nothing for lower-confidence picks rather than
+// editorializing them as unsure; the reason text still carries the "why".
+function confidenceLabel(confidence?: number): string | null {
+  if (typeof confidence !== 'number') return null;
+  if (confidence >= 0.85) return 'A confident pick';
+  if (confidence >= 0.65) return 'Recommended';
+  return null;
+}
+
 // A RecommendationItem carries only the fields the engine returns; project it onto
 // the MenuItem shape the image/video resolvers expect (categoryType drives both the
 // drink/dessert classification and the demo-clip fallback).
@@ -94,6 +105,14 @@ export function RecommendationCard({
   const src = imageFor(item);
   const price = Number(item.price) || 0;
   const reason = (showReason || variant !== 'compact') ? item.reason : '';
+  // Phase 5 (AI Concierge): "expected additional value" naturally maps to the
+  // price delta of an upgrade/replacement (the whole point of the uplift pill)
+  // — auto-derive it from the engine's own netRevenueIncrease when a caller
+  // hasn't passed an explicit uplift, so every replace-style card gets one
+  // without every call site needing to compute/pass it themselves.
+  const resolvedUplift = typeof uplift === 'number' ? uplift
+    : (item.replacement && typeof item.netRevenueIncrease === 'number' && item.netRevenueIncrease > 0 ? item.netRevenueIncrease : undefined);
+  const confidenceText = (showReason || variant !== 'compact') ? confidenceLabel(item.confidence) : null;
   // Poster-first: resolve the video only to decide whether to offer a play button.
   // The <video> element is mounted (and the file requested) ONLY after a tap.
   const videoSrc = playable ? resolveVideo(asMenuItem(item)) : null;
@@ -214,9 +233,10 @@ export function RecommendationCard({
           )}
           <span className={styles.name}>{item.name}</span>
           {reason && <span className={styles.reason}>{reason}</span>}
+          {confidenceText && <span className={styles.confidence}>{confidenceText}</span>}
           <span className={styles.bottomRow}>
             {price > 0 && <span className={styles.price}>{formatPrice(price)}</span>}
-            {typeof uplift === 'number' && uplift > 0 && <span className={styles.uplift}>+{formatPrice(uplift)}</span>}
+            {typeof resolvedUplift === 'number' && resolvedUplift > 0 && <span className={styles.uplift}>+{formatPrice(resolvedUplift)}</span>}
           </span>
           {note && <span className={styles.note}>“{note}”</span>}
         </div>

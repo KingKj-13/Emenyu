@@ -20,9 +20,10 @@
   box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 0 20px rgba(198,162,75,0.15);
 }
 
-/* Phase 3 (Dining Concierge): a quiet gold pulse when the concierge has a new
+/* Phase 5 (AI Concierge): a quiet gold badge when the concierge has a new
    suggestion -- never covers the screen, never opens the panel on its own,
-   clears the moment the guest opens chat. */
+   clears the moment the guest opens chat. ONE gentle pulse then it settles
+   (a luxury product attracts attention quietly, not with constant motion). */
 .notifyDot {
   position: absolute;
   top: 4px;
@@ -32,12 +33,13 @@
   border-radius: 50%;
   background: var(--color-gold, #c6a24b);
   box-shadow: 0 0 0 2px var(--blue-black, #041b2c);
-  animation: notifyPulse 1.8s ease-in-out infinite;
+  animation: notifyPulse 900ms ease-out 1;
 }
 
 @keyframes notifyPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.35); opacity: 0.6; }
+  0% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1.4); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 /* Call-waiter bell, stacked directly above the AI launcher */
@@ -141,28 +143,30 @@
 
 .welcome { color: var(--color-sand); font-size: 13px; line-height: 1.6; }
 
-.suggestions {
+/* Phase 5 (AI Concierge): ongoing, context-aware suggestion chips, shown
+   above the input at all times (not just the empty welcome screen) — never
+   an empty chat opening, and the set changes as the cart/conversation does. */
+.chipRow {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 6px;
-  margin-top: 12px;
+  padding: 8px 12px 0;
+  flex-shrink: 0;
 }
 
-/* Navy + gold hairline, matching the rest of the palette — this was the one
-   flat light-gray surface in the customer app. */
-.suggestion {
-  padding: 7px 12px;
+.chip {
+  padding: 6px 11px;
   background: rgba(198,162,75,0.07);
   border: 1px solid rgba(198,162,75,0.24);
-  border-radius: var(--radius-card);
+  border-radius: 999px;
   color: var(--color-sand);
-  font-size: 12px;
-  text-align: left;
+  font-size: 11.5px;
+  white-space: nowrap;
   cursor: pointer;
   transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
 }
 
-.suggestion:hover {
+.chip:hover {
   border-color: rgba(198,162,75,0.45);
   background: rgba(198,162,75,0.13);
   color: var(--color-cream);
@@ -276,4 +280,17 @@
   gap: 6px;
   margin-top: 8px;
   padding: 0 4px;
+  border-radius: var(--radius-card, 8px);
+}
+
+/* Phase 5 (AI Concierge): briefly highlights the recommendation a guest
+   arrived at via a clicked browser notification — a quiet one-shot glow,
+   not a repeating animation. */
+.flash {
+  animation: flashGlow 2.1s ease-out 1;
+}
+
+@keyframes flashGlow {
+  0% { box-shadow: 0 0 0 2px rgba(198,162,75,0.7), 0 0 24px rgba(198,162,75,0.5); }
+  100% { box-shadow: 0 0 0 0 rgba(198,162,75,0); }
 }

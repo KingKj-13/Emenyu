@@ -221,9 +221,10 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     luxuryTableCount: parseInteger(env.TRUMP_LUXURY_TABLE_COUNT, 6),
     luxuryTableBase: parseInteger(env.TRUMP_LUXURY_TABLE_BASE, 900),
     brandName: env.TRUMP_BRAND_NAME || 'Trump',
-    // Phase 3B: the chatbot's display name (Donald). Surfaced to the client via
-    // GET /api/config so the SPA stops hardcoding "Trump AI".
-    assistantName: env.TRUMP_ASSISTANT_NAME || 'Donald',
+    // Phase 5 (AI Concierge): the chatbot's display name/branding. Surfaced to
+    // the client via GET /api/config so the SPA never hardcodes it. This is a
+    // branding string only — it carries no recommendation logic.
+    assistantName: env.TRUMP_ASSISTANT_NAME || '🍷 Your Sommelier',
     // Waiter-app APK download link ("latest" GitHub release asset), surfaced to the
     // Admin UI via GET /api/config so managers can hand it to new staff on account
     // creation. See docs/final-product/phase-04b/APK-BUILD.md for the release rule.

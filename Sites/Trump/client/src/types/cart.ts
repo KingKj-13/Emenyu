@@ -6,6 +6,12 @@ export interface CartItem {
   img: string;
   description: string;
   source?: 'guest' | 'waiter';
+  // Phase 5 (AI Concierge): carried through when the adding surface has it
+  // (menu items, chat/cart suggestions), so presentation-layer timing logic
+  // can tell a drink from a main without re-deriving category from the name.
+  // Optional — items added without it fall back to a keyword heuristic.
+  categoryType?: string;
+  beverageKind?: string;
 }
 
 export interface CartTotals {

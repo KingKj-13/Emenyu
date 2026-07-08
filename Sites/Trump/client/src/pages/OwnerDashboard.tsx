@@ -346,7 +346,7 @@ function buildBusinessInsights(dow: Dow[], reco: RecommendationAnalytics | null)
   }
   const topEarner = (reco?.topRevenue || []).filter(r => r.revenue > 0)[0];
   if (topEarner) {
-    out.push({ severity: 'low', title: `${topEarner.name} is ${reco ? 'Donald' : 'your AI'}'s top earner`, detail: `${formatPrice(topEarner.revenue)} attributed from recommendations. Keep it stocked and well-paired.` });
+    out.push({ severity: 'low', title: `${topEarner.name} is ${ASSISTANT_NAME}'s top earner`, detail: `${formatPrice(topEarner.revenue)} attributed from recommendations. Keep it stocked and well-paired.` });
   }
   return out;
 }

@@ -63,7 +63,7 @@ export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
             variant="compact"
             item={rec}
             onOpen={() => { trackClick(rec, ctx); setPendingItemName(rec.name); setIsOpen(false); }}
-            onAdd={() => { trackAccepted(rec, ctx); addItem({ name: rec.name, price: rec.price, img: recommendationImage(rec), description: rec.description || '' }); }}
+            onAdd={() => { trackAccepted(rec, ctx); addItem({ name: rec.name, price: rec.price, img: recommendationImage(rec), description: rec.description || '', categoryType: rec.categoryType, beverageKind: rec.beverageKind }); }}
           />
         ))}
       </div>
