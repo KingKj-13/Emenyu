@@ -1,0 +1,52 @@
+{
+  "_source": "Extracted verbatim from server/services/nlg/templateNlgProvider.js (composePairingLine openers/recommends/closers/signatureClosers, sayToTable's tone switch + VIP/returning branch, upsellScript). Placeholders in {braces} stand in for the runtime values (item name, dish/source name, formatted price, cooking hook, etc.) that the code substitutes in.",
+  "patterns": [
+    { "useCase": "pairing", "tone": "friendly", "detailLevel": "simple", "text": "If you're open to a recommendation, I'd go with the {item}." },
+    { "useCase": "pairing", "tone": "friendly", "detailLevel": "simple", "text": "Honestly, I'd suggest the {item}." },
+    { "useCase": "pairing", "tone": "professional", "detailLevel": "expert", "text": "I'd recommend the {item}." },
+    { "useCase": "pairing", "tone": "professional", "detailLevel": "expert", "text": "My suggestion would be the {item}." },
+    { "useCase": "pairing", "tone": "luxury", "detailLevel": "expert", "text": "Might I suggest the {item}?" },
+    { "useCase": "pairing", "tone": "luxury", "detailLevel": "expert", "text": "A fitting choice would be the {item}." },
+
+    { "useCase": "pairing", "tone": "friendly", "detailLevel": "simple", "text": "I noticed you've gone with the {source}." },
+    { "useCase": "pairing", "tone": "friendly", "detailLevel": "simple", "text": "Since you've already got the {source} on the table," },
+    { "useCase": "pairing", "tone": "professional", "detailLevel": "expert", "text": "You've added the {source}." },
+    { "useCase": "pairing", "tone": "professional", "detailLevel": "expert", "text": "With the {source} already ordered," },
+    { "useCase": "pairing", "tone": "luxury", "detailLevel": "expert", "text": "With the {source} already at the table," },
+    { "useCase": "pairing", "tone": "luxury", "detailLevel": "expert", "text": "Given the {source} you've chosen," },
+
+    { "useCase": "pairing", "tone": "friendly", "detailLevel": "simple", "text": "If you're open to a recommendation, I'd definitely pair it with our {item}." },
+    { "useCase": "pairing", "tone": "friendly", "detailLevel": "simple", "text": "I'd pair it with our {item}." },
+    { "useCase": "pairing", "tone": "professional", "detailLevel": "expert", "text": "I'd recommend pairing it with our {item}." },
+    { "useCase": "pairing", "tone": "professional", "detailLevel": "expert", "text": "I'd suggest the {item} alongside it." },
+    { "useCase": "pairing", "tone": "luxury", "detailLevel": "expert", "text": "I'd suggest our {item} alongside it." },
+    { "useCase": "pairing", "tone": "luxury", "detailLevel": "expert", "text": "May I suggest the {item} to accompany it?" },
+
+    { "useCase": "pairing", "tone": "friendly", "detailLevel": "simple", "text": "It's one of my favourite combinations on the menu." },
+    { "useCase": "pairing", "tone": "friendly", "detailLevel": "simple", "text": "It's always a hit at this table." },
+    { "useCase": "pairing", "tone": "professional", "detailLevel": "expert", "text": "It's a pairing I'd confidently recommend." },
+    { "useCase": "pairing", "tone": "professional", "detailLevel": "expert", "text": "It's one of our most requested combinations." },
+    { "useCase": "pairing", "tone": "luxury", "detailLevel": "expert", "text": "It’s a pairing our regulars return for." },
+    { "useCase": "pairing", "tone": "luxury", "detailLevel": "expert", "text": "It rarely disappoints." },
+
+    { "useCase": "pairing", "tone": "friendly", "detailLevel": "simple", "text": "It's one of our signature dishes, so you're in good hands." },
+    { "useCase": "pairing", "tone": "friendly", "detailLevel": "simple", "text": "It's a signature plate here — always a good sign." },
+    { "useCase": "pairing", "tone": "professional", "detailLevel": "expert", "text": "It's one of our signature dishes." },
+    { "useCase": "pairing", "tone": "professional", "detailLevel": "expert", "text": "It's a signature plate, well worth it." },
+    { "useCase": "pairing", "tone": "luxury", "detailLevel": "expert", "text": "It’s one of the kitchen’s signature dishes." },
+    { "useCase": "pairing", "tone": "luxury", "detailLevel": "expert", "text": "It’s a signature of the house." },
+
+    { "useCase": "pairing", "tone": "casual", "detailLevel": "simple", "text": "{dish} is {hook} — honestly, the {suggestion} is the move. Trust me on that one." },
+    { "useCase": "pairing", "tone": "luxury", "detailLevel": "expert", "text": "{dish} is {hook}. Allow me to pour the {suggestion} alongside — it's the pairing I recommend to every table." },
+    { "useCase": "pairing", "tone": "casual", "detailLevel": "simple", "text": "{dish}, {hook}. Add the {suggestion}." },
+    { "useCase": "pairing", "tone": "friendly", "detailLevel": "simple", "text": "{dish} is {hook} — and it's made for the {suggestion}. Shall I bring both?" },
+    { "useCase": "pairing", "tone": "professional", "detailLevel": "expert", "text": "{dish} is {hook}. I'd {actionPhrase} with the {suggestion} — it's the pairing I recommend to every table." },
+    { "useCase": "occasion", "tone": "celebratory", "detailLevel": "expert", "text": "{dish} is {hook}. I'd {actionPhrase} with the {suggestion} — it's the one you enjoyed last time." },
+    { "useCase": "occasion", "tone": "celebratory", "detailLevel": "simple", "text": "{dish} is {hook}. I'd {actionPhrase} with the {suggestion} — it's how I'd set up the table tonight." },
+
+    { "useCase": "pairing", "tone": "casual", "detailLevel": "simple", "text": "Add the {item}? {price}." },
+    { "useCase": "pairing", "tone": "luxury", "detailLevel": "expert", "text": "May I suggest the {item}? It's {benefit} — {price}." },
+    { "useCase": "pairing", "tone": "professional", "detailLevel": "expert", "text": "I'd recommend the {item}. It's {benefit} — {price}." },
+    { "useCase": "pairing", "tone": "friendly", "detailLevel": "simple", "text": "I'd add the {item} if you're keen — it's {benefit}, {price}." }
+  ]
+}

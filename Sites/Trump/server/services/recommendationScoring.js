@@ -188,6 +188,82 @@ function nextJourneyStage(cart = [], menuByName = new Map(), { upgradeOffered = 
   return 'done';
 }
 
+// ── Phase 4 (Recommendation Engine V2) additions ───────────────────────────
+// The composite scoring + confidence formulas the spec (sections 4.3/4.6)
+// names explicitly. These are ADDITIVE: scoreCandidate()'s existing return
+// shape (confidence/expectedValue/netRevenueIncrease/replacement/finalScore)
+// is unchanged, and ranking in aiService.recommend() still sorts by the
+// existing, tested finalScore — these new components are exposed alongside
+// it (candidate.brain.scoreComponents / .confidenceBreakdown) for
+// transparency and future tuning, deliberately not swapped in as the live
+// ranking key on an already-tuned, already-validated system.
+//
+// Each term is derived from a real signal already computed elsewhere in the
+// pipeline (never a fabricated number) — see inline comments for the exact
+// source of each component.
+
+const TYPE_PRIORITY = { upgrade: 100, add_on: 70, pairing: 85, side: 70, dessert: 60, coffee: 50, digestif: 40 };
+
+function recTypeOf(candidate = {}) {
+  if (candidate.isReplacement) return 'upgrade';
+  const type = candidate.item?.categoryType;
+  if (type === 'DESSERT') return 'dessert';
+  if (type === 'STARTER') return 'side';
+  return candidate.recType || 'pairing';
+}
+
+// H/P/R/S/T/O/Pop/Chef/Pref/Pen, per spec 4.3. Returns each 0..max plus a
+// TotalScore sum (max = 100+100+40+50+50+25+20+20+30-100, informational only).
+function computeScoreComponents({ candidate = {}, mealStateService = null, currentState = null, popularity = 0, guestIntel = null, intensityFactor = 1 } = {}) {
+  const type = recTypeOf(candidate);
+
+  const H = TYPE_PRIORITY[type] ?? 75; // hierarchy priority by type
+  const P = Math.round(baseConfidence(candidate) * 100); // pairing-match quality proxy (reused as P_norm(c) by the confidence formula below, per spec 4.6)
+  const R = Math.max(0, Math.min(40, Math.round((candidate.brain?.netRevenueIncrease ?? 0) / 10))); // revenue/margin, from the already-computed price delta
+  const S = candidate.chef === true ? 50 : 40; // hospitality/etiquette comfort — every surviving candidate already passed R1-R7 + the new stage/downsell/structural gates
+  let T = 30;
+  if (mealStateService && currentState) {
+    if (mealStateService.isAllowed(currentState, type)) T = 50;
+    else if (mealStateService.isForbidden(currentState, type)) T = 0;
+  }
+  const O = (Array.isArray(candidate.reasonTags) && candidate.reasonTags.includes('occasion')) ? 25 : 0;
+  const Pop = Math.max(0, Math.min(20, Math.round((Number(popularity) || 0) * 20)));
+  const Chef = candidate.chef === true ? 20 : 0;
+  const favourite = guestIntel?.present && Array.isArray(guestIntel.topItems) && guestIntel.topItems.some(n => normalizeName(n) === normalizeName(candidate.item?.name));
+  const Pref = favourite ? 30 : (guestIntel?.vip ? 10 : 0);
+  const Pen = intensityFactor < 1 ? 20 : 0;
+
+  const TotalScore = H + P + R + S + T + O + Pop + Chef + Pref - Pen;
+  return { H, P, R, S, T, O, Pop, Chef, Pref, Pen, TotalScore };
+}
+
+// Confidence Formula, per spec 4.6 — combination of pairing match quality,
+// knowledge-source coverage, historical acceptance, business-rule match,
+// timing fit, and metadata completeness, with components exposed.
+function computeConfidenceBreakdown({ candidate = {}, sourcesHit = 1, historicalAcceptance = null, scoreComponents = null, businessRuleMatch = 1 } = {}) {
+  const pairingMatchQuality = baseConfidence(candidate); // P_norm(c) — same source as scoring's P component
+  const knowledgeCoverage = clamp01((Number(sourcesHit) || 1) / 3); // # of knowledge sources agreeing (chef/hero/tag-match count as up to 3)
+  const historicalAcceptanceNorm = historicalAcceptance == null ? 0.5 : clamp01(historicalAcceptance); // neutral prior when no analytics history yet
+  const timingFit = scoreComponents ? clamp01(scoreComponents.T / 50) : 0.6;
+  const tags = candidate.item?.tags || {};
+  const expectedFields = ['protein', 'richness', 'course', 'drinkType', 'spice', 'texture'];
+  const metadataCompleteness = clamp01(expectedFields.filter(f => tags[f] !== undefined && tags[f] !== null).length / expectedFields.length);
+
+  const components = {
+    pairingMatchQuality,
+    knowledgeCoverage,
+    historicalAcceptance: historicalAcceptanceNorm,
+    businessRuleMatch: clamp01(businessRuleMatch),
+    timingFit,
+    metadataCompleteness
+  };
+  const values = Object.values(components);
+  const confidence = clamp01(values.reduce((sum, v) => sum + v, 0) / values.length);
+  const band = confidence >= 0.85 ? 'high' : confidence >= 0.65 ? 'medium' : 'low';
+
+  return { confidence: Number(confidence.toFixed(2)), band, components };
+}
+
 module.exports = {
   clamp01,
   baseConfidence,
@@ -197,5 +273,7 @@ module.exports = {
   netRevenueIncrease,
   tierWeights,
   scoreCandidate,
-  nextJourneyStage
+  nextJourneyStage,
+  computeScoreComponents,
+  computeConfidenceBreakdown
 };

@@ -1,0 +1,322 @@
+{
+  "meta": {
+    "source": "server/services/intentClassifier.js (OCCASION_MAP, OCCASION_DETAIL_MAP) + server/services/aiService.js (SPECIAL_WORDS) + trump_hero_pairings.json (occasions)",
+    "precedence": "occasions[] below is ordered exactly as OCCASION_DETAIL_MAP is checked in intentClassifier.classify(): 'more specific buckets are checked before the generic celebration fallback' (first regex match wins, loop breaks on first hit).",
+    "note": "slots.occasion (coarse, from OCCASION_MAP) and slots.occasionDetail (fine, from OCCASION_DETAIL_MAP) are computed independently from the same normalized message text. heroPairings.archetypeFor(slot) — which supplies leadWithDishes/drinkVarietals/note — is only ever called with the COARSE slots.occasion value, never occasionDetail directly, so a detail occasion only surfaces lead-with dishes when its own keywords also happen to satisfy a coarse OCCASION_MAP bucket. See per-entry \"archetypeNote\" for how each one resolves."
+  },
+  "coarseOccasionMap": [
+    {
+      "key": "celebration",
+      "pattern": "\\b(celebrat|birthday|anniversary|engagement|graduation|promotion|special occasion)\\b",
+      "detectionKeywords": [
+        "celebrat",
+        "birthday",
+        "anniversary",
+        "engagement",
+        "graduation",
+        "promotion",
+        "special occasion"
+      ]
+    },
+    {
+      "key": "sharing",
+      "pattern": "\\b(football|soccer|rugby|the game|the match|watching|sports|to share|sharing|with friends|the boys|the lads|group)\\b",
+      "detectionKeywords": [
+        "football",
+        "soccer",
+        "rugby",
+        "the game",
+        "the match",
+        "watching",
+        "sports",
+        "to share",
+        "sharing",
+        "with friends",
+        "the boys",
+        "the lads",
+        "group"
+      ]
+    },
+    {
+      "key": "date",
+      "pattern": "\\b(date night|date|romantic|just the two|for two|impress)\\b",
+      "detectionKeywords": [
+        "date night",
+        "date",
+        "romantic",
+        "just the two",
+        "for two",
+        "impress"
+      ]
+    },
+    {
+      "key": "quick",
+      "pattern": "\\b(quick|fast|in a hurry|on the go|grab a|before a movie|quick bite)\\b",
+      "detectionKeywords": [
+        "quick",
+        "fast",
+        "in a hurry",
+        "on the go",
+        "grab a",
+        "before a movie",
+        "quick bite"
+      ]
+    },
+    {
+      "key": "group",
+      "pattern": "\\b(big group|large group|whole table|group booking|platter for|for the whole)\\b",
+      "detectionKeywords": [
+        "big group",
+        "large group",
+        "whole table",
+        "group booking",
+        "platter for",
+        "for the whole"
+      ]
+    }
+  ],
+  "specialWords": [
+    "birthday",
+    "anniversary",
+    "event",
+    "celebration",
+    "party",
+    "gathering",
+    "festival",
+    "ceremony",
+    "function",
+    "occasion",
+    "milestone",
+    "achievement",
+    "engagement",
+    "wedding",
+    "proposal",
+    "graduation",
+    "farewell",
+    "retirement",
+    "promotion",
+    "date"
+  ],
+  "occasions": [
+    {
+      "key": "birthday",
+      "detectionPattern": "\\b(birthday|bday|born day)\\b",
+      "detectionKeywords": [
+        "birthday",
+        "bday",
+        "born day"
+      ],
+      "coarseOccasionBucket": "celebration",
+      "specialWordsOverlap": [
+        "birthday"
+      ],
+      "leadWithDishes": [
+        "Springbok Carpaccio",
+        "Tomahawk",
+        "Kings Cut Ribeye"
+      ],
+      "drinkVarietals": [
+        "Champagne",
+        "Cap Classique",
+        "Red Blend (Meerlust / Vilafonte)"
+      ],
+      "note": "Open with bubbles, a big shared cut for the table, bubbly + cake to close.",
+      "archetypeNote": "Coarse \"celebration\" bucket fires because \"birthday\" is also one of its keywords, so heroPairings.archetypeFor('celebration') resolves the celebration archetype below."
+    },
+    {
+      "key": "anniversary",
+      "detectionPattern": "\\b(anniversary|years together|wedding anniversary)\\b",
+      "detectionKeywords": [
+        "anniversary",
+        "years together",
+        "wedding anniversary"
+      ],
+      "coarseOccasionBucket": "celebration",
+      "specialWordsOverlap": [
+        "anniversary",
+        "wedding"
+      ],
+      "leadWithDishes": [
+        "Springbok Carpaccio",
+        "Tomahawk",
+        "Kings Cut Ribeye"
+      ],
+      "drinkVarietals": [
+        "Champagne",
+        "Cap Classique",
+        "Red Blend (Meerlust / Vilafonte)"
+      ],
+      "note": "Open with bubbles, a big shared cut for the table, bubbly + cake to close.",
+      "archetypeNote": "Coarse \"celebration\" bucket fires because \"anniversary\" is also one of its keywords, resolving the same celebration archetype."
+    },
+    {
+      "key": "graduation",
+      "detectionPattern": "\\b(graduation|graduated|graduating|degree|diploma)\\b",
+      "detectionKeywords": [
+        "graduation",
+        "graduated",
+        "graduating",
+        "degree",
+        "diploma"
+      ],
+      "coarseOccasionBucket": "celebration",
+      "specialWordsOverlap": [
+        "graduation"
+      ],
+      "leadWithDishes": [
+        "Springbok Carpaccio",
+        "Tomahawk",
+        "Kings Cut Ribeye"
+      ],
+      "drinkVarietals": [
+        "Champagne",
+        "Cap Classique",
+        "Red Blend (Meerlust / Vilafonte)"
+      ],
+      "note": "Open with bubbles, a big shared cut for the table, bubbly + cake to close.",
+      "archetypeNote": "Coarse \"celebration\" bucket fires because \"graduation\" is also one of its keywords, resolving the same celebration archetype."
+    },
+    {
+      "key": "business_dinner",
+      "detectionPattern": "\\b(business dinner|client dinner|work dinner|colleagues|business meeting|client meeting|work function|corporate|with the team|the boss)\\b",
+      "detectionKeywords": [
+        "business dinner",
+        "client dinner",
+        "work dinner",
+        "colleagues",
+        "business meeting",
+        "client meeting",
+        "work function",
+        "corporate",
+        "with the team",
+        "the boss"
+      ],
+      "coarseOccasionBucket": null,
+      "specialWordsOverlap": [
+        "function"
+      ],
+      "leadWithDishes": [],
+      "drinkVarietals": [],
+      "note": null,
+      "archetypeNote": "No coarse OCCASION_MAP bucket contains any business_dinner keyword (\"business dinner\", \"colleagues\", \"corporate\", \"the boss\", etc.), so slots.occasion stays null and heroPairings.archetypeFor() returns null — no lead-with dishes/drinks surface for this detail occasion; it falls through to ordinary tag/menu-context recommendations."
+    },
+    {
+      "key": "sports_night",
+      "detectionPattern": "\\b(football|soccer|rugby|cricket|the game|the match|world cup|watching the game|match night)\\b",
+      "detectionKeywords": [
+        "football",
+        "soccer",
+        "rugby",
+        "cricket",
+        "the game",
+        "the match",
+        "world cup",
+        "watching the game",
+        "match night"
+      ],
+      "coarseOccasionBucket": "sharing",
+      "specialWordsOverlap": [],
+      "leadWithDishes": [
+        "Firecracker Chicken Wings",
+        "Full Rack Pork Loin Ribs",
+        "Beef Ribs",
+        "Boerewors & Chakalaka",
+        "Beef Biltong"
+      ],
+      "drinkVarietals": [
+        "Castle Lager (draught)",
+        "Castle Lite",
+        "Savanna Dry"
+      ],
+      "note": "Sharing plates + cold draught. Keep it casual and loud-friendly.",
+      "archetypeNote": "Coarse \"sharing\" bucket fires because football/soccer/rugby/\"watching the game\" overlap its keywords, resolving the \"football / watching the game / sharing\" archetype below."
+    },
+    {
+      "key": "date",
+      "detectionPattern": "\\b(date night|date|romantic|just the two|for two|impress)\\b",
+      "detectionKeywords": [
+        "date night",
+        "date",
+        "romantic",
+        "just the two",
+        "for two",
+        "impress"
+      ],
+      "coarseOccasionBucket": "date",
+      "specialWordsOverlap": [
+        "date"
+      ],
+      "leadWithDishes": [
+        "Springbok Carpaccio",
+        "Fillet",
+        "Ribeye"
+      ],
+      "drinkVarietals": [
+        "Cabernet Sauvignon",
+        "Pinot Noir",
+        "Cap Classique"
+      ],
+      "note": "Finish with Death by Chocolate Cake to share.",
+      "archetypeNote": "Identical keyword set to the coarse \"date\" bucket, so it always resolves the date-night archetype below."
+    },
+    {
+      "key": "family_dinner",
+      "detectionPattern": "\\b(family dinner|with (my |the )?(family|kids|parents)|family gathering|family celebration)\\b",
+      "detectionKeywords": [
+        "family dinner",
+        "with my family",
+        "with the family",
+        "with family",
+        "with my kids",
+        "with the kids",
+        "with kids",
+        "with my parents",
+        "with the parents",
+        "with parents",
+        "family gathering",
+        "family celebration"
+      ],
+      "coarseOccasionBucket": null,
+      "specialWordsOverlap": [
+        "celebration",
+        "gathering"
+      ],
+      "leadWithDishes": [],
+      "drinkVarietals": [],
+      "note": null,
+      "archetypeNote": "No coarse OCCASION_MAP bucket contains any family_dinner keyword (\"family dinner\", \"with the family/kids/parents\", \"family gathering\"), so slots.occasion stays null and heroPairings.archetypeFor() returns null — no lead-with dishes/drinks surface for this detail occasion; it falls through to ordinary tag/menu-context recommendations."
+    },
+    {
+      "key": "celebration",
+      "detectionPattern": "\\b(celebrat|engagement|promotion|special occasion|milestone|achievement)\\b",
+      "detectionKeywords": [
+        "celebrat",
+        "engagement",
+        "promotion",
+        "special occasion",
+        "milestone",
+        "achievement"
+      ],
+      "coarseOccasionBucket": "celebration",
+      "specialWordsOverlap": [
+        "occasion",
+        "milestone",
+        "achievement",
+        "engagement",
+        "promotion"
+      ],
+      "leadWithDishes": [
+        "Springbok Carpaccio",
+        "Tomahawk",
+        "Kings Cut Ribeye"
+      ],
+      "drinkVarietals": [
+        "Champagne",
+        "Cap Classique",
+        "Red Blend (Meerlust / Vilafonte)"
+      ],
+      "note": "Open with bubbles, a big shared cut for the table, bubbly + cake to close.",
+      "archetypeNote": "Coarse \"celebration\" bucket overlaps for celebrat*/engagement/promotion/\"special occasion\" triggers (resolving the celebration archetype below), but NOT for \"milestone\" or \"achievement\" — those two detail-only keywords have no coarse-bucket counterpart, so a message matching only on them yields no archetype."
+    }
+  ]
+}

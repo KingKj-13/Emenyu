@@ -1,0 +1,80 @@
+{
+  "$schema": "emenu-v3-knowledge",
+  "domain": "beer_pairings",
+  "source_files": [
+    "server/services/nlg/hospitalityKnowledge.js (RULES array)",
+    "server/services/aiService.js (addPerfectPairings -> pairingRules[\"Perfect grill pairing\"])"
+  ],
+  "notes": [
+    "conditions objects are literal restatements of RULES[].match(d, w) from hospitalityKnowledge.js, where d = dish.tags and w = drink.tags.",
+    "phrases.*.text values are copied verbatim from RULES[].clauses[tone]."
+  ],
+  "entries": [
+    {
+      "id": "beer-spice",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "beer", "spice_gte": 1 },
+      "recommended_style": "cold beer",
+      "principle": "carbonation + cold temperature is the most reliable way to cool capsaicin heat",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["A cold beer is the most reliable way to cool the heat in this dish."],
+        "friendly": ["Honestly a cold beer is the best way to cool that heat down, works every time."],
+        "luxury": ["A well-chilled beer tempers the spice cleanly, without dulling the flavour."]
+      }
+    },
+    {
+      "id": "beer-general",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "beer" },
+      "recommended_style": "cold beer",
+      "principle": "simple, unfussy default pairing for straightforward, hearty food",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["Nothing complicated about it — a cold beer just works with food like this."],
+        "friendly": ["No overthinking needed, a cold one just goes with food like this."],
+        "luxury": ["A simple, well-chilled beer suits this kind of straightforward, hearty food."]
+      }
+    },
+    {
+      "id": "crispy-carbonation",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "texture_includes": "crispy", "drinkType_any_of": ["sparkling", "beer"] },
+      "recommended_style": "sparkling wine or beer",
+      "principle": "carbonation cuts through crunch/texture, keeps the dish feeling lighter than it looks",
+      "fidelity_note": "Cross-cutting rule, duplicated from wine_pairings.json (same source RULES entry) because it also fires for beer, not sparkling wine exclusively. See identical entry there.",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["The carbonation cuts through the crunch and keeps the dish from feeling heavy."],
+        "friendly": ["The bubbles cut right through the crunch, keeps it feeling light instead of heavy."],
+        "luxury": ["The carbonation plays well off the texture — it keeps the dish feeling lighter than it looks."]
+      }
+    },
+    {
+      "id": "cider",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "cider" },
+      "recommended_style": "cider",
+      "principle": "sweetness in cider cools/tempers the dish rather than competing with it",
+      "fidelity_note": "Originally present in hospitalityKnowledge.js RULES but not captured in the initial extraction pass (flagged as unassigned); added here for completeness so the data-driven rules engine has full parity with the original 21-entry RULES array. Filed under beer_pairings.json since categoryClassifier.js's own BEER beverageKind list includes cider.",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["The sweetness in the cider cools things down nicely against the dish."],
+        "friendly": ["It's got a bit of sweetness that cools everything down nicely with the {dish}."],
+        "luxury": ["A touch of sweetness in the cider tempers the dish rather than competing with it."]
+      }
+    },
+    {
+      "id": "grill-beer-pairing",
+      "source": "aiService.js addPerfectPairings() pairingRules[\"Perfect grill pairing\"] (DRINK typedPair)",
+      "conditions": { "dish_name_or_searchText_matches": "/burger|ribs|pork|wings/" },
+      "recommended_style": "lager, beer, or cider",
+      "principle": "grilled/fried pub-style food pairs with cold carbonated beer-family drinks (candidate-generation rule, not a narrative phrase rule)",
+      "label": "Perfect grill pairing",
+      "score": 88,
+      "drink_keywords": ["lager", "beer", "cider"],
+      "companion_food_keywords": ["chips", "onion rings", "coleslaw"],
+      "fidelity_note": "Keyword candidate generator (pickVariedMenuItem), no professional/friendly/luxury phrase variants in source. 'cider' keyword included here as it shares this rule's DRINK typedPair with lager/beer; cider also gets its own hospitalityKnowledge.js RULES entry ('cider') which is NOT duplicated in this file since it was not in the requested beer entry list -- it lives only in the source RULES array, unassigned to any of the 7 requested files. See top-level fidelity note in this repo response for the full unassigned-entries list."
+    }
+  ]
+}

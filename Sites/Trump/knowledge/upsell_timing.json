@@ -1,0 +1,47 @@
+{
+  "_source": "Derived from server/services/aiService.js addCourseCompletions() and its stage scoring (score constants are the literal addCandidate(...) score arguments passed per stage; the journey order drink -> food -> wine -> upgrade -> dessert -> coffee -> digestif -> done is stated verbatim in the function's own comment).",
+  "stages": [
+    {
+      "stage": "drink",
+      "intensity": 74,
+      "recommendedSuggestionTypes": ["WINE", "DRINK"],
+      "idealMoment": "Right at the start of the meal, before anything is on the table yet — offer something to drink first (title: 'To start, something to drink')."
+    },
+    {
+      "stage": "food",
+      "intensity": 78,
+      "recommendedSuggestionTypes": ["STARTER", "MAIN"],
+      "idealMoment": "Once a drink is ordered but no starter or main has been chosen — nudge toward food (title: 'Start with a starter or main')."
+    },
+    {
+      "stage": "wine",
+      "intensity": 76,
+      "recommendedSuggestionTypes": ["WINE"],
+      "idealMoment": "Once a starter or main is on the table but no wine has been added yet — pour a bottle that pairs with it (title: 'Wine pairing')."
+    },
+    {
+      "stage": "upgrade",
+      "intensity": 1150,
+      "recommendedSuggestionTypes": ["Premium upgrade — a same-role swap of the main dish already ordered (chef-curated, reuses replacement/EV logic)"],
+      "idealMoment": "After food and wine are both on the table, when a curated premium upgrade exists for the main dish and hasn't been offered yet — the highest-priority nudge in the journey (title: 'Premium upgrade')."
+    },
+    {
+      "stage": "dessert",
+      "intensity": 66,
+      "recommendedSuggestionTypes": ["DESSERT"],
+      "idealMoment": "Once food, wine and the upgrade decision are settled — offer a sweet finish (title: 'Sweet finish')."
+    },
+    {
+      "stage": "coffee",
+      "intensity": 60,
+      "recommendedSuggestionTypes": ["DRINK (beverageKind === 'HOT')"],
+      "idealMoment": "After dessert has been addressed — offer a hot drink to close the meal (title: 'Coffee to finish')."
+    },
+    {
+      "stage": "digestif",
+      "intensity": 56,
+      "recommendedSuggestionTypes": ["DRINK (tags.drinkType in spirit/port/amarula)"],
+      "idealMoment": "The final stage of the journey, after coffee — offer an after-dinner spirit/port/amarula (title: 'An after-dinner drink'); once this is offered the journey is 'done' and no further recommendations are pushed."
+    }
+  ]
+}

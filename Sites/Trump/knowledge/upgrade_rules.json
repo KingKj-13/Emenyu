@@ -1,0 +1,72 @@
+{
+  "upgrades": [
+    {
+      "from": "Ribeye",
+      "to": "Wagyu Ribeye",
+      "note": "for noticeably richer marbling and a more buttery finish",
+      "reason": "Suggest upgrading from Ribeye to Wagyu Ribeye — for noticeably richer marbling and a more buttery finish."
+    },
+    {
+      "from": "Fillet",
+      "to": "Wagyu Fillet",
+      "note": "the same gentle cut, softened further by Wagyu's marbling",
+      "reason": "Suggest upgrading from Fillet to Wagyu Fillet — the same gentle cut, softened further by Wagyu's marbling."
+    },
+    {
+      "from": "Sirloin",
+      "to": "Wagyu Sirloin",
+      "note": "the same firm bite, with Wagyu's marbling carrying it further",
+      "reason": "Suggest upgrading from Sirloin to Wagyu Sirloin — the same firm bite, with Wagyu's marbling carrying it further."
+    },
+    {
+      "from": "Rump",
+      "to": "Wagyu Rump",
+      "note": "the same full flavour, elevated by Wagyu's fat",
+      "reason": "Suggest upgrading from Rump to Wagyu Rump — the same full flavour, elevated by Wagyu's fat."
+    },
+    {
+      "from": "Tomahawk",
+      "to": "Wagyu Ribeye",
+      "note": "if you'd like the marbling of Wagyu in a more manageable portion",
+      "reason": "Suggest upgrading from Tomahawk to Wagyu Ribeye — if you'd like the marbling of Wagyu in a more manageable portion."
+    }
+  ],
+  "sauceUpgrades": [
+    {
+      "forDish": "Ribeye",
+      "sauce": "Mushroom Truffle Butter",
+      "note": "melts over the hot steak and rounds out the char with an earthy, buttery finish",
+      "reason": "Suggest adding Mushroom Truffle Butter to Ribeye — melts over the hot steak and rounds out the char with an earthy, buttery finish."
+    },
+    {
+      "forDish": "Fillet",
+      "sauce": "Creamy Mushroom Sauce",
+      "note": "a gentle sauce that won't overpower fillet's own delicate flavour",
+      "reason": "Suggest adding Creamy Mushroom Sauce to Fillet — a gentle sauce that won't overpower fillet's own delicate flavour."
+    },
+    {
+      "forDish": "Sirloin",
+      "sauce": "Three Peppercorn Sauce",
+      "note": "classic with sirloin's firmer bite and deeper flavour",
+      "reason": "Suggest adding Three Peppercorn Sauce to Sirloin — classic with sirloin's firmer bite and deeper flavour."
+    },
+    {
+      "forDish": "Rump",
+      "sauce": "Garlic & Sage Butter",
+      "note": "a simple, savoury finish that lets the rump's own flavour lead",
+      "reason": "Suggest adding Garlic & Sage Butter to Rump — a simple, savoury finish that lets the rump's own flavour lead."
+    },
+    {
+      "forDish": "Tomahawk",
+      "sauce": "Mushroom Truffle Butter",
+      "note": "a showpiece sauce for a showpiece cut",
+      "reason": "Suggest adding Mushroom Truffle Butter to Tomahawk — a showpiece sauce for a showpiece cut."
+    },
+    {
+      "forDish": "Wagyu Ribeye",
+      "sauce": "Mushroom Truffle Butter",
+      "note": "doubles down on the richness — truffle and Wagyu fat both lean into umami",
+      "reason": "Suggest adding Mushroom Truffle Butter to Wagyu Ribeye — doubles down on the richness — truffle and Wagyu fat both lean into umami."
+    }
+  ]
+}

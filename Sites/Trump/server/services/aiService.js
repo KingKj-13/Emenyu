@@ -12,6 +12,13 @@ const { createHeroPairings } = require('./heroPairings');
 const { computeOrderedTogether } = require('./marketBasket');
 const { SmartPairingEngine } = require('./smartPairingEngine');
 const scoring = require('./recommendationScoring');
+// Phase 4 (Recommendation Engine V2) additions — additive, do not change any
+// existing candidate-generation/ranking behaviour by themselves.
+const { createMealStateService } = require('./mealStateService');
+const { createBusinessRules } = require('./businessRules');
+const { createRecommendationMemory } = require('./recommendationMemory');
+const { createItemGraph } = require('./itemGraph');
+const candidateFilterPipeline = require('./candidateFilterPipeline');
 
 const SPECIAL_WORDS = [
   'birthday',
@@ -364,6 +371,15 @@ class AiService {
     this.reason = createReasonComposer({ nlgService: this.nlgService, heroPairings: this.hero, logger });
     this.smartPairings = new SmartPairingEngine(config, { logger });
 
+    // Phase 4 (Recommendation Engine V2): meal-state model, business/frequency
+    // rules, per-table recommendation memory, and the unified item graph.
+    // Additive — nothing above this line changes; recommend()/chat() opt into
+    // these below rather than having their existing logic replaced.
+    this.mealStates = createMealStateService();
+    this.businessRules = createBusinessRules();
+    this.recoMemory = createRecommendationMemory({ businessRules: this.businessRules, logger });
+    this.itemGraph = createItemGraph({ marketBasket: { computeOrderedTogether } });
+
     // Perf: the recommendation/chat path used to reload the whole menu, every
     // order + history record, the admin/chef recs and recompute popularity on
     // EVERY recommend() call — and a single chat() fans out several recommend()
@@ -485,9 +501,15 @@ class AiService {
     } else if (lower.includes('deal') || lower.includes('special')) {
       responseData = await this.buildDealsReply(menuContext);
     } else if (knowledgeAnswer) {
+      // Phase 4 (business_rules.json "timing:never-interrupt-to-upsell"): a
+      // guest asking about hours/policy/allergens is mid-question about
+      // something else entirely — riding an unrelated upsell along on the
+      // answer is exactly the interruption the spec warns against.
       responseData = {
         reply: knowledgeAnswer.reply,
-        suggestions: (knowledgeAnswer.suggestions || []).map(item => publicItem(item, 'From our kitchen'))
+        suggestions: this.businessRules.shouldSuppressProactive('info')
+          ? []
+          : (knowledgeAnswer.suggestions || []).map(item => publicItem(item, 'From our kitchen'))
       };
     } else if (intent.type === 'offtopic') {
       // Phase 3B: warm, in-character decline — never a random menu match.
@@ -1334,6 +1356,33 @@ class AiService {
       .sort((a, b) => b.brain.finalScore - a.brain.finalScore);
     finalKept = [...chefScored, ...restScored].map(s => ({ ...s.candidate, brain: s.brain }));
 
+    // Phase 4 (Recommendation Engine V2): the candidate filter pipeline's
+    // remaining steps (never-suggest-declined, no-dessert-before-mains,
+    // no-wine-after-coffee, never-downsell, protein/structural conflict,
+    // per-category cap, frequency/cooldown) — additive on top of the
+    // existing chef/hero/tag/rotation/category-safety/dietary/allergy
+    // filtering above, never replacing it. The quality/correctness steps
+    // (5-8) always run; the frequency/cooldown step (9) only gates a call a
+    // caller has explicitly flagged payload.proactive === true (an
+    // unsolicited nudge, e.g. a future chat-initiated upsell) — recommend()
+    // is called continuously by many existing surfaces (ItemModal pairings,
+    // the cart upsell rail, waiter panel, etc.) that never set this flag
+    // today, so the suggestion/frequency counters stay dormant for all of
+    // them rather than silently emptying an always-on panel a guest expects
+    // to see something in.
+    const tableId = payload.tableId || payload.deviceId || null;
+    const pipelineResult = candidateFilterPipeline.runPipeline({
+      candidates: finalKept,
+      cart,
+      tableId,
+      wantsValue: false,
+      proactive: payload.proactive === true,
+      memory: this.recoMemory,
+      businessRules: this.businessRules,
+      maxUnrelatedItems: this.businessRules.thresholds.maxUnrelatedItems
+    });
+    finalKept = pipelineResult.kept;
+
     // Phase 3C: ONE copy source. Compose every result's reason via reasonComposer
     // (authored hero → chef → tag-true Tier-2 → never-blank), anchored to the
     // primary food dish in the cart so a hero dish renders its varietal's line.
@@ -1364,11 +1413,38 @@ class AiService {
         pub.netRevenueIncrease = candidate.brain.netRevenueIncrease;
         pub.replacement = candidate.brain.replacement;
       }
+      // Phase 4 (Recommendation Engine V2): named scoring components (H/P/R/
+      // S/T/O/Pop/Chef/Pref/Pen, spec 4.3) and the confidence breakdown (spec
+      // 4.6), exposed alongside the existing confidence/expectedValue fields
+      // above — additive, informational; ranking above still uses finalScore.
+      const currentState = this.mealStates.currentState(cart, menuContext.byName);
+      const scoreComponents = scoring.computeScoreComponents({
+        candidate,
+        mealStateService: this.mealStates,
+        currentState,
+        popularity: (popularity.get(normalizeName(candidate.item?.name)) || 0) / Math.max(1, Math.max(...popularity.values(), 1)),
+        guestIntel
+      });
+      pub.scoreComponents = scoreComponents;
+      pub.confidenceBreakdown = scoring.computeConfidenceBreakdown({ candidate, scoreComponents });
       // Phase 4: carry the rotation group through so analytics can attribute
       // impressions/clicks to the group the engine drew from.
       pub.rotationGroup = candidate.rotationGroup || '';
       pub.reason = await this.reason.pairingReason(pub, sourceDish, { cartWine });
       out.push(pub);
+    }
+
+    // Phase 4 (Recommendation Engine V2): record this turn into the per-table
+    // recommendation memory (spec 4.5) — never-re-suggest-rejected and
+    // frequency/cooldown enforcement above read this on the NEXT call.
+    if (tableId) {
+      this.recoMemory.recordTurn(tableId, {
+        cartNames: cart.map(c => c.name),
+        suggestedNames: out.map(o => o.name),
+        ignoredNamesThisTurn: Array.isArray(payload.excludeNames) ? payload.excludeNames : [],
+        stage: this.mealStates.currentState(cart, menuContext.byName),
+        proactive: payload.proactive === true
+      });
     }
     return out;
   }

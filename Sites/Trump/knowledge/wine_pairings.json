@@ -1,0 +1,168 @@
+{
+  "$schema": "emenu-v3-knowledge",
+  "domain": "wine_pairings",
+  "source_files": [
+    "server/services/nlg/hospitalityKnowledge.js (RULES array)",
+    "server/services/aiService.js (addPerfectPairings -> pairingRules)"
+  ],
+  "notes": [
+    "Every 'conditions' object is a literal restatement of the corresponding RULES[].match(d, w) predicate from hospitalityKnowledge.js, where d = dish.tags and w = drink.tags.",
+    "'chicken-light-drink' and 'crispy-carbonation' are cross-cutting rules in the source code (they also fire for non-wine drinks: any light-bodied pour, or beer). They are included here because a wine (white / sparkling) is the primary/first-listed match branch, but they are NOT wine-exclusive in the original code -- see the same two entries duplicated with a cross-reference note in beer_pairings.json for the beer-facing branch of crispy-carbonation.",
+    "phrases.*.text values are copied verbatim from RULES[].clauses[tone] in hospitalityKnowledge.js. The literal '{dish}' placeholder is preserved exactly as in source; it is substituted with the lowercased dish name at render time by whyClauseFor().",
+    "Two-variant clause sets are rotated deterministically via pick(list, `${dish.name}|${drink.name}|${rule.id}`) (hashString-based), not randomly -- captured here as 'rotation: deterministic-hash' rather than reimplemented."
+  ],
+  "entries": [
+    {
+      "id": "red-full-rich-meat",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "red", "body": "full", "richness_gte": 2, "protein_any_of": ["beef", "lamb", "game"] },
+      "recommended_style": "full-bodied red",
+      "principle": "tannin+fat: richness/marbling softens tannins, smooths finish",
+      "rotation": "deterministic-hash",
+      "phrases": {
+        "professional": [
+          "The richness in the {dish} holds up well against a fuller-bodied red — it softens the tannins and gives you a smoother finish.",
+          "A full-bodied red like this is built for the char on the {dish}; the tannins settle down against the richness."
+        ],
+        "friendly": [
+          "The marbling in the {dish} really works with a fuller-bodied red — you get a much smoother finish.",
+          "Honestly the char on the {dish} is made for a red with this much backbone, it just softens everything out."
+        ],
+        "luxury": [
+          "The wine's structure comes alive against the richness of the {dish} — the tannins soften and the finish lengthens.",
+          "A red with this much depth was built for a cut like the {dish}; the marbling rounds off every tannin."
+        ]
+      }
+    },
+    {
+      "id": "red-full-rich-other",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "red", "body": "full", "richness_gte": 2 },
+      "recommended_style": "full-bodied red",
+      "principle": "tannin+fat: same as red-full-rich-meat, but fires for any rich dish (e.g. rich sauce) without a beef/lamb/game protein tag",
+      "rotation": "deterministic-hash",
+      "phrases": {
+        "professional": ["The richness of the {dish} holds up well against a fuller-bodied red — it softens the tannins nicely."],
+        "friendly": ["That creamy, rich sauce on the {dish} can really take a red with this much weight — it softens everything out."],
+        "luxury": ["A red with this much depth stands up comfortably to the richness of the {dish}."]
+      }
+    },
+    {
+      "id": "red-medium",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "red", "body": "medium", "richness_gte": 1 },
+      "recommended_style": "medium-bodied red",
+      "principle": "balance: medium structure rounds out the plate without fighting or overpowering it",
+      "rotation": "deterministic-hash",
+      "phrases": {
+        "professional": ["A medium-bodied red won't fight with the {dish} — it just rounds the plate out nicely."],
+        "friendly": ["This one's not too heavy, so it just rounds out the {dish} without taking over."],
+        "luxury": ["A softer-structured red like this lets the {dish} lead, rather than competing with it."]
+      }
+    },
+    {
+      "id": "white-seafood",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "white", "protein_includes": "seafood" },
+      "recommended_style": "white wine",
+      "principle": "acidity lift: acid cuts through / lifts seafood rather than masking it — classic pairing",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["The acidity in the wine lifts the seafood rather than masking it — a classic pairing."],
+        "friendly": ["That crisp acidity just lifts the {dish} right up, it's a classic match for a reason."],
+        "luxury": ["The wine's acidity is a natural foil for seafood — it lifts the dish instead of sitting on top of it."]
+      }
+    },
+    {
+      "id": "white-light",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "white", "body": "light", "richness_lte": 1 },
+      "recommended_style": "light-bodied white",
+      "principle": "lightness matches lightness: keeps a delicate/light dish from feeling weighed down",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["A lighter white keeps the plate feeling fresh rather than weighed down."],
+        "friendly": ["Keeps things light, the wine won't bulldoze the {dish} at all."],
+        "luxury": ["A lighter-bodied white lets the more delicate notes in the {dish} come through."]
+      }
+    },
+    {
+      "id": "sparkling",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "sparkling" },
+      "recommended_style": "sparkling wine / MCC / Champagne",
+      "principle": "carbonation cuts richness and adds a celebratory lift",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["The bubbles cut through the richness and keep every bite feeling fresh."],
+        "friendly": ["Bubbles always cut through a plate like this, it keeps things feeling fresh — and it's got a nice celebratory lift too."],
+        "luxury": ["The bead in the wine cuts cleanly through the dish and lifts the whole course."]
+      }
+    },
+    {
+      "id": "rose",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "rose" },
+      "recommended_style": "rosé",
+      "principle": "mid-weight balance: enough body for the dish, stays light enough not to weigh the table down",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["It has enough body for the dish but stays light enough not to weigh the table down."],
+        "friendly": ["It's got just enough weight for the {dish} without feeling heavy."],
+        "luxury": ["There's enough structure here for the dish, without ever feeling heavy-handed."]
+      }
+    },
+    {
+      "id": "chicken-light-drink",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "protein_includes": "chicken", "any_of": [{ "body": "light" }, { "drinkType": "white" }] },
+      "recommended_style": "light-bodied pour or white wine",
+      "principle": "chicken is forgiving; keeping the drink light keeps the whole plate balanced and lets delicate cooking show",
+      "fidelity_note": "Cross-cutting rule: matches ANY light-bodied drink OR any white wine, not wine exclusively. Placed here because white wine is the clearest wine-domain instance of this rule.",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["Chicken is forgiving, but a lighter pour keeps the whole plate feeling balanced."],
+        "friendly": ["Chicken goes with almost anything, but keeping it light like this keeps the whole plate balanced."],
+        "luxury": ["A lighter pour lets the more delicate cooking on the chicken still come through."]
+      }
+    },
+    {
+      "id": "crispy-carbonation",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "texture_includes": "crispy", "drinkType_any_of": ["sparkling", "beer"] },
+      "recommended_style": "sparkling wine or beer",
+      "principle": "carbonation cuts through crunch/texture, keeps the dish feeling lighter than it looks",
+      "fidelity_note": "Cross-cutting rule: also fires for beer, not sparkling wine exclusively. See duplicate entry with the same fidelity note in beer_pairings.json.",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["The carbonation cuts through the crunch and keeps the dish from feeling heavy."],
+        "friendly": ["The bubbles cut right through the crunch, keeps it feeling light instead of heavy."],
+        "luxury": ["The carbonation plays well off the texture — it keeps the dish feeling lighter than it looks."]
+      }
+    },
+    {
+      "id": "steak-wine-pairing",
+      "source": "aiService.js addPerfectPairings() pairingRules[\"Perfect steak pairing\"] (WINE typedPair)",
+      "conditions": { "dish_name_or_searchText_matches": "/tomahawk|wagyu|fillet|ribeye|rump|sirloin|steak|beef/" },
+      "recommended_style": "Shiraz, Cabernet Sauvignon, Merlot, or Pinotage",
+      "principle": "steak/red-wine classic pairing (candidate-generation rule, not a narrative phrase rule)",
+      "label": "Perfect steak pairing",
+      "score": 94,
+      "wine_keywords": ["shiraz", "cabernet", "merlot", "pinotage"],
+      "companion_food_keywords": ["pepper sauce", "mushroom sauce", "garlic butter"],
+      "fidelity_note": "This rule has no professional/friendly/luxury phrase variants in source -- it is a keyword-matching candidate generator (pickVariedMenuItem), not a hospitalityKnowledge.js RULES narrative entry. Label field is the literal rule.title string from source."
+    },
+    {
+      "id": "seafood-wine-pairing",
+      "source": "aiService.js addPerfectPairings() pairingRules[\"Perfect seafood pairing\"] (WINE typedPair)",
+      "conditions": { "dish_name_or_searchText_matches": "/prawn|calamari|salmon|kingklip|hake|seafood|squid|mussel/" },
+      "recommended_style": "Chardonnay, Sauvignon Blanc, or Chenin Blanc",
+      "principle": "seafood/white-wine classic pairing (candidate-generation rule, not a narrative phrase rule)",
+      "label": "Perfect seafood pairing",
+      "score": 92,
+      "wine_keywords": ["chardonnay", "sauvignon", "chenin"],
+      "companion_food_keywords": ["garlic bread", "chips", "greek salad"],
+      "fidelity_note": "Same shape as steak-wine-pairing: keyword candidate generator, no phrase variants in source."
+    }
+  ]
+}

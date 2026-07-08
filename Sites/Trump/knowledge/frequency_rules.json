@@ -1,0 +1,55 @@
+{
+  "_meta": {
+    "title": "Recommendation Engine — Proactive Suggestion Frequency / Cooldown Rules",
+    "status": "gap-to-implement",
+    "status_note": "No cooldown, per-guest suggestion counter, or decline-triggered intensity throttle exists anywhere in the current codebase. aiService.recommend()/chat() are stateless per-call except for `excludeNames` (chatSession.js's session.ignoredNames, derived from conversation history) which stops the SAME item from being re-suggested one turn after it was ignored — that is a duplicate-avoidance mechanism, not a frequency/cooldown/intensity system. There is no counter of how many proactive suggestions a guest has seen this meal, no timestamp-based minimum gap between unsolicited suggestions, and no decline-streak tracking anywhere in aiService.js, chatSession.js, or recommendationRules.js.",
+    "current_partial_coverage": {
+      "mechanism": "chatSession.js's session.ignoredNames, consumed by aiService.recommend()'s excludeNames parameter",
+      "what_it_does": "Prevents re-showing the exact item name(s) suggested last turn and not acted on, within the current chat conversation only.",
+      "what_it_does_not_do": "Count total proactive suggestions across a meal; enforce a minimum time/turn gap between unsolicited suggestions; detect or respond to a streak of consecutive declines; or stop proactive upsell attempts after repeated guest disengagement. All of these require new state the engine does not currently track (a per-table/session suggestion counter + timestamps + a decline tally)."
+    },
+    "applies_to": "Both the customer chatbot (aiService.chat()) and the waiter-facing upsell surface (aiService.cartRecommendations()) — a full meal spans both surfaces, so the counters this file specifies should be tracked per guest/table across the whole visit, not per-surface."
+  },
+  "rules": [
+    {
+      "id": "frequency:max-proactive-suggestions-per-meal",
+      "status": "gap-to-implement",
+      "threshold": 6,
+      "threshold_unit": "proactive (unsolicited) suggestions per guest, per full meal",
+      "spec_range": "4-8 (spec allows a range; 6 is the concrete default chosen for this implementation, the midpoint)",
+      "reason": "Prevents the dining experience from feeling like a sales funnel. A guest who is offered a new suggestion every time they interact starts to experience the assistant as a conversion machine rather than a host — capping the total across a whole meal keeps every suggestion feeling considered rather than automatic.",
+      "notes": "Should count ONLY proactive/unsolicited suggestions (surfaced without the guest asking for a recommendation) — a guest explicitly asking 'what's good' or 'pair this' should not consume this budget, since they asked for it."
+    },
+    {
+      "id": "frequency:min-minutes-between-unsolicited-suggestions",
+      "status": "gap-to-implement",
+      "threshold": 6,
+      "threshold_unit": "minutes, minimum gap between two unsolicited (proactive) suggestions to the same guest/table",
+      "spec_range": "5-10 minutes (spec allows a range; 6 minutes is the concrete default chosen for this implementation)",
+      "reason": "Avoids spamming the guest with back-to-back unsolicited suggestions. Even a single proactive nudge lands better when it isn't immediately preceded by another one — spacing gives each suggestion room to be considered on its own rather than blurring into a stream of pitches.",
+      "notes": "Should be measured from the timestamp of the last PROACTIVE suggestion shown to this guest/table, not from the last reply of any kind (a guest-requested pairing shouldn't reset or be blocked by this cooldown)."
+    },
+    {
+      "id": "frequency:reduce-intensity-after-consecutive-declines",
+      "status": "gap-to-implement",
+      "threshold": 3,
+      "threshold_unit": "consecutive declined/dismissed suggestions before reducing suggestion intensity",
+      "spec_range": "2-3 (spec allows a range; 3 is the concrete default chosen for this implementation)",
+      "reason": "Respects the guest's signals. A guest who has declined several suggestions in a row is telling the assistant, through behavior rather than words, that the current approach or pace isn't landing — continuing at the same intensity ignores that signal. Reducing intensity (fewer items per suggestion, longer gaps, or narrower scope) is the appropriate response before stopping entirely.",
+      "notes": "A 'decline' here is an explicit dismissal (recommendationAnalytics.js's `dismissed` event type), distinct from a suggestion simply being ignored (no click/accept/dismiss at all) — see frequency:stop-after-ignored-suggestions for the ignored-suggestion case, which is a stronger signal and warrants a harder stop rather than a soft reduction."
+    },
+    {
+      "id": "frequency:stop-proactive-upsell-after-ignored-suggestions",
+      "status": "gap-to-implement",
+      "threshold": 2,
+      "threshold_unit": "consecutive ignored (not engaged with — no click, accept, or dismiss) suggestions before proactive upsell stops entirely for the remainder of the meal",
+      "spec_range": "2 ignored suggestions (fixed default per spec, not a range)",
+      "reason": "Silence is a signal. A guest who doesn't even engage enough to explicitly decline a suggestion — twice in a row — is communicating disinterest more strongly than an explicit decline would. Continuing to proactively push suggestions past that point stops being hospitality and starts being nagging; the assistant should go fully reactive (answer only what's asked) rather than keep initiating.",
+      "notes": "Distinct from frequency:reduce-intensity-after-consecutive-declines: that rule softens the approach after explicit declines, this rule is a hard stop on proactive (unsolicited) suggestions after silent non-engagement. Guest-initiated requests (chat questions, 'what pairs with this') should still be answered normally even after this stop triggers — only unprompted suggestions are suppressed."
+    }
+  ],
+  "implementation_pointer": {
+    "suggested_home": "A new stateful counter alongside chatSession.js (which already derives per-conversation memory from client-sent history) or a small server-side per-table/session store (mirroring how RecommendationEvent rows are already keyed by sessionId in recommendationEventService.js) would need to track: proactive-suggestion count, last-proactive-suggestion timestamp, and a rolling decline/ignore streak, then feed a go/no-go + intensity signal into aiService.recommend() and chat() before suggestions are attached to a response.",
+    "existing_signal_to_reuse": "recommendationAnalytics.js's EVENT_TYPES already distinguish 'dismissed' (explicit decline) from the absence of any click/accepted/dismissed/ordered event (implicit ignore) — the frequency rules above can be computed as a rolling aggregation over the SAME RecommendationEvent stream already being written today, without a new data model."
+  }
+}

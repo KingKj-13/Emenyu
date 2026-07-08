@@ -1,0 +1,54 @@
+{
+  "$schema": "emenu-v3-knowledge",
+  "domain": "spirit_pairings",
+  "source_files": [
+    "server/services/nlg/hospitalityKnowledge.js (RULES array)"
+  ],
+  "notes": [
+    "conditions objects are literal restatements of RULES[].match(d, w) from hospitalityKnowledge.js, where d = dish.tags and w = drink.tags.",
+    "phrases.*.text values are copied verbatim from RULES[].clauses[tone].",
+    "'spirit-dessert' is also cross-referenced (duplicated) in dessert_pairings.json since it is gated on d.course === 'DESSERT'; that duplication is intentional per the requested file split, not an error.",
+    "aiService.js's 'Sweet finish pairing' rule (dessert -> irish coffee/espresso/whisky/cognac) DOES include spirit keywords (whisky, cognac), but per the task instructions that entire aiService rule is filed under dessert_pairings.json only, not duplicated here."
+  ],
+  "entries": [
+    {
+      "id": "spirit-dessert",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "spirit", "course": "DESSERT" },
+      "recommended_style": "neat spirit (e.g. whisky, cognac)",
+      "principle": "a spirit is the natural way to close the meal once dessert is finished",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["A spirit like this is a natural way to close the meal after dessert."],
+        "friendly": ["A neat pour like that is honestly the perfect way to finish once the dessert's done."],
+        "luxury": ["A spirit of this weight is the natural way to close the evening once the dessert is finished."]
+      }
+    },
+    {
+      "id": "spirit-rich",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "spirit", "richness_gte": 2 },
+      "recommended_style": "spirit with weight/depth",
+      "principle": "the spirit needs enough weight to stand up to a rich dish rather than fading beside it",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["It has the weight to stand up to a rich dish like this rather than getting lost."],
+        "friendly": ["It's got enough weight that it won't get lost next to something this rich."],
+        "luxury": ["It carries enough depth to stand alongside a dish this rich, rather than fading beside it."]
+      }
+    },
+    {
+      "id": "spirit-general",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "spirit" },
+      "recommended_style": "spirit",
+      "principle": "simple, unfussy default -- a considered pour that sits alongside the dish without competing",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["A pour like this works well on the side, no need to overthink it."],
+        "friendly": ["Nothing complicated here, it just goes well alongside."],
+        "luxury": ["A considered pour that sits comfortably alongside the dish, without competing for attention."]
+      }
+    }
+  ]
+}

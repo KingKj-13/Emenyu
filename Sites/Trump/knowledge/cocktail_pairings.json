@@ -1,0 +1,54 @@
+{
+  "$schema": "emenu-v3-knowledge",
+  "domain": "cocktail_pairings",
+  "source_files": [
+    "server/services/nlg/hospitalityKnowledge.js (RULES array)"
+  ],
+  "notes": [
+    "conditions objects are literal restatements of RULES[].match(d, w) from hospitalityKnowledge.js, where d = dish.tags and w = drink.tags.",
+    "phrases.*.text values are copied verbatim from RULES[].clauses[tone].",
+    "aiService.js addPerfectPairings()/addFoodPairings() have no cocktail-keyed pairingRules -- neither pairingRules nor foodRules ever list a cocktail/spirit-name keyword group, so there is nothing to add from aiService.js for this domain."
+  ],
+  "entries": [
+    {
+      "id": "cocktail-citrus",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "cocktail", "flavour_includes": "citrus" },
+      "recommended_style": "citrus-forward cocktail",
+      "principle": "citrus acidity cuts cleanly through richness on the plate",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["The citrus in the cocktail cuts cleanly through the richness of the dish."],
+        "friendly": ["The citrus in that cocktail cuts right through the richness, keeps every bite feeling lighter."],
+        "luxury": ["The citrus lift in the cocktail plays nicely against the richness on the plate."]
+      }
+    },
+    {
+      "id": "cocktail-general",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "cocktail" },
+      "recommended_style": "cocktail",
+      "principle": "cocktail has enough character/complexity to stand up to a dish without getting lost next to it",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["It has enough character to stand up to the dish without getting lost."],
+        "friendly": ["It's got enough going on that it won't get lost next to the {dish}."],
+        "luxury": ["There's enough going on in the glass that it holds its own alongside the dish."]
+      }
+    },
+    {
+      "id": "mocktail-soft",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType_any_of": ["mocktail", "soft"] },
+      "recommended_style": "mocktail or soft drink",
+      "principle": "refreshing, palate-resetting pour between bites",
+      "fidelity_note": "Originally present in hospitalityKnowledge.js RULES but not captured in the initial extraction pass (flagged as unassigned); added here for completeness so the data-driven rules engine has full parity with the original 21-entry RULES array.",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["It's refreshing enough to reset the palate between bites."],
+        "friendly": ["It's nice and refreshing, keeps things feeling light between bites of the {dish}."],
+        "luxury": ["Something this refreshing keeps the palate clear between courses."]
+      }
+    }
+  ]
+}
