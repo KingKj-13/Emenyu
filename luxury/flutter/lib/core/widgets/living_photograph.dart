@@ -51,7 +51,9 @@ class _LivingPhotographState extends State<LivingPhotograph> {
   Future<void> _initVideo() async {
     if (widget.videoUrl.isEmpty) return;
 
-    _controller = VideoPlayerController.networkUrl(Uri.parse(resolveMediaUrl(widget.videoUrl)));
+    _controller = widget.videoUrl.startsWith('assets/')
+        ? VideoPlayerController.asset(widget.videoUrl)
+        : VideoPlayerController.networkUrl(Uri.parse(resolveMediaUrl(widget.videoUrl)));
     try {
       await _controller!.initialize();
       if (!mounted) return;
