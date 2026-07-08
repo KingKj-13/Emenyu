@@ -2,6 +2,8 @@
   "meta": {
     "source": "trump_hero_pairings.json (pairings/upgrades/sauceUpgrades) + server/services/recommendationScoring.js (nextJourneyStage course order)",
     "note": "STATIC edges only. \"shares_context_with\" edges (computed live from order history via marketBasket.js / computeOrderedTogether) are intentionally NOT included here — those stay computed at runtime, not authored.",
+    "_consumer": "LIVE — server/services/itemGraph.js loads this file and is called from aiService.js's aiPairing() (the secondOrder response field, ItemModal/PairingModal's per-item pairing lookup).",
+    "_derivation_honesty": "pairs_with edges are a faithful copy of trump_hero_pairings.json's pairings array (heroPairings.js's own core dishFor/preferredVarietals/reasonFor/bottlesOfVarietal matching logic was judged too heavily depended-upon by exact-string chat-validate.js assertions to safely re-point at this file's edge-list shape this phase — trump_hero_pairings.json remains authoritative for that specific lookup). upgrade_of/add_on_to edges are likewise a copy of the SAME content knowledge/upgrade_rules.json now authoritatively serves to heroPairings.upgradeFor()/sauceUpgradeFor(). This file exists as a graph-shaped READ VIEW for traversal (itemGraph.js's edgesFor/secondOrder), not as an independently-authored third copy — if the underlying pairing/upgrade content ever changes, update trump_hero_pairings.json and knowledge/upgrade_rules.json; this file would need regenerating from them (not yet automated).",
     "edgeTypeCounts": {
       "pairs_with": 199,
       "upgrade_of": 5,

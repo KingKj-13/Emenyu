@@ -67,15 +67,13 @@ function runPipeline({
   // tannic reds clashing with oily fish (metallic flavours) — the one
   // structural conflict concrete enough to enforce as a hard drop without a
   // full sommelier rules engine. Bypassed for chef-authored candidates, same
-  // pattern as R1-R7's chef bypass.
-  const OILY_FISH_RE = /salmon|mackerel|sardine|trout|tuna/i;
-  const cartHasOilyFish = cart.some(line => OILY_FISH_RE.test(String(line?.name || '')));
+  // pattern as R1-R7's chef bypass. Pattern comes from businessRules (loaded
+  // from business_rules.json's structural:tannin-clashes-with-oily-fish entry).
   kept = kept.filter(cand => {
-    if (cand.chef === true) return true;
+    if (cand.chef === true || !businessRules) return true;
     const item = cand.item || {};
     const type = item.categoryType || classifier.categoryType(item);
-    const isTannicRed = type === 'WINE' && item.tags?.drinkType === 'red' && item.tags?.body === 'full';
-    if (isTannicRed && cartHasOilyFish) { drop(cand, 'structural:tannin-clashes-with-oily-fish'); return false; }
+    if (businessRules.isStructuralConflict({ categoryType: type, item, cart })) { drop(cand, 'structural:tannin-clashes-with-oily-fish'); return false; }
     return true;
   });
 

@@ -142,13 +142,25 @@ function createHeroPairings({ logger = null, file = path.join(__dirname, '..', '
   }
 
   // Recommendation Brain V2 — dish-level narrative facts (cooking method, story)
-  // and premium-upgrade/sauce-upgrade mappings, keyed by the same hero dish name
-  // dishFor() resolves to. Additive to the existing wine/beer/cocktail pairing
-  // data above; never fabricated — every {from,to}/{forDish,sauce} references a
-  // real Trump menu item.
+  // keyed by the same hero dish name dishFor() resolves to. dishNotes has no
+  // dedicated spec-named knowledge file (it wasn't part of the v3 spec's file
+  // index), so trump_hero_pairings.json stays authoritative for it.
   const dishNotesByName = new Map((ready ? (data.dishNotes || []) : []).map(d => [d.dish, d]));
-  const upgradesByName = new Map((ready ? (data.upgrades || []) : []).map(u => [u.from, u]));
-  const sauceUpgradesByName = new Map((ready ? (data.sauceUpgrades || []) : []).map(s => [s.forDish, s]));
+
+  // Phase 4 (Recommendation Engine V2): upgrades/sauceUpgrades now load from
+  // knowledge/upgrade_rules.json — the single authoritative source (same
+  // {from,to,note}/{forDish,sauce,note} shape, extracted verbatim from this
+  // same trump_hero_pairings.json data). Falls back to the original file's
+  // arrays only if the knowledge file is missing/unreadable, so a partial
+  // deploy can't silently lose upgrade nudges.
+  let upgradesData = null;
+  try {
+    upgradesData = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'knowledge', 'upgrade_rules.json'), 'utf-8'));
+  } catch (error) {
+    logger?.warn?.('upgrade_rules_load_failed', { error: error.message });
+  }
+  const upgradesByName = new Map((upgradesData?.upgrades || (ready ? data.upgrades : []) || []).map(u => [u.from, u]));
+  const sauceUpgradesByName = new Map((upgradesData?.sauceUpgrades || (ready ? data.sauceUpgrades : []) || []).map(s => [s.forDish, s]));
 
   function dishNoteFor(itemName, itemTags = {}) {
     const d = dishFor(itemName, itemTags);

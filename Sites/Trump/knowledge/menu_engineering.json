@@ -2,6 +2,8 @@
   "_meta": {
     "title": "Menu Engineering — Stars / Plow-Horses / Puzzles / Dogs Classification Spec",
     "status": "specification-only",
+    "_active": false,
+    "_status": "REFERENCE ONLY — no runtime consumer exists yet. Nothing in the codebase computes or reads this classification today; recommendationInsights.js's dead_recommendation/poor_rotation_group detection is the nearest existing analogue (acceptance-rate-only, not this popularity x price-tier matrix).",
     "status_note": "This is a specification for a classifier to COMPUTE AT RUNTIME (e.g. a new menuEngineeringService.js), not a static per-item list. Thresholds are medians recomputed whenever menu/order data changes — nothing here is a frozen snapshot.",
     "margin_data_confirmed_absent": "Verified against prisma/schema.prisma: the shared schema has no cost/margin/foodCost/wholesalePrice field on the menu item model or anywhere else — only `price` (the sale price) is stored. Classic menu engineering (Kasavana & Smith) crosses POPULARITY with CONTRIBUTION MARGIN (price minus food cost); with no cost data in the schema, real margin cannot be computed today.",
     "proxy_disclosure": "This spec substitutes PRICE TIER as an explicit, clearly-labeled PROXY for margin — it is NOT real margin data and should never be presented to restaurant owners as an actual profitability figure. It assumes (does not confirm) that higher-priced items carry proportionally higher margin, which is a common but unverified assumption in the absence of real cost data. The moment a real cost/foodCost field is added to the schema, this proxy should be replaced by true contribution-margin classification."

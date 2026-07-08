@@ -1,5 +1,6 @@
 {
   "_source": "Derived from server/services/aiService.js addCourseCompletions() and its stage scoring (score constants are the literal addCandidate(...) score arguments passed per stage; the journey order drink -> food -> wine -> upgrade -> dessert -> coffee -> digestif -> done is stated verbatim in the function's own comment).",
+  "_consumer": "LIVE/authoritative for the numeric 'intensity' field — server/services/aiService.js's loadUpsellTiming() reads stages[].intensity directly; the hardcoded score constants are gone. recommendedSuggestionTypes/idealMoment/title text stay in code (pools/filter functions), documented here for reference.",
   "stages": [
     {
       "stage": "drink",

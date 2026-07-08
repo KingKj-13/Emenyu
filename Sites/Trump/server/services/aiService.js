@@ -19,29 +19,40 @@ const { createBusinessRules } = require('./businessRules');
 const { createRecommendationMemory } = require('./recommendationMemory');
 const { createItemGraph } = require('./itemGraph');
 const candidateFilterPipeline = require('./candidateFilterPipeline');
+const fs = require('fs');
+const path = require('path');
 
-const SPECIAL_WORDS = [
-  'birthday',
-  'anniversary',
-  'event',
-  'celebration',
-  'party',
-  'gathering',
-  'festival',
-  'ceremony',
-  'function',
-  'occasion',
-  'milestone',
-  'achievement',
-  'engagement',
-  'wedding',
-  'proposal',
-  'graduation',
-  'farewell',
-  'retirement',
-  'promotion',
-  'date'
-];
+// Phase 4 (Recommendation Engine V2): loaded from knowledge/occasion_rules.json
+// (specialWords), the single authoritative source — not duplicated here.
+function loadSpecialWords() {
+  try {
+    const file = path.join(__dirname, '..', '..', 'knowledge', 'occasion_rules.json');
+    const data = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    if (Array.isArray(data.specialWords) && data.specialWords.length) return data.specialWords;
+  } catch (error) {
+    // fall through to the fallback below
+  }
+  return ['birthday', 'anniversary', 'event', 'celebration', 'party', 'gathering', 'festival', 'ceremony', 'function', 'occasion', 'milestone', 'achievement', 'engagement', 'wedding', 'proposal', 'graduation', 'farewell', 'retirement', 'promotion', 'date'];
+}
+const SPECIAL_WORDS = loadSpecialWords();
+
+// Phase 4 (Recommendation Engine V2): per-stage intensity scores loaded from
+// knowledge/upsell_timing.json — the single authoritative source for
+// addCourseCompletions()'s stage-score constants (title strings/pools/filter
+// functions stay in code, only the numeric intensity moved to data).
+function loadUpsellTiming() {
+  const fallback = { drink: 74, food: 78, wine: 76, upgrade: 1150, dessert: 66, coffee: 60, digestif: 56 };
+  try {
+    const file = path.join(__dirname, '..', '..', 'knowledge', 'upsell_timing.json');
+    const data = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    const byStage = {};
+    (data.stages || []).forEach(s => { if (s.stage && Number.isFinite(s.intensity)) byStage[s.stage] = s.intensity; });
+    return { ...fallback, ...byStage };
+  } catch (error) {
+    return fallback;
+  }
+}
+const UPSELL_TIMING = loadUpsellTiming();
 
 const STOP_WORDS = new Set([
   'the',
@@ -1168,12 +1179,25 @@ class AiService {
     const foodPairings = enriched.filter(p => !['WINE', 'DRINK'].includes(p.categoryType || ''));
     const drinkPairings = enriched.filter(p => ['WINE', 'DRINK'].includes(p.categoryType || ''));
 
+    // Phase 4 (Recommendation Engine V2): direct pairs_with/upgrade_of/add_on_to
+    // edges from the unified item graph (spec 4.7), additive/optional so
+    // existing clients that don't render it are unaffected. Capped to
+    // one-hop-out from the item itself — a full multi-hop BFS through a
+    // shared wine node fans out to many unrelated dishes that also pair with
+    // it (noisy, not a meaningful "meal journey" chain), so it's not used here.
+    const secondOrder = item?.name
+      ? this.itemGraph.edgesFor(item.name)
+          .slice(0, 6)
+          .map(edge => ({ type: edge.type, source: edge.source, target: edge.target, note: edge.note }))
+      : [];
+
     return {
       title: item?.name ? `Pairs with ${item.name}` : "Chef's Pick",
       description: item?.description || 'A confident table recommendation from the local menu.',
       foodPairings,
       drinkPairings,
       pairings: [...foodPairings, ...drinkPairings],
+      secondOrder,
       talkTrack: recs.length
         ? `I would pair this with ${recs[0].name}; it rounds out the table nicely.`
         : "I'd keep this simple and ask the waiter for the freshest pairing tonight."
@@ -1664,7 +1688,7 @@ class AiService {
         // so it earns the SAME guaranteed-prominent placement every other
         // chef pairing gets (existing "chef always wins" ordering), rather
         // than competing on raw EV against everything else in the rest tier.
-        addCandidate(upgradeItem, "Premium upgrade", 1150, {
+        addCandidate(upgradeItem, "Premium upgrade", UPSELL_TIMING.upgrade, {
           rotationGroup: `upgrade:${normalizeName(mainDish.name)}`,
           isReplacement: true,
           chef: true,
@@ -1687,17 +1711,17 @@ class AiService {
     };
 
     if (stage === 'food') {
-      pickFrom([...(menuContext.categorized.STARTER || []), ...(menuContext.categorized.MAIN || [])], 'Start with a starter or main', 78);
+      pickFrom([...(menuContext.categorized.STARTER || []), ...(menuContext.categorized.MAIN || [])], 'Start with a starter or main', UPSELL_TIMING.food);
     } else if (stage === 'wine') {
-      pickFrom(menuContext.categorized.WINE || [], 'Wine pairing', 76);
+      pickFrom(menuContext.categorized.WINE || [], 'Wine pairing', UPSELL_TIMING.wine);
     } else if (stage === 'drink') {
-      pickFrom([...(menuContext.categorized.WINE || []), ...(menuContext.categorized.DRINK || [])], 'To start, something to drink', 74);
+      pickFrom([...(menuContext.categorized.WINE || []), ...(menuContext.categorized.DRINK || [])], 'To start, something to drink', UPSELL_TIMING.drink);
     } else if (stage === 'dessert') {
-      pickFrom(menuContext.categorized.DESSERT || [], 'Sweet finish', 66);
+      pickFrom(menuContext.categorized.DESSERT || [], 'Sweet finish', UPSELL_TIMING.dessert);
     } else if (stage === 'coffee') {
-      pickFrom(menuContext.categorized.DRINK || [], 'Coffee to finish', 60, item => classifier.beverageKind(item) === 'HOT');
+      pickFrom(menuContext.categorized.DRINK || [], 'Coffee to finish', UPSELL_TIMING.coffee, item => classifier.beverageKind(item) === 'HOT');
     } else if (stage === 'digestif') {
-      pickFrom(menuContext.categorized.DRINK || [], 'An after-dinner drink', 56, item => ['spirit', 'port', 'amarula'].includes(item.tags?.drinkType));
+      pickFrom(menuContext.categorized.DRINK || [], 'An after-dinner drink', UPSELL_TIMING.digestif, item => ['spirit', 'port', 'amarula'].includes(item.tags?.drinkType));
     }
   }
 

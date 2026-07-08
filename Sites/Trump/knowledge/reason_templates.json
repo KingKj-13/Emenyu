@@ -1,5 +1,7 @@
 {
   "_source": "Extracted verbatim from server/services/reasonComposer.js (fallback(), dessertNarrative()), server/services/marketBasket.js (whyFromTags), server/services/opportunityService.js (actionLabel), and server/services/aiService.js (addCourseCompletions' upgrade-stage reason). These are the never-blank / category-aware defaults used only when no chef-authored or hero-pairing reason exists.",
+  "_active": false,
+  "_status": "REFERENCE ONLY — not loaded by any runtime code. Templates from 4 different source functions were flattened into one array by useCase, and the useCase key collides across sources (three different 'dessert' entries with different placeholder shapes, for example) — wiring this back into all 4 original call sites unambiguously would need a reshape, not a mechanical load, so it was left as documentation rather than force a lookup that could silently pick the wrong entry. reasonComposer.js/marketBasket.js/opportunityService.js/aiService.js remain the live sources.",
   "templates": [
     { "useCase": "wine", "pattern": "A confident pour alongside {source}." },
     { "useCase": "drink", "pattern": "A great glass to lift {source}." },

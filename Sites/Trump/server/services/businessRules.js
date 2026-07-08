@@ -33,19 +33,16 @@ function loadJson(file, fallback) {
   }
 }
 
-// Intent types that mean "the guest is mid-conversation about something else"
-// (a direct question, or a decline of the current topic) — proactive
-// suggestions should not interrupt these. Guest-initiated recommendation/
-// pairing/swap/attribute/dietary/occasion asks are exactly what proactive
-// suggestions exist to answer, so those types are never suppressed.
-const SUPPRESS_PROACTIVE_INTENT_TYPES = new Set(['info', 'offtopic']);
-
 function createBusinessRules({ file, frequencyFile } = {}) {
   const businessRulesDoc = loadJson(file || 'business_rules.json', { rules: [] });
   const frequencyDoc = loadJson(frequencyFile || 'frequency_rules.json', { rules: [] });
 
   const rules = Array.isArray(businessRulesDoc.rules) ? businessRulesDoc.rules : [];
   const frequencyRules = Array.isArray(frequencyDoc.rules) ? frequencyDoc.rules : [];
+
+  function ruleById(id) {
+    return rules.find(r => r.id === id) || null;
+  }
 
   const thresholds = {
     maxProactivePerMeal: frequencyRules.find(r => r.id === 'frequency:max-proactive-suggestions-per-meal')?.threshold ?? 6,
@@ -57,9 +54,19 @@ function createBusinessRules({ file, frequencyFile } = {}) {
     maxUnrelatedItems: 3
   };
 
-  function ruleById(id) {
-    return rules.find(r => r.id === id) || null;
-  }
+  // Intent types that mean "the guest is mid-conversation about something
+  // else" (a direct question, or a decline of the current topic) — proactive
+  // suggestions should not interrupt these. Loaded from business_rules.json's
+  // timing:never-interrupt-to-upsell entry (suppressForIntentTypes) — the
+  // live, authoritative config, not a hardcoded set.
+  const SUPPRESS_PROACTIVE_INTENT_TYPES = new Set(
+    ruleById('timing:never-interrupt-to-upsell')?.suppressForIntentTypes || ['info', 'offtopic']
+  );
+
+  // Structural conflict pattern (spec 2.2.1 "tannin + oily fish"), loaded from
+  // business_rules.json's structural:tannin-clashes-with-oily-fish entry.
+  const oilyFishPatternSource = ruleById('structural:tannin-clashes-with-oily-fish')?.oilyFishPattern || 'salmon|mackerel|sardine|trout|tuna';
+  const OILY_FISH_RE = new RegExp(oilyFishPatternSource, 'i');
 
   // value:never-downsell — block a same-role replacement candidate that is
   // CHEAPER than the item it replaces, unless the guest explicitly asked for
@@ -90,6 +97,13 @@ function createBusinessRules({ file, frequencyFile } = {}) {
     return SUPPRESS_PROACTIVE_INTENT_TYPES.has(intentType);
   }
 
+  // structural:tannin-clashes-with-oily-fish — a full-bodied red wine
+  // candidate is blocked when the cart already holds an oily fish dish.
+  function isStructuralConflict({ categoryType, item = {}, cart = [] } = {}) {
+    if (categoryType !== 'WINE' || item.tags?.drinkType !== 'red' || item.tags?.body !== 'full') return false;
+    return cart.some(line => OILY_FISH_RE.test(String(line?.name || '')));
+  }
+
   return {
     rules,
     frequencyRules,
@@ -98,7 +112,8 @@ function createBusinessRules({ file, frequencyFile } = {}) {
     isDownsell,
     isDessertBeforeMains,
     isWineAfterCoffee,
-    shouldSuppressProactive
+    shouldSuppressProactive,
+    isStructuralConflict
   };
 }
 

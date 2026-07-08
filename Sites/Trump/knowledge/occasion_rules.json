@@ -2,7 +2,13 @@
   "meta": {
     "source": "server/services/intentClassifier.js (OCCASION_MAP, OCCASION_DETAIL_MAP) + server/services/aiService.js (SPECIAL_WORDS) + trump_hero_pairings.json (occasions)",
     "precedence": "occasions[] below is ordered exactly as OCCASION_DETAIL_MAP is checked in intentClassifier.classify(): 'more specific buckets are checked before the generic celebration fallback' (first regex match wins, loop breaks on first hit).",
-    "note": "slots.occasion (coarse, from OCCASION_MAP) and slots.occasionDetail (fine, from OCCASION_DETAIL_MAP) are computed independently from the same normalized message text. heroPairings.archetypeFor(slot) — which supplies leadWithDishes/drinkVarietals/note — is only ever called with the COARSE slots.occasion value, never occasionDetail directly, so a detail occasion only surfaces lead-with dishes when its own keywords also happen to satisfy a coarse OCCASION_MAP bucket. See per-entry \"archetypeNote\" for how each one resolves."
+    "note": "slots.occasion (coarse, from OCCASION_MAP) and slots.occasionDetail (fine, from OCCASION_DETAIL_MAP) are computed independently from the same normalized message text. heroPairings.archetypeFor(slot) — which supplies leadWithDishes/drinkVarietals/note — is only ever called with the COARSE slots.occasion value, never occasionDetail directly, so a detail occasion only surfaces lead-with dishes when its own keywords also happen to satisfy a coarse OCCASION_MAP bucket. See per-entry \"archetypeNote\" for how each one resolves.",
+    "_consumers": {
+      "coarseOccasionMap": "LIVE/authoritative — server/services/intentClassifier.js loads this array directly (loadOccasionMaps()) to build OCCASION_MAP; the hardcoded array is gone, not just unused.",
+      "occasions[].key / detectionPattern / detectionKeywords": "LIVE/authoritative — intentClassifier.js loads these to build OCCASION_DETAIL_MAP.",
+      "specialWords": "LIVE/authoritative — server/services/aiService.js loads this array directly (loadSpecialWords()); the hardcoded SPECIAL_WORDS array is gone.",
+      "occasions[].leadWithDishes / drinkVarietals / note / archetypeNote": "REFERENCE ONLY — heroPairings.js's archetypeFor(slot) still reads the original 5-entry coarse archetype content from trump_hero_pairings.json's occasions array, not from these fine-grained (8-entry) fields. A coarse bucket like 'celebration' has 4 candidate fine-grained entries here (birthday/anniversary/graduation/celebration) with different lead-with content each — collapsing that to a single archetype pick would be a real behaviour decision, not a mechanical wiring change, so it was deliberately left as documentation pending a future design pass rather than guessed at."
+    }
   },
   "coarseOccasionMap": [
     {

@@ -92,6 +92,15 @@
       "location": "aiService.js recommend(), addCandidate()'s `seen` Set (NOT in recommendationRules.js)"
     },
     {
+      "id": "structural:tannin-clashes-with-oily-fish",
+      "status": "implemented",
+      "description": "Never recommend a full-bodied red wine alongside an oily fish dish already in the cart (spec 2.2.1: tannic reds clash with oily fish, creating metallic flavours).",
+      "scope": "Applies to WINE candidates where tags.drinkType === 'red' and tags.body === 'full', when the cart contains an item whose name matches the oily-fish pattern. Bypassed for chef-authored candidates (candidate.chef === true), matching R1-R7's chef bypass pattern.",
+      "reason": "Sommelier principle (spec section 2.2.1, 'Tannin and oily fish'): high-acid, low-tannin whites are preferred over tannic reds with oily fish — the metallic clash is a real, named structural conflict, not a style preference.",
+      "oilyFishPattern": "salmon|mackerel|sardine|trout|tuna",
+      "_consumer": "server/services/candidateFilterPipeline.js reads oilyFishPattern from businessRules.ruleById('structural:tannin-clashes-with-oily-fish') — this is the live, authoritative pattern, not a separately-hardcoded regex."
+    },
+    {
       "id": "value:never-downsell",
       "status": "gap-to-implement",
       "description": "Never recommend a same-role replacement that is CHEAPER than the item it replaces, unless the guest has explicitly asked for something more affordable or lighter.",
@@ -125,11 +134,13 @@
     },
     {
       "id": "timing:never-interrupt-to-upsell",
-      "status": "gap-to-implement",
+      "status": "implemented",
       "description": "Never surface a proactive suggestion while the guest is mid-conversation about something else (e.g. mid-order, asking a question, or actively engaged with a different topic) — wait for a natural pause.",
       "scope": "Would need a conversational-state signal (e.g. 'is this turn answering a direct question vs. an open invitation for suggestions') gating whether recommend()'s output is surfaced proactively at all, independent of what candidates it generates.",
       "reason": "Suggestions dropped into the middle of an unrelated exchange feel like an interruption, which is the single fastest way to make an AI assistant feel like a sales bot rather than a host — timing matters as much as content.",
-      "gap_detail": "Confirmed gap: aiService.js's chat() always attaches suggestions to every response branch (including knowledge/policy answers and off-topic declines get an empty array, but no branch actively suppresses suggestions based on conversational timing/interruption signals). This rule overlaps with frequency_rules.json's cooldown enforcement but is really a distinct 'don't talk over the guest' rule, not just a rate limit."
+      "gap_detail": "Phase 4: implemented for the one concrete branch that violated it — aiService.chat()'s knowledgeAnswer branch (hours/policy/allergen questions) no longer attaches suggestions. Not a general conversational-timing model across every branch (see suppressForIntentTypes below for exactly which intent types this covers).",
+      "suppressForIntentTypes": ["info", "offtopic"],
+      "_consumer": "server/services/businessRules.js's shouldSuppressProactive(intentType) reads suppressForIntentTypes directly — this array is the live, authoritative config, not documentation of a hardcoded set."
     },
     {
       "id": "utterance:max-one-upgrade-plus-one-pairing",

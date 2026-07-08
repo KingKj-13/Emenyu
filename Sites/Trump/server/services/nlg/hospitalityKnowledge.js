@@ -110,16 +110,71 @@ const isBevCat = it => ['WINE', 'DRINK'].includes(lc(it && it.categoryType).toUp
 // category's course/protein tags (e.g. a steak-enhancement butter reads as
 // course=MAIN, protein=beef) but aren't cooked themselves -- never given a
 // cooking-method line.
+//
+// Phase 4 (Recommendation Engine V2): rule set loaded from
+// knowledge/protein_rules.json (same match order/priority, same phrases as
+// the original hardcoded if/else chain) rather than hardcoded here.
 const CONDIMENT_RE = /\b(sauce|butter|dressing|dip|chutney|relish|glaze)\b/;
+
+function matchesItemConditions(item, tags, nameL, cond = {}) {
+  for (const [key, value] of Object.entries(cond)) {
+    switch (key) {
+      case 'protein_any_of': if (!(Array.isArray(tags.protein) && tags.protein.some(p => value.includes(p)))) return false; break;
+      case 'protein_includes': if (!(Array.isArray(tags.protein) && tags.protein.includes(value))) return false; break;
+      case 'flavour_includes': if (!(Array.isArray(tags.flavour) && tags.flavour.includes(value))) return false; break;
+      case 'texture_includes': if (!(Array.isArray(tags.texture) && tags.texture.includes(value))) return false; break;
+      case 'course': if (tags.course !== value) return false; break;
+      case 'temperature': if (tags.temperature !== value) return false; break;
+      case 'name_matches': { const re = value instanceof RegExp ? value : new RegExp(String(value).replace(/^\//, '').replace(/\/$/, '')); if (!re.test(nameL)) return false; break; }
+      case 'any_of': if (!value.some(sub => matchesItemConditions(item, tags, nameL, sub))) return false; break;
+      default: break;
+    }
+  }
+  return true;
+}
+
+function loadCookingMethodRules() {
+  try {
+    const file = path.join(__dirname, '..', '..', '..', 'knowledge', 'protein_rules.json');
+    const data = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    const rules = [];
+    (data.non_protein_cooking_method_rules?.entries || [])
+      .filter(e => e.id !== 'condiment-exclusion' && e.id !== 'no-match-fallback' && e.conditions)
+      .forEach(e => rules.push({ priority: e.match_priority, conditions: e.conditions, phrase: e.phrase }));
+    (data.proteins || []).forEach(p => {
+      const variants = Object.keys(p.cooking_style || {}).filter(k => k !== 'conditions_default');
+      variants.forEach(vKey => {
+        const phraseKey = vKey.replace('conditions_', '') + '_variant';
+        const phrase = p.cooking_method_phrases?.[phraseKey]?.professional;
+        if (phrase) rules.push({ priority: p.match_priority, conditions: p.cooking_style[vKey], phrase });
+      });
+      const def = p.cooking_style?.conditions_default;
+      const defPhrase = p.cooking_method_phrases?.default_variant?.professional;
+      if (def && typeof def === 'object' && defPhrase) rules.push({ priority: p.match_priority + 0.5, conditions: def, phrase: defPhrase });
+    });
+    rules.sort((a, b) => a.priority - b.priority);
+    return rules;
+  } catch (error) {
+    return null; // signals the caller to use the hardcoded fallback chain
+  }
+}
+const COOKING_METHOD_RULES = loadCookingMethodRules();
+
 function cookingMethodFor(item = {}) {
   const tags = item.tags || {};
   const nameL = lc(item.name);
   if (CONDIMENT_RE.test(nameL)) return '';
+
+  if (COOKING_METHOD_RULES) {
+    const rule = COOKING_METHOD_RULES.find(r => matchesItemConditions(item, tags, nameL, r.conditions));
+    return rule ? rule.phrase : '';
+  }
+
+  // Fallback (only reached if knowledge/protein_rules.json is missing/unreadable).
   const course = tags.course;
   const protein = tags.protein || [];
   const texture = tags.texture || [];
   const flavour = tags.flavour || [];
-
   if (course === 'SUSHI' || /sashimi|sushi/.test(nameL)) return 'sliced fresh to order';
   if (protein.includes('seafood') && texture.includes('flaky')) return 'pan-seared so it stays flaky';
   if (protein.includes('seafood')) return 'kept simple so the flavour stays clean';

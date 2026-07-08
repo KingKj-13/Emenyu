@@ -1,5 +1,7 @@
 {
   "_source": "Extracted verbatim from server/services/nlg/templateNlgProvider.js (composePairingLine openers/recommends/closers/signatureClosers, sayToTable's tone switch + VIP/returning branch, upsellScript). Placeholders in {braces} stand in for the runtime values (item name, dish/source name, formatted price, cooking hook, etc.) that the code substitutes in.",
+  "_active": false,
+  "_status": "REFERENCE ONLY — not loaded by any runtime code. templateNlgProvider.js remains the live source for these tone-keyed sentence pools; a second full data-driven conversion (after hospitalityKnowledge.js's pairing RULES) was judged lower value-to-risk for this phase given no test coverage exists over templateNlgProvider's internals and it is one of the most heavily-used copy-generation paths in the app. This file exists so the content is inspectable/extensible per the spec's intent, and as a documented target for a future wiring pass.",
   "patterns": [
     { "useCase": "pairing", "tone": "friendly", "detailLevel": "simple", "text": "If you're open to a recommendation, I'd go with the {item}." },
     { "useCase": "pairing", "tone": "friendly", "detailLevel": "simple", "text": "Honestly, I'd suggest the {item}." },

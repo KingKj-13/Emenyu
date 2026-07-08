@@ -2,7 +2,9 @@
   "_meta": {
     "title": "Recommendation Engine — Psychology Principles Already Implemented",
     "purpose": "The engine was never explicitly designed against a persuasion/hospitality-psychology checklist, but several of its existing mechanisms already embody well-known principles implicitly. This documents which ones, grounded in the exact code that produces the effect, so the engine refactor builds on top of these rather than re-inventing them.",
-    "status": "already-enforced (all entries in this file describe code that runs today)"
+    "status": "already-enforced (all entries in this file describe code that runs today)",
+    "_active": false,
+    "_status": "REFERENCE ONLY — this FILE has no runtime consumer (nothing require()s/reads it). It documents mechanisms that already run in other code (guestAdjustedConfidence's favourite/VIP bumps, chef-first ordering, rotationService, marketBasket's social-proof copy) — the underlying behavior is real and live, but not because this file drives it."
   },
   "principles": [
     {

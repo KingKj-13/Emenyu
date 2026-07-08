@@ -2,6 +2,8 @@
   "_meta": {
     "title": "Recommendation Engine — Learning / Analytics: Implemented vs Planned",
     "purpose": "What recommendationEventService.js (storage) + recommendationAnalytics.js (pure aggregation) + recommendationInsights.js (owner-facing insights) ALREADY track today, versus what the spec wants that doesn't exist yet — each planned item includes how it could be layered onto the existing RecommendationEvent pipeline rather than building a parallel system.",
+    "_active": false,
+    "_status": "REFERENCE ONLY — this FILE has no runtime consumer. The 'implemented' section documents real, live code (recommendationEventService.js/recommendationAnalytics.js/recommendationInsights.js all run today, independent of this file); the 'planned' section is a forward-looking roadmap per the spec's own 'design for adaptation even if not implemented initially' guidance, not something any code reads.",
     "pipeline_today": "recommendationEventService.js writes/reads RecommendationEvent rows (Postgres primary, JSON-fallback per the repo's hybrid-persistence convention). recommendationAnalytics.js's aggregate(events, filters) is a pure function that turns a raw event array into the dashboard payload — no I/O, fully offline-testable. recommendationInsights.js's generate() turns that analytics payload (+ health + chef recs + menu items) into ranked, actionable owner insights."
   },
   "implemented": [
