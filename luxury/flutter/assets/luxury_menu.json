@@ -22,7 +22,7 @@
                     "chefStory": "Presented traditionally to allow the purity of the caviar to remain the centrepiece of the experience.",
                     "ingredientStory": "Harvested from premium Oscietra sturgeon using sustainable farming techniques.",
                     "heroImage": "assets/images/001_oscietra_caviar.jpg",
-                    "heroVideo": "assets/videos/001_oscietra_caviar.mp4",
+                    "heroVideo": "video/001_oscietra_caviar.mp4",
                     "featured": true,
                     "chefPick": true,
                     "available": true
@@ -42,7 +42,7 @@
                     "chefStory": "Served simply with citrus to highlight the natural character of the oyster.",
                     "ingredientStory": "Raised in the Gillardeau family's renowned oyster beds on the Atlantic coast.",
                     "heroImage": "assets/images/002_gillardeau_oysters.jpg",
-                    "heroVideo": "assets/videos/002_gillardeau_oysters.mp4",
+                    "heroVideo": "video/002_gillardeau_oysters.mp4",
                     "featured": true,
                     "chefPick": false,
                     "available": true
@@ -62,7 +62,7 @@
                     "chefStory": "Lightly seared to preserve the sweetness and buttery consistency.",
                     "ingredientStory": "Harvested from the pristine cold waters surrounding Hokkaido.",
                     "heroImage": "assets/images/003_hokkaido_scallops.jpg",
-                    "heroVideo": "assets/videos/003_hokkaido_scallops.mp4",
+                    "heroVideo": "video/003_hokkaido_scallops.mp4",
                     "featured": false,
                     "chefPick": true,
                     "available": true
@@ -82,7 +82,7 @@
                     "chefStory": "Finished with delicate seasoning to celebrate the fish rather than overpower it.",
                     "ingredientStory": "Premium-grade Bluefin selected from trusted Japanese suppliers.",
                     "heroImage": "assets/images/004_bluefin_tuna_tataki.jpg",
-                    "heroVideo": "assets/videos/004_bluefin_tuna_tataki.mp4",
+                    "heroVideo": "video/004_bluefin_tuna_tataki.mp4",
                     "featured": false,
                     "chefPick": false,
                     "available": true
@@ -108,7 +108,7 @@
                     "chefStory": "Prepared with minimal intervention so every slice delivers the authentic Wagyu experience.",
                     "ingredientStory": "Certified A5 Miyazaki Wagyu raised under strict Japanese grading standards.",
                     "heroImage": "assets/images/005_a5_wagyu_strip.jpg",
-                    "heroVideo": "assets/videos/005_a5_wagyu_strip.mp4",
+                    "heroVideo": "video/005_a5_wagyu_strip.mp4",
                     "featured": true,
                     "chefPick": true,
                     "available": true
@@ -128,7 +128,7 @@
                     "chefStory": "Slow-fired over premium charcoal before resting to maximise tenderness.",
                     "ingredientStory": "Selected from premium Australian Black Angus cattle.",
                     "heroImage": "assets/images/006_tomahawk.jpg",
-                    "heroVideo": "assets/videos/006_tomahawk.mp4",
+                    "heroVideo": "video/006_tomahawk.mp4",
                     "featured": true,
                     "chefPick": false,
                     "available": true
@@ -148,7 +148,7 @@
                     "chefStory": "Expertly grilled to produce a crisp exterior while preserving a buttery interior.",
                     "ingredientStory": "Raised on carefully managed Australian Wagyu farms using premium feeding programs.",
                     "heroImage": "assets/images/007_wagyu_ribeye.jpg",
-                    "heroVideo": "assets/videos/007_wagyu_ribeye.mp4",
+                    "heroVideo": "video/007_wagyu_ribeye.mp4",
                     "featured": true,
                     "chefPick": true,
                     "available": true
@@ -174,7 +174,7 @@
                     "chefStory": "Steamed gently before being finished over charcoal with cultured butter and herbs.",
                     "ingredientStory": "Wild-caught from the cold waters off the coast of Maine, ensuring exceptional sweetness and freshness.",
                     "heroImage": "assets/images/008_maine_lobster.jpg",
-                    "heroVideo": "assets/videos/008_maine_lobster.mp4",
+                    "heroVideo": "video/008_maine_lobster.mp4",
                     "featured": true,
                     "chefPick": true,
                     "available": true
@@ -194,7 +194,7 @@
                     "chefStory": "Prepared with restraint so the natural sweetness remains the highlight of every bite.",
                     "ingredientStory": "Harvested sustainably from the icy waters of Alaska.",
                     "heroImage": "assets/images/009_king_crab.jpg",
-                    "heroVideo": "assets/videos/009_king_crab.mp4",
+                    "heroVideo": "video/009_king_crab.mp4",
                     "featured": true,
                     "chefPick": false,
                     "available": true
@@ -214,7 +214,7 @@
                     "chefStory": "Slow roasted to preserve moisture while creating a perfectly caramelised surface.",
                     "ingredientStory": "Responsibly sourced from deep Southern Ocean waters.",
                     "heroImage": "assets/images/010_chilean_sea_bass.jpg",
-                    "heroVideo": "assets/videos/010_chilean_sea_bass.mp4",
+                    "heroVideo": "video/010_chilean_sea_bass.mp4",
                     "featured": false,
                     "chefPick": true,
                     "available": true
@@ -240,7 +240,7 @@
                     "chefStory": "Recommended for milestone celebrations and refined seafood pairings.",
                     "ingredientStory": "Produced exclusively from Grand Cru vineyards in Champagne.",
                     "heroImage": "assets/images/011_dom_perignon.jpg",
-                    "heroVideo": "assets/videos/011_dom_perignon.mp4",
+                    "heroVideo": "video/011_dom_perignon.mp4",
                     "featured": true,
                     "chefPick": true,
                     "available": true
@@ -260,7 +260,7 @@
                     "chefStory": "Served in oversized crystal stemware to fully express its bouquet.",
                     "ingredientStory": "Crafted from more than one hundred reserve wines spanning multiple vintages.",
                     "heroImage": "assets/images/012_krug.jpg",
-                    "heroVideo": "assets/videos/012_krug.mp4",
+                    "heroVideo": "video/012_krug.mp4",
                     "featured": true,
                     "chefPick": true,
                     "available": true
@@ -280,7 +280,7 @@
                     "chefStory": "One of our cellar's signature Champagnes for truly memorable occasions.",
                     "ingredientStory": "Produced only during exceptional vintages from estate-owned vineyards.",
                     "heroImage": "assets/images/013_cristal.jpg",
-                    "heroVideo": "assets/videos/013_cristal.mp4",
+                    "heroVideo": "video/013_cristal.mp4",
                     "featured": true,
                     "chefPick": false,
                     "available": true
@@ -300,7 +300,7 @@
                     "chefStory": "An outstanding companion to premium shellfish and aged cheeses.",
                     "ingredientStory": "Fermented in oak barrels using traditional Bollinger methods.",
                     "heroImage": "assets/images/014_bollinger.jpg",
-                    "heroVideo": "assets/videos/014_bollinger.mp4",
+                    "heroVideo": "video/014_bollinger.mp4",
                     "featured": false,
                     "chefPick": true,
                     "available": true
@@ -320,7 +320,7 @@
                     "chefStory": "Perfect as an aperitif or alongside delicate seafood dishes.",
                     "ingredientStory": "Crafted predominantly from Premier Cru Chardonnay vineyards.",
                     "heroImage": "assets/images/015_ruinart.jpg",
-                    "heroVideo": "assets/videos/015_ruinart.mp4",
+                    "heroVideo": "video/015_ruinart.mp4",
                     "featured": false,
                     "chefPick": false,
                     "available": true
@@ -346,7 +346,7 @@
                     "chefStory": "Reserved for guests seeking one of the world's finest expressions of Cabernet Sauvignon.",
                     "ingredientStory": "Produced from meticulously maintained vineyards in the prestigious Margaux appellation.",
                     "heroImage": "assets/images/016_margaux.jpg",
-                    "heroVideo": "assets/videos/016_margaux.mp4",
+                    "heroVideo": "video/016_margaux.mp4",
                     "featured": true,
                     "chefPick": true,
                     "available": true
@@ -366,7 +366,7 @@
                     "chefStory": "Our sommeliers recommend this exceptional vintage with premium Wagyu and dry-aged beef.",
                     "ingredientStory": "Produced by one of the world's oldest and most respected wine estates.",
                     "heroImage": "assets/images/017_lafite.jpg",
-                    "heroVideo": "assets/videos/017_lafite.mp4",
+                    "heroVideo": "video/017_lafite.mp4",
                     "featured": true,
                     "chefPick": true,
                     "available": true
@@ -386,7 +386,7 @@
                     "chefStory": "Chosen for guests seeking a modern luxury wine with exceptional international recognition.",
                     "ingredientStory": "A collaboration between Baron Philippe de Rothschild and Robert Mondavi.",
                     "heroImage": "assets/images/018_opus_one.jpg",
-                    "heroVideo": "assets/videos/018_opus_one.mp4",
+                    "heroVideo": "video/018_opus_one.mp4",
                     "featured": true,
                     "chefPick": false,
                     "available": true
@@ -406,7 +406,7 @@
                     "chefStory": "Recommended for guests exploring Italian fine wines at their highest expression.",
                     "ingredientStory": "Produced from the historic Tenuta San Guido estate overlooking the Tuscan coast.",
                     "heroImage": "assets/images/019_sassicaia.jpg",
-                    "heroVideo": "assets/videos/019_sassicaia.mp4",
+                    "heroVideo": "video/019_sassicaia.mp4",
                     "featured": false,
                     "chefPick": true,
                     "available": true
@@ -426,7 +426,7 @@
                     "chefStory": "Presented to collectors and connoisseurs seeking one of the Southern Hemisphere's greatest wines.",
                     "ingredientStory": "Produced from carefully selected Shiraz vineyards across South Australia.",
                     "heroImage": "assets/images/020_penfolds_grange.jpg",
-                    "heroVideo": "assets/videos/020_penfolds_grange.mp4",
+                    "heroVideo": "video/020_penfolds_grange.mp4",
                     "featured": true,
                     "chefPick": true,
                     "available": true
@@ -452,7 +452,7 @@
                     "chefStory": "Served in crystal with a hand-cut ice sphere to highlight its rich aromas and silky finish.",
                     "ingredientStory": "Crafted at The Macallan Distillery using exceptional oak casks that define its unmistakable character.",
                     "heroImage": "assets/images/021_macallan18.jpg",
-                    "heroVideo": "assets/videos/021_macallan18.mp4",
+                    "heroVideo": "video/021_macallan18.mp4",
                     "featured": true,
                     "chefPick": true,
                     "available": true
@@ -472,7 +472,7 @@
                     "chefStory": "Recommended after dinner as a luxurious digestif served in crystal glassware.",
                     "ingredientStory": "Aged for twenty-one years before an extended Caribbean rum cask finish.",
                     "heroImage": "assets/images/022_glenfiddich21.jpg",
-                    "heroVideo": "assets/videos/022_glenfiddich21.mp4",
+                    "heroVideo": "video/022_glenfiddich21.mp4",
                     "featured": true,
                     "chefPick": true,
                     "available": true
@@ -492,7 +492,7 @@
                     "chefStory": "One of the rarest whiskies on our list, reserved for collectors and enthusiasts.",
                     "ingredientStory": "A meticulous blend of aged malt and grain whiskies matured in multiple cask types.",
                     "heroImage": "assets/images/023_hibiki21.jpg",
-                    "heroVideo": "assets/videos/023_hibiki21.mp4",
+                    "heroVideo": "video/023_hibiki21.mp4",
                     "featured": true,
                     "chefPick": false,
                     "available": true
@@ -512,7 +512,7 @@
                     "chefStory": "A timeless classic enjoyed neat or with a single crystal-clear ice sphere.",
                     "ingredientStory": "Created from some of Scotland's rarest whisky reserves.",
                     "heroImage": "assets/images/024_blue_label.jpg",
-                    "heroVideo": "assets/videos/024_blue_label.mp4",
+                    "heroVideo": "video/024_blue_label.mp4",
                     "featured": false,
                     "chefPick": true,
                     "available": true
@@ -532,7 +532,7 @@
                     "chefStory": "Recommended for guests who appreciate robust smoky whiskies.",
                     "ingredientStory": "Slowly matured for sixteen years beside the rugged Scottish coastline.",
                     "heroImage": "assets/images/025_lagavulin16.jpg",
-                    "heroVideo": "assets/videos/025_lagavulin16.mp4",
+                    "heroVideo": "video/025_lagavulin16.mp4",
                     "featured": false,
                     "chefPick": false,
                     "available": true
@@ -558,7 +558,7 @@
                     "chefStory": "Prepared to order and baked individually for every guest.",
                     "ingredientStory": "Made using premium Valrhona chocolate sourced from France's most celebrated chocolatier.",
                     "heroImage": "assets/images/026_chocolate_souffle.jpg",
-                    "heroVideo": "assets/videos/026_chocolate_souffle.mp4",
+                    "heroVideo": "video/026_chocolate_souffle.mp4",
                     "featured": true,
                     "chefPick": true,
                     "available": true
@@ -578,7 +578,7 @@
                     "chefStory": "Caramelised moments before serving for the perfect crack with every spoon.",
                     "ingredientStory": "Prepared using whole Madagascan vanilla beans and fresh cream.",
                     "heroImage": "assets/images/027_creme_brulee.jpg",
-                    "heroVideo": "assets/videos/027_creme_brulee.mp4",
+                    "heroVideo": "video/027_creme_brulee.mp4",
                     "featured": false,
                     "chefPick": true,
                     "available": true
@@ -598,7 +598,7 @@
                     "chefStory": "Personally selected by our chef to conclude the dining experience with elegance.",
                     "ingredientStory": "Featuring hand-crafted cheeses from renowned European producers.",
                     "heroImage": "assets/images/028_artisan_cheese.jpg",
-                    "heroVideo": "assets/videos/028_artisan_cheese.mp4",
+                    "heroVideo": "video/028_artisan_cheese.mp4",
                     "featured": true,
                     "chefPick": true,
                     "available": true
