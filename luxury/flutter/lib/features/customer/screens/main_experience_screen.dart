@@ -315,20 +315,6 @@ class _MainExperienceScreenState extends ConsumerState<MainExperienceScreen> {
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              if (selectedItem?['heroVideo'] != null &&
-                                  (selectedItem!['heroVideo'] as String).isNotEmpty)
-                                Center(
-                                  child: Container(
-                                    width: 64,
-                                    height: 64,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.black.withOpacity(0.5),
-                                      border: Border.all(color: LuxuryColors.white.withOpacity(0.8), width: 2),
-                                    ),
-                                    child: const Icon(Icons.play_arrow_rounded, color: LuxuryColors.white, size: 36),
-                                  ),
-                                ),
                               Positioned(
                                 bottom: 0,
                                 left: 0,

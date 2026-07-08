@@ -11,7 +11,6 @@ class LivingPhotograph extends StatefulWidget {
   final String videoUrl;
   final Function(String)? onError;
   final double borderRadius;
-  final bool showPlayButton;
 
   const LivingPhotograph({
     super.key,
@@ -19,7 +18,6 @@ class LivingPhotograph extends StatefulWidget {
     required this.videoUrl,
     this.onError,
     this.borderRadius = 8.0,
-    this.showPlayButton = true,
   });
 
   @override
@@ -57,6 +55,8 @@ class _LivingPhotographState extends State<LivingPhotograph> {
     try {
       await _controller!.initialize();
       if (!mounted) return;
+
+      await _controller!.setVolume(0);
 
       setState(() {
         _isVideoInitialized = true;
@@ -139,32 +139,6 @@ class _LivingPhotographState extends State<LivingPhotograph> {
     );
   }
 
-  Widget _buildPlayButton() {
-    if (!widget.showPlayButton || widget.videoUrl.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Center(
-      child: Container(
-        width: 64,
-        height: 64,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.black.withOpacity(0.5),
-          border: Border.all(
-            color: LuxuryColors.white.withOpacity(0.8),
-            width: 2,
-          ),
-        ),
-        child: const Icon(
-          Icons.play_arrow_rounded,
-          color: LuxuryColors.white,
-          size: 36,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
@@ -217,9 +191,6 @@ class _LivingPhotographState extends State<LivingPhotograph> {
                 ),
               ),
             ),
-
-            // 4. Play button overlay
-            if (_videoOpacity == 0.0) _buildPlayButton(),
           ],
         ),
       ),

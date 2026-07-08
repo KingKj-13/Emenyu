@@ -121,7 +121,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               imageUrl: _heroImage,
               videoUrl: _heroVideo,
               borderRadius: 0,
-              showPlayButton: !_isFullScreenImage,
             ),
           ),
 
