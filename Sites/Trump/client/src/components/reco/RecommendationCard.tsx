@@ -4,7 +4,7 @@
 // also looks right inside the waiter theme.
 import { useState } from 'react';
 import { Plus, Sparkles, Play, Repeat, Crown } from 'lucide-react';
-import { resolveImage, resolveAssetPath, resolveVideo, FALLBACK_IMAGE } from '../../lib/imageResolver';
+import { resolveThumbnail, resolveVideo, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import type { MenuItem } from '../../types/menu';
 import styles from './RecommendationCard.module.css';
@@ -80,9 +80,12 @@ function asMenuItem(item: RecommendationItem): MenuItem {
   } as MenuItem;
 }
 
+// Every variant (compact 66px, detailed/waiter 84-92px, journey/large 190px)
+// is a thumbnail-sized slot — resolveThumbnail() already handles both an
+// explicit item.img and the demo-fallback path, so one call covers both of
+// imageFor()'s old branches without ever shipping the full-res source.
 function imageFor(item: RecommendationItem): string {
-  if (item.img && item.img.trim()) return resolveAssetPath(item.img);
-  return resolveImage(asMenuItem(item));
+  return resolveThumbnail(asMenuItem(item));
 }
 
 export function RecommendationCard({

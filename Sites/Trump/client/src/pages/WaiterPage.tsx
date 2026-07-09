@@ -34,7 +34,7 @@ import { api } from '../services/api';
 import { getSocket } from '../services/socket';
 import { RESTAURANT_ID } from '../constants/api';
 import { buildMenuSections, flattenMenu } from '../lib/menuUtils';
-import { resolveImage, resolveVideo } from '../lib/imageResolver';
+import { resolveThumbnail, resolveVideo } from '../lib/imageResolver';
 import { money, moneyExact } from '../lib/waiterFormat';
 import { StartShiftScreen } from './waiter/StartShiftScreen';
 import { SplitBillModal } from '../components/waiter/SplitBillModal';
@@ -672,15 +672,15 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
 }
 
 // Falls back to a monogram tile (dish initial on tinted navy) instead of a
-// broken-image square whenever resolveImage() can't produce a real photo, or
-// the photo it names 404s — this screen was ~95% broken thumbnails before.
-// Phase 2 (Waiter Experience): poster-first, tap-to-play video — the SAME
-// pattern as the customer menu's RecommendationCard journey variant. The
-// <video> element only mounts after a tap; it never autoplays or eager-loads.
+// broken-image square whenever resolveThumbnail() can't produce a real photo,
+// or the photo it names 404s — this screen was ~95% broken thumbnails before.
+// Uses the 300px thumbnail, not the full-res image, for this 52x52 tile.
+// Video has been removed from Trump; resolveVideo() always returns null now,
+// so the tap-to-play affordance below never renders.
 function AddItemThumb({ item }: { item: MenuItem }) {
   const [errored, setErrored] = useState(false);
   const [playing, setPlaying] = useState(false);
-  const src = resolveImage(item);
+  const src = resolveThumbnail(item);
   const videoSrc = resolveVideo(item);
 
   if (playing && videoSrc) {

@@ -11,7 +11,7 @@ import { CartRecommendations } from './CartRecommendations';
 import { TipSelector } from './TipSelector';
 import { ReceiptView } from './ReceiptView';
 import { flattenMenu, formatPrice, normalizeName } from '../../lib/menuUtils';
-import { resolveImage, FALLBACK_IMAGE } from '../../lib/imageResolver';
+import { resolveImage, resolveThumbnail, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { trackOrdered } from '../../lib/recoAnalytics';
 import { Spinner } from '../ui/Spinner';
 import type { MenuItem } from '../../types/menu';
@@ -259,7 +259,7 @@ export function CartDrawer() {
                       </div>
                     ) : (
                       currentOrder.map((item, i) => {
-                        const imgSrc = resolveImage({ name: item.name, price: item.price, description: item.description, img: item.img });
+                        const imgSrc = resolveThumbnail({ name: item.name, price: item.price, description: item.description, img: item.img });
                         return (
                           <div key={`${item.name}-${i}`} className={styles.historyItem}>
                             {imgSrc && (
@@ -292,7 +292,7 @@ export function CartDrawer() {
                     ) : (
                       favoriteRows.map(({ name, item }) => (
                         <div key={name} className={styles.favoriteItem}>
-                          {item && <img src={resolveImage(item)} alt={item.name} className={styles.historyThumb} loading="lazy" />}
+                          {item && <img src={resolveThumbnail(item)} alt={item.name} className={styles.historyThumb} loading="lazy" />}
                           <button className={styles.favoriteMain} onClick={() => openMenuItem(name)}>
                             <span className={styles.historyName}>{item?.name || name}</span>
                             {item?.price ? <span className={styles.favoritePrice}>{formatPrice(item.price)}</span> : null}

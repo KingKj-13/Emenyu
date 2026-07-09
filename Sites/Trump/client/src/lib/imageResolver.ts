@@ -130,34 +130,6 @@ const EXTRA_DRINK_TERMS = [
 
 const DESSERT_TERMS = ['dessert', 'cake', 'ice cream', 'cheesecake', 'sweet', 'baklava', 'fondant'];
 
-// Trump-usable dish clips only. Everything Greek was removed; unmatched items
-// fall through to the category demo loops in demoVideoFor (steak-grill, seafood,
-// pasta, dessert), so the Greek video files are now unreferenced and purgeable.
-const LOCAL_OPTIMIZED_VIDEO_MAP: Record<string, string> = {
-  // Steak & beef
-  'beef tomahawk': 'Beef Tomahawk.mp4',
-  tomahawk: 'Beef Tomahawk.mp4',
-  'beef fillet': 'beef fillet.mp4',
-  'rump steak 200g': 'Rump Steak 200g.mp4',
-  'rump steak 300g': 'Rump Steak 300g.mp4',
-  'rump steak': 'Rump Steak 300g.mp4',
-  'beef strips': 'Beef Strips.mp4',
-  'beef fillet pasta': 'Beef Fillet Pasta.mp4',
-  // Lamb & pork
-  'crispy lamb chops': 'Crispy Lamb Chops.mp4',
-  'crispy chops lamb 300g': 'Crispy Chops Lamb 300g.mp4',
-  'crispy chops lamb 150g': 'Crispy Chops Lamb 150g.mp4',
-  'crispy pork chops': 'Crispy Pork Chops.mp4',
-  // Seafood
-  calamari: 'Calamari.mp4',
-  mussels: 'Mussels.mp4',
-  // Chicken & pasta
-  'chicken pasta': 'Chicken Pasta.mp4',
-  'chicken lasagna': 'Chicken lasagna.mp4',
-  'chicken lasagne': 'Chicken lasagna.mp4',
-  'chicken livers': 'Chicken Livers.mp4',
-};
-
 function mediaText(item: MenuItem): string {
   return [
     item.category,
@@ -196,26 +168,10 @@ export function isDrinkItem(item: MenuItem): boolean {
   return [...DRINK_TERMS, ...EXTRA_DRINK_TERMS].some(term => hasTerm(text, term));
 }
 
-const COCKTAIL_TERMS = [
-  'cocktail', 'cocktails', 'mojito', 'margarita', 'martini', 'negroni',
-  'cosmopolitan', 'old fashioned', 'whiskey sour', 'aperol spritz', 'long island'
-];
-
-export function isCocktailItem(item: MenuItem): boolean {
-  if (item.beverageKind) return item.beverageKind === 'COCKTAIL';
-  const text = classificationText(item);
-  return COCKTAIL_TERMS.some(term => hasTerm(text, term));
-}
-
 export function isDessertItem(item: MenuItem): boolean {
   if (item.categoryType) return item.categoryType === 'DESSERT';
   const text = classificationText(item);
   return DESSERT_TERMS.some(term => hasTerm(text, term));
-}
-
-export function isVideoEligible(item: MenuItem): boolean {
-  // Food is always eligible; among drinks, only cocktails get a video.
-  return !isDrinkItem(item) || isCocktailItem(item);
 }
 
 // Universal fallback — a file that actually exists in the current Images set
@@ -234,38 +190,6 @@ function demoImageFor(item: MenuItem): string {
   }
 
   return FALLBACK_IMAGE;
-}
-
-function demoVideoFor(item: MenuItem): string | null {
-  if (!isVideoEligible(item)) return null;
-  // Cocktails: no per-drink clips exist, so use the cocktail demo loop.
-  if (isCocktailItem(item)) return `${BASE_PATH}/Video/demo/cocktail.mp4`;
-  const text = mediaText(item);
-  const compactName = String(item.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-
-  for (const [name, file] of Object.entries(LOCAL_OPTIMIZED_VIDEO_MAP)) {
-    const compactKey = name.replace(/[^a-z0-9]+/g, '');
-    if (compactName === compactKey || compactName.includes(compactKey) || compactKey.includes(compactName)) {
-      return `${BASE_PATH}/Video/${file}`;
-    }
-  }
-
-  if (isDessertItem(item)) return `${BASE_PATH}/Video/demo/dessert.mp4`;
-  if (/(pasta|spaghetti|linguine|bolognese|alfredo|pesto|noodle)/.test(text)) return `${BASE_PATH}/Video/demo/pasta.mp4`;
-  if (/(sushi|sashimi|maki|nigiri|roll|tempura|crispy rice|edamame|wasabi|poke)/.test(text)) {
-    return `${BASE_PATH}/Video/demo/seafood.mp4`;
-  }
-  if (/(seafood|prawn|shrimp|oyster|mussel|fish|salmon|kingklip|hake|sole|calamari|squid|line ?fish)/.test(text)) {
-    return `${BASE_PATH}/Video/demo/seafood.mp4`;
-  }
-  // Vegetarian / salads get the pasta demo loop (no Greek meze clip anymore).
-  if (/(vegetarian|veg |veggie|salad|caprese|halloumi|avocado|side)/.test(text)) {
-    return `${BASE_PATH}/Video/demo/pasta.mp4`;
-  }
-  if (/(steak|beef|fillet|sirloin|rump|rib|burger|lamb|pork|chop|grill|tomahawk|venison|game|oxtail|biltong|wors|chicken|trinchado)/.test(text)) {
-    return `${BASE_PATH}/Video/demo/steak-grill.mp4`;
-  }
-  return `${BASE_PATH}/Video/demo/steak-grill.mp4`;
 }
 
 export function resolveImage(item: MenuItem): string {
@@ -309,15 +233,14 @@ export function resolveThumbnail(item: MenuItem): string {
   return `${match[1]}/thumbnails/${stem}.webp`;
 }
 
-export function resolveVideo(item: MenuItem): string | null {
-  if (item.videoVisible === false) return null;
-  if (!isVideoEligible(item)) return null;
-  if (!item.video?.trim()) return demoVideoFor(item);
-  const raw = item.video.trim();
-  if (/^https?:\/\//.test(raw) || raw.startsWith('data:') || raw.startsWith('blob:') || raw.startsWith('/uploads/')) return demoVideoFor(item);
-  if (raw.startsWith(`${BASE_PATH}/`)) return raw;
-  if (raw.startsWith('/')) return `${BASE_PATH}${raw}`;
-  return `${BASE_PATH}/${raw}`;
+// Video has been removed from Trump entirely (all Video/*.mp4 files deleted
+// from the server, ~1.5GB) — no menu item ever gets a video again. Every
+// caller already has an "if there's a video, do X, else just show the image"
+// branch (poster-first tap-to-play), so a single unconditional null here is
+// enough to make video-related UI disappear everywhere without touching each
+// call site individually.
+export function resolveVideo(_item: MenuItem): string | null {
+  return null;
 }
 
 export function normalizeYouTubeId(value?: string): string {
@@ -342,20 +265,12 @@ export function normalizeYouTubeId(value?: string): string {
   return '';
 }
 
-export function resolveYouTubeEmbed(item: MenuItem, autoplay = false): string | null {
-  if (item.videoVisible === false || !isVideoEligible(item)) return null;
-  const id = normalizeYouTubeId(item.youtubeId);
-  if (!id) return null;
-  const params = new URLSearchParams({
-    rel: '0',
-    modestbranding: '1',
-    playsinline: '1'
-  });
-  if (autoplay) {
-    params.set('autoplay', '1');
-    params.set('mute', '1');
-  }
-  return `https://www.youtube.com/embed/${id}?${params.toString()}`;
+// Video has been removed from Trump entirely — no menu item ever gets a video
+// again, local or embedded (no item currently has a youtubeId set, but this
+// stays off unconditionally so setting one later can't silently reactivate
+// video playback).
+export function resolveYouTubeEmbed(_item: MenuItem, _autoplay = false): string | null {
+  return null;
 }
 
 export function resolveAssetPath(path: string): string {

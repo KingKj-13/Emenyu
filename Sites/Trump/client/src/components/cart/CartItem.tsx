@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Minus, Trash2 } from 'lucide-react';
 import { formatPrice } from '../../lib/menuUtils';
-import { resolveImage } from '../../lib/imageResolver';
+import { resolveThumbnail } from '../../lib/imageResolver';
 import type { CartItem as CartItemType } from '../../types/cart';
 import styles from './CartItem.module.css';
 
@@ -15,7 +15,8 @@ interface CartItemProps {
 
 export function CartItemRow({ item, index, onUpdateQty, onRemove, onNoteChange }: CartItemProps) {
   const [imgError, setImgError] = useState(false);
-  const imgSrc = imgError ? '' : resolveImage({
+  // 60x60 slot — the thumbnail, not the full-res image.
+  const imgSrc = imgError ? '' : resolveThumbnail({
     name: item.name,
     price: item.price,
     description: item.description,

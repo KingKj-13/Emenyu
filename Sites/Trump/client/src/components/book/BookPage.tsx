@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Plus, Wine } from 'lucide-react';
-import { resolveImage } from '../../lib/imageResolver';
+import { resolveThumbnail } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import type { MenuItem } from '../../types/menu';
 import styles from './BookPage.module.css';
@@ -42,7 +42,8 @@ function BookItem({ item, onItemClick, onAddToCart, onPairingClick }: {
   onAddToCart: (item: MenuItem) => void;
   onPairingClick?: (item: MenuItem) => void;
 }) {
-  const imgSrc = resolveImage(item);
+  // 38x38 slot — the thumbnail, not the full-res image.
+  const imgSrc = resolveThumbnail(item);
 
   return (
     <div
