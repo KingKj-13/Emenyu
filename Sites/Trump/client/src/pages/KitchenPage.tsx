@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { LogOut, Volume2, VolumeX } from 'lucide-react';
+import { LogOut, Volume2, VolumeX, Clock, AlertTriangle, Flame, ArrowRight, Check, CheckCheck } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../hooks/useAuth';
 import { useSocketEvent } from '../hooks/useSocket';
@@ -40,7 +40,16 @@ function ElapsedTimer({ since }: { since: string }) {
 
   const mins = elapsed / 60000;
   const cls = mins > 15 ? styles.timeOverdue : mins > 8 ? styles.timeWarning : styles.timeNormal;
-  return <span className={`${styles.timeElapsed} ${cls}`}>{formatElapsed(elapsed)}</span>;
+  // Urgency is color-coded, but color alone fails color-blind cooks under heat
+  // lamps — a shape/glyph carries the same signal at all three tiers, not just
+  // the most extreme one.
+  const Icon = mins > 15 ? Flame : mins > 8 ? AlertTriangle : Clock;
+  return (
+    <span className={`${styles.timeElapsed} ${cls}`}>
+      <Icon size={12} />
+      {formatElapsed(elapsed)}
+    </span>
+  );
 }
 
 const NEXT_STATUS: Record<KitchenStatus, KitchenStatus | 'served'> = {
@@ -56,9 +65,15 @@ const COL_LABEL: Record<KitchenStatus, string> = {
 };
 
 const COL_BTN_LABEL: Record<KitchenStatus, string> = {
-  new: 'Start Preparing →',
-  preparing: 'Mark Ready ✓',
-  ready: 'Served — Complete ✓'
+  new: 'Start Preparing',
+  preparing: 'Mark Ready',
+  ready: 'Served — Complete'
+};
+
+const COL_BTN_ICON: Record<KitchenStatus, typeof ArrowRight> = {
+  new: ArrowRight,
+  preparing: Check,
+  ready: CheckCheck,
 };
 
 export function KitchenPage() {
@@ -188,25 +203,23 @@ export function KitchenPage() {
                         className={`${styles.orderCard} ${cardCls} ${minsOld > 15 ? styles.cardOverdue : ''}`}
                       >
                         <div className={styles.cardHeader}>
-                          <span className={styles.tableLabel}>
-                            {order.tableId.replace(/^table/, 'Table ')}
-                          </span>
-                          <div className={styles.cardMeta}>
-                            <ElapsedTimer since={order.timestamp} />
-                            <span className={styles.orderTotal}>
-                              R {(order.total || 0).toFixed(2)}
+                          <div className={styles.cardHeaderLeft}>
+                            <span className={styles.tableLabel}>
+                              {order.tableId.replace(/^table/, 'Table ')}
                             </span>
+                            <span className={styles.orderId}>#{order.id}</span>
                           </div>
+                          <ElapsedTimer since={order.timestamp} />
                         </div>
 
                         <div className={styles.itemsList}>
                           {(order.items || []).map(item => (
                             <div key={item.id} className={styles.orderItem}>
-                              <div>
+                              <span className={styles.itemQty}>{item.quantity}×</span>
+                              <div className={styles.itemBody}>
                                 <span className={styles.itemName}>{item.name}</span>
                                 {item.note && <div className={styles.itemNote}>{item.note}</div>}
                               </div>
-                              <span className={styles.itemQty}>×{item.quantity}</span>
                             </div>
                           ))}
                         </div>
@@ -216,6 +229,7 @@ export function KitchenPage() {
                           onClick={() => advance(order)}
                         >
                           {COL_BTN_LABEL[status]}
+                          {(() => { const BtnIcon = COL_BTN_ICON[status]; return <BtnIcon size={14} />; })()}
                         </button>
                       </div>
                     );
