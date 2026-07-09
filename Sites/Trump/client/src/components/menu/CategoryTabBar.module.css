@@ -26,7 +26,8 @@
   border: 1px solid transparent;
   border-radius: 20px;
   background: transparent;
-  color: rgba(201, 187, 165, 0.55);
+  /* Unselected tabs must still read as tappable, not disabled. */
+  color: rgba(201, 187, 165, 0.74);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -58,8 +59,9 @@
   padding: 8px 6px;
   border: 1px solid rgba(198, 162, 75, 0.18);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.015);
-  color: rgba(201, 187, 165, 0.62);
+  background: rgba(255, 255, 255, 0.03);
+  /* Unselected tabs must still read as tappable, not disabled. */
+  color: rgba(201, 187, 165, 0.8);
   font-family: var(--font-heading, inherit);
   font-size: 13px;
   font-weight: 700;

@@ -7,6 +7,7 @@ import { api } from '../../services/api';
 import { formatPrice } from '../../lib/menuUtils';
 import { ASSISTANT_NAME } from '../../constants/config';
 import type { RecommendationAnalytics, RecoInsightsResult, RecoTally } from '../../types/menu';
+import styles from './AnalyticsPanels.module.css';
 
 type Range = 'today' | '7d' | '30d' | '90d';
 const RANGES: { key: Range; label: string; days: number }[] = [
@@ -27,6 +28,9 @@ function dateRange(r: Range) {
 }
 
 const pct = (v?: number) => `${Math.round((v || 0) * 100)}%`;
+// Same severity palette as OwnerDashboard's Insight component — one shared
+// convention across every "what to act on" panel in the app.
+const SEVERITY: Record<string, string> = { high: '#e0696b', medium: '#c6a24b', low: '#6f9a7a' };
 
 export function AIPerformancePanel() {
   const [range, setRange] = useState<Range>('7d');
@@ -51,8 +55,8 @@ export function AIPerformancePanel() {
 
   useEffect(() => { load(range); }, [range, load]);
 
-  if (loading) return <div style={{ padding: 16, opacity: .6 }}>Loading AI performance…</div>;
-  if (!data) return <div style={{ padding: 16, opacity: .6 }}>No recommendation data available.</div>;
+  if (loading) return <div className={styles.loading}>Loading AI performance…</div>;
+  if (!data) return <div className={styles.empty}>No recommendation data available yet.</div>;
 
   const t = data.totals;
   // Grouped by the recType the engine actually tags each event with — the
@@ -75,25 +79,20 @@ export function AIPerformancePanel() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-        <h3 style={{ margin: 0 }}>AI Performance</h3>
-        <div style={{ display: 'flex', gap: 6 }}>
+      <div className={styles.head}>
+        <h3 className={styles.title}>AI Performance</h3>
+        <div className={styles.rangeBar}>
           {RANGES.map(r => (
             <button
               key={r.key}
+              className={`${styles.rangeBtn} ${range === r.key ? styles.rangeBtnActive : ''}`}
               onClick={() => setRange(r.key)}
-              style={{
-                padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                border: '1px solid ' + (range === r.key ? '#c6a24b' : '#e7ddc8'),
-                background: range === r.key ? 'rgba(198,162,75,0.15)' : '#fff',
-                color: range === r.key ? '#8a6d2f' : '#5a4f3d',
-              }}
             >{r.label}</button>
           ))}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+      <div className={styles.tileGrid}>
         <Tile label="Recommendations made" value={String(t.impressions)} />
         <Tile label="Accepted" value={pct(t.acceptanceRate)} sub={`${t.accepted} of ${t.impressions}`} />
         <Tile label="Revenue generated" value={formatPrice(t.revenue)} sub={`${t.ordered} orders`} />
@@ -105,34 +104,38 @@ export function AIPerformancePanel() {
       </div>
 
       {bestPairing && (
-        <div style={{ marginTop: 16, padding: 12, borderRadius: 10, background: 'rgba(198,162,75,0.08)', border: '1px solid rgba(198,162,75,0.25)' }}>
-          <strong style={{ fontSize: 13 }}>Best-converting recommendation:</strong>{' '}
-          <span style={{ fontSize: 13 }}>{bestPairing.name} — {pct(bestPairing.acceptanceRate)} acceptance, {formatPrice(bestPairing.revenue)} revenue</span>
+        <div className={styles.callout}>
+          <span className={styles.calloutLabel}>Best-converting recommendation:</span>{' '}
+          {bestPairing.name} — {pct(bestPairing.acceptanceRate)} acceptance, {formatPrice(bestPairing.revenue)} revenue
         </div>
       )}
 
-      <h4 style={{ marginTop: 22, marginBottom: 8 }}>Top-earning recommendations</h4>
-      <RecoTable rows={data.topRevenue} empty="No recommendation revenue in this period." />
+      <div className={styles.section}>
+        <h4 className={styles.sectionTitle}>Top-earning recommendations</h4>
+        <RecoTable rows={data.topRevenue} empty="No recommendation revenue in this period." />
+      </div>
 
-      <h4 style={{ marginTop: 22, marginBottom: 8 }}>By source</h4>
-      <RecoTable rows={data.bySource} empty="No data in this period." labelKey="source" />
+      <div className={styles.section}>
+        <h4 className={styles.sectionTitle}>By source</h4>
+        <RecoTable rows={data.bySource} empty="No data in this period." labelKey="source" />
+      </div>
 
       {insights && insights.insights.length > 0 && (
-        <>
-          <h4 style={{ marginTop: 22, marginBottom: 8 }}>What to act on</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className={styles.section}>
+          <h4 className={styles.sectionTitle}>What to act on</h4>
+          <div className={styles.list} style={{ gap: 8 }}>
             {insights.insights.slice(0, 6).map((ins, i) => (
-              <div key={i} style={{ padding: '10px 12px', borderRadius: 8, background: '#fff', border: '1px solid #e7ddc8', borderLeft: `3px solid ${ins.severity === 'high' ? '#c0392b' : ins.severity === 'medium' ? '#c6a24b' : '#6f9a7a'}` }}>
-                <strong style={{ fontSize: 13 }}>{ins.title}</strong>
-                <div style={{ fontSize: 12, opacity: .75 }}>{ins.detail}</div>
-                {ins.action && <div style={{ fontSize: 12, color: '#8a6d2f', marginTop: 2 }}>→ {ins.action}</div>}
+              <div key={i} className={styles.insight} style={{ borderLeft: `3px solid ${SEVERITY[ins.severity] || '#9aa6b2'}` }}>
+                <div className={styles.insightTitle}><strong>{ins.title}</strong></div>
+                <div className={styles.insightDetail}>{ins.detail}</div>
+                {ins.action && <div className={styles.insightAction}>→ {ins.action}</div>}
               </div>
             ))}
           </div>
-        </>
+        </div>
       )}
 
-      <p style={{ marginTop: 18, fontSize: 11, opacity: .55, fontStyle: 'italic' }}>
+      <p className={styles.footnote}>
         Average recommendation confidence isn't shown — the engine doesn't persist a confidence value per event, so rather than
         show a fabricated number, acceptance rate and revenue per impression (above) serve as the honest, observable proxies.
       </p>
@@ -142,34 +145,34 @@ export function AIPerformancePanel() {
 
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid #e7ddc8', borderRadius: 12, padding: 14, boxShadow: '0 1px 3px rgba(0,0,0,.05)' }}>
-      <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1206', lineHeight: 1.15 }}>{value}</div>
-      <div style={{ fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#9b8a66', marginTop: 4 }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, color: '#8a6d2f', marginTop: 2 }}>{sub}</div>}
+    <div className={styles.tile}>
+      <div className={styles.tileValue}>{value}</div>
+      <div className={styles.tileLabel}>{label}</div>
+      {sub && <div className={styles.tileSub}>{sub}</div>}
     </div>
   );
 }
 
 function RecoTable({ rows, empty, labelKey = 'name' }: { rows: RecoTally[]; empty: string; labelKey?: 'name' | 'source' }) {
-  if (!rows || rows.length === 0) return <div style={{ padding: 12, opacity: .5, fontSize: 13 }}>{empty}</div>;
+  if (!rows || rows.length === 0) return <div className={styles.empty}>{empty}</div>;
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+    <div className={styles.tableWrap}>
+      <table className={styles.table}>
         <thead>
-          <tr style={{ textAlign: 'left', color: '#9b8a66', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.05em' }}>
-            <th style={{ padding: '8px 10px' }}>{labelKey === 'source' ? 'Source' : 'Item'}</th>
-            <th style={{ padding: '8px 10px' }}>Shown</th>
-            <th style={{ padding: '8px 10px' }}>Accepted</th>
-            <th style={{ padding: '8px 10px' }}>Revenue</th>
+          <tr>
+            <th>{labelKey === 'source' ? 'Source' : 'Item'}</th>
+            <th>Shown</th>
+            <th>Accepted</th>
+            <th>Revenue</th>
           </tr>
         </thead>
         <tbody>
           {rows.slice(0, 8).map((r, i) => (
-            <tr key={i} style={{ borderTop: '1px solid #f0e9d8' }}>
-              <td style={{ padding: '8px 10px' }}>{labelKey === 'source' ? r.source : r.name}</td>
-              <td style={{ padding: '8px 10px' }}>{r.impressions}</td>
-              <td style={{ padding: '8px 10px' }}>{pct(r.acceptanceRate)}</td>
-              <td style={{ padding: '8px 10px', fontWeight: 700, color: '#8a6d2f' }}>{formatPrice(r.revenue)}</td>
+            <tr key={i}>
+              <td>{labelKey === 'source' ? r.source : r.name}</td>
+              <td>{r.impressions}</td>
+              <td>{pct(r.acceptanceRate)}</td>
+              <td className={styles.tableRev}>{formatPrice(r.revenue)}</td>
             </tr>
           ))}
         </tbody>

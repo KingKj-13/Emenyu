@@ -1,11 +1,12 @@
-import { X, UtensilsCrossed, Wine, Star } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { X, UtensilsCrossed, Wine, Star, UserCog, ShieldCheck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import styles from './SideDrawer.module.css';
 
 interface NavLink {
   label: string;
-  icon?: string;
+  icon?: ReactNode;
   onClick: () => void;
 }
 
@@ -123,10 +124,10 @@ export function SideDrawer({
         <div className={styles.staff}>
           <p className={styles.sectionLabel}>Staff Access</p>
           <Link to="/Waiter" className={styles.staffBtn} onClick={close}>
-            <span>&#128119;</span> Waiter App
+            <UserCog size={15} /> Waiter App
           </Link>
           <Link to="/Admin" className={styles.staffBtn} onClick={close}>
-            <span>&#9881;</span> Admin Dashboard
+            <ShieldCheck size={15} /> Admin Dashboard
           </Link>
         </div>
       </aside>

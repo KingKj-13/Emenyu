@@ -8,6 +8,7 @@ import { api } from '../../services/api';
 import { formatPrice } from '../../lib/menuUtils';
 import { ASSISTANT_NAME } from '../../constants/config';
 import type { FloorState } from '../../types/waiter';
+import styles from './AnalyticsPanels.module.css';
 
 interface JourneyStep { key: string; label: string; done: boolean; items?: string[]; detail?: string }
 interface Journey { tableId: string; found: boolean; status?: string; timestamp?: string; total?: number; waiterName?: string; rating?: number | null; steps?: JourneyStep[] }
@@ -45,12 +46,12 @@ export function CustomerJourneyPanel() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-        <h3 style={{ margin: 0 }}>Customer Journey</h3>
+      <div className={styles.head}>
+        <h3 className={styles.title}>Customer Journey</h3>
         <select
+          className={styles.select}
           value={selected}
           onChange={e => setSelected(e.target.value)}
-          style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #e7ddc8', fontSize: 13, background: '#fff' }}
         >
           {tableOptions.length === 0 && <option value="">No tables yet</option>}
           {tableOptions.map(t => <option key={t} value={t}>{t.replace(/^table/i, 'Table ')}</option>)}
@@ -58,40 +59,37 @@ export function CustomerJourneyPanel() {
       </div>
 
       {loading ? (
-        <div style={{ padding: 16, opacity: .6 }}>Loading journey…</div>
+        <div className={styles.loading}>Loading journey…</div>
       ) : !journey || !journey.found ? (
-        <div style={{ padding: 16, opacity: .5, fontSize: 13 }}>No order history for this table yet.</div>
+        <div className={styles.empty}>No order history for this table yet.</div>
       ) : (
         <>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 18, fontSize: 13 }}>
+          <div className={styles.metaRow}>
             <span><strong>{journey.status === 'active' ? 'Currently dining' : 'Completed visit'}</strong></span>
-            {journey.waiterName && <span style={{ opacity: .7 }}>Served by {journey.waiterName}</span>}
-            {journey.total != null && <span style={{ opacity: .7 }}>{formatPrice(journey.total)}</span>}
-            {journey.rating != null && <span style={{ opacity: .7 }}>{journey.rating}★ rated</span>}
+            {journey.waiterName && <span className={styles.metaMuted}>Served by {journey.waiterName}</span>}
+            {journey.total != null && <span className={styles.metaMuted}>{formatPrice(journey.total)}</span>}
+            {journey.rating != null && <span className={styles.metaMuted}>{journey.rating}★ rated</span>}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <div className={styles.timeline}>
             {(journey.steps || []).map((step, i) => (
-              <div key={step.key} style={{ display: 'flex', gap: 12 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{
-                    width: 26, height: 26, borderRadius: '50%', display: 'grid', placeItems: 'center', flexShrink: 0,
-                    background: step.done ? '#c6a24b' : '#f0e9d8', color: step.done ? '#fff' : '#9b8a66',
-                  }}>
+              <div key={step.key} className={styles.timelineStep}>
+                <div className={styles.timelineRail}>
+                  <div className={`${styles.timelineDot} ${step.done ? styles.timelineDotDone : ''}`}>
                     {step.done ? <Check size={14} /> : <Circle size={8} fill="currentColor" />}
                   </div>
                   {i < (journey.steps?.length || 0) - 1 && (
-                    <div style={{ width: 2, flex: 1, minHeight: 18, background: step.done ? '#c6a24b' : '#f0e9d8' }} />
+                    <div className={`${styles.timelineLine} ${step.done ? styles.timelineLineDone : ''}`} />
                   )}
                 </div>
-                <div style={{ paddingBottom: 18 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: step.done ? '#1a1206' : '#9b8a66' }}>{step.label}</div>
+                <div className={styles.timelineBody}>
+                  <div className={`${styles.timelineLabel} ${step.done ? styles.timelineLabelDone : ''}`}>{step.label}</div>
                   {step.items && step.items.length > 0 && (
-                    <div style={{ fontSize: 12, opacity: .7, marginTop: 2 }}>{step.items.join(', ')}</div>
+                    <div className={styles.timelineDetail}>{step.items.join(', ')}</div>
                   )}
-                  {step.detail && <div style={{ fontSize: 12, opacity: .7, marginTop: 2 }}>{step.detail}</div>}
+                  {step.detail && <div className={styles.timelineDetail}>{step.detail}</div>}
                   {!step.done && step.key === 'recommendation' && (
-                    <div style={{ fontSize: 11, opacity: .5, fontStyle: 'italic', marginTop: 2 }}>
+                    <div className={styles.timelineNote}>
                       No {ASSISTANT_NAME} interaction tracked for this specific visit.
                     </div>
                   )}

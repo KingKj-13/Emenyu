@@ -5,7 +5,9 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { api } from '../../services/api';
 import { formatPrice } from '../../lib/menuUtils';
+import { ASSISTANT_NAME } from '../../constants/config';
 import type { ChefRec } from '../../types/menu';
+import styles from './AnalyticsPanels.module.css';
 
 type Range = 'today' | '7d' | '30d' | '90d';
 const RANGES: { key: Range; label: string; days: number }[] = [
@@ -83,141 +85,126 @@ export function ChefIntelligencePanel() {
 
   useEffect(() => { load(range); }, [range, load]);
 
-  if (loading) return <div style={{ padding: 16, opacity: .6 }}>Loading chef intelligence…</div>;
+  if (loading) return <div className={styles.loading}>Loading chef intelligence…</div>;
 
   const activeChefRecs = chefRecs.filter(r => r.active);
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-        <h3 style={{ margin: 0 }}>Chef Intelligence</h3>
-        <div style={{ display: 'flex', gap: 6 }}>
+      <div className={styles.head}>
+        <h3 className={styles.title}>Chef Intelligence</h3>
+        <div className={styles.rangeBar}>
           {RANGES.map(r => (
             <button
               key={r.key}
+              className={`${styles.rangeBtn} ${range === r.key ? styles.rangeBtnActive : ''}`}
               onClick={() => setRange(r.key)}
-              style={{
-                padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                border: '1px solid ' + (range === r.key ? '#c6a24b' : '#e7ddc8'),
-                background: range === r.key ? 'rgba(198,162,75,0.15)' : '#fff',
-                color: range === r.key ? '#8a6d2f' : '#5a4f3d',
-              }}
             >{r.label}</button>
           ))}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 22 }}>
+      <div className={styles.tileGrid}>
         <Tile label="Active chef recs" value={String(activeChefRecs.length)} sub={`${chefRecs.length} total`} />
         <Tile label="Dishes tracked" value={String(topItems.length + bottomItems.length)} />
         <Tile label="Wine pairings with signal" value={String(wineItems.length)} />
         <Tile label="Trending up this week" value={String(trending.length)} />
       </div>
 
-      <TwoUp>
+      <div className={styles.twoUp}>
         <Section title="Most ordered dishes">
           <ItemList rows={topItems} empty="No sales yet." />
         </Section>
         <Section title="Least ordered dishes" subtitle="Of dishes that sold at least once">
           <ItemList rows={bottomItems} empty="No sales yet." />
         </Section>
-      </TwoUp>
+      </div>
 
-      <TwoUp>
-        <Section title="Best wine pairings" subtitle={`Recommended wine, by ${ASSISTANT_LABEL} acceptance & revenue`}>
+      <div className={styles.twoUp}>
+        <Section title="Best wine pairings" subtitle={`Recommended wine, by ${ASSISTANT_NAME} acceptance & revenue`}>
           {wineItems.length === 0 ? <Empty msg="No wine recommendation activity yet." /> : (
-            <List>
+            <div className={styles.list}>
               {wineItems.map(w => (
                 <Row key={w.name} left={w.name} mid={`${Math.round(w.acceptanceRate * 100)}% accepted`} right={formatPrice(w.revenue)} />
               ))}
-            </List>
+            </div>
           )}
         </Section>
         <Section title="Premium price tier" subtitle="Highest-priced dishes — a margin proxy, since no cost data is tracked">
           {premiumItems.length === 0 ? <Empty msg="No menu data." /> : (
-            <List>
+            <div className={styles.list}>
               {premiumItems.map(m => (
                 <Row key={m.dbId} left={m.name} mid={m.category} right={formatPrice(m.price)} />
               ))}
-            </List>
+            </div>
           )}
         </Section>
-      </TwoUp>
+      </div>
 
       <Section title="Trending up this week" subtitle="Dishes selling more than the prior period — a real order-velocity comparison, not a seasonal calendar">
         {trending.length === 0 ? <Empty msg="Nothing trending up yet — not enough repeat sales history." /> : (
-          <List>
+          <div className={styles.list}>
             {trending.map(t => (
               <Row key={t.name} left={t.name} mid={`${t.prior} → ${t.recent}`} right={`+${t.delta}`} />
             ))}
-          </List>
+          </div>
         )}
       </Section>
 
       <Section title="Chef recommendations" subtitle="Active pairing rules (Menu & Offers → Chef Recs)">
         {activeChefRecs.length === 0 ? <Empty msg="No active chef recommendations." /> : (
-          <List>
+          <div className={styles.list}>
             {activeChefRecs.slice(0, 10).map(r => (
               <Row key={r.id} left={`${r.sourceName} → ${r.targetName}`} mid={r.recType} right={r.reason ? r.reason.slice(0, 40) : ''} />
             ))}
-          </List>
+          </div>
         )}
       </Section>
     </div>
   );
 }
 
-const ASSISTANT_LABEL = 'the sommelier';
-
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid #e7ddc8', borderRadius: 12, padding: 14, boxShadow: '0 1px 3px rgba(0,0,0,.05)' }}>
-      <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1206', lineHeight: 1.15 }}>{value}</div>
-      <div style={{ fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: '#9b8a66', marginTop: 4 }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, color: '#8a6d2f', marginTop: 2 }}>{sub}</div>}
+    <div className={styles.tile}>
+      <div className={styles.tileValue}>{value}</div>
+      <div className={styles.tileLabel}>{label}</div>
+      {sub && <div className={styles.tileSub}>{sub}</div>}
     </div>
   );
 }
 
-function TwoUp({ children }: { children: ReactNode }) {
-  return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18, marginBottom: 18 }}>{children}</div>;
-}
-
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
-    <div>
-      <h4 style={{ margin: '0 0 2px' }}>{title}</h4>
-      {subtitle && <p style={{ margin: '0 0 8px', fontSize: 11.5, opacity: .6 }}>{subtitle}</p>}
+    <div className={styles.section}>
+      <h4 className={styles.sectionTitle}>{title}</h4>
+      {subtitle && <p className={styles.sectionSub}>{subtitle}</p>}
       {children}
     </div>
   );
 }
 
-function List({ children }: { children: ReactNode }) {
-  return <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{children}</div>;
-}
-
 function Row({ left, mid, right }: { left: string; mid?: string; right?: string }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 8, alignItems: 'center', fontSize: 12.5, padding: '4px 0', borderTop: '1px solid #f0e9d8' }}>
-      <span style={{ color: '#1a1206', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{left}</span>
-      {mid && <span style={{ color: '#9b8a66', fontSize: 11.5 }}>{mid}</span>}
-      {right && <span style={{ color: '#8a6d2f', fontWeight: 700 }}>{right}</span>}
+    <div className={styles.row}>
+      <span className={styles.rowName}>{left}</span>
+      {mid && <span className={styles.rowMeta}>{mid}</span>}
+      {right && <span className={styles.rowValue}>{right}</span>}
     </div>
   );
 }
 
 function Empty({ msg }: { msg: string }) {
-  return <div style={{ padding: '12px 0', opacity: .5, fontSize: 12.5 }}>{msg}</div>;
+  return <div className={styles.empty}>{msg}</div>;
 }
 
 function ItemList({ rows, empty }: { rows: Item[]; empty: string }) {
   if (!rows || rows.length === 0) return <Empty msg={empty} />;
   return (
-    <List>
+    <div className={styles.list}>
       {rows.map((it, i) => (
         <Row key={it.name} left={`#${i + 1} ${it.name}`} mid={`${it.quantity}×`} right={formatPrice(it.revenue)} />
       ))}
-    </List>
+    </div>
   );
 }
