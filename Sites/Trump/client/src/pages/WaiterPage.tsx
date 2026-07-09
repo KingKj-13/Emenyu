@@ -185,7 +185,7 @@ function TopBar() {
         <span className="wv-avatar">{(shift.name || 'W').charAt(0).toUpperCase()}</span>
         <span>
           <b>{shift.name || 'Waiter'}</b>
-          <small>Online - {shift.role}</small>
+          <small>Online · {shift.role}</small>
         </span>
       </button>
       <div className="wv-top-actions">
@@ -274,7 +274,7 @@ function HomeScreen() {
         {next ? (
           <>
             <h1>{next.isLuxury ? next.displayName : `Table ${next.number}`}</h1>
-            <p>{statusCopy(statusForTable(next, alerts, tasks))} - {next.guests || 0} guests - {money(next.spend || 0)}</p>
+            <p>{statusCopy(statusForTable(next, alerts, tasks))} · {next.guests || 0} guests · {money(next.spend || 0)}</p>
             <p className="wv-intel-summary">{tableIntelSummary(next, nextIntel, nextEvent)}</p>
             <button className="wv-primary" onClick={() => selectTable(next.tableId)}>Open table</button>
           </>
@@ -334,7 +334,7 @@ function InsightTags({ intel, event }: { intel: TableIntel | null; event?: { lab
 
 function Timeline({ status, placed }: { status?: string; placed: number }) {
   const steps = ['Sent To Kitchen', 'Preparing', 'Ready', 'Served'];
-  const active = status === 'ready' ? 2 : placed > 0 ? 1 : 0;
+  const active = status === 'served' ? 3 : status === 'ready' ? 2 : placed > 0 ? 1 : 0;
   return (
     <div className="wv-timeline">
       {steps.map((step, index) => (
@@ -869,7 +869,7 @@ function AlertsScreen() {
           </div>
           <div className="wv-alert-actions">
             {task.tableId && <button onClick={() => selectTable(task.tableId)}>Open</button>}
-            <button onClick={() => task.status === 'open' ? ackTask(task.id) : api.resolveWaiterTask(task.id).then(reload)}> {task.status === 'open' ? 'Ack' : 'Resolve'} </button>
+            <button className="wv-alert-primary" onClick={() => task.status === 'open' ? ackTask(task.id) : api.resolveWaiterTask(task.id).then(reload)}> {task.status === 'open' ? 'Ack' : 'Resolve'} </button>
           </div>
         </section>
       ))}
@@ -884,7 +884,7 @@ function AlertsScreen() {
           </div>
           <div className="wv-alert-actions">
             {alert.tableId && <button onClick={() => selectTable(alert.tableId!)}>Open</button>}
-            <button onClick={() => respondAlert(alert.id)}>On my way</button>
+            <button className="wv-alert-primary" onClick={() => respondAlert(alert.id)}>On my way</button>
             <button onClick={() => dismissAlert(alert.id)}>Dismiss</button>
           </div>
         </section>

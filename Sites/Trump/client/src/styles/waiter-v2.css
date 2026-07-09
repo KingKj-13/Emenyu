@@ -322,7 +322,11 @@
 @keyframes wv-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(224,85,95,0); } 50% { box-shadow: 0 0 0 3px rgba(224,85,95,0.25); } }
 .wv-alert-actions { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
 .wv-alert-actions button { min-height: 36px; padding: 0 14px; border-radius: 10px; font-size: 13px; font-weight: 600; background: var(--w-surface2); border: 1px solid var(--w-border); color: var(--w-text); white-space: nowrap; }
-.wv-alert-actions button:first-child { background: var(--w-gold-grad); color: #1a1407; border-color: transparent; }
+/* The urgent action (Ack/Resolve/On my way) is styled gold explicitly via
+   this class — not ":first-child", which previously made whichever button
+   happened to render first (often just "Open", a plain navigation shortcut)
+   look like the primary action regardless of what it actually did. */
+.wv-alert-actions button.wv-alert-primary { background: var(--w-gold-grad); color: #1a1407; border-color: transparent; }
 
 /* ── Chat center ─────────────────────────────────────────────────────────── */
 .wv-chat-analyze { display: flex; flex-direction: column; gap: 10px; }

@@ -5,6 +5,12 @@ import { BRAND_NAME, SHIFT_START, DEFAULT_SECTION, WAITER_ROLES } from '../../co
 import type { WaiterRole } from '../../types/waiter';
 
 const today = new Date().toLocaleDateString('en-ZA', { weekday: 'long' });
+function timeGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning.';
+  if (h < 17) return 'Good afternoon.';
+  return 'Good evening.';
+}
 
 export function StartShiftScreen() {
   const { startShift } = useWaiter();
@@ -26,7 +32,7 @@ export function StartShiftScreen() {
       <div style={{ marginTop: 'min(12vh, 90px)' }}>
         <p className="w-eyebrow">{BRAND_NAME} · {today} Service</p>
         <h1 className="w-display" style={{ fontSize: 46, marginTop: 14 }}>
-          Good evening.<br /><em className="w-gold-text" style={{ fontStyle: 'italic' }}>Who's on the floor?</em>
+          {timeGreeting()}<br /><em className="w-gold-text" style={{ fontStyle: 'italic' }}>Who's on the floor?</em>
         </h1>
       </div>
 
@@ -58,7 +64,7 @@ export function StartShiftScreen() {
         Start Service
       </button>
       <p style={{ textAlign: 'center', color: 'var(--w-text3)', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 18 }}>
-        Shift started {SHIFT_START} · 30 tables on floor
+        Shift started {SHIFT_START} · {section.length} tables in your section
       </p>
     </div>
   );

@@ -4,18 +4,22 @@
    (display) + Manrope (body) fonts.
    ============================================================================ */
 .waiter-app {
-  --w-bg: #0a0a0b;
-  --w-bg2: #101012;
-  --w-surface: #17171b;
-  --w-surface2: #1e1e23;
+  /* Aliased to the shared brand tokens (client/src/index.css) rather than
+     hand-copied hex, so the waiter surface is provably the same navy/gold/
+     cream as the rest of the app — a hand-copied palette had drifted to an
+     achromatic near-black background with no blue cast. */
+  --w-bg: var(--color-ink);
+  --w-bg2: var(--color-coal);
+  --w-surface: var(--color-panel);
+  --w-surface2: var(--color-panel-soft);
   --w-surface3: #26262c;
   --w-border: rgba(255, 255, 255, 0.07);
   --w-border-gold: rgba(201, 162, 75, 0.30);
-  --w-text: #F5EFE3;
+  --w-text: var(--color-cream);
   --w-text2: #9c9488;
   --w-text3: #6f6a61;
-  --w-gold: #C9A24B;
-  --w-gold-bright: #E9C45A;
+  --w-gold: var(--color-gold);
+  --w-gold-bright: var(--color-gold-soft);
   --w-gold-deep: #A87C2A;
   --w-gold-grad: linear-gradient(135deg, #EBC85F 0%, #C9982E 100%);
   --w-gold-glow: 0 8px 30px rgba(201, 152, 46, 0.35);
@@ -266,7 +270,7 @@
 .w-sheet-handle { width: 42px; height: 4px; border-radius: 999px; background: var(--w-surface3); margin: 4px auto 16px; }
 .w-sheet-close, .w-modal-close { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--w-border); display: grid; place-items: center; color: var(--w-text2); font-size: 18px; }
 .w-modal-wrap { position: fixed; inset: 0; z-index: 51; display: flex; align-items: flex-end; }
-.w-modal { width: 100%; background: var(--w-bg2); border-top: 1px solid var(--w-border-gold); border-radius: 22px 22px 0 0; padding: 18px 18px calc(22px + var(--w-safe-bottom)); transform: translateY(100%); animation: w-slideup 0.26s var(--ease-premium, cubic-bezier(0.2,0.8,0.2,1)) forwards; }
+.w-modal { position: relative; z-index: 52; width: 100%; background: var(--w-bg2); border-top: 1px solid var(--w-border-gold); border-radius: 22px 22px 0 0; padding: 18px 18px calc(22px + var(--w-safe-bottom)); transform: translateY(100%); animation: w-slideup 0.26s var(--ease-premium, cubic-bezier(0.2,0.8,0.2,1)) forwards; }
 .w-modal-head { display: flex; align-items: flex-start; justify-content: space-between; }
 .w-modal-title { font-family: var(--w-font-display); font-size: 30px; line-height: 1; }
 .w-modal-sub { color: var(--w-text3); font-size: 13px; margin-top: 4px; }
