@@ -122,6 +122,10 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const [reportTables, setReportTables] = useState<AnalyticsTable[]>([]);
   const [reportHours, setReportHours] = useState<AnalyticsHour[]>([]);
   const [reportRatings, setReportRatings] = useState<RatingsData | null>(null);
+  const [reportTrend, setReportTrend] = useState<{ date: string; revenue: number; orders: number }[]>([]);
+  const [reportTrendBucket, setReportTrendBucket] = useState<'day' | 'week' | 'month'>('day');
+  const [reportLeaderboard, setReportLeaderboard] = useState<{ rank: number; waiterName: string; salesDriven: number; tips: number; tablesServed: number }[]>([]);
+  const [reportKitchen, setReportKitchen] = useState<{ seated: number; cooking: number; ready: number; empty: number } | null>(null);
   const [tableCarts, setTableCarts] = useState<TableCartEntry[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [chefRecs, setChefRecs] = useState<ChefRec[]>([]);
@@ -232,19 +236,28 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   async function loadReports(range: ReportRange) {
     setLoading(true);
     const params = getDateRange(range);
+    const bucket: 'day' | 'week' | 'month' = range === 'all' ? 'month' : range === '30d' ? 'week' : 'day';
+    const leaderboardPeriod = range === 'today' ? 'today' : range === '7d' ? 'week' : 'month';
+    setReportTrendBucket(bucket);
     try {
-      const [summary, items, tables, hours, ratings] = await Promise.all([
+      const [summary, items, tables, hours, ratings, trend, leaderboard, floor] = await Promise.all([
         api.getAnalyticsSummary(params),
         api.getAnalyticsItems(params),
         api.getAnalyticsTables(params),
         api.getAnalyticsHours(params),
         api.getRatings(params),
+        api.getAnalyticsTrend({ ...params, bucket }).catch(() => ({ bucket, points: [] })),
+        api.getWaiterLeaderboard({ period: leaderboardPeriod }).catch(() => ({ leaderboard: [] })),
+        api.getFloor().catch(() => null),
       ]);
       setReportSummary(summary as AnalyticsSummary);
       setReportItems((items as AnalyticsItem[]) || []);
       setReportTables((tables as AnalyticsTable[]) || []);
       setReportHours((hours as AnalyticsHour[]) || []);
       setReportRatings(ratings as RatingsData || null);
+      setReportTrend(trend.points || []);
+      setReportLeaderboard(leaderboard.leaderboard || []);
+      setReportKitchen(floor?.counts || null);
     } catch {}
     setLoading(false);
   }
@@ -456,6 +469,21 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     URL.revokeObjectURL(url);
   }
 
+  function exportReportsCsv() {
+    const rows = [['Item', 'Quantity sold', 'Revenue']];
+    reportItems.forEach(it => rows.push([it.name, String(it.quantity), String(it.revenue)]));
+    rows.push([]);
+    rows.push(['Table', 'Revenue', 'Orders']);
+    reportTables.forEach(t => rows.push([t.tableId, String(t.revenue), String(t.orderCount)]));
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `report-${reportRange}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const liveCovers = tableCarts.filter(t => t.itemCount > 0).length;
 
   const NAV_GROUPS: { label: string; items: { key: Tab; label: string; icon: typeof ClipboardList; badge?: number }[] }[] = [
@@ -504,7 +532,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     bundles: { eyebrow: 'CURATED MENUS', title: 'Recommended orders', sub: `${bundles.length} persona bundle${bundles.length !== 1 ? 's' : ''} · the menu "Not sure what to order?" strip`, actions: refreshAction },
     deals: { eyebrow: 'OFFERS', title: 'Deals', sub: 'Bundle dishes into featured set menus', actions: <button className={styles.actionBtnGold} onClick={openNewDeal}><Plus size={14} /> New deal</button> },
     qrcodes: { eyebrow: 'TABLE QR CODES', title: 'QR codes', sub: 'Each links a guest straight to its table session' },
-    reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top dishes, peak hours & guest ratings' },
+    reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top dishes, peak hours & guest ratings', actions: <button className={styles.actionBtn} onClick={exportReportsCsv}><Download size={14} /> Export CSV</button> },
     aiperformance: { eyebrow: 'ANALYTICS', title: 'AI Performance', sub: 'Recommendations made, accepted, and the revenue behind them' },
     chefintel: { eyebrow: 'ANALYTICS', title: 'Chef Intelligence', sub: 'Best & worst sellers, wine pairings, pricing tier & trends' },
     journey: { eyebrow: 'ANALYTICS', title: 'Customer Journey', sub: 'One table’s visit, course by course' },
@@ -680,6 +708,10 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
                   tables={reportTables}
                   hours={reportHours}
                   ratings={reportRatings}
+                  trend={reportTrend}
+                  trendBucket={reportTrendBucket}
+                  leaderboard={reportLeaderboard}
+                  kitchen={reportKitchen}
                   onRangeChange={r => {
                     setReportRange(r);
                     loadReports(r);
@@ -1081,17 +1113,22 @@ const RANGE_LABELS: Record<ReportRange, string> = {
   all: 'All Time'
 };
 
-function ReportsPanel({ range, summary, items, tables, hours, ratings, onRangeChange }: {
+function ReportsPanel({ range, summary, items, tables, hours, ratings, trend, trendBucket, leaderboard, kitchen, onRangeChange }: {
   range: ReportRange;
   summary: AnalyticsSummary | null;
   items: AnalyticsItem[];
   tables: AnalyticsTable[];
   hours: AnalyticsHour[];
   ratings: RatingsData | null;
+  trend: { date: string; revenue: number; orders: number }[];
+  trendBucket: 'day' | 'week' | 'month';
+  leaderboard: { rank: number; waiterName: string; salesDriven: number; tips: number; tablesServed: number }[];
+  kitchen: { seated: number; cooking: number; ready: number; empty: number } | null;
   onRangeChange: (r: ReportRange) => void;
 }) {
   const maxTableRevenue = Math.max(...tables.map(t => t.revenue), 1);
   const maxHourCount = Math.max(...hours.map(h => h.count), 1);
+  const maxTrendRevenue = Math.max(...trend.map(t => t.revenue), 1);
 
   return (
     <div className={styles.reportsPanel}>
@@ -1134,6 +1171,24 @@ function ReportsPanel({ range, summary, items, tables, hours, ratings, onRangeCh
         <div className={styles.emptyState}><p>No data for this period.</p></div>
       )}
 
+      {trend.length > 0 && (
+        <div className={styles.reportSection}>
+          <h3 className={styles.reportSectionTitle}>Revenue trend ({trendBucket === 'day' ? 'daily' : trendBucket === 'week' ? 'weekly' : 'monthly'})</h3>
+          <div className={styles.hoursChart}>
+            {trend.map(t => (
+              <div key={t.date} className={styles.hourBar}>
+                <div
+                  className={styles.hourBarFill}
+                  style={{ height: `${(t.revenue / maxTrendRevenue) * 100}%` }}
+                  title={`${t.date} — ${formatPrice(t.revenue)} (${t.orders} orders)`}
+                />
+                <span className={styles.hourLabel}>{t.date.slice(5)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className={styles.reportsGrid}>
         {items.length > 0 && (
           <div className={styles.reportSection}>
@@ -1167,6 +1222,47 @@ function ReportsPanel({ range, summary, items, tables, hours, ratings, onRangeCh
                   <span className={styles.tableBarValue}>{formatPrice(t.revenue)}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {leaderboard.length > 0 && (
+          <div className={styles.reportSection}>
+            <h3 className={styles.reportSectionTitle}>Waiter performance</h3>
+            <div className={styles.topItemsList}>
+              {leaderboard.map(w => (
+                <div key={w.waiterName} className={styles.topItemRow}>
+                  <span className={styles.topItemRank}>#{w.rank}</span>
+                  <span className={styles.topItemName}>{w.waiterName}</span>
+                  <span className={styles.topItemQty}>{w.tablesServed} table{w.tablesServed !== 1 ? 's' : ''}</span>
+                  <span className={styles.topItemRev}>{formatPrice(w.salesDriven)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {kitchen && (
+          <div className={styles.reportSection}>
+            <h3 className={styles.reportSectionTitle}>Kitchen performance</h3>
+            <p style={{ fontSize: 11.5, opacity: .6, margin: '0 0 8px' }}>Live board right now — no per-order prep-time history is tracked yet</p>
+            <div className={styles.summaryCards}>
+              <div className={styles.summaryCard}>
+                <div className={styles.summaryValue}>{kitchen.cooking}</div>
+                <div className={styles.summaryLabel}>Cooking</div>
+              </div>
+              <div className={styles.summaryCard}>
+                <div className={styles.summaryValue}>{kitchen.ready}</div>
+                <div className={styles.summaryLabel}>Ready to serve</div>
+              </div>
+              <div className={styles.summaryCard}>
+                <div className={styles.summaryValue}>{kitchen.seated}</div>
+                <div className={styles.summaryLabel}>Seated, ordering</div>
+              </div>
+              <div className={styles.summaryCard}>
+                <div className={styles.summaryValue}>{kitchen.empty}</div>
+                <div className={styles.summaryLabel}>Empty tables</div>
+              </div>
             </div>
           </div>
         )}
