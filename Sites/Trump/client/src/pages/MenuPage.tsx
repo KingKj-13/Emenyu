@@ -1,10 +1,15 @@
-import { useState, useMemo, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef, Suspense, lazy, type ComponentType, type ReactNode } from 'react';
 import { preload } from 'react-dom';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  Salad, Fish, Beef, Drumstick, UtensilsCrossed, Sandwich, Soup, Leaf, CakeSlice,
+  Wine, Beer, Martini, Coffee, Check, CheckCircle2, PartyPopper, ChefHat, Star,
+} from 'lucide-react';
 import { useSocketEvent } from '../hooks/useSocket';
 import { AppShell } from '../components/layout/AppShell';
 import { SideDrawer } from '../components/layout/SideDrawer';
 import { CategorySection } from '../components/menu/CategorySection';
+import { MenuSkeletonGrid } from '../components/menu/MenuSkeletonGrid';
 import { RecommendedOrders } from '../components/menu/RecommendedOrders';
 import { ItemModal } from '../components/menu/ItemModal';
 import { PairingModal } from '../components/menu/PairingModal';
@@ -37,6 +42,20 @@ const DRINKS_TITLES = new Set([
 const SETMENU_TITLES = new Set([
   'Signature Combos', 'Signature Platters', 'Set Menu', 'Set Menus',
 ]);
+
+const SECTION_ICON_COMPONENTS: Record<string, ComponentType<{ size?: number }>> = {
+  'To Start': Salad, 'Tempura': Sandwich, 'Bespoke Salads': Salad,
+  'Sushi & Sashimi': Fish, 'Signature Seafood': Fish,
+  'Trumps Premium Steaks': Beef, 'Pork & Ribs': Drumstick,
+  'Lamb': Beef, 'Venison & Game': Beef, 'Oxtail & Beef Ribs': Beef,
+  'Signature Combos': Star, 'Signature Platters': UtensilsCrossed,
+  'Gourmet Burgers': Sandwich, 'Chicken Dishes': Drumstick,
+  'Trumps Pastas': Soup, 'Vegetarian': Leaf,
+  'Sides & Extras': UtensilsCrossed, 'Dessert & Cakes': CakeSlice,
+  'Sparkling': Wine, 'White Wine': Wine, 'Red Wine': Wine,
+  'Beer & Cider': Beer, 'Spirits': Martini,
+  'Liqueurs & After-Dinner': Martini, 'Soft & Hot': Coffee, 'Cocktails': Martini,
+};
 
 export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   const { tableId: paramTableId } = useParams<{ tableId: string }>();
@@ -250,38 +269,30 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
     setPendingItemName(null);
   }, [findItemByName, openItem, pendingItemName, setPendingItemName, setSearchQuery]);
 
-  const SECTION_ICONS: Record<string, string> = {
-    'To Start': '🥗', 'Tempura': '🍤', 'Bespoke Salads': '🥙',
-    'Sushi & Sashimi': '🍱', 'Signature Seafood': '🦞',
-    'Trumps Premium Steaks': '🥩', 'Pork & Ribs': '🍖',
-    'Lamb': '🍗', 'Venison & Game': '🦌', 'Oxtail & Beef Ribs': '🍖',
-    'Signature Combos': '⭐', 'Signature Platters': '🍽️',
-    'Gourmet Burgers': '🍔', 'Chicken Dishes': '🐔',
-    'Trumps Pastas': '🍝', 'Vegetarian': '🥦',
-    'Sides & Extras': '🍟', 'Dessert & Cakes': '🍰',
-    'Sparkling': '🥂', 'White Wine': '🍾', 'Red Wine': '🍷',
-    'Beer & Cider': '🍺', 'Spirits': '🥃',
-    'Liqueurs & After-Dinner': '🍫', 'Soft & Hot': '☕', 'Cocktails': '🍹',
-  };
+  // Gold line-glyph per section, matching the icon system used everywhere else
+  // in the app (lucide-react) — no emoji.
+  const sectionIconFor = (title: string): ComponentType<{ size?: number }> => SECTION_ICON_COMPONENTS[title] ?? UtensilsCrossed;
 
   // Nav links for the SideDrawer
-  const gridNavLinks = useMemo(() => sections.map(s => ({
-    label: s.title,
-    icon: SECTION_ICONS[s.title] ?? '▸',
-    onClick: () => {
-      const id = `section-${s.title.toLowerCase().replace(/\s+/g, '-')}`;
-      setTimeout(() => {
-        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 280);
-    },
+  const gridNavLinks = useMemo(() => sections.map(s => {
+    const Icon = sectionIconFor(s.title);
+    return {
+      label: s.title,
+      icon: <Icon size={15} />,
+      onClick: () => {
+        const id = `section-${s.title.toLowerCase().replace(/\s+/g, '-')}`;
+        setTimeout(() => {
+          document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 280);
+      },
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  })), [sections]);
+  }), [sections]);
 
-  const bookNavLinks = useMemo(() => FOOD_CHAPTERS.map(ch => ({
-    label: ch.title,
-    icon: SECTION_ICONS[ch.title] ?? '▸',
-    onClick: () => {},
-  })), []);
+  const bookNavLinks = useMemo(() => FOOD_CHAPTERS.map(ch => {
+    const Icon = sectionIconFor(ch.title);
+    return { label: ch.title, icon: <Icon size={15} />, onClick: () => {} };
+  }), []);
 
   function handleItemClick(item: MenuItem) {
     openItem(item, 'replace');
@@ -374,10 +385,7 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
 
       <div className={styles.content}>
         {loading ? (
-          <div className={styles.loadingState}>
-            <Spinner size={48} />
-            <p>Loading menu…</p>
-          </div>
+          <MenuSkeletonGrid />
         ) : error ? (
           <div className={styles.errorState}>
             <p>Unable to load menu. Please try refreshing.</p>
@@ -446,7 +454,7 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
         />
       )}
       <CartDrawer />
-      <ChatPanel onItemClick={handleChatItemClick} />
+      {!loading && <ChatPanel onItemClick={handleChatItemClick} />}
         <AddedToast />
     </AppShell>
   );
@@ -465,16 +473,16 @@ function AddedToast() {
   }, [justAdded?.t]);
   return (
     <div className={`${styles.addedToast} ${visible ? styles.addedToastShow : ''}`} role="status" aria-live="polite">
-      <span className={styles.addedCheck} aria-hidden>✓</span> Added to cart · {label}
+      <span className={styles.addedCheck} aria-hidden><Check size={13} strokeWidth={3} /></span> Added to cart · {label}
     </div>
   );
 }
 
-const STATUS_STEPS: { key: string; label: string; icon: string }[] = [
-  { key: 'new', label: 'Order Received', icon: '✓' },
-  { key: 'preparing', label: 'Being Prepared', icon: '🍳' },
-  { key: 'ready', label: 'Ready for Service', icon: '✅' },
-  { key: 'served', label: 'Enjoy your meal!', icon: '🎉' },
+const STATUS_STEPS: { key: string; label: string; icon: ReactNode }[] = [
+  { key: 'new', label: 'Order Received', icon: <Check size={14} /> },
+  { key: 'preparing', label: 'Being Prepared', icon: <ChefHat size={14} /> },
+  { key: 'ready', label: 'Ready for Service', icon: <CheckCircle2 size={14} /> },
+  { key: 'served', label: 'Enjoy your meal!', icon: <PartyPopper size={14} /> },
 ];
 
 function RatingModal({ orderId, tableId, onClose }: { orderId: number; tableId: string; onClose: () => void }) {
@@ -497,7 +505,7 @@ function RatingModal({ orderId, tableId, onClose }: { orderId: number; tableId: 
     <div className={styles.ratingOverlay} onClick={onClose}>
       <div className={styles.ratingModal} onClick={e => e.stopPropagation()}>
         {submitted ? (
-          <div className={styles.ratingThanks}>🎉 Thank you for your feedback!</div>
+          <div className={styles.ratingThanks}><PartyPopper size={18} /> Thank you for your feedback!</div>
         ) : (
           <>
             <h3 className={styles.ratingTitle}>How was your experience?</h3>
@@ -510,7 +518,7 @@ function RatingModal({ orderId, tableId, onClose }: { orderId: number; tableId: 
                   onMouseLeave={() => setHover(0)}
                   onClick={() => setRating(s)}
                   aria-label={`Rate ${s} star${s !== 1 ? 's' : ''}`}
-                >★</button>
+                ><Star size={22} fill={s <= (hover || rating) ? 'currentColor' : 'none'} /></button>
               ))}
             </div>
             <textarea

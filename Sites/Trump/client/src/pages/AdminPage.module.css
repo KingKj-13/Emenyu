@@ -232,7 +232,7 @@
   font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none;
   color-scheme: dark;
 }
-.formInput:focus, .formTextarea:focus { outline: none; border-color: rgba(200, 165, 85, 0.5); }
+.formInput:focus:not(:focus-visible), .formTextarea:focus:not(:focus-visible) { border-color: rgba(200, 165, 85, 0.5); }
 .formInput::placeholder, .formTextarea::placeholder { color: rgba(201, 187, 165, 0.4); }
 .formTextarea { resize: vertical; min-height: 48px; }
 .formGrid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
@@ -717,7 +717,7 @@
   color: var(--color-cream);
   font-size: 12px;
 }
-.youtubeInput:focus { outline: none; border-color: rgba(198,162,75,0.42); }
+.youtubeInput:focus:not(:focus-visible) { border-color: rgba(198,162,75,0.42); }
 .youtubeInput::placeholder { color: rgba(201,187,165,0.38); }
 
 .mediaClearBtn {

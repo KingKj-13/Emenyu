@@ -65,8 +65,8 @@ export const MenuCard = memo(function MenuCard({
           </span>
         )}
         {!soldOut && item.popular && (
-          <span className={styles.chipAi} aria-label="AI recommended item">
-            <Sparkles size={10} /> AI Recommend
+          <span className={styles.chipAi} aria-label="Guest favourite">
+            <Sparkles size={10} /> Guest Favourite
           </span>
         )}
         <button
@@ -109,7 +109,7 @@ export const MenuCard = memo(function MenuCard({
           </button>
         </div>
         {item.allergens && (
-          <p className={styles.allergens}>{item.allergens}</p>
+          <p className={styles.allergens}><strong>Contains:</strong> {item.allergens}</p>
         )}
       </div>
     </article>

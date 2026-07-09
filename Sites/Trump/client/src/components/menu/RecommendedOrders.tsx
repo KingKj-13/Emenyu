@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, ShoppingCart } from 'lucide-react';
+import { useState, useEffect, type ComponentType } from 'react';
+import { ShoppingCart, Check, Fish, Beef, Leaf, Soup, ChefHat } from 'lucide-react';
 import { RECOMMENDED_ORDERS, type PersonaOrder } from '../../constants/recommendedOrders';
 import { formatPrice } from '../../lib/menuUtils';
 import { RecommendationCard } from '../reco/RecommendationCard';
@@ -13,6 +13,13 @@ interface Props {
   onOpenItem: (name: string) => void;
   onAddOrder: (names: string[]) => void;
 }
+
+// Icon for the curated persona bundles — a gold lucide glyph in place of the
+// emoji the bundle data used to carry. Falls back to ChefHat for any
+// live/admin-sourced bundle whose id isn't one of the five curated personas.
+const PERSONA_ICON: Record<string, ComponentType<{ size?: number }>> = {
+  sushi: Fish, steak: Beef, fish: Fish, veg: Leaf, pasta: Soup,
+};
 
 function OrderCard({ order, resolveItem, onOpenItem, onAddOrder }: Props & { order: PersonaOrder }) {
   const [added, setAdded] = useState(false);
@@ -34,10 +41,12 @@ function OrderCard({ order, resolveItem, onOpenItem, onAddOrder }: Props & { ord
     setTimeout(() => setAdded(false), 1600);
   }
 
+  const PersonaIcon = PERSONA_ICON[order.id] ?? ChefHat;
+
   return (
     <div className={styles.card} style={{ ['--accent' as string]: order.accent }}>
       <div className={styles.cardHead}>
-        <span className={styles.icon}>{order.icon}</span>
+        <span className={styles.icon}><PersonaIcon size={20} /></span>
         <div className={styles.headText}>
           <span className={styles.persona}>{order.persona}</span>
           <span className={styles.blurb}>{order.blurb}</span>
@@ -75,7 +84,7 @@ function OrderCard({ order, resolveItem, onOpenItem, onAddOrder }: Props & { ord
           <span className={styles.total}>{formatPrice(total)}</span>
         </div>
         <button className={`${styles.addBtn} ${added ? styles.addBtnDone : ''}`} onClick={addAll}>
-          {added ? <>Added ✓</> : <><ShoppingCart size={15} /> Add order</>}
+          {added ? <><Check size={15} /> Added</> : <><ShoppingCart size={15} /> Add order</>}
         </button>
       </div>
     </div>
@@ -107,7 +116,7 @@ export function RecommendedOrders(props: Props) {
         {orders.map(order => (
           <OrderCard key={order.id} order={order} {...props} />
         ))}
-        <div className={styles.endSpacer} aria-hidden><Plus size={0} /></div>
+        <div className={styles.endSpacer} aria-hidden />
       </div>
     </section>
   );

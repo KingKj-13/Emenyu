@@ -47,7 +47,7 @@ export function SplitBillModal() {
   return (
     <div className="w-modal-wrap">
       <div className="w-backdrop" onClick={closeOverlay} />
-      <div className="w-modal" style={{ position: 'relative', zIndex: 2, maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="w-modal" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="w-modal-head">
           <div>
             <h2 className="w-modal-title">Split the bill</h2>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Heart, Plus, Minus, ShoppingCart, ChevronLeft } from 'lucide-react';
+import { X, Heart, Plus, Minus, ShoppingCart, ChevronLeft, Flame } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
@@ -41,6 +41,14 @@ interface PairingResult {
   foodPairings?: PairingItem[];
   drinkPairings?: PairingItem[];
   pairings?: PairingItem[];
+}
+
+// The stored `spice` field is a raw chili-emoji string (🌶️ / 🌶️🌶️ / 🌶️🌶️🌶️),
+// not a formatted label — map it to a level word instead of rendering emoji.
+const SPICE_LEVELS = ['', 'Mild heat', 'Medium heat', 'Hot'];
+function spiceLevelLabel(spice: string): string {
+  const count = (spice.match(/🌶/gu) || []).length;
+  return SPICE_LEVELS[Math.min(count, SPICE_LEVELS.length - 1)] || 'Spiced';
 }
 
 function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?: (name: string) => void }) {
@@ -277,14 +285,14 @@ export function ItemModal({
         <div className={styles.body}>
           {item.available === false && (
             <div className={styles.unavailableBanner}>
-              Currently unavailable
+              Sold Out
             </div>
           )}
 
           <div className={styles.chips}>
             {item.chefPick && <Badge variant="gold">Chef Recommends</Badge>}
-            {item.popular && <Badge variant="purple">AI Recommend</Badge>}
-            {item.spice && <Badge variant="muted">{item.spice}</Badge>}
+            {item.popular && <Badge variant="gold">Guest Favourite</Badge>}
+            {item.spice && <Badge variant="muted"><Flame size={11} /> {spiceLevelLabel(item.spice)}</Badge>}
           </div>
 
           <h2 className={styles.name}>{item.name}</h2>
@@ -337,10 +345,10 @@ export function ItemModal({
               className={styles.addBtn}
               onClick={handleAdd}
               disabled={item.available === false}
-              aria-label={item.available === false ? `${item.name} is currently unavailable` : `Add ${qty} ${item.name} to cart`}
+              aria-label={item.available === false ? `${item.name} is sold out` : `Add ${qty} ${item.name} to cart`}
             >
               <ShoppingCart size={18} />
-              {item.available === false ? 'Unavailable' : `Add ${qty > 1 ? `${qty} × ` : ''}${formatPrice(item.price * qty)}`}
+              {item.available === false ? 'Sold Out' : `Add ${qty > 1 ? `${qty} × ` : ''}${formatPrice(item.price * qty)}`}
             </button>
           </div>
         </div>

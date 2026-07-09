@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Printer, Users } from 'lucide-react';
+import { X, Printer, Users, Minus, Plus } from 'lucide-react';
 import { formatPrice } from '../../lib/menuUtils';
 import styles from './ReceiptView.module.css';
 
@@ -90,9 +90,9 @@ export function ReceiptView({ tableId, items, onClose }: ReceiptViewProps) {
           <div className={styles.splitRow}>
             <Users size={14} />
             <span className={styles.splitLabel}>Split between</span>
-            <button className={styles.splitBtn} onClick={() => setSplitCount(c => Math.max(1, c - 1))}>−</button>
+            <button className={styles.splitBtn} onClick={() => setSplitCount(c => Math.max(1, c - 1))} aria-label="Fewer guests"><Minus size={14} /></button>
             <span className={styles.splitCount}>{splitCount}</span>
-            <button className={styles.splitBtn} onClick={() => setSplitCount(c => Math.min(20, c + 1))}>+</button>
+            <button className={styles.splitBtn} onClick={() => setSplitCount(c => Math.min(20, c + 1))} aria-label="More guests"><Plus size={14} /></button>
           </div>
           <div className={styles.actionBtns}>
             <button className={styles.closeBtn} onClick={onClose}>

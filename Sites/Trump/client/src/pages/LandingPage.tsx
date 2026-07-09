@@ -1,5 +1,6 @@
-import { useEffect, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Beef, Fish, Salad, UtensilsCrossed, Wine, Sparkles, Martini, ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
 import styles from './LandingPage.module.css';
@@ -12,73 +13,23 @@ interface Category {
   label: string;
   sub: string;
   glow: string;
-  icon: ReactNode;
+  icon: typeof Beef;
   to: (t: string) => string;
   external?: boolean;
 }
 
-const I = {
-  steak: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 9c0-3 3-5 7-5s7 2 7 6c0 5-4 9-9 9-3 0-5-2-5-5 0-2 0-3 0-5Z" />
-      <circle cx="9.5" cy="10.5" r="1.4" />
-    </svg>
-  ),
-  sushi: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 15a4 4 0 0 1 4-4h10a4 4 0 0 1 0 8H7a4 4 0 0 1-4-4Z" />
-      <path d="M5 12c2.5-2.5 11.5-2.5 14 0" />
-    </svg>
-  ),
-  starters: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 17a8 8 0 0 1 16 0" />
-      <path d="M3 17h18" />
-      <path d="M12 9V7" />
-      <circle cx="12" cy="6" r="1.1" />
-    </svg>
-  ),
-  butchery: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 17 16 4l4 4c-3.5 3.5-8 5.5-12 7Z" />
-      <path d="M3 17l3 3" />
-    </svg>
-  ),
-  wine: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M7 3h10l-1 6a4 4 0 0 1-8 0L7 3Z" />
-      <path d="M12 15v5" />
-      <path d="M8 21h8" />
-    </svg>
-  ),
-  setmenu: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3l2.6 5.7 6.2.6-4.7 4.2 1.4 6.1L12 16.8 6.3 19.6l1.4-6.1L3 9.3l6.2-.6L12 3Z" />
-    </svg>
-  ),
-  cocktails: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 5h16l-8 8L4 5Z" />
-      <path d="M12 13v6" />
-      <path d="M8 21h8" />
-    </svg>
-  ),
-  drinks: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10 2h4v3l1 2v12a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V7l1-2V2Z" />
-      <path d="M9.5 11h5" />
-    </svg>
-  ),
-};
-
-// 2×3 chooser grid (matches the phone-fit opening). Butchery moves to a footer link.
+// 2×3 chooser grid (matches the phone-fit opening). Butchery lives as a footer link.
+// Glow alphas are normalized so every tile reads at the same tint STRENGTH
+// regardless of how saturated its underlying hue is (purple/orange naturally
+// read stronger than olive/green at equal alpha — see the alpha inversely
+// scaled to each color's HSL saturation, tuned around the wine tile's alpha).
 const CATEGORIES: Category[] = [
-  { key: 'wine', label: 'Wine', sub: 'The cellar', glow: 'rgba(122, 64, 130, 0.32)', icon: I.wine, to: t => drink(t, 'Red Wine') },
-  { key: 'cocktails', label: 'Cocktails', sub: 'Signature pours', glow: 'rgba(162, 102, 42, 0.32)', icon: I.cocktails, to: t => drink(t, 'Cocktails') },
-  { key: 'setmenu', label: 'Set Menu', sub: 'Curated combos', glow: 'rgba(128, 118, 52, 0.32)', icon: I.setmenu, to: t => `/${t}/setmenu` },
-  { key: 'mains', label: 'Mains', sub: 'Steaks, seafood and grill', glow: 'rgba(150, 72, 38, 0.30)', icon: I.steak, to: t => sec(t, 'Trumps Premium Steaks') },
-  { key: 'starters', label: 'Starters', sub: 'To begin', glow: 'rgba(74, 122, 78, 0.30)', icon: I.starters, to: t => sec(t, 'Starters') },
-  { key: 'sushi', label: 'Sushi & Sashimi', sub: 'From the sea', glow: 'rgba(58, 112, 152, 0.34)', icon: I.sushi, to: t => sec(t, 'Sushi') },
+  { key: 'wine', label: 'Wine', sub: 'The cellar', glow: 'rgba(122, 64, 130, 0.32)', icon: Wine, to: t => drink(t, 'Red Wine') },
+  { key: 'cocktails', label: 'Cocktails', sub: 'Signature pours', glow: 'rgba(162, 102, 42, 0.19)', icon: Martini, to: t => drink(t, 'Cocktails') },
+  { key: 'setmenu', label: 'Set Menu', sub: 'Curated combos', glow: 'rgba(128, 118, 52, 0.26)', icon: Sparkles, to: t => `/${t}/setmenu` },
+  { key: 'mains', label: 'Mains', sub: 'Steaks, seafood and grill', glow: 'rgba(150, 72, 38, 0.19)', icon: Beef, to: t => sec(t, 'Trumps Premium Steaks') },
+  { key: 'starters', label: 'Starters', sub: 'To begin', glow: 'rgba(74, 122, 78, 0.45)', icon: Salad, to: t => sec(t, 'Starters') },
+  { key: 'sushi', label: 'Sushi & Sashimi', sub: 'From the sea', glow: 'rgba(58, 112, 152, 0.25)', icon: Fish, to: t => sec(t, 'Sushi') },
 ];
 
 export function LandingPage() {
@@ -119,25 +70,34 @@ export function LandingPage() {
             <span className={styles.ctaSub}>Every dish, pour and pairing</span>
           </span>
           <span className={styles.ctaArrow} aria-hidden>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12h14" /><path d="M13 6l6 6-6 6" />
-            </svg>
+            <ArrowRight size={22} />
           </span>
         </button>
 
         <div className={styles.grid}>
-          {CATEGORIES.map(c => (
-            <button key={c.key} className={styles.tile} style={{ '--glow': c.glow } as CSSProperties} onClick={() => go(c)}>
-              <span className={styles.glow} aria-hidden />
-              <span className={styles.icon} aria-hidden>{c.icon}</span>
-              <span className={styles.tileText}>
-                <span className={styles.tileLabel}>{c.label}</span>
-                <span className={styles.tileSub}>{c.sub}</span>
-              </span>
-            </button>
-          ))}
+          {CATEGORIES.map((c, i) => {
+            const Icon = c.icon;
+            return (
+              <button
+                key={c.key}
+                className={styles.tile}
+                style={{ '--glow': c.glow, '--stagger': i } as CSSProperties}
+                onClick={() => go(c)}
+              >
+                <span className={styles.glow} aria-hidden />
+                <span className={styles.icon} aria-hidden><Icon size={24} /></span>
+                <span className={styles.tileText}>
+                  <span className={styles.tileLabel}>{c.label}</span>
+                  <span className={styles.tileSub}>{c.sub}</span>
+                </span>
+              </button>
+            );
+          })}
         </div>
 
+        <a className={styles.footer} href={sec(tableId, 'Butchery')} onClick={e => { e.preventDefault(); navigate(sec(tableId, 'Butchery')); }}>
+          <span className={styles.butchery}><UtensilsCrossed size={11} /> Butchery</span>
+        </a>
       </div>
     </div>
   );

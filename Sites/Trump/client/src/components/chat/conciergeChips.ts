@@ -12,7 +12,7 @@ export interface ConciergeChip {
 export const QUICK_ACTIONS: ConciergeChip[] = [
   { label: 'Recommend a wine', message: 'Can you recommend a wine for tonight?' },
   { label: 'Pair my drink', message: 'What food pairs with my drink?' },
-  { label: "Chef's favourite", message: "What's the chef's favourite tonight?" },
+  { label: "Chef's pick", message: "What's the chef's pick tonight?" },
   { label: 'Premium upgrade', message: 'Is there a premium upgrade available for what I have?' },
   { label: 'Dessert', message: 'What would you recommend for dessert?' },
   { label: 'Coffee', message: 'What coffee would you recommend to finish?' },
@@ -46,14 +46,14 @@ export function getContextChips(cartItems: CartItem[]): ConciergeChip[] {
   if (hasDessert) {
     return [
       { label: 'Coffee to finish', message: 'What coffee would you recommend to finish?' },
-      { label: "Chef's favourite", message: "What's the chef's favourite tonight?" },
+      { label: "Chef's pick", message: "What's the chef's pick tonight?" },
       { label: 'Surprise me', message: 'Surprise me with something great.' },
     ];
   }
   if (hasDrink && cartItems.length) {
     return [
       { label: 'Pair my drink', message: 'What food pairs with my drink?' },
-      { label: "Chef's favourite", message: "What's the chef's favourite tonight?" },
+      { label: "Chef's pick", message: "What's the chef's pick tonight?" },
       { label: 'Premium upgrade', message: 'Is there a premium upgrade available for what I have?' },
       { label: 'Best seller', message: "What's your best seller?" },
     ];
@@ -61,14 +61,14 @@ export function getContextChips(cartItems: CartItem[]): ConciergeChip[] {
   if (cartItems.length) {
     return [
       { label: 'Recommend a wine', message: 'Can you recommend a wine for tonight?' },
-      { label: "Chef's favourite", message: "What's the chef's favourite tonight?" },
+      { label: "Chef's pick", message: "What's the chef's pick tonight?" },
       { label: 'Best seller', message: "What's your best seller?" },
     ];
   }
   // Empty cart / opening state.
   return [
     { label: 'Recommend a wine', message: 'Can you recommend a wine for tonight?' },
-    { label: "Chef's favourite", message: "What's the chef's favourite tonight?" },
+    { label: "Chef's pick", message: "What's the chef's pick tonight?" },
     { label: "Today's specials", message: "What are today's specials?" },
     { label: 'Surprise me', message: 'Surprise me with something great.' },
   ];

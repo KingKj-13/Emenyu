@@ -32,7 +32,7 @@
   padding: 6px;
   background: linear-gradient(160deg, #001828, #020f1c);
   border: 1px solid rgba(198,162,75,0.3);
-  border-radius: var(--radius-card, 8px);
+  border-radius: 10px;
   box-shadow: 0 16px 40px rgba(0,0,0,0.5);
 }
 

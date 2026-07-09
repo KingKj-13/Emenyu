@@ -99,7 +99,7 @@
 .favBtn:hover, .favActive { color: #e06060; border-color: rgba(224,96,96,0.5); }
 .favBtnOffset { left: 56px; }
 
-.body { padding: 20px 24px 24px; }
+.body { padding: 20px 24px 0; }
 
 .chips { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 
@@ -149,7 +149,22 @@
   padding: 16px 0;
 }
 
-.actions { border-top: 1px solid var(--color-line); padding-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+/* Sticky footer CTA — the primary conversion action must never require
+   scrolling past the recommendation panel to reach. Bleeds to the panel's
+   edges (negative margin matches .body's horizontal padding) and sits on
+   var(--color-glass-strong) so content scrolling underneath stays legible. */
+.actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin: 16px -24px 0;
+  padding: 16px 24px calc(16px + env(safe-area-inset-bottom));
+  background: var(--color-glass-strong);
+  border-top: 1px solid var(--color-line);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
 .qtyRow { display: flex; align-items: center; gap: 16px; }
 
@@ -187,15 +202,15 @@
   transition: border-color 160ms ease;
 }
 .noteInput::placeholder { color: rgba(201,187,165,0.4); }
-.noteInput:focus { outline: none; border-color: rgba(198,162,75,0.4); }
+.noteInput:focus:not(:focus-visible) { border-color: rgba(198,162,75,0.4); }
 
 .unavailableBanner {
   margin-bottom: 12px;
   padding: 9px 14px;
   background: rgba(239,68,68,0.1);
   border: 1px solid rgba(239,68,68,0.3);
-  border-radius: 8px;
-  color: #fca5a5;
+  border-radius: var(--radius-card);
+  color: var(--color-danger-text);
   font-size: 13px;
   font-weight: 600;
   text-align: center;
@@ -274,9 +289,9 @@
 }
 
 @media (max-width: 560px) {
-  .body { padding: 16px 16px calc(18px + env(safe-area-inset-bottom)); }
+  .body { padding: 16px 16px 0; }
   .media { aspect-ratio: 16 / 10; }
-  .actions { gap: 10px; padding-top: 12px; }
+  .actions { gap: 10px; margin: 12px -16px 0; padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); }
   .addBtn { min-height: 48px; }
   .name { font-size: 20px; }
   .price { font-size: 20px; margin-bottom: 10px; }

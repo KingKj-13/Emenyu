@@ -26,6 +26,34 @@ export default defineConfig({
         target: 'http://localhost:3012',
         changeOrigin: true,
       },
+      '/Trump/orders': {
+        target: 'http://localhost:3012',
+        changeOrigin: true,
+      },
+      '/Trump/history': {
+        target: 'http://localhost:3012',
+        changeOrigin: true,
+      },
+      '/Trump/complete': {
+        target: 'http://localhost:3012',
+        changeOrigin: true,
+      },
+      '/Trump/incomplete': {
+        target: 'http://localhost:3012',
+        changeOrigin: true,
+      },
+      '/Trump/Images': {
+        target: 'http://localhost:3012',
+        changeOrigin: true,
+      },
+      '/Trump/Video': {
+        target: 'http://localhost:3012',
+        changeOrigin: true,
+      },
+      '/Trump/uploads': {
+        target: 'http://localhost:3012',
+        changeOrigin: true,
+      },
       '/Trump/socket.io': {
         target: 'http://localhost:3012',
         changeOrigin: true,

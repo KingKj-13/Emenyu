@@ -69,32 +69,39 @@ export function PairingModal({ item, open, onClose }: PairingModalProps) {
           ) : error ? (
             <p className={styles.error}>{error}</p>
           ) : result ? (
-            <>
-              {(() => {
-                // This is the "Wine & Drink Pairing" modal — show drinks/wine only,
-                // never food. Prefer the typed drinkPairings; otherwise filter.
-                const drinks = (result.drinkPairings && result.drinkPairings.length)
-                  ? result.drinkPairings
-                  : (result.pairings || []).filter(p => DRINK_TYPES.has((p.categoryType || '').toUpperCase()));
-                const list = drinks.length ? drinks : (result.pairings || []);
-                return list.length > 0 && (
-                <div className={styles.pairings}>
-                  {list.map((p, i) => (
-                    <RecommendationCard
-                      key={i}
-                      variant="detailed"
-                      showReason
-                      item={p as RecommendationItem}
-                      onOpen={() => { setPendingItemName(p.name); onClose(); }}
-                    />
-                  ))}
-                </div>
-                );
-              })()}
-              {result.talkTrack && (
-                <p className={styles.talkTrack}>{result.talkTrack}</p>
-              )}
-            </>
+            (() => {
+              // This is the "Wine & Drink Pairing" modal — show drinks/wine only,
+              // never food. Prefer the typed drinkPairings; otherwise filter.
+              const drinks = (result.drinkPairings && result.drinkPairings.length)
+                ? result.drinkPairings
+                : (result.pairings || []).filter(p => DRINK_TYPES.has((p.categoryType || '').toUpperCase()));
+              const curKey = (item?.name || '').toLowerCase().trim();
+              const list = (drinks.length ? drinks : (result.pairings || []))
+                .filter(p => (p.name || '').toLowerCase().trim() !== curKey);
+              if (list.length === 0 && !result.talkTrack) {
+                return <p className={styles.error}>No pairing suggestions available for this dish yet.</p>;
+              }
+              return (
+                <>
+                  {list.length > 0 && (
+                    <div className={styles.pairings}>
+                      {list.map((p, i) => (
+                        <RecommendationCard
+                          key={i}
+                          variant="detailed"
+                          showReason
+                          item={p as RecommendationItem}
+                          onOpen={() => { setPendingItemName(p.name); onClose(); }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {result.talkTrack && (
+                    <p className={styles.talkTrack}>{result.talkTrack}</p>
+                  )}
+                </>
+              );
+            })()
           ) : null}
         </div>
       </div>

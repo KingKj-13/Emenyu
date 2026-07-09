@@ -37,15 +37,17 @@
 
 .noteInput {
   width: 100%;
-  padding: 4px 8px;
+  padding: 6px 8px;
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 3px;
+  border-radius: var(--radius-card);
   color: var(--color-cream);
-  font-size: 11px;
+  /* >=16px so iOS Safari doesn't zoom the viewport when the field is focused
+     — same fix already applied to ItemModal's equivalent note field. */
+  font-size: 16px;
 }
 .noteInput::placeholder { color: rgba(201,187,165,0.35); }
-.noteInput:focus { outline: none; border-color: rgba(198,162,75,0.3); }
+.noteInput:focus:not(:focus-visible) { border-color: rgba(198,162,75,0.3); }
 
 .controls {
   display: flex;
@@ -65,8 +67,8 @@
 }
 
 .qty button {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   border: none;

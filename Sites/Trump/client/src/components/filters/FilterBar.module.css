@@ -43,7 +43,7 @@
 }
 
 .searchInput::placeholder { color: rgba(201,187,165,0.4); }
-.searchInput:focus { outline: none; border-color: rgba(198,162,75,0.4); }
+.searchInput:focus:not(:focus-visible) { border-color: rgba(198,162,75,0.4); }
 
 .clearSearch {
   position: absolute;

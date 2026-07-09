@@ -173,6 +173,7 @@
 }
 
 .ratingThanks {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
   font-size: 17px; font-weight: 700; color: var(--color-cream);
   text-align: center; padding: 8px 0;
 }
@@ -180,7 +181,9 @@
 .ratingStars { display: flex; justify-content: center; gap: 8px; margin-bottom: 14px; }
 
 .ratingStar {
-  font-size: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: rgba(255,255,255,0.2);
   background: none; border: none;
   cursor: pointer;
@@ -199,7 +202,7 @@
   color: var(--color-cream); font-size: 13px;
   resize: none; margin-bottom: 14px;
 }
-.ratingComment:focus { outline: none; border-color: rgba(198,162,75,0.4); }
+.ratingComment:focus:not(:focus-visible) { border-color: rgba(198,162,75,0.4); }
 
 .ratingActions { display: flex; gap: 8px; }
 

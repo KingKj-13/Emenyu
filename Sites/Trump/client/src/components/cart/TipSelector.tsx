@@ -2,10 +2,13 @@ import { useCart } from '../../hooks/useCart';
 import type { TipMode } from '../../types/cart';
 import styles from './TipSelector.module.css';
 
+// 10% anchored as the middle percentage (5/10/15/Custom) rather than 5% — a
+// 5% anchor under-tips relative to full-service norms and costs staff real money.
 const TIP_OPTIONS: { value: TipMode; label: string }[] = [
   { value: 0, label: 'No tip' },
   { value: 0.05, label: '5%' },
   { value: 0.1, label: '10%' },
+  { value: 0.15, label: '15%' },
   { value: 'custom', label: 'Custom' },
 ];
 
@@ -33,7 +36,7 @@ export function TipSelector() {
             type="number"
             className={styles.customInput}
             value={customTip || ''}
-            onChange={e => setCustomTip(Number(e.target.value))}
+            onChange={e => setCustomTip(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
             placeholder="0"
             min={0}
             max={100}

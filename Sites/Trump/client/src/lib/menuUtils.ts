@@ -1,4 +1,5 @@
 import type { MenuData, MenuSection, MenuItem, Chapter } from '../types/menu';
+import { formatCurrency } from './currency';
 
 export function normalizeName(raw: string): string {
   return String(raw || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -123,7 +124,7 @@ export function getChapterItems(menuData: MenuData, chapter: Chapter): MenuItem[
 }
 
 export function formatPrice(price: number): string {
-  return `R ${price.toFixed(0)}`;
+  return formatCurrency(price);
 }
 
 export function formatTableLabel(rawValue: string): string {

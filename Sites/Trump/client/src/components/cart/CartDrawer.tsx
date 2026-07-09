@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, ShoppingBag, Receipt, Heart, Plus } from 'lucide-react';
+import { X, ShoppingBag, Receipt, Heart, Plus, Check } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 import { useApp } from '../../context/AppContext';
 import { useFavorites } from '../../hooks/useFavorites';
@@ -11,10 +11,11 @@ import { CartRecommendations } from './CartRecommendations';
 import { TipSelector } from './TipSelector';
 import { ReceiptView } from './ReceiptView';
 import { flattenMenu, formatPrice, normalizeName } from '../../lib/menuUtils';
-import { resolveImage } from '../../lib/imageResolver';
+import { resolveImage, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { trackOrdered } from '../../lib/recoAnalytics';
 import { Spinner } from '../ui/Spinner';
 import type { MenuItem } from '../../types/menu';
+import type { CartItem } from '../../types/cart';
 import styles from './CartDrawer.module.css';
 
 type CartTab = 'cart' | 'current' | 'favorites';
@@ -39,8 +40,19 @@ export function CartDrawer() {
   const { menuData } = useMenu();
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [lastOrder, setLastOrder] = useState<CartItem[]>([]);
   const [tab, setTab] = useState<CartTab>('cart');
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
+
+  // Reopening the drawer with items in the cart should always land on the Cart
+  // tab — otherwise a repeat order (add an item after checking out earlier)
+  // silently opens on the stale "Current Order" tab with the new item hidden.
+  useEffect(() => {
+    if (isOpen && items.length > 0) setTab('cart');
+    // Only when the drawer transitions open — not on every cart edit while it's open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const allMenuItems = useMemo(() => flattenMenu(menuData), [menuData]);
   const favoriteRows = useMemo(() => favorites.map(name => ({
@@ -51,6 +63,16 @@ export function CartDrawer() {
   function openMenuItem(name: string) {
     setPendingItemName(name);
     setIsOpen(false);
+  }
+
+  function closeDrawer() {
+    setIsOpen(false);
+    setSubmitted(false);
+  }
+
+  function switchTab(next: CartTab) {
+    setTab(next);
+    setSubmitted(false);
   }
 
   function addFavoriteToCart(item: MenuItem) {
@@ -68,6 +90,7 @@ export function CartDrawer() {
   async function handleSubmit() {
     if (items.length === 0) return;
     setSubmitting(true);
+    setSubmitError(false);
     const orderedItems = items.map(item => ({ ...item }));
 
     try {
@@ -85,12 +108,12 @@ export function CartDrawer() {
       // Phase 4: attribute "ordered" events to any recommendations accepted this session.
       trackOrdered(orderedItems.map(i => i.name));
       setHistory([...currentOrder, ...orderedItems]);
+      setLastOrder(orderedItems);
       clear();
       setTab('current');
       setSubmitted(true);
-      setTimeout(() => { setSubmitted(false); }, 1600);
     } catch {
-      alert('Failed to place order. Please try again.');
+      setSubmitError(true);
     } finally {
       setSubmitting(false);
     }
@@ -109,7 +132,7 @@ export function CartDrawer() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.22 }}
-              onClick={() => setIsOpen(false)}
+              onClick={closeDrawer}
             />
             <motion.aside
               className={styles.drawer}
@@ -127,13 +150,13 @@ export function CartDrawer() {
                   {tab === 'cart' ? `Your Cart (${count})` : tab === 'current' ? 'Current Order' : 'Favorites'}
                 </h2>
                 <div className={styles.tabs}>
-                  <button className={`${styles.tab} ${tab === 'cart' ? styles.tabActive : ''}`} onClick={() => setTab('cart')}>Cart</button>
-                  <button className={`${styles.tab} ${tab === 'current' ? styles.tabActive : ''}`} onClick={() => setTab('current')}>Current Order</button>
-                  <button className={`${styles.tab} ${tab === 'favorites' ? styles.tabActive : ''}`} onClick={() => setTab('favorites')} aria-label="Favorites">
+                  <button className={`${styles.tab} ${tab === 'cart' ? styles.tabActive : ''}`} onClick={() => switchTab('cart')}>Cart</button>
+                  <button className={`${styles.tab} ${tab === 'current' ? styles.tabActive : ''}`} onClick={() => switchTab('current')}>Current Order</button>
+                  <button className={`${styles.tab} ${tab === 'favorites' ? styles.tabActive : ''}`} onClick={() => switchTab('favorites')} aria-label="Favorites">
                     <Heart size={13} />
                   </button>
                 </div>
-                <button className={styles.closeBtn} onClick={() => setIsOpen(false)} aria-label="Close cart">
+                <button className={styles.closeBtn} onClick={closeDrawer} aria-label="Close cart">
                   <X size={20} />
                 </button>
               </div>
@@ -141,9 +164,30 @@ export function CartDrawer() {
               <div className={styles.body}>
                 {submitted ? (
                   <div className={styles.successMsg}>
-                    <div className={styles.successIcon}>OK</div>
-                    <p>Order placed successfully!</p>
+                    <motion.div
+                      className={styles.successIcon}
+                      initial={{ scale: 0.4, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 260, damping: 16 }}
+                    >
+                      <Check size={30} strokeWidth={3} />
+                    </motion.div>
+                    <p className={styles.successTitle}>Order placed successfully!</p>
                     <p className={styles.successSub}>Your waiter has been notified.</p>
+                    <p className={styles.successEta}>Most dishes are ready in 15–20 minutes.</p>
+                    {lastOrder.length > 0 && (
+                      <div className={styles.successSummary}>
+                        {lastOrder.map((item, i) => (
+                          <div key={`${item.name}-${i}`} className={styles.successSummaryRow}>
+                            <span>{item.qty}× {item.name}</span>
+                            <span>{formatPrice(item.price * item.qty)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button className={styles.emptyBrowseBtn} onClick={closeDrawer}>
+                      Continue Browsing
+                    </button>
                   </div>
                 ) : tab === 'cart' ? (
                   <>
@@ -151,6 +195,15 @@ export function CartDrawer() {
                       <div className={styles.empty}>
                         <ShoppingBag size={48} className={styles.emptyIcon} />
                         <p>Your cart is empty</p>
+                        <p className={styles.emptyBrand}>Your table awaits its first course.</p>
+                        <button className={styles.emptyBrowseBtn} onClick={() => setIsOpen(false)}>
+                          Browse the Menu
+                        </button>
+                        {currentOrder.length > 0 && (
+                          <button className={styles.emptyBillLink} onClick={() => setReceiptOpen(true)}>
+                            <Receipt size={12} /> View Bill
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <>
@@ -215,7 +268,7 @@ export function CartDrawer() {
                                 alt={item.name}
                                 className={styles.historyThumb}
                                 loading="lazy"
-                                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                onError={e => { (e.currentTarget as HTMLImageElement).src = FALLBACK_IMAGE; }}
                               />
                             )}
                             <div className={styles.historyMeta}>
@@ -258,6 +311,11 @@ export function CartDrawer() {
 
               {tab === 'cart' && items.length > 0 && !submitted && (
                 <div className={styles.footer}>
+                  {submitError && (
+                    <p className={styles.submitErrorMsg} role="alert">
+                      Couldn't place your order — please try again.
+                    </p>
+                  )}
                   <button
                     className={styles.submitBtn}
                     onClick={handleSubmit}
@@ -268,7 +326,7 @@ export function CartDrawer() {
                   </button>
                 </div>
               )}
-              {currentOrder.length > 0 && !submitted && (
+              {currentOrder.length > 0 && !submitted && !(tab === 'cart' && items.length === 0) && (
                 <div className={styles.billFooter}>
                   <button className={styles.billBtn} onClick={() => setReceiptOpen(true)}>
                     <Receipt size={14} />

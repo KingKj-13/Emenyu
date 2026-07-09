@@ -1,0 +1,22 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: linear-gradient(160deg, rgba(11, 23, 30, 0.96), rgba(6, 13, 18, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.image { aspect-ratio: 3/2; display: block; border-radius: 0; }
+
+.body { padding: 13px 14px 14px; }
+
+.footer { margin-top: 12px; }
+
+@media (max-width: 480px) {
+  .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+}

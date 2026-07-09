@@ -43,8 +43,8 @@
 }
 
 .closeBtn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   border: 1px solid rgba(255,255,255,0.12);
@@ -75,7 +75,7 @@
 }
 
 .error {
-  color: #e08080;
+  color: var(--color-danger-text);
   font-size: 13px;
   text-align: center;
   padding: 24px 0;

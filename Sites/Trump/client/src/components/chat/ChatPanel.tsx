@@ -50,14 +50,20 @@ function highlightKeywords(content: string, names: string[]) {
   const all = [...new Set([...exact, ...CATEGORY_WORDS])].sort((a, b) => b.length - a.length);
   if (!all.length) return content;
   const escaped = all.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const pattern = new RegExp(`(${escaped.join('|')})`, 'gi');
+  // Word-boundary the whole alternation (so "steak" can't match mid-word) and
+  // allow an optional trailing "s" as ONE match (so plurals — which is how the
+  // server actually phrases these words most of the time — highlight whole,
+  // not split into a bold stem plus a plain trailing letter).
+  const pattern = new RegExp(`\\b((?:${escaped.join('|')})s?)\\b`, 'gi');
   const lowerSet = new Set(all.map(n => n.toLowerCase()));
   const parts = content.split(pattern);
-  return parts.map((part, i) => (
-    lowerSet.has(part.toLowerCase())
+  return parts.map((part, i) => {
+    const lower = part.toLowerCase();
+    const isMatch = lowerSet.has(lower) || lowerSet.has(lower.replace(/s$/, ''));
+    return isMatch
       ? <span key={i} className={styles.dishName}>{part}</span>
-      : <span key={i}>{part}</span>
-  ));
+      : <span key={i}>{part}</span>;
+  });
 }
 
 export function ChatPanel({ onItemClick }: ChatPanelProps) {
@@ -184,7 +190,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
       shown.forEach(s => { if (s?.name) shownItemNamesRef.current.add(s.name); });
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: res.reply || 'Sorry, I had trouble responding.',
+        content: res.reply || 'Let me think on that again — go ahead and ask once more.',
         suggestions: shown
       }]);
       if (shown.length) trackImpressions(shown, CHAT_RECO_CTX);
@@ -267,7 +273,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
             className={styles.panel}
             role="dialog"
             aria-label="Concierge chat"
-            aria-modal="false"
+            aria-modal="true"
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.96 }}
@@ -281,7 +287,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
             <div className={styles.messages} aria-live="polite" aria-atomic="false">
               {messages.length === 0 && (
                 <div className={styles.welcome}>
-                  <p>Good evening — I'm {assistantName}. How may I assist your table tonight?</p>
+                  <p>Good evening — I'm your sommelier tonight. How may I look after your table?</p>
                 </div>
               )}
 

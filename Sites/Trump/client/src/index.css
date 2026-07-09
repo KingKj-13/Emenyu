@@ -26,6 +26,9 @@
   --color-teal:         #4d7f82;
   --color-line:         rgba(200, 165, 85, 0.15);
   --color-overlay:      rgba(4, 14, 26, 0.85);
+  /* One canonical danger/error text color — was previously 3 near-identical
+     hardcoded reds (#e08080, #e06060, #fca5a5) scattered across pages. */
+  --color-danger-text:  #fca5a5;
 
   /* ── Effects ── */
   --shadow-soft:  0 18px 46px rgba(0, 0, 0, 0.52);
@@ -83,7 +86,9 @@
   --z-tabs: 90;
   --z-bottom-bar: 200;
   --z-chat: 210;
+  --z-drawer-backdrop: 250;
   --z-drawer: 260;
+  --z-receipt: 300;
   --z-modal: 500;
 
   --content-max: 1200px;
@@ -119,6 +124,10 @@ body {
   overflow-x: hidden;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  /* Cormorant Garamond ships old-style (non-lining) figures by default; force
+     lining + tabular numerals everywhere so prices/table numbers/timers read
+     as data, not as decorative text. */
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 img, video { display: block; max-width: 100%; }
@@ -135,7 +144,9 @@ button, a, [role="button"], label, summary {
 
 button:focus-visible,
 a:focus-visible,
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
   outline: 2px solid var(--color-gold);
   outline-offset: 2px;
 }

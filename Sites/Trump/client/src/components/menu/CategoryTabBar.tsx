@@ -47,6 +47,13 @@ export function CategoryTabBar({ sections }: CategoryTabBarProps) {
   const shownGroup = openGroup ?? activeGroup;
   const shownItems = grouped.find(g => g.group === shownGroup)?.items ?? [];
 
+  // Once scrolling has genuinely carried the guest into a different group than
+  // the one they tapped, drop the tap override so the bar starts following
+  // scroll position again — otherwise it stays frozen on the tapped group forever.
+  useEffect(() => {
+    if (openGroup && activeGroup && activeGroup !== openGroup) setOpenGroup(null);
+  }, [activeGroup, openGroup]);
+
   useEffect(() => {
     if (sections.length <= 1) return;
     observerRef.current?.disconnect();
