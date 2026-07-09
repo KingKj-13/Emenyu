@@ -675,8 +675,9 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
 // broken-image square whenever resolveThumbnail() can't produce a real photo,
 // or the photo it names 404s — this screen was ~95% broken thumbnails before.
 // Uses the 300px thumbnail, not the full-res image, for this 52x52 tile.
-// Video has been removed from Trump; resolveVideo() always returns null now,
-// so the tap-to-play affordance below never renders.
+// resolveVideo() only returns a clip for the 16 reshot dishes (imageResolver's
+// ITEM_VIDEO_MAP); every other item gets null and the play affordance below
+// never renders for it.
 function AddItemThumb({ item }: { item: MenuItem }) {
   const [errored, setErrored] = useState(false);
   const [playing, setPlaying] = useState(false);

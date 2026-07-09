@@ -233,14 +233,34 @@ export function resolveThumbnail(item: MenuItem): string {
   return `${match[1]}/thumbnails/${stem}.webp`;
 }
 
-// Video has been removed from Trump entirely (all Video/*.mp4 files deleted
-// from the server, ~1.5GB) — no menu item ever gets a video again. Every
-// caller already has an "if there's a video, do X, else just show the image"
-// branch (poster-first tap-to-play), so a single unconditional null here is
-// enough to make video-related UI disappear everywhere without touching each
-// call site individually.
-export function resolveVideo(_item: MenuItem): string | null {
-  return null;
+// 2026-07 reshoot: exactly these 16 dishes got a dedicated short clip
+// (960x540, silent, faststart — see Sites/Trump/Video/menu-items/). This is a
+// name-keyed allowlist, not a shared/demo fallback map, so it's structurally
+// impossible for two menu items to end up pointing at the same clip. Every
+// other item still resolves to null and shows only its photo.
+const ITEM_VIDEO_MAP: Record<string, string> = {
+  'flash pan fried chicken livers': 'flash_pan_fried_chicken_livers.mp4',
+  'chicken trinchado': 'chicken_trinchado.mp4',
+  'springbok carpaccio': 'springbok_carpaccio.mp4',
+  'boerewors & chakalaka': 'boerewors_and_chakalaka.mp4',
+  'crispy rice': 'crispy_rice.mp4',
+  'trumps rainbow reloaded (10pc)': 'trumps_rainbow_reloaded_10pc.mp4',
+  'rock shrimp tempura roll (8pc)': 'rock_shrimp_tempura_roll_8pc.mp4',
+  'wagyu ribeye 300g': 'wagyu_ribeye_300g.mp4',
+  't-bone 500g': 't_bone_500g.mp4',
+  'beef ribs (3 pce) ±1kg': 'beef_ribs_3_pce_1kg.mp4',
+  'oxtail': 'oxtail.mp4',
+  'mixed grill': 'mixed_grill.mp4',
+  'kingklip & prawn': 'kingklip_and_prawn.mp4',
+  'jalapeno chilli and cheese burger': 'jalapeno_chilli_and_cheese_burger.mp4',
+  'seafood pasta': 'seafood_pasta.mp4',
+  'firecracker chicken wings (400g)': 'firecracker_chicken_wings_400g.mp4',
+};
+
+export function resolveVideo(item: MenuItem): string | null {
+  if (item.videoVisible === false) return null;
+  const file = ITEM_VIDEO_MAP[(item.name || '').trim().toLowerCase()];
+  return file ? `${BASE_PATH}/Video/menu-items/${file}` : null;
 }
 
 export function normalizeYouTubeId(value?: string): string {
