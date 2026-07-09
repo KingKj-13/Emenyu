@@ -449,9 +449,6 @@
 
 .accName { flex: 1; font-weight: 600; color: var(--color-cream); }
 .accUsername { color: var(--color-sand); }
-.accRole { padding: 2px 8px; border-radius: var(--radius-pill); background: rgba(198,162,75,0.12); color: var(--color-gold); font-size: 11px; font-weight: 600; text-transform: uppercase; }
-.accStatus { font-size: 11px; color: #a8c4a0; }
-.suspended { color: #e08080; }
 
 .chatLogList { display: flex; flex-direction: column; gap: 12px; }
 
@@ -463,6 +460,7 @@
 }
 
 .chatLogMeta { display: flex; gap: 12px; font-size: 11px; color: var(--color-sand); margin-bottom: 8px; }
+.specialStar { color: var(--color-gold); margin-left: 4px; vertical-align: -2px; }
 .chatLogMsg { margin: 0 0 6px; font-size: 13px; color: var(--color-cream); }
 .chatLogReply { margin: 0; font-size: 13px; color: var(--color-sand); }
 
@@ -584,6 +582,22 @@
   accent-color: var(--color-gold);
   cursor: pointer;
 }
+
+/* Red means destructive — editing isn't, so it gets its own neutral/gold
+   styling instead of sharing this class (it used to, teaching users that
+   editing is dangerous). */
+.itemEditBtn {
+  padding: 4px 7px;
+  border: 1px solid rgba(198,162,75,0.25);
+  border-radius: 5px;
+  background: transparent;
+  color: rgba(198,162,75,0.75);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+  flex-shrink: 0;
+}
+.itemEditBtn:hover { background: rgba(198,162,75,0.12); color: var(--color-gold, #c6a24b); }
 
 .itemDeleteBtn {
   padding: 4px 7px;
@@ -953,6 +967,7 @@
 }
 
 .resvMeta { display: flex; gap: 14px; font-size: 12px; color: var(--color-sand); margin-bottom: 8px; flex-wrap: wrap; }
+.resvMeta span { display: inline-flex; align-items: center; gap: 4px; }
 
 .resvNotes { margin: 0 0 10px; font-size: 12px; color: var(--color-sand); font-style: italic; }
 
@@ -1145,7 +1160,7 @@
 /* ── Ratings ── */
 .ratingSummary { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
 .ratingBig { font-size: 40px; font-weight: 800; color: var(--color-gold); font-family: var(--font-heading); }
-.ratingStarsRow { font-size: 20px; }
+.ratingStarsRow { display: flex; align-items: center; gap: 3px; }
 .starFilled { color: var(--color-gold); }
 .starEmpty { color: rgba(255,255,255,0.2); }
 .ratingCount { font-size: 13px; color: var(--color-sand); }
@@ -1154,7 +1169,7 @@
   border-bottom: 1px solid var(--color-line);
 }
 .ratingCommentMeta { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; font-size: 12px; }
-.ratingCommentStars { color: var(--color-gold); letter-spacing: -1px; }
+.ratingCommentStars { display: inline-flex; align-items: center; gap: 1px; color: var(--color-gold); }
 .ratingCommentTable { color: var(--color-sand); }
 .ratingCommentDate { color: rgba(255,255,255,0.35); margin-left: auto; }
 .ratingCommentText { margin: 0; font-size: 13px; color: var(--color-cream); }

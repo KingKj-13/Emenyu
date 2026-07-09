@@ -1,19 +1,23 @@
 import { useState, useEffect, useCallback, type ReactNode, type CSSProperties } from 'react';
-import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Pencil, Plus, X, Sparkles, TrendingUp, Activity, ShieldCheck, Copy, Check } from 'lucide-react';
+import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Pencil, Plus, X, Sparkles, TrendingUp, Activity, ShieldCheck, Copy, Check, Star, Armchair, Brain, ChefHat, Route } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../hooks/useAuth';
 import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
 import { api } from '../services/api';
 import { Spinner } from '../components/ui/Spinner';
-import { formatPrice } from '../lib/menuUtils';
+import { Badge } from '../components/ui/Badge';
+import { formatPrice, formatTableLabel } from '../lib/menuUtils';
 import type { ChefRec, ChefRecInput, ChefRecType, ChefBeverageKind, RecommendationAnalytics, RecoTally, RecoInsightsResult, RecoInsight, BundleAdmin, BundleInput, BundleItemInput } from '../types/menu';
 import type { WaiterTask } from '../types/waiter';
 import styles from './AdminPage.module.css';
 import { NotificationBell } from '../components/operations/NotificationBell';
 import { OwnerOperations } from '../components/operations/OwnerOperations';
 import { AuditViewer } from '../components/operations/AuditViewer';
+import { AIPerformancePanel } from '../components/analytics/AIPerformancePanel';
+import { ChefIntelligencePanel } from '../components/analytics/ChefIntelligencePanel';
+import { CustomerJourneyPanel } from '../components/analytics/CustomerJourneyPanel';
 
-type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles' | 'servicedesk' | 'operations' | 'audit';
+type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles' | 'servicedesk' | 'operations' | 'audit' | 'aiperformance' | 'chefintel' | 'journey';
 
 interface Order {
   filename: string;
@@ -472,6 +476,9 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     { label: 'INSIGHT', items: [
       { key: 'reports', label: 'Reports', icon: BarChart2 },
       { key: 'recoanalytics', label: 'Reco Analytics', icon: TrendingUp },
+      { key: 'aiperformance', label: 'AI Performance', icon: Brain },
+      { key: 'chefintel', label: 'Chef Intelligence', icon: ChefHat },
+      { key: 'journey', label: 'Customer Journey', icon: Route },
       { key: 'accounts', label: 'Accounts', icon: Users },
       { key: 'chat', label: 'Chat Logs', icon: MessageSquare },
     ] },
@@ -498,6 +505,9 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     deals: { eyebrow: 'OFFERS', title: 'Deals', sub: 'Bundle dishes into featured set menus', actions: <button className={styles.actionBtnGold} onClick={openNewDeal}><Plus size={14} /> New deal</button> },
     qrcodes: { eyebrow: 'TABLE QR CODES', title: 'QR codes', sub: 'Each links a guest straight to its table session' },
     reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top dishes, peak hours & guest ratings' },
+    aiperformance: { eyebrow: 'ANALYTICS', title: 'AI Performance', sub: 'Recommendations made, accepted, and the revenue behind them' },
+    chefintel: { eyebrow: 'ANALYTICS', title: 'Chef Intelligence', sub: 'Best & worst sellers, wine pairings, pricing tier & trends' },
+    journey: { eyebrow: 'ANALYTICS', title: 'Customer Journey', sub: 'One table’s visit, course by course' },
     accounts: { eyebrow: 'STAFF', title: 'Accounts', sub: `${accounts.length} team member${accounts.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('account')}><Plus size={14} /> Add account</button> },
     chat: { eyebrow: 'AI SOMMELIER', title: 'Chat logs', sub: 'Guest conversations with the AI sommelier' },
     operations: { eyebrow: 'OPERATIONS · LIVE', title: 'Operations', sub: 'Live floor — staff on shift, table ownership, orders & alerts', actions: refreshAction },
@@ -511,7 +521,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
       <div className={styles.console}>
         <div className={styles.topChrome}>
           <div className={styles.lights}><span /><span /><span /></div>
-          <div className={styles.urlPill}><span className={styles.urlDot} /> emenyu.io/admin · Trump Steakhouse</div>
+          <div className={styles.urlPill}><span className={styles.urlDot} /> emenyu.io/admin · Trumps Prime Grillhouse</div>
           <div className={styles.chromeRight}><NotificationBell scope="all" /><NotificationButton /></div>
         </div>
         <div className={styles.body}>
@@ -584,6 +594,9 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
               )}
               {tab === 'accounts' && <AccountsList accounts={accounts} currentUsername={user?.username} onUpdateStatus={handleUpdateAccountStatus} />}
               {tab === 'chat' && <><LiveChatMonitor /><ChatLogList logs={chatLogs} /></>}
+              {tab === 'aiperformance' && <AIPerformancePanel />}
+              {tab === 'chefintel' && <ChefIntelligencePanel />}
+              {tab === 'journey' && <CustomerJourneyPanel />}
               {tab === 'operations' && <OwnerOperations />}
               {tab === 'audit' && <AuditViewer />}
               {tab === 'menu' && (
@@ -735,7 +748,7 @@ function OrderList({ orders, actionLoading, isHistory = false, onComplete, onDel
         <div key={order.filename} className={styles.orderCard}>
           <div className={styles.orderHeader}>
             <span className={styles.orderTable}>
-              {order.tableId || order.table_number || 'Unknown table'}
+              {formatTableLabel(order.tableId || order.table_number || 'unknown table')}
             </span>
             {order.timestamp && (
               <span className={styles.orderTime}>
@@ -819,12 +832,13 @@ function AccountRow({ acc, isSelf, onUpdateStatus }: {
     catch { alert('Could not update the account.'); }
     finally { setBusy(false); }
   }
+  const roleVariant = acc.role === 'owner' ? 'purple' : acc.role === 'manager' ? 'gold' : 'muted';
   return (
     <div className={styles.accountRow}>
       <span className={styles.accName}>{acc.label || acc.username}</span>
       <span className={styles.accUsername}>@{acc.username}</span>
-      <span className={styles.accRole}>{acc.role}</span>
-      <span className={`${styles.accStatus} ${suspended ? styles.suspended : ''}`}>{acc.status || 'active'}</span>
+      <Badge variant={roleVariant}>{acc.role}</Badge>
+      <Badge variant={suspended ? 'red' : 'gold'}>{acc.status || 'active'}</Badge>
       {!isSelf && (
         <button className={styles.actionBtn} onClick={toggle} disabled={busy} style={{ marginLeft: 'auto' }}>
           {busy ? <Spinner size={12} /> : suspended ? 'Activate' : 'Suspend'}
@@ -883,7 +897,7 @@ function LiveChatMonitor() {
           {live.map((log, i) => (
             <div key={i} className={styles.chatLog}>
               <div className={styles.chatLogMeta}>
-                <span>{log.tableId || 'Unknown'}{log.is_special ? ' ⭐' : ''}</span>
+                <span>{formatTableLabel(log.tableId || 'unknown')}{log.is_special ? <Star size={12} fill="currentColor" className={styles.specialStar} /> : ''}</span>
                 {log.timestamp && <span>{log.timestamp}</span>}
               </div>
               {log.message && <p className={styles.chatLogMsg}><strong>Q:</strong> {log.message}</p>}
@@ -903,7 +917,7 @@ function ChatLogList({ logs }: { logs: unknown[] }) {
       {(logs as Array<{ timestamp?: string; tableId?: string; message?: string; reply?: string }>).map((log, i) => (
         <div key={i} className={styles.chatLog}>
           <div className={styles.chatLogMeta}>
-            <span>{log.tableId || 'Unknown'}</span>
+            <span>{formatTableLabel(log.tableId || 'unknown')}</span>
             {log.timestamp && <span>{new Date(log.timestamp).toLocaleString()}</span>}
           </div>
           {log.message && <p className={styles.chatLogMsg}><strong>Q:</strong> {log.message}</p>}
@@ -964,9 +978,9 @@ function ReservationsPanel({ reservations, date, onDateChange, onStatusChange, o
                 </span>
               </div>
               <div className={styles.resvMeta}>
-                <span>👥 {r.partySize} {r.partySize === 1 ? 'person' : 'people'}</span>
-                <span>🕐 {new Date(r.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                {r.tableId && <span>🪑 {r.tableId}</span>}
+                <span><Users size={12} /> {r.partySize} {r.partySize === 1 ? 'person' : 'people'}</span>
+                <span><Clock size={12} /> {new Date(r.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                {r.tableId && <span><Armchair size={12} /> {formatTableLabel(r.tableId)}</span>}
               </div>
               {r.notes && <p className={styles.resvNotes}>{r.notes}</p>}
               <div className={styles.resvActions}>
@@ -1185,7 +1199,7 @@ function ReportsPanel({ range, summary, items, tables, hours, ratings, onRangeCh
             <div className={styles.ratingBig}>{ratings.average.toFixed(1)}</div>
             <div className={styles.ratingStarsRow}>
               {[1,2,3,4,5].map(s => (
-                <span key={s} className={s <= Math.round(ratings.average) ? styles.starFilled : styles.starEmpty}>★</span>
+                <Star key={s} size={16} className={s <= Math.round(ratings.average) ? styles.starFilled : styles.starEmpty} fill={s <= Math.round(ratings.average) ? 'currentColor' : 'none'} />
               ))}
             </div>
             <div className={styles.ratingCount}>{ratings.count} review{ratings.count !== 1 ? 's' : ''}</div>
@@ -1193,8 +1207,10 @@ function ReportsPanel({ range, summary, items, tables, hours, ratings, onRangeCh
           {ratings.recent.filter(r => r.comment).slice(0, 10).map(r => (
             <div key={r.id} className={styles.ratingComment}>
               <div className={styles.ratingCommentMeta}>
-                <span className={styles.ratingCommentStars}>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
-                <span className={styles.ratingCommentTable}>{r.tableId.replace(/^table/, 'Table ')}</span>
+                <span className={styles.ratingCommentStars}>
+                  {[1,2,3,4,5].map(s => <Star key={s} size={11} fill={s <= r.rating ? 'currentColor' : 'none'} />)}
+                </span>
+                <span className={styles.ratingCommentTable}>{formatTableLabel(r.tableId)}</span>
                 <span className={styles.ratingCommentDate}>{new Date(r.createdAt).toLocaleDateString()}</span>
               </div>
               <p className={styles.ratingCommentText}>{r.comment}</p>
@@ -1294,7 +1310,7 @@ function MenuAvailabilityList({ items, togglingId, selected, bulkLoading, onTogg
                   {togglingId === item.dbId ? <Spinner size={12} /> : item.available ? 'Available' : 'Sold Out'}
                 </button>
                 <button
-                  className={styles.itemDeleteBtn}
+                  className={styles.itemEditBtn}
                   onClick={() => onEdit(item)}
                   aria-label={`Edit ${item.name}`}
                   title="Edit item"
@@ -1786,7 +1802,7 @@ function RecoBoard({ title, rows, metric }: { title: string; rows: RecoTally[]; 
         {rows.map((r, i) => (
           <div key={`${r.name || r.source || r.rotationGroup || 'row'}-${i}`} className={styles.topItemRow}>
             <span className={styles.topItemRank}>#{i + 1}</span>
-            <span className={styles.topItemName}>{r.name || r.source || r.rotationGroup || '—'}{r.chef ? ' ⭐' : ''}</span>
+            <span className={styles.topItemName}>{r.name || r.source || r.rotationGroup || '—'}{r.chef ? <Star size={11} fill="currentColor" className={styles.specialStar} /> : ''}</span>
             <span className={styles.topItemQty}>{r.impressions} shown</span>
             <span className={styles.topItemRev}>{metric(r)}</span>
           </div>
