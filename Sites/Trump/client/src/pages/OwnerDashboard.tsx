@@ -13,16 +13,19 @@ import { api } from '../services/api';
 import { formatPrice } from '../lib/menuUtils';
 import { ASSISTANT_NAME } from '../constants/config';
 import type { RecommendationAnalytics, RecoInsightsResult } from '../types/menu';
+import type { FloorState, LeaderboardRow, WaiterTask } from '../types/waiter';
 import styles from './OwnerDashboard.module.css';
 
 // ── response shapes (typing the existing endpoints; not re-deriving them) ──
 interface Summary { revenue: number; orderCount: number; avgOrderValue: number; topTable: string | null; topTableRevenue: number; covers?: number; avgPerCover?: number }
-interface Item { name: string; quantity: number; revenue: number }
+interface Item { name: string; quantity: number; revenue: number; categoryType?: string }
 interface Hour { hour: number; count: number }
 interface Dow { dow: number; label: string; count: number; revenue: number }
 interface TrendPoint { date: string; revenue: number; orders: number }
 interface RatingRow { id: number; rating: number; comment: string; tableId: string; createdAt: string }
 interface Ratings { average: number; count: number; recent: RatingRow[] }
+interface TableRow { tableId: string; revenue: number; orderCount: number }
+interface Pairing { a: string; b: string; count: number; revenue: number }
 
 type RangeKey = 'today' | '7d' | '30d' | '90d';
 const RANGES: { key: RangeKey; label: string; days: number; bucket: 'day' | 'week' }[] = [
@@ -63,12 +66,20 @@ export function OwnerDashboard() {
   const [ratings, setRatings] = useState<Ratings | null>(null);
   const [reco, setReco] = useState<RecommendationAnalytics | null>(null);
   const [recoInsights, setRecoInsights] = useState<RecoInsightsResult | null>(null);
+  const [tables, setTables] = useState<TableRow[]>([]);
+  const [drinkItems, setDrinkItems] = useState<Item[]>([]);
+  const [dessertItems, setDessertItems] = useState<Item[]>([]);
+  const [pairings, setPairings] = useState<Pairing[]>([]);
+  const [floor, setFloor] = useState<FloorState | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
+  const [tasks, setTasks] = useState<WaiterTask[]>([]);
 
   const load = useCallback(async (r: RangeKey) => {
     setLoading(true);
     const { from, to, bucket } = rangeParams(r);
     const p = { from, to };
-    const [s, ti, bi, h, dw, tr, rt, ra, ri] = await Promise.all([
+    const leaderboardPeriod = r === 'today' ? 'today' : r === '7d' ? 'week' : 'month';
+    const [s, ti, bi, h, dw, tr, rt, ra, ri, tb, di, de, pr, fl, lb, tk] = await Promise.all([
       api.getAnalyticsSummary(p).catch(() => null),
       api.getAnalyticsItems({ ...p, order: 'desc' }).catch(() => []),
       api.getAnalyticsItems({ ...p, order: 'asc' }).catch(() => []),
@@ -78,6 +89,13 @@ export function OwnerDashboard() {
       api.getRatings(p).catch(() => null),
       api.getRecommendationAnalytics({ from, to }).catch(() => null),
       api.getRecommendationInsights({ from, to }).catch(() => null),
+      api.getAnalyticsTables(p).catch(() => []),
+      api.getAnalyticsItems({ ...p, order: 'desc', category: 'DRINK', limit: 5 }).catch(() => []),
+      api.getAnalyticsItems({ ...p, order: 'desc', category: 'DESSERT', limit: 5 }).catch(() => []),
+      api.getAnalyticsPairings(p).catch(() => []),
+      api.getFloor().catch(() => null),
+      api.getWaiterLeaderboard({ period: leaderboardPeriod }).catch(() => ({ leaderboard: [] })),
+      api.getWaiterTasks({ status: 'open' }).catch(() => []),
     ]);
     setSummary(s as Summary | null);
     setTopItems(ti as Item[]);
@@ -88,6 +106,13 @@ export function OwnerDashboard() {
     setRatings(rt as Ratings | null);
     setReco(ra as RecommendationAnalytics | null);
     setRecoInsights(ri as RecoInsightsResult | null);
+    setTables(tb as TableRow[]);
+    setDrinkItems(di as Item[]);
+    setDessertItems(de as Item[]);
+    setPairings(pr as Pairing[]);
+    setFloor(fl as FloorState | null);
+    setLeaderboard((lb as { leaderboard: LeaderboardRow[] })?.leaderboard || []);
+    setTasks(tk as WaiterTask[]);
     setLoading(false);
   }, []);
 
@@ -97,6 +122,20 @@ export function OwnerDashboard() {
   const donaldRevenue = totals?.revenue || 0;
   const covers = summary?.covers || 0;
   const avgPerCover = covers > 0 ? (summary!.revenue / covers) : 0;
+
+  // Live floor state — separate from the "Revenue" KPI above, which only counts
+  // completed (paid) orders. A busy floor with several tables mid-service is real
+  // signal even before those tables check out.
+  const occupiedTables = floor ? floor.tableCount - floor.counts.empty : 0;
+  const onFloorRevenue = floor ? floor.tables.reduce((s, t) => s + (t.spend || 0), 0) : 0;
+  const topWaiter = leaderboard[0] || null;
+  const today = new Date().toDateString();
+  const celebrationsToday = tasks.filter(t => t.type === 'birthday' && new Date(t.createdAt).toDateString() === today).length;
+  // Honest revenue-uplift: recommendation-attributed revenue as a share of the
+  // OTHER (non-attributed) revenue in the same period — not a fabricated
+  // counterfactual, just the two real totals the server already computes.
+  const baseline = Math.max(0, (summary?.revenue || 0) - donaldRevenue);
+  const upliftPct = baseline > 0 ? (donaldRevenue / baseline) * 100 : null;
 
   // A few light, plain-English callouts derived from the server's own aggregates.
   const businessInsights = buildBusinessInsights(dow, reco);
@@ -125,6 +164,14 @@ export function OwnerDashboard() {
           <div className={styles.loading}><Spinner size={40} /></div>
         ) : (
           <>
+            {/* Right now — live floor state, independent of the completed-orders
+                KPIs below (those only count paid/history orders). */}
+            <section className={styles.kpiGrid}>
+              <Kpi value={floor ? String(occupiedTables) : '—'} label="Tables occupied now" sub={onFloorRevenue > 0 ? `${formatPrice(onFloorRevenue)} on the floor` : undefined} />
+              <Kpi value={String(celebrationsToday)} label="Celebrations today" hint={celebrationsToday > 0 ? undefined : 'none flagged yet'} />
+              <Kpi value={topWaiter ? topWaiter.waiterName : '—'} label="Top waiter" sub={topWaiter ? formatPrice(topWaiter.salesDriven) : undefined} />
+            </section>
+
             {/* Hero — the recommendation ROI story */}
             <section className={styles.hero}>
               <div className={styles.heroIcon}><Sparkles size={20} /></div>
@@ -132,9 +179,9 @@ export function OwnerDashboard() {
                 <div className={styles.heroLabel}>{ASSISTANT_NAME.toUpperCase()} ADDED TO YOUR TICKETS</div>
                 <div className={styles.heroValue}>{formatPrice(donaldRevenue)}</div>
                 <div className={styles.heroSub}>
-                  {totals
-                    ? `${totals.ordered} orders generated · ${pct(totals.acceptanceRate)} acceptance · ${formatPrice(totals.revenuePerImpression || 0)}/impression`
-                    : 'No recommendation events in this period yet.'}
+                  {totals && totals.impressions > 0
+                    ? `${totals.ordered} orders generated · ${pct(totals.acceptanceRate)} acceptance · ${formatPrice(totals.revenuePerImpression || 0)}/impression${upliftPct != null ? ` · +${Math.round(upliftPct)}% over non-AI revenue` : ''}`
+                    : `${ASSISTANT_NAME} hasn't upsold yet — check Chef Recs are enabled in Menu & Offers.`}
                 </div>
               </div>
             </section>
@@ -175,7 +222,7 @@ export function OwnerDashboard() {
                       const max = Math.max(...hours.map(h => h.count), 1);
                       return hours.map(h => (
                         <div key={h.hour} className={styles.barCol} title={`${h.hour}:00 — ${h.count} orders`}>
-                          <div className={styles.bar} style={{ height: `${(h.count / max) * 100}%` }} />
+                          <div className={`${styles.bar} ${styles.barGold}`} style={{ height: `${(h.count / max) * 100}%` }} />
                           {h.hour % 6 === 0 && <span className={styles.barLabel}>{h.hour}h</span>}
                         </div>
                       ));
@@ -203,13 +250,70 @@ export function OwnerDashboard() {
 
             {/* Top & bottom dishes */}
             <div className={styles.twoUp}>
-              <Panel title="Top dishes">
+              <Panel title="Top dishes" subtitle="By quantity sold — see revenue alongside">
                 <DishList rows={topItems} empty="No sales yet." />
               </Panel>
               <Panel title="Bottom dishes" subtitle="Least ordered (of items that sold)">
                 <DishList rows={bottomItems} empty="No sales yet." />
               </Panel>
             </div>
+
+            {/* Top drinks & desserts */}
+            <div className={styles.twoUp}>
+              <Panel title="Top drinks" subtitle="Wine, cocktails, beer & soft drinks">
+                <DishList rows={drinkItems} empty="No drinks sold yet." />
+              </Panel>
+              <Panel title="Top desserts">
+                <DishList rows={dessertItems} empty="No desserts sold yet." />
+              </Panel>
+            </div>
+
+            {/* Highest-spending tables (full ranking) */}
+            <Panel title="Highest-spending tables" subtitle="Completed orders, this period">
+              {tables.length > 0 ? (
+                <div className={styles.dishList}>
+                  {tables.slice(0, 7).map((t, i) => (
+                    <div key={t.tableId} className={styles.dishRow}>
+                      <span className={styles.dishRank}>#{i + 1}</span>
+                      <span className={styles.dishName}>{t.tableId.replace(/^table/i, 'Table ')}</span>
+                      <span className={styles.dishQty}>{t.orderCount} order{t.orderCount !== 1 ? 's' : ''}</span>
+                      <span className={styles.dishRev}>{formatPrice(t.revenue)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : <Empty msg="No completed orders yet." />}
+            </Panel>
+
+            {/* Popular pairings */}
+            <Panel title="Popular pairings" subtitle="Items most often ordered on the same bill">
+              {pairings.length > 0 ? (
+                <div className={styles.dishList}>
+                  {pairings.slice(0, 6).map(p => (
+                    <div key={`${p.a}|${p.b}`} className={styles.dishRow}>
+                      <span className={styles.dishRank}>{p.count}×</span>
+                      <span className={styles.dishName}>{p.a} + {p.b}</span>
+                      <span className={styles.dishRev}>{formatPrice(p.revenue)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : <Empty msg="No repeated pairings yet." />}
+            </Panel>
+
+            {/* Waiter leaderboard */}
+            <Panel title="Waiter performance" subtitle="Sales driven, this period">
+              {leaderboard.length > 0 ? (
+                <div className={styles.dishList}>
+                  {leaderboard.slice(0, 5).map(w => (
+                    <div key={w.waiterName} className={styles.dishRow}>
+                      <span className={styles.dishRank}>#{w.rank}</span>
+                      <span className={styles.dishName}>{w.waiterName}</span>
+                      <span className={styles.dishQty}>{w.tablesServed} table{w.tablesServed !== 1 ? 's' : ''}</span>
+                      <span className={styles.dishRev}>{formatPrice(w.salesDriven)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : <Empty msg="No completed orders yet." />}
+            </Panel>
 
             {/* Recommendation funnel (compact) */}
             <Panel title={`${ASSISTANT_NAME}'s funnel`} subtitle="Shown → tapped → added → ordered">
@@ -236,7 +340,9 @@ export function OwnerDashboard() {
                   </div>
                   {ratings.recent.filter(r => r.comment).slice(0, 5).map(r => (
                     <div key={r.id} className={styles.ratingRow}>
-                      <span className={styles.ratingRowStars}>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                      <span className={styles.ratingRowStars}>
+                        {[1, 2, 3, 4, 5].map(s => <Star key={s} size={11} fill={s <= r.rating ? 'currentColor' : 'none'} />)}
+                      </span>
                       <p className={styles.ratingComment}>{r.comment}</p>
                     </div>
                   ))}

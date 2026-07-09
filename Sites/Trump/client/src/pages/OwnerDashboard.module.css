@@ -114,7 +114,7 @@
 .ratingStars { display: inline-flex; gap: 2px; color: var(--color-gold, #c6a24b); }
 .ratingCount { font-size: 12px; color: var(--color-sand, #c9bba5); }
 .ratingRow { padding: 8px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
-.ratingRowStars { font-size: 11px; color: var(--color-gold, #c6a24b); }
+.ratingRowStars { display: inline-flex; gap: 1px; color: var(--color-gold, #c6a24b); }
 .ratingComment { margin: 3px 0 0; font-size: 12.5px; color: rgba(243, 234, 214, 0.85); line-height: 1.45; }
 
 /* Insights */
