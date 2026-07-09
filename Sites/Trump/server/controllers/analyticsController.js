@@ -1,6 +1,11 @@
 // Use the shared, explicitly-resolved Prisma client so a Trump-local @prisma/client
 // stub can't shadow the generated client (which silently zeroed analytics).
 const { getPrisma } = require('../services/prismaClient');
+// Read-only classification for reporting (category splits, pairing labels). This
+// is the same shared classifier every other surface uses — not part of the
+// recommendation engine's candidate/scoring pipeline.
+const { categoryType, beverageKind } = require('../services/categoryClassifier');
+const { getCanonicalTableId } = require('../utils/helpers');
 
 function parseDateRange(from, to) {
   const ts = {};
@@ -64,20 +69,25 @@ function createAnalyticsController({ config }) {
     },
 
     // order=desc (default) → best sellers; order=asc → worst sellers (bottom dishes).
-    // Both are over items that sold at least once in the period.
+    // Both are over items that sold at least once in the period. An optional
+    // `category` (STARTER|MAIN|DESSERT|WINE|DRINK) narrows to that categoryType —
+    // pulled over a wider pool then filtered in-process, since categoryType isn't
+    // a stored column on OrderItem.
     async getItems(req, res) {
-      const { from, to, order } = req.query;
+      const { from, to, order, category, limit } = req.query;
       const dir = order === 'asc' ? 'asc' : 'desc';
+      const take = category ? 200 : (Math.min(Number(limit) || 10, 50));
       try {
         const db = getPrisma();
         const orderWhere = { restaurantId, status: 'history', ...parseDateRange(from, to) };
-        const rows = await db.orderItem.groupBy({
+        let rows = await db.orderItem.groupBy({
           by: ['name'],
           where: { order: orderWhere },
           _sum: { quantity: true },
           orderBy: { _sum: { quantity: dir } },
-          take: 10
+          take
         });
+        if (category) rows = rows.filter(r => categoryType(r.name) === String(category).toUpperCase()).slice(0, Math.min(Number(limit) || 10, 50));
         const names = rows.map(r => r.name);
         const revenues = await db.orderItem.groupBy({
           by: ['name'],
@@ -88,7 +98,8 @@ function createAnalyticsController({ config }) {
         res.json(rows.map(r => ({
           name: r.name,
           quantity: r._sum.quantity || 0,
-          revenue: Number((revMap[r.name] || 0).toFixed(2))
+          revenue: Number((revMap[r.name] || 0).toFixed(2)),
+          categoryType: categoryType(r.name)
         })));
       } catch {
         res.json([]);
@@ -159,6 +170,109 @@ function createAnalyticsController({ config }) {
         res.json({ bucket: b, points });
       } catch {
         res.json({ bucket: b, points: [] });
+      }
+    },
+
+    // Popular pairings — which two items most often appear on the same bill.
+    // Pure reporting: computed fresh from completed orders, no recommendation
+    // engine involved and nothing fed back into it.
+    async getPairings(req, res) {
+      const { from, to } = req.query;
+      try {
+        const db = getPrisma();
+        const where = { restaurantId, status: 'history', ...parseDateRange(from, to) };
+        const orders = await db.order.findMany({
+          where,
+          select: { items: { select: { name: true, price: true, quantity: true } } }
+        });
+        const pairs = new Map(); // "A|B" (alpha-sorted) -> { a, b, count, revenue }
+        for (const order of orders) {
+          const names = [...new Set(order.items.map(i => i.name))];
+          for (let i = 0; i < names.length; i++) {
+            for (let j = i + 1; j < names.length; j++) {
+              const [a, b] = [names[i], names[j]].sort();
+              const key = `${a}|${b}`;
+              const itemA = order.items.find(it => it.name === a);
+              const itemB = order.items.find(it => it.name === b);
+              const lineRevenue = (Number(itemA?.price) || 0) * (Number(itemA?.quantity) || 1)
+                + (Number(itemB?.price) || 0) * (Number(itemB?.quantity) || 1);
+              const cur = pairs.get(key) || { a, b, count: 0, revenue: 0 };
+              cur.count += 1;
+              cur.revenue += lineRevenue;
+              pairs.set(key, cur);
+            }
+          }
+        }
+        const top = [...pairs.values()]
+          .filter(p => p.count > 1) // a pairing needs to have actually repeated to be "popular"
+          .sort((x, y) => y.count - x.count || y.revenue - x.revenue)
+          .slice(0, 10)
+          .map(p => ({ a: p.a, b: p.b, count: p.count, revenue: Number(p.revenue.toFixed(2)) }));
+        res.json(top);
+      } catch {
+        res.json([]);
+      }
+    },
+
+    // Customer journey for a single table — built fresh from Order/OrderItem for
+    // its most recent order (active if one exists, else the latest history one).
+    // Pure reporting: classification reuses the shared categoryClassifier, nothing
+    // here reads or writes recommendation-engine state.
+    async getJourney(req, res) {
+      const tableId = getCanonicalTableId(req.query.tableId || '');
+      if (!tableId) return res.status(400).json({ error: 'tableId required' });
+      try {
+        const db = getPrisma();
+        const active = await db.order.findFirst({
+          where: { restaurantId, tableId, status: 'active' },
+          orderBy: { timestamp: 'desc' },
+          include: { items: true }
+        });
+        const order = active || await db.order.findFirst({
+          where: { restaurantId, tableId, status: 'history' },
+          orderBy: { timestamp: 'desc' },
+          include: { items: true }
+        });
+        if (!order) return res.json({ tableId, found: false });
+
+        const buckets = { drink: [], starter: [], main: [], dessert: [], coffee: [] };
+        for (const item of order.items) {
+          const type = categoryType(item.name);
+          if (type === 'STARTER') buckets.starter.push(item.name);
+          else if (type === 'DESSERT') buckets.dessert.push(item.name);
+          else if (type === 'MAIN') buckets.main.push(item.name);
+          else if (type === 'WINE' || type === 'DRINK') {
+            (beverageKind(item.name) === 'HOT' ? buckets.coffee : buckets.drink).push(item.name);
+          }
+        }
+
+        const [rating, waiter, recoEvent] = await Promise.all([
+          db.orderRating.findUnique({ where: { orderId: order.id } }).catch(() => null),
+          db.waiterAssignment.findFirst({ where: { restaurantId, tableId, status: 'active' }, orderBy: { assignedAt: 'desc' } }).catch(() => null),
+          db.recommendationEvent.findFirst({
+            where: { restaurantId, eventType: 'accepted', sessionId: { contains: tableId } },
+            orderBy: { createdAt: 'desc' }
+          }).catch(() => null)
+        ]);
+
+        const steps = [
+          { key: 'entered', label: 'Guest seated', done: true, detail: waiter?.waiterName ? `Served by ${waiter.waiterName}` : '' },
+          { key: 'drink', label: 'Drink ordered', done: buckets.drink.length > 0, items: buckets.drink },
+          { key: 'starter', label: 'Starter', done: buckets.starter.length > 0, items: buckets.starter },
+          { key: 'main', label: 'Main course', done: buckets.main.length > 0, items: buckets.main },
+          { key: 'dessert', label: 'Dessert', done: buckets.dessert.length > 0, items: buckets.dessert },
+          { key: 'coffee', label: 'Coffee / digestif', done: buckets.coffee.length > 0, items: buckets.coffee },
+          { key: 'recommendation', label: `${req.query.assistantLabel || 'AI'} recommendation accepted`, done: Boolean(recoEvent), detail: recoEvent?.recommendedName || '' },
+          { key: 'billPaid', label: 'Bill settled', done: order.status === 'history' },
+        ];
+
+        res.json({
+          tableId, found: true, status: order.status, timestamp: order.timestamp, total: order.total,
+          waiterName: waiter?.waiterName || order.waiterName || '', rating: rating?.rating || null,
+          steps
+        });
+      } catch (err) {
+        res.status(500).json({ tableId, found: false, error: err.message });
       }
     },
 

@@ -11,6 +11,8 @@ function registerAnalyticsRoutes(app, controllers, adminAuth) {
   app.get(paths('hours'), adminAuth, controllers.analytics.getHours);
   app.get(paths('trend'), adminAuth, controllers.analytics.getTrend);
   app.get(paths('day-of-week'), adminAuth, controllers.analytics.getDayOfWeek);
+  app.get(paths('pairings'), adminAuth, controllers.analytics.getPairings);
+  app.get(paths('journey'), adminAuth, controllers.analytics.getJourney);
 }
 
 module.exports = { registerAnalyticsRoutes };
