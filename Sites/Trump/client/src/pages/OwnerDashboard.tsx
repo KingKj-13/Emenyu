@@ -126,9 +126,19 @@ export function OwnerDashboard() {
   // Live floor state — separate from the "Revenue" KPI above, which only counts
   // completed (paid) orders. A busy floor with several tables mid-service is real
   // signal even before those tables check out.
-  const occupiedTables = floor ? floor.tableCount - floor.counts.empty : 0;
+  const occupiedTables = floor ? (floor.tableCount + floor.luxuryTableCount) - floor.counts.empty : 0;
   const onFloorRevenue = floor ? floor.tables.reduce((s, t) => s + (t.spend || 0), 0) : 0;
-  const topWaiter = leaderboard[0] || null;
+  // Completed-sales leaderboard first (real closed business); if nothing has
+  // been paid out yet this period (e.g. early in a busy shift), fall back to
+  // whoever has the most value on the floor right now — labeled differently
+  // so it's never mistaken for a completed sale.
+  const floorByWaiter = floor
+    ? floor.tables.reduce((m, t) => { if (t.waiter) m.set(t.waiter, (m.get(t.waiter) || 0) + (t.spend || 0)); return m; }, new Map<string, number>())
+    : new Map<string, number>();
+  const topFloorWaiter = [...floorByWaiter.entries()].sort((a, b) => b[1] - a[1])[0] || null;
+  const topWaiter = leaderboard[0]
+    ? { name: leaderboard[0].waiterName, value: leaderboard[0].salesDriven, inProgress: false }
+    : topFloorWaiter ? { name: topFloorWaiter[0], value: topFloorWaiter[1], inProgress: true } : null;
   const today = new Date().toDateString();
   const celebrationsToday = tasks.filter(t => t.type === 'birthday' && new Date(t.createdAt).toDateString() === today).length;
   // Honest revenue-uplift: recommendation-attributed revenue as a share of the
@@ -169,7 +179,7 @@ export function OwnerDashboard() {
             <section className={styles.kpiGrid}>
               <Kpi value={floor ? String(occupiedTables) : '—'} label="Tables occupied now" sub={onFloorRevenue > 0 ? `${formatPrice(onFloorRevenue)} on the floor` : undefined} />
               <Kpi value={String(celebrationsToday)} label="Celebrations today" hint={celebrationsToday > 0 ? undefined : 'none flagged yet'} />
-              <Kpi value={topWaiter ? topWaiter.waiterName : '—'} label="Top waiter" sub={topWaiter ? formatPrice(topWaiter.salesDriven) : undefined} />
+              <Kpi value={topWaiter ? topWaiter.name : '—'} label="Top waiter" sub={topWaiter ? `${formatPrice(topWaiter.value)}${topWaiter.inProgress ? ' in progress' : ''}` : undefined} />
             </section>
 
             {/* Hero — the recommendation ROI story */}

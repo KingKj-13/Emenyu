@@ -5,13 +5,39 @@ const { getPrisma } = require('../services/prismaClient');
 // is the same shared classifier every other surface uses — not part of the
 // recommendation engine's candidate/scoring pipeline.
 const { categoryType, beverageKind } = require('../services/categoryClassifier');
-const { getCanonicalTableId } = require('../utils/helpers');
+const { getCanonicalTableId, normalizeName } = require('../utils/helpers');
 
 function parseDateRange(from, to) {
   const ts = {};
   if (from) ts.gte = new Date(from);
   if (to) ts.lte = new Date(to);
   return Object.keys(ts).length > 0 ? { timestamp: ts } : {};
+}
+
+// name -> category title, cached briefly. Historical OrderItem rows only ever
+// stored the item name, not its category — and the classifier needs the
+// category (e.g. "Cabernet Sauvignon") to tell a wine brand like "Tokara" or
+// a beer like "Castle Lite" apart from a food dish; passing the bare name alone
+// silently falls through to the MAIN default. Same pattern as
+// waiterAnalyticsService's getCourseMap().
+let categoryMapCache = { at: 0, map: null, restaurantId: null };
+async function getCategoryMap(db, restaurantId) {
+  if (categoryMapCache.map && categoryMapCache.restaurantId === restaurantId && Date.now() - categoryMapCache.at < 60000) {
+    return categoryMapCache.map;
+  }
+  const map = new Map();
+  try {
+    const items = await db.menuItem.findMany({ where: { restaurantId }, select: { name: true, category: { select: { title: true } } } });
+    for (const item of items) map.set(normalizeName(item.name), item.category?.title || '');
+  } catch { /* empty map -> classification falls back to name-only */ }
+  categoryMapCache = { at: Date.now(), map, restaurantId };
+  return map;
+}
+function classifyByName(name, categoryMap) {
+  return categoryType({ name, category: categoryMap.get(normalizeName(name)) || '' });
+}
+function beverageKindByName(name, categoryMap) {
+  return beverageKind({ name, category: categoryMap.get(normalizeName(name)) || '' });
 }
 
 const pad = n => String(n).padStart(2, '0');
@@ -87,7 +113,10 @@ function createAnalyticsController({ config }) {
           orderBy: { _sum: { quantity: dir } },
           take
         });
-        if (category) rows = rows.filter(r => categoryType(r.name) === String(category).toUpperCase()).slice(0, Math.min(Number(limit) || 10, 50));
+        if (category) {
+          const categoryMap = await getCategoryMap(db, restaurantId);
+          rows = rows.filter(r => classifyByName(r.name, categoryMap) === String(category).toUpperCase()).slice(0, Math.min(Number(limit) || 10, 50));
+        }
         const names = rows.map(r => r.name);
         const revenues = await db.orderItem.groupBy({
           by: ['name'],
@@ -95,11 +124,12 @@ function createAnalyticsController({ config }) {
           _sum: { price: true }
         });
         const revMap = Object.fromEntries(revenues.map(r => [r.name, r._sum.price || 0]));
+        const categoryMap = await getCategoryMap(db, restaurantId);
         res.json(rows.map(r => ({
           name: r.name,
           quantity: r._sum.quantity || 0,
           revenue: Number((revMap[r.name] || 0).toFixed(2)),
-          categoryType: categoryType(r.name)
+          categoryType: classifyByName(r.name, categoryMap)
         })));
       } catch {
         res.json([]);
@@ -187,15 +217,16 @@ function createAnalyticsController({ config }) {
         });
         const pairs = new Map(); // "A|B" (alpha-sorted) -> { a, b, count, revenue }
         for (const order of orders) {
-          const names = [...new Set(order.items.map(i => i.name))];
+          const lineValue = new Map(); // name -> price*quantity, O(1) lookup instead of a re-scan per pair
+          for (const it of order.items) {
+            if (!lineValue.has(it.name)) lineValue.set(it.name, (Number(it.price) || 0) * (Number(it.quantity) || 1));
+          }
+          const names = [...lineValue.keys()];
           for (let i = 0; i < names.length; i++) {
             for (let j = i + 1; j < names.length; j++) {
               const [a, b] = [names[i], names[j]].sort();
               const key = `${a}|${b}`;
-              const itemA = order.items.find(it => it.name === a);
-              const itemB = order.items.find(it => it.name === b);
-              const lineRevenue = (Number(itemA?.price) || 0) * (Number(itemA?.quantity) || 1)
-                + (Number(itemB?.price) || 0) * (Number(itemB?.quantity) || 1);
+              const lineRevenue = lineValue.get(a) + lineValue.get(b);
               const cur = pairs.get(key) || { a, b, count: 0, revenue: 0 };
               cur.count += 1;
               cur.revenue += lineRevenue;
@@ -235,14 +266,15 @@ function createAnalyticsController({ config }) {
         });
         if (!order) return res.json({ tableId, found: false });
 
+        const categoryMap = await getCategoryMap(db, restaurantId);
         const buckets = { drink: [], starter: [], main: [], dessert: [], coffee: [] };
         for (const item of order.items) {
-          const type = categoryType(item.name);
+          const type = classifyByName(item.name, categoryMap);
           if (type === 'STARTER') buckets.starter.push(item.name);
           else if (type === 'DESSERT') buckets.dessert.push(item.name);
           else if (type === 'MAIN') buckets.main.push(item.name);
           else if (type === 'WINE' || type === 'DRINK') {
-            (beverageKind(item.name) === 'HOT' ? buckets.coffee : buckets.drink).push(item.name);
+            (beverageKindByName(item.name, categoryMap) === 'HOT' ? buckets.coffee : buckets.drink).push(item.name);
           }
         }
 
@@ -262,7 +294,7 @@ function createAnalyticsController({ config }) {
           { key: 'main', label: 'Main course', done: buckets.main.length > 0, items: buckets.main },
           { key: 'dessert', label: 'Dessert', done: buckets.dessert.length > 0, items: buckets.dessert },
           { key: 'coffee', label: 'Coffee / digestif', done: buckets.coffee.length > 0, items: buckets.coffee },
-          { key: 'recommendation', label: `${req.query.assistantLabel || 'AI'} recommendation accepted`, done: Boolean(recoEvent), detail: recoEvent?.recommendedName || '' },
+          { key: 'recommendation', label: `${config.assistantName || 'Sommelier'} recommendation accepted`, done: Boolean(recoEvent), detail: recoEvent?.recommendedName || '' },
           { key: 'billPaid', label: 'Bill settled', done: order.status === 'history' },
         ];
 
