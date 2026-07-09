@@ -123,12 +123,16 @@ function configureSecurity(app, config, logger) {
   app.disable('x-powered-by');
   app.set('trust proxy', config.security.trustProxy ? 1 : false);
 
-  // Phase 05 — controlled load-test bypass. Default OFF; only true when
-  // TRUMP_LOAD_TEST_BYPASS is explicitly set. Loudly warn so it is never left on.
-  const loadTestBypass = Boolean(config.security.loadTestBypass);
-  if (loadTestBypass) {
-    logger.warn('rate_limit_bypass_active', {
-      message: 'TRUMP_LOAD_TEST_BYPASS is ON — rate limiting is DISABLED. For controlled load testing only. NEVER use in production.'
+  // Phase 05 — controlled load-test bypass using custom header.
+  const loadTestSecret = process.env.LOAD_TEST_SECRET;
+  const isLoadTestBypass = (req) => {
+    if (!loadTestSecret) return false;
+    return req.headers['x-load-test-secret'] === loadTestSecret;
+  };
+
+  if (loadTestSecret) {
+    logger.warn('rate_limit_bypass_configured', {
+      message: 'LOAD_TEST_SECRET is set. Requests with matching x-load-test-secret header will bypass rate limits. NEVER expose this secret.'
     });
   }
 
@@ -176,7 +180,7 @@ function configureSecurity(app, config, logger) {
       standardHeaders: 'draft-8',
       legacyHeaders: false,
       skip(req) {
-        return loadTestBypass || (req.method === 'GET' && (STATIC_ASSET_PATTERN.test(req.path) || req.path.endsWith('/healthz') || req.path.endsWith('/readyz')));
+        return isLoadTestBypass(req) || (req.method === 'GET' && (STATIC_ASSET_PATTERN.test(req.path) || req.path.endsWith('/healthz') || req.path.endsWith('/readyz')));
       },
       handler: createRateLimitHandler(logger, 'rate_limit_general')
     })
@@ -190,7 +194,7 @@ function configureSecurity(app, config, logger) {
       standardHeaders: 'draft-8',
       legacyHeaders: false,
       skipSuccessfulRequests: true,
-      skip: () => loadTestBypass,
+      skip: (req) => isLoadTestBypass(req),
       handler: createRateLimitHandler(logger, 'rate_limit_auth')
     })
   );
@@ -205,7 +209,7 @@ function configureSecurity(app, config, logger) {
     standardHeaders: 'draft-8',
     legacyHeaders: false,
     skip(req) {
-      return loadTestBypass || req.method !== 'POST';
+      return isLoadTestBypass(req) || req.method !== 'POST';
     },
     handler: createRateLimitHandler(logger, 'rate_limit_public_write')
   });
@@ -229,7 +233,7 @@ function configureSecurity(app, config, logger) {
       standardHeaders: 'draft-8',
       legacyHeaders: false,
       skip(req) {
-        return loadTestBypass || req.method !== 'POST';
+        return isLoadTestBypass(req) || req.method !== 'POST';
       },
       handler: createRateLimitHandler(logger, 'rate_limit_chat')
     })
