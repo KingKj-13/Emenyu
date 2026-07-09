@@ -1135,7 +1135,7 @@ class AiService {
 
   // Phase 3B: warm, in-character decline for anything off the menu.
   buildOfftopicReply() {
-    const name = (this.config && this.config.assistantName) || 'Donald';
+    const name = (this.config && this.config.assistantName) || '🍷 Your Sommelier';
     return {
       reply: `Ha — that one's a little beyond my table. I'm ${name}, your dining host: I can talk steaks, seafood, sushi, wines and pairings, or help you build the perfect meal. What are you in the mood for?`,
       suggestions: []
