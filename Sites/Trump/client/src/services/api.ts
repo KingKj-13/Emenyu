@@ -298,9 +298,24 @@ export const api = {
     return fetchJson<unknown>(`${ENDPOINTS.analyticsummary}?${q}`);
   },
 
-  getAnalyticsItems(params: { from?: string; to?: string; order?: 'asc' | 'desc' }) {
+  getAnalyticsItems(params: { from?: string; to?: string; order?: 'asc' | 'desc'; category?: string; limit?: number }) {
+    const q = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])
+    ).toString();
+    return fetchJson<{ name: string; quantity: number; revenue: number; categoryType: string }[]>(`${ENDPOINTS.analyticsItems}?${q}`);
+  },
+
+  getAnalyticsPairings(params: { from?: string; to?: string }) {
     const q = new URLSearchParams(params as Record<string, string>).toString();
-    return fetchJson<unknown[]>(`${ENDPOINTS.analyticsItems}?${q}`);
+    return fetchJson<{ a: string; b: string; count: number; revenue: number }[]>(`${ENDPOINTS.analyticsPairings}?${q}`);
+  },
+
+  getCustomerJourney(tableId: string) {
+    return fetchJson<{
+      tableId: string; found: boolean; status?: string; timestamp?: string; total?: number;
+      waiterName?: string; rating?: number | null; error?: string;
+      steps?: { key: string; label: string; done: boolean; items?: string[]; detail?: string }[];
+    }>(`${ENDPOINTS.analyticsJourney}?tableId=${encodeURIComponent(tableId)}`);
   },
 
   getAnalyticsTrend(params: { from?: string; to?: string; bucket?: 'day' | 'week' | 'month' }) {

@@ -43,6 +43,8 @@ export const ENDPOINTS = {
   analyticsHours: `${API_PREFIX}/api/analytics/hours`,
   analyticsTrend: `${API_PREFIX}/api/analytics/trend`,
   analyticsDayOfWeek: `${API_PREFIX}/api/analytics/day-of-week`,
+  analyticsPairings: `${API_PREFIX}/api/analytics/pairings`,
+  analyticsJourney: `${API_PREFIX}/api/analytics/journey`,
   analyticsRecommendations: `${API_PREFIX}/api/analytics/recommendations`,
   analyticsRecommendationsInsights: `${API_PREFIX}/api/analytics/recommendations/insights`,
   recoEvents: `${API_PREFIX}/api/reco/events`,
