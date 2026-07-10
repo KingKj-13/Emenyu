@@ -1,0 +1,358 @@
+{
+  "generatedAt": "2026-07-06T13:27:21.965Z",
+  "pass": true,
+  "sampled": 150,
+  "categories": 24,
+  "total": 450,
+  "byTone": {
+    "casual": 150,
+    "professional": 150,
+    "luxury": 150
+  },
+  "banned": 0,
+  "tooLong": 0,
+  "collisions": 8,
+  "collisionRate": 0.017777777777777778,
+  "examples": [
+    {
+      "category": "Starters",
+      "examples": [
+        {
+          "item": "CHICKEN TRINCHADO",
+          "anchor": "SHANNON ELGIN",
+          "text": "Since you've already got the SHANNON ELGIN on the table, I'd pair it with our CHICKEN TRINCHADO. This one's not too heavy, so it just rounds out the chicken trinchado without taking over. It's flame-grilled. It's always a hit at this table."
+        },
+        {
+          "item": "SPRINGBOK CARPACCIO",
+          "anchor": "FERREIRA RUBY",
+          "text": "I noticed you've gone with the FERREIRA RUBY. If you're open to a recommendation, I'd definitely pair it with our SPRINGBOK CARPACCIO. Nothing complicated here, it just goes well alongside. It's grilled to order. It's one of my favourite combinations on the menu."
+        }
+      ]
+    },
+    {
+      "category": "Salads",
+      "examples": [
+        {
+          "item": "HALLOUMI SALAD",
+          "anchor": "RUSTENBURG",
+          "text": "Since you've already got the RUSTENBURG on the table, I'd pair it with our HALLOUMI SALAD. It's a solid, easy match for the halloumi salad, you really can't go wrong with it. It's fried till properly crisp. It's always a hit at this table."
+        },
+        {
+          "item": "TRUMPS SALAD",
+          "anchor": "ANTHONIJ RUPERT OPTIMA",
+          "text": "Since you've already got the ANTHONIJ RUPERT OPTIMA on the table, I'd pair it with our TRUMPS SALAD. It's a solid, easy match for the trumps salad, you really can't go wrong with it. It's tossed fresh. It's a signature plate here — always a good sign."
+        }
+      ]
+    },
+    {
+      "category": "Sushi",
+      "examples": [
+        {
+          "item": "RAINBOW ROLL - PRAWN (8pc)",
+          "anchor": "L'AVENIR SINGLE BLOCK",
+          "text": "Since you've already got the L'AVENIR SINGLE BLOCK on the table, I'd pair it with our RAINBOW ROLL - PRAWN (8pc). That crisp acidity just lifts the rainbow roll - prawn (8pc) right up, it's a classic match for a reason. It's sliced fresh to order. It's always a hit at this table."
+        },
+        {
+          "item": "RAINBOW ROLL - VEGETABLE (4pc)",
+          "anchor": "CREATION",
+          "text": "I noticed you've gone with the CREATION. If you're open to a recommendation, I'd definitely pair it with our RAINBOW ROLL - VEGETABLE (4pc). This one's not too heavy, so it just rounds out the rainbow roll - vegetable (4pc) without taking over. It's sliced fresh to order. It's one of my favourite combinations on the menu."
+        }
+      ]
+    },
+    {
+      "category": "Signature Seafood",
+      "examples": [
+        {
+          "item": "KINGKLIP FILLET",
+          "anchor": "DA LUCA ROSÉ PROSECCO",
+          "text": "I noticed you've gone with the DA LUCA ROSÉ PROSECCO. If you're open to a recommendation, I'd definitely pair it with our KINGKLIP FILLET. Bubbles always cut through a plate like this, it keeps things feeling fresh — and it's got a nice celebratory lift too. It's pan-seared so it stays flaky. It's one of my favourite combinations on the menu."
+        },
+        {
+          "item": "PRAWN & CALAMARI",
+          "anchor": "REMY MARTIN 1738 SIDE CAR",
+          "text": "I noticed you've gone with the REMY MARTIN 1738 SIDE CAR. If you're open to a recommendation, I'd definitely pair it with our PRAWN & CALAMARI. The citrus in that cocktail cuts right through the richness, keeps every bite feeling lighter. It's kept simple so the flavour stays clean. It's one of my favourite combinations on the menu."
+        }
+      ]
+    },
+    {
+      "category": "Trumps Premium Steaks",
+      "examples": [
+        {
+          "item": "CRANBERRY SAUCE",
+          "anchor": "SHANNON ELGIN",
+          "text": "Since you've already got the SHANNON ELGIN on the table, I'd pair it with our CRANBERRY SAUCE. This one's not too heavy, so it just rounds out the cranberry sauce without taking over. It's always a hit at this table — echoing the fruity note."
+        },
+        {
+          "item": "FILLET 360g",
+          "anchor": "CONSTITUTION ROAD",
+          "text": "Since you've already got the CONSTITUTION ROAD on the table, I'd pair it with our FILLET 360g. It's a solid, easy match for the fillet 360g, you really can't go wrong with it. It's char-grilled over the coals. It's always a hit at this table."
+        }
+      ]
+    },
+    {
+      "category": "Pork & Ribs",
+      "examples": [
+        {
+          "item": "PORK TOMAHAWK ±600g",
+          "anchor": "KAHLUA COFFEE",
+          "text": "I noticed you've gone with the KAHLUA COFFEE. If you're open to a recommendation, I'd definitely pair it with our PORK TOMAHAWK ±600g. Good one to have once the plate's cleared, rounds things off nicely. It's one of our signature dishes, so you're in good hands."
+        }
+      ]
+    },
+    {
+      "category": "Lamb",
+      "examples": [
+        {
+          "item": "LAMB RUMP 300g",
+          "anchor": "RUPERT & ROTHSCHILD CLASSIQUE",
+          "text": "I noticed you've gone with the RUPERT & ROTHSCHILD CLASSIQUE. If you're open to a recommendation, I'd definitely pair it with our LAMB RUMP 300g. Honestly the char on the lamb rump 300g is made for a red with this much backbone, it just softens everything out. It's char-grilled over the coals. It's one of my favourite combinations on the menu."
+        }
+      ]
+    },
+    {
+      "category": "Venison & Game",
+      "examples": [
+        {
+          "item": "OSTRICH FILLET ±450g",
+          "anchor": "RICHELIEU 10 Year",
+          "text": "Since you've already got the RICHELIEU 10 Year on the table, I'd pair it with our OSTRICH FILLET ±450g. It's got enough weight that it won't get lost next to something this rich. It's char-grilled over the coals. It's always a hit at this table."
+        },
+        {
+          "item": "SPRINGBOK ±450g",
+          "anchor": "MUSGRAVE PINK",
+          "text": "I noticed you've gone with the MUSGRAVE PINK. If you're open to a recommendation, I'd definitely pair it with our SPRINGBOK ±450g. Nothing complicated here, it just goes well alongside. It's char-grilled over the coals. It's one of my favourite combinations on the menu."
+        }
+      ]
+    },
+    {
+      "category": "Oxtail & Beef Ribs",
+      "examples": [
+        {
+          "item": "BEEF RIBS (3 pce) ±1kg",
+          "anchor": "CUCUMBER LEMONADE",
+          "text": "Since you've already got the CUCUMBER LEMONADE on the table, I'd pair it with our BEEF RIBS (3 pce) ±1kg. It's nice and refreshing, keeps things feeling light between bites of the beef ribs (3 pce) ±1kg. It's char-grilled over the coals. It's always a hit at this table."
+        },
+        {
+          "item": "OXTAIL",
+          "anchor": "SARONSBERG SEISMIC",
+          "text": "Braised slow in red wine and onion, oxtail wants that richness mirrored — a deep red blend echoes the sauce and matches the melting, savoury meat."
+        }
+      ]
+    },
+    {
+      "category": "Signature Combos",
+      "examples": [
+        {
+          "item": "RUMP STEAK, BOEREWORS AND RIBS",
+          "anchor": "BOEKENHOUTSKLOOF",
+          "text": "Juicy and full-flavoured, the rump meets its match in Shiraz's spice and depth. Full-flavoured and well-worked, which is why it holds up best of all the cuts to a hard sear. If you'd like something even more memorable, I'd suggest upgrading to the Wagyu Rump — the same full flavour, elevated by Wagyu's fat."
+        },
+        {
+          "item": "THE KING, QUEEN PLATTER",
+          "anchor": "CAFÉ LATTE",
+          "text": "Since you've already got the CAFÉ LATTE on the table, I'd pair it with our THE KING, QUEEN PLATTER. Good one to have once the plate's cleared, rounds things off nicely. It's pan-seared so it stays flaky. It's a signature plate here — always a good sign."
+        }
+      ]
+    },
+    {
+      "category": "Burgers",
+      "examples": [
+        {
+          "item": "CHEESE BURGER",
+          "anchor": "REMY MARTIN VSOP",
+          "text": "I noticed you've gone with the REMY MARTIN VSOP. If you're open to a recommendation, I'd definitely pair it with our CHEESE BURGER. It's got enough weight that it won't get lost next to something this rich. It's grilled to order. It's one of our signature dishes, so you're in good hands."
+        }
+      ]
+    },
+    {
+      "category": "Chicken Dishes",
+      "examples": [
+        {
+          "item": "FIRECRACKER CHICKEN WINGS - 800g",
+          "anchor": "RUST EN VREDE ESTATE",
+          "text": "Since you've already got the RUST EN VREDE ESTATE on the table, I'd pair it with our FIRECRACKER CHICKEN WINGS - 800g. It's a solid, easy match for the firecracker chicken wings - 800g, you really can't go wrong with it. It's flame-grilled. It's always a hit at this table."
+        },
+        {
+          "item": "FULL CHICKEN",
+          "anchor": "REMY MARTIN 1738",
+          "text": "Since you've already got the REMY MARTIN 1738 on the table, I'd pair it with our FULL CHICKEN. Nothing complicated here, it just goes well alongside. It's flame-grilled. It's always a hit at this table."
+        }
+      ]
+    },
+    {
+      "category": "Pastas",
+      "examples": [
+        {
+          "item": "ALFREDO",
+          "anchor": "RED BULL SUGAR FREE",
+          "text": "Since you've already got the RED BULL SUGAR FREE on the table, I'd pair it with our ALFREDO. It's nice and refreshing, keeps things feeling light between bites of the alfredo. It's a signature plate here — always a good sign."
+        },
+        {
+          "item": "SPAGHETTI BOLOGNESE",
+          "anchor": "MACALLAN 15 year",
+          "text": "Since you've already got the MACALLAN 15 year on the table, I'd pair it with our SPAGHETTI BOLOGNESE. It's got enough weight that it won't get lost next to something this rich. It's grilled to order. It's a signature plate here — always a good sign."
+        }
+      ]
+    },
+    {
+      "category": "Vegetarian",
+      "examples": [
+        {
+          "item": "VEG PLATTER",
+          "anchor": "CUCUMBER LEMONADE",
+          "text": "Since you've already got the CUCUMBER LEMONADE on the table, I'd pair it with our VEG PLATTER. It's nice and refreshing, keeps things feeling light between bites of the veg platter. It's fried till properly crisp. It's always a hit at this table."
+        }
+      ]
+    },
+    {
+      "category": "Sides",
+      "examples": [
+        {
+          "item": "SIDE GREEN SALAD",
+          "anchor": "JOSE CUERVO REPOSADO",
+          "text": "Since you've already got the JOSE CUERVO REPOSADO on the table, I'd pair it with our SIDE GREEN SALAD. Nothing complicated here, it just goes well alongside. It's always a hit at this table."
+        },
+        {
+          "item": "STEAKHOUSE CHIPS",
+          "anchor": "GLENLIVET 18 year",
+          "text": "Since you've already got the GLENLIVET 18 year on the table, I'd pair it with our STEAKHOUSE CHIPS. It's got enough weight that it won't get lost next to something this rich. It's always a hit at this table."
+        }
+      ]
+    },
+    {
+      "category": "Dessert",
+      "examples": [
+        {
+          "item": "TRIO OF ICE CREAM",
+          "anchor": "FRYER'S COVE",
+          "text": "Since you've already got the FRYER'S COVE on the table, I'd pair it with our TRIO OF ICE CREAM. It's a solid, easy match for the trio of ice cream, you really can't go wrong with it. It's served well chilled. It's always a hit at this table."
+        },
+        {
+          "item": "DUO OF ICE CREAM",
+          "anchor": "FAT BASTARD",
+          "text": "I noticed you've gone with the FAT BASTARD. If you're open to a recommendation, I'd definitely pair it with our DUO OF ICE CREAM. That creamy, rich sauce on the duo of ice cream can really take a red with this much weight — it softens everything out. It's served well chilled. It's one of my favourite combinations on the menu."
+        }
+      ]
+    },
+    {
+      "category": "Set Menus",
+      "examples": [
+        {
+          "item": "CHEF'S CHOICE - 2 Courses",
+          "anchor": "BOSCHENDAL NICOLAS",
+          "text": "I noticed you've gone with the BOSCHENDAL NICOLAS. If you're open to a recommendation, I'd definitely pair it with our CHEF'S CHOICE - 2 Courses. Honestly the char on the chef's choice - 2 courses is made for a red with this much backbone, it just softens everything out. It's kept simple so the flavour stays clean. It's one of my favourite combinations on the menu."
+        },
+        {
+          "item": "CHEF'S PREMIUM - 2 Courses",
+          "anchor": "BALVENIE 12 year",
+          "text": "I noticed you've gone with the BALVENIE 12 year. If you're open to a recommendation, I'd definitely pair it with our CHEF'S PREMIUM - 2 Courses. It's got enough weight that it won't get lost next to something this rich. It's pan-seared so it stays flaky. It's one of my favourite combinations on the menu."
+        }
+      ]
+    },
+    {
+      "category": "Champagne",
+      "examples": [
+        {
+          "item": "L'ORMARINS BRUT CLASSIQUE ROSÉ",
+          "anchor": "FILLET 260g",
+          "text": "Since you've already got the FILLET 260g on the table, I'd pair it with our L'ORMARINS BRUT CLASSIQUE ROSÉ. Bubbles always cut through a plate like this, it keeps things feeling fresh — and it's got a nice celebratory lift too. It's always a hit at this table."
+        },
+        {
+          "item": "VEUVE CLICQUOT RICH",
+          "anchor": "FIRECRACKER CHICKEN WINGS (400g)",
+          "text": "Since you've already got the FIRECRACKER CHICKEN WINGS (400g) on the table, I'd pair it with our VEUVE CLICQUOT RICH. Bubbles always cut through a plate like this, it keeps things feeling fresh — and it's got a nice celebratory lift too. It's always a hit at this table."
+        }
+      ]
+    },
+    {
+      "category": "White Wine",
+      "examples": [
+        {
+          "item": "FRYER'S COVE",
+          "anchor": "MUSHROOM TRUFFLE BUTTER",
+          "text": "Since you've already got the MUSHROOM TRUFFLE BUTTER on the table, I'd pair it with our FRYER'S COVE. It's a solid, easy match for the mushroom truffle butter, you really can't go wrong with it. It's always a hit at this table."
+        },
+        {
+          "item": "SPRINGFIELD LIFE OF STONE",
+          "anchor": "LAMB CHOPS 4's 500g",
+          "text": "I noticed you've gone with the LAMB CHOPS 4's 500g. If you're open to a recommendation, I'd definitely pair it with our SPRINGFIELD LIFE OF STONE. It's a solid, easy match for the lamb chops 4's 500g, you really can't go wrong with it. It's one of my favourite combinations on the menu."
+        }
+      ]
+    },
+    {
+      "category": "Red Wine",
+      "examples": [
+        {
+          "item": "VILAFONTE SERIES C",
+          "anchor": "HAKE & CALAMARI",
+          "text": "Since you've already got the HAKE & CALAMARI on the table, I'd pair it with our VILAFONTE SERIES C. It's a solid, easy match for the hake & calamari, you really can't go wrong with it. It's always a hit at this table."
+        },
+        {
+          "item": "KLEINE ZALZE FAMILY RESERVE",
+          "anchor": "DE KRANS MOSCATO",
+          "text": "I noticed you've gone with the DE KRANS MOSCATO. If you're open to a recommendation, I'd definitely pair it with our KLEINE ZALZE FAMILY RESERVE. It's a solid, easy match for the de krans moscato, you really can't go wrong with it. It's one of my favourite combinations on the menu."
+        }
+      ]
+    },
+    {
+      "category": "Beers",
+      "examples": [
+        {
+          "item": "CASTLE",
+          "anchor": "BACON, EGG & CHEESE BURGER",
+          "text": "I noticed you've gone with the BACON, EGG & CHEESE BURGER. If you're open to a recommendation, I'd definitely pair it with our CASTLE. No overthinking needed, a cold one just goes with food like this. It's one of our signature dishes, so you're in good hands."
+        },
+        {
+          "item": "HEINEKEN SILVER",
+          "anchor": "ALFREDO",
+          "text": "Since you've already got the ALFREDO on the table, I'd pair it with our HEINEKEN SILVER. No overthinking needed, a cold one just goes with food like this. It's a signature plate here — always a good sign."
+        }
+      ]
+    },
+    {
+      "category": "Spirits",
+      "examples": [
+        {
+          "item": "JAMESON SELECT RESERVE",
+          "anchor": "MUSSELS",
+          "text": "Since you've already got the MUSSELS on the table, I'd pair it with our JAMESON SELECT RESERVE. Nothing complicated here, it just goes well alongside. It's always a hit at this table."
+        },
+        {
+          "item": "GLENFIDDICH 15 year",
+          "anchor": "PRAWN & CALAMARI",
+          "text": "I noticed you've gone with the PRAWN & CALAMARI. If you're open to a recommendation, I'd definitely pair it with our GLENFIDDICH 15 year. Nothing complicated here, it just goes well alongside. It's one of my favourite combinations on the menu."
+        }
+      ]
+    },
+    {
+      "category": "Cocktails",
+      "examples": [
+        {
+          "item": "DON MAGARITA",
+          "anchor": "WAGYU FILLET 300g",
+          "text": "I noticed you've gone with the WAGYU FILLET 300g. If you're open to a recommendation, I'd definitely pair it with our DON MAGARITA. The citrus in that cocktail cuts right through the richness, keeps every bite feeling lighter. It's one of our signature dishes, so you're in good hands."
+        },
+        {
+          "item": "FLAVOURED MOJITO - GREEN APPLE",
+          "anchor": "6 QUEEN PRAWNS",
+          "text": "Since you've already got the 6 QUEEN PRAWNS on the table, I'd pair it with our FLAVOURED MOJITO - GREEN APPLE. The citrus in that cocktail cuts right through the richness, keeps every bite feeling lighter. It's always a hit at this table."
+        }
+      ]
+    },
+    {
+      "category": "Mocktails & Cold Beverages",
+      "examples": [
+        {
+          "item": "ORIGINAL LEMONADE",
+          "anchor": "RAINBOW ROLL - PRAWN (8pc)",
+          "text": "I noticed you've gone with the RAINBOW ROLL - PRAWN (8pc). If you're open to a recommendation, I'd definitely pair it with our ORIGINAL LEMONADE. It's nice and refreshing, keeps things feeling light between bites of the rainbow roll - prawn (8pc). It's one of my favourite combinations on the menu."
+        },
+        {
+          "item": "EARL GREY TEA",
+          "anchor": "SAVOURY RICE",
+          "text": "Since you've already got the SAVOURY RICE on the table, I'd pair it with our EARL GREY TEA. Good one to have once the plate's cleared, rounds things off nicely. It's always a hit at this table."
+        }
+      ]
+    }
+  ]
+}

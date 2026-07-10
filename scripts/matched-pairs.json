@@ -1,0 +1,2174 @@
+[
+  {
+    "file": "1800_tequila_reposado.jpg",
+    "dbId": 338,
+    "dbName": "1800 TEQUILA REPOSADO",
+    "normalized": "1800tequilareposado"
+  },
+  {
+    "file": "6_queen_prawns.jpg",
+    "dbId": 49,
+    "dbName": "6 QUEEN PRAWNS",
+    "normalized": "6queenprawns"
+  },
+  {
+    "file": "9_queen_prawns.jpg",
+    "dbId": 50,
+    "dbName": "9 QUEEN PRAWNS",
+    "normalized": "9queenprawns"
+  },
+  {
+    "file": "add_feta.jpg",
+    "dbId": 143,
+    "dbName": "ADD FETA",
+    "normalized": "addfeta"
+  },
+  {
+    "file": "alfredo.jpg",
+    "dbId": 125,
+    "dbName": "ALFREDO",
+    "normalized": "alfredo"
+  },
+  {
+    "file": "alto.jpg",
+    "dbId": 242,
+    "dbName": "ALTO",
+    "normalized": "alto"
+  },
+  {
+    "file": "alto_estate.jpg",
+    "dbId": 267,
+    "dbName": "ALTO ESTATE",
+    "normalized": "altoestate"
+  },
+  {
+    "file": "amarula.jpg",
+    "dbId": 375,
+    "dbName": "AMARULA",
+    "normalized": "amarula"
+  },
+  {
+    "file": "amarula_gin.jpg",
+    "dbId": 349,
+    "dbName": "AMARULA GIN",
+    "normalized": "amarulagin"
+  },
+  {
+    "file": "americano_coffee.jpg",
+    "dbId": 429,
+    "dbName": "AMERICANO COFFEE",
+    "normalized": "americanocoffee"
+  },
+  {
+    "file": "amstel.jpg",
+    "dbId": 286,
+    "dbName": "AMSTEL",
+    "normalized": "amstel"
+  },
+  {
+    "file": "anthonij_rupert_optima.jpg",
+    "dbId": 252,
+    "dbName": "ANTHONIJ RUPERT OPTIMA",
+    "normalized": "anthonijrupertoptima"
+  },
+  {
+    "file": "aperol_campari.jpg",
+    "dbId": 384,
+    "dbName": "APEROL CAMPARI",
+    "normalized": "aperolcampari"
+  },
+  {
+    "file": "armand_de_brignac_gold_ace_of_spades.jpg",
+    "dbId": 163,
+    "dbName": "ARMAND DE BRIGNAC GOLD (ACE OF SPADES)",
+    "normalized": "armanddebrignacgoldaceofspades"
+  },
+  {
+    "file": "bacardi_superior_black.jpg",
+    "dbId": 367,
+    "dbName": "BACARDI SUPERIOR BLACK",
+    "normalized": "bacardisuperiorblack"
+  },
+  {
+    "file": "bacardi_superior_white.jpg",
+    "dbId": 366,
+    "dbName": "BACARDI SUPERIOR WHITE",
+    "normalized": "bacardisuperiorwhite"
+  },
+  {
+    "file": "bacon_and_cheese_burger.jpg",
+    "dbId": 115,
+    "dbName": "BACON AND CHEESE BURGER",
+    "normalized": "baconandcheeseburger"
+  },
+  {
+    "file": "bacon_and_chicken_burger.jpg",
+    "dbId": 113,
+    "dbName": "BACON AND CHICKEN BURGER",
+    "normalized": "baconandchickenburger"
+  },
+  {
+    "file": "bains_cape_mountain.jpg",
+    "dbId": 316,
+    "dbName": "BAINS CAPE MOUNTAIN",
+    "normalized": "bainscapemountain"
+  },
+  {
+    "file": "balvenie_12_year.jpg",
+    "dbId": 325,
+    "dbName": "BALVENIE 12 year",
+    "normalized": "balvenie12year"
+  },
+  {
+    "file": "bbq_peri_peri_beef_burger.jpg",
+    "dbId": 110,
+    "dbName": "BBQ / PERI-PERI BEEF BURGER",
+    "normalized": "bbqperiperibeefburger"
+  },
+  {
+    "file": "bbq_peri_peri_chicken_burger.jpg",
+    "dbId": 112,
+    "dbName": "BBQ / PERI-PERI CHICKEN BURGER",
+    "normalized": "bbqperiperichickenburger"
+  },
+  {
+    "file": "beef_biltong.jpg",
+    "dbId": 4,
+    "dbName": "BEEF BILTONG",
+    "normalized": "beefbiltong"
+  },
+  {
+    "file": "beef_fillet_pasta.jpg",
+    "dbId": 126,
+    "dbName": "BEEF FILLET PASTA",
+    "normalized": "beeffilletpasta"
+  },
+  {
+    "file": "beef_ribs_2_pce_600g.jpg",
+    "dbId": 99,
+    "dbName": "BEEF RIBS (2 pce) 600g",
+    "normalized": "beefribs2pce600g"
+  },
+  {
+    "file": "beef_ribs_3_pce_1kg.jpg",
+    "dbId": 100,
+    "dbName": "BEEF RIBS (3 pce) ±1kg",
+    "normalized": "beefribs3pce1kg"
+  },
+  {
+    "file": "bells.jpg",
+    "dbId": 314,
+    "dbName": "BELLS",
+    "normalized": "bells"
+  },
+  {
+    "file": "belvedere.jpg",
+    "dbId": 362,
+    "dbName": "BELVEDERE",
+    "normalized": "belvedere"
+  },
+  {
+    "file": "bernini_blush.jpg",
+    "dbId": 294,
+    "dbName": "BERNINI BLUSH",
+    "normalized": "berniniblush"
+  },
+  {
+    "file": "berry_fruit_juices.jpg",
+    "dbId": 419,
+    "dbName": "BERRY FRUIT JUICES",
+    "normalized": "berryfruitjuices"
+  },
+  {
+    "file": "beyerskloof_reserve.jpg",
+    "dbId": 201,
+    "dbName": "BEYERSKLOOF RESERVE",
+    "normalized": "beyerskloofreserve"
+  },
+  {
+    "file": "blantons_original_single_barrel.jpg",
+    "dbId": 370,
+    "dbName": "BLANTONS ORIGINAL SINGLE BARREL",
+    "normalized": "blantonsoriginalsinglebarrel"
+  },
+  {
+    "file": "boekenhoutskloof.jpg",
+    "dbId": 241,
+    "dbName": "BOEKENHOUTSKLOOF",
+    "normalized": "boekenhoutskloof"
+  },
+  {
+    "file": "boekenhoutskloof_stellenbosch.jpg",
+    "dbId": 229,
+    "dbName": "BOEKENHOUTSKLOOF STELLENBOSCH",
+    "normalized": "boekenhoutskloofstellenbosch"
+  },
+  {
+    "file": "bollinger_special_cuvee_brut.jpg",
+    "dbId": 160,
+    "dbName": "BOLLINGER SPECIAL CUVEE BRUT",
+    "normalized": "bollingerspecialcuveebrut"
+  },
+  {
+    "file": "boschendal_nicolas.jpg",
+    "dbId": 258,
+    "dbName": "BOSCHENDAL NICOLAS",
+    "normalized": "boschendalnicolas"
+  },
+  {
+    "file": "brutal_fruit_litchi_seche.jpg",
+    "dbId": 293,
+    "dbName": "BRUTAL FRUIT LITCHI SECHE",
+    "normalized": "brutalfruitlitchiseche"
+  },
+  {
+    "file": "budweiser.jpg",
+    "dbId": 289,
+    "dbName": "BUDWEISER",
+    "normalized": "budweiser"
+  },
+  {
+    "file": "buffalo_trace.jpg",
+    "dbId": 369,
+    "dbName": "BUFFALO TRACE",
+    "normalized": "buffalotrace"
+  },
+  {
+    "file": "bushmills_black.jpg",
+    "dbId": 319,
+    "dbName": "BUSHMILLS BLACK",
+    "normalized": "bushmillsblack"
+  },
+  {
+    "file": "bushmills_original.jpg",
+    "dbId": 318,
+    "dbName": "BUSHMILLS ORIGINAL",
+    "normalized": "bushmillsoriginal"
+  },
+  {
+    "file": "california_roll_prawn_4pc.jpg",
+    "dbId": 27,
+    "dbName": "CALIFORNIA ROLL - PRAWN (4pc)",
+    "normalized": "californiarollprawn4pc"
+  },
+  {
+    "file": "california_roll_prawn_8pc.jpg",
+    "dbId": 25,
+    "dbName": "CALIFORNIA ROLL - PRAWN (8pc)",
+    "normalized": "californiarollprawn8pc"
+  },
+  {
+    "file": "california_roll_salmon_4pc.jpg",
+    "dbId": 26,
+    "dbName": "CALIFORNIA ROLL - SALMON (4pc)",
+    "normalized": "californiarollsalmon4pc"
+  },
+  {
+    "file": "california_roll_salmon_8pc.jpg",
+    "dbId": 24,
+    "dbName": "CALIFORNIA ROLL - SALMON (8pc)",
+    "normalized": "californiarollsalmon8pc"
+  },
+  {
+    "file": "cape_malva_pudding.jpg",
+    "dbId": 146,
+    "dbName": "CAPE MALVA PUDDING",
+    "normalized": "capemalvapudding"
+  },
+  {
+    "file": "cape_of_good_hope_riebeeksrivier.jpg",
+    "dbId": 233,
+    "dbName": "CAPE OF GOOD HOPE RIEBEEKSRIVIER",
+    "normalized": "capeofgoodhoperiebeeksrivier"
+  },
+  {
+    "file": "cappuccino.jpg",
+    "dbId": 431,
+    "dbName": "CAPPUCCINO",
+    "normalized": "cappuccino"
+  },
+  {
+    "file": "captain_morgan_dark_rum.jpg",
+    "dbId": 365,
+    "dbName": "CAPTAIN MORGAN DARK RUM",
+    "normalized": "captainmorgandarkrum"
+  },
+  {
+    "file": "captain_morgan_spiced_gold.jpg",
+    "dbId": 364,
+    "dbName": "CAPTAIN MORGAN SPICED GOLD",
+    "normalized": "captainmorganspicedgold"
+  },
+  {
+    "file": "cap_maritime_coastal.jpg",
+    "dbId": 243,
+    "dbName": "CAP MARITIME COASTAL",
+    "normalized": "capmaritimecoastal"
+  },
+  {
+    "file": "cardhu_12_year.jpg",
+    "dbId": 320,
+    "dbName": "CARDHU 12 year",
+    "normalized": "cardhu12year"
+  },
+  {
+    "file": "carling_black_label.jpg",
+    "dbId": 279,
+    "dbName": "CARLING BLACK LABEL",
+    "normalized": "carlingblacklabel"
+  },
+  {
+    "file": "castle.jpg",
+    "dbId": 274,
+    "dbName": "CASTLE",
+    "normalized": "castle"
+  },
+  {
+    "file": "castle_double_malt.jpg",
+    "dbId": 282,
+    "dbName": "CASTLE DOUBLE MALT",
+    "normalized": "castledoublemalt"
+  },
+  {
+    "file": "castle_lager.jpg",
+    "dbId": 280,
+    "dbName": "CASTLE LAGER",
+    "normalized": "castlelager"
+  },
+  {
+    "file": "chakalaka_sauce.jpg",
+    "dbId": 82,
+    "dbName": "CHAKALAKA SAUCE",
+    "normalized": "chakalakasauce"
+  },
+  {
+    "file": "cheese_burger.jpg",
+    "dbId": 111,
+    "dbName": "CHEESE BURGER",
+    "normalized": "cheeseburger"
+  },
+  {
+    "file": "chef_s_choice_2_courses.jpg",
+    "dbId": 150,
+    "dbName": "CHEF'S CHOICE - 2 Courses",
+    "normalized": "chefschoice2courses"
+  },
+  {
+    "file": "chef_s_choice_3_courses.jpg",
+    "dbId": 151,
+    "dbName": "CHEF'S CHOICE - 3 Courses",
+    "normalized": "chefschoice3courses"
+  },
+  {
+    "file": "chef_s_premium_2_courses.jpg",
+    "dbId": 152,
+    "dbName": "CHEF'S PREMIUM - 2 Courses",
+    "normalized": "chefspremium2courses"
+  },
+  {
+    "file": "chef_s_premium_3_courses.jpg",
+    "dbId": 153,
+    "dbName": "CHEF'S PREMIUM - 3 Courses",
+    "normalized": "chefspremium3courses"
+  },
+  {
+    "file": "chicken_breast.jpg",
+    "dbId": 118,
+    "dbName": "CHICKEN BREAST",
+    "normalized": "chickenbreast"
+  },
+  {
+    "file": "chicken_pasta.jpg",
+    "dbId": 124,
+    "dbName": "CHICKEN PASTA",
+    "normalized": "chickenpasta"
+  },
+  {
+    "file": "chicken_trinchado.jpg",
+    "dbId": 2,
+    "dbName": "CHICKEN TRINCHADO",
+    "normalized": "chickentrinchado"
+  },
+  {
+    "file": "chimichurri.jpg",
+    "dbId": 86,
+    "dbName": "CHIMICHURRI",
+    "normalized": "chimichurri"
+  },
+  {
+    "file": "chocolate_brownie.jpg",
+    "dbId": 149,
+    "dbName": "CHOCOLATE BROWNIE",
+    "normalized": "chocolatebrownie"
+  },
+  {
+    "file": "cinzano_bianco.jpg",
+    "dbId": 382,
+    "dbName": "CINZANO BIANCO",
+    "normalized": "cinzanobianco"
+  },
+  {
+    "file": "ciroc.jpg",
+    "dbId": 361,
+    "dbName": "CIROC",
+    "normalized": "ciroc"
+  },
+  {
+    "file": "clase_azul_reposado.jpg",
+    "dbId": 344,
+    "dbName": "CLASE AZUL REPOSADO",
+    "normalized": "claseazulreposado"
+  },
+  {
+    "file": "cointreau.jpg",
+    "dbId": 376,
+    "dbName": "COINTREAU",
+    "normalized": "cointreau"
+  },
+  {
+    "file": "constantia_glen_3.jpg",
+    "dbId": 264,
+    "dbName": "CONSTANTIA GLEN 3",
+    "normalized": "constantiaglen3"
+  },
+  {
+    "file": "constantia_glen_two.jpg",
+    "dbId": 198,
+    "dbName": "CONSTANTIA GLEN TWO",
+    "normalized": "constantiaglentwo"
+  },
+  {
+    "file": "cordials.jpg",
+    "dbId": 420,
+    "dbName": "CORDIALS",
+    "normalized": "cordials"
+  },
+  {
+    "file": "corona.jpg",
+    "dbId": 285,
+    "dbName": "CORONA",
+    "normalized": "corona"
+  },
+  {
+    "file": "corona_non_alcoholic_0_0.jpg",
+    "dbId": 290,
+    "dbName": "CORONA NON-ALCOHOLIC 0.0",
+    "normalized": "coronanonalcoholic00"
+  },
+  {
+    "file": "cosmopolitan.jpg",
+    "dbId": 386,
+    "dbName": "COSMOPOLITAN",
+    "normalized": "cosmopolitan"
+  },
+  {
+    "file": "cranberry_sauce.jpg",
+    "dbId": 85,
+    "dbName": "CRANBERRY SAUCE",
+    "normalized": "cranberrysauce"
+  },
+  {
+    "file": "creamed_spinach.jpg",
+    "dbId": 133,
+    "dbName": "CREAMED SPINACH",
+    "normalized": "creamedspinach"
+  },
+  {
+    "file": "creamy_cheese_sauce.jpg",
+    "dbId": 79,
+    "dbName": "CREAMY CHEESE SAUCE",
+    "normalized": "creamycheesesauce"
+  },
+  {
+    "file": "creamy_mushroom_sauce.jpg",
+    "dbId": 81,
+    "dbName": "CREAMY MUSHROOM SAUCE",
+    "normalized": "creamymushroomsauce"
+  },
+  {
+    "file": "crispy_rice.jpg",
+    "dbId": 21,
+    "dbName": "CRISPY RICE",
+    "normalized": "crispyrice"
+  },
+  {
+    "file": "cruz_vintage_black.jpg",
+    "dbId": 360,
+    "dbName": "CRUZ VINTAGE BLACK",
+    "normalized": "cruzvintageblack"
+  },
+  {
+    "file": "cucumber_lemonade.jpg",
+    "dbId": 406,
+    "dbName": "CUCUMBER LEMONADE",
+    "normalized": "cucumberlemonade"
+  },
+  {
+    "file": "dalla_cia.jpg",
+    "dbId": 248,
+    "dbName": "DALLA CIA",
+    "normalized": "dallacia"
+  },
+  {
+    "file": "dalla_cia_grappa.jpg",
+    "dbId": 383,
+    "dbName": "DALLA CIA GRAPPA",
+    "normalized": "dallaciagrappa"
+  },
+  {
+    "file": "da_luca_prosecco.jpg",
+    "dbId": 171,
+    "dbName": "DA LUCA PROSECCO",
+    "normalized": "dalucaprosecco"
+  },
+  {
+    "file": "death_by_chocolate_cake.jpg",
+    "dbId": 148,
+    "dbName": "DEATH BY CHOCOLATE CAKE",
+    "normalized": "deathbychocolatecake"
+  },
+  {
+    "file": "decaf_cappuccino.jpg",
+    "dbId": 430,
+    "dbName": "DECAF CAPPUCCINO",
+    "normalized": "decafcappuccino"
+  },
+  {
+    "file": "delaire_graff_botmaskop.jpg",
+    "dbId": 253,
+    "dbName": "DELAIRE GRAFF BOTMASKOP",
+    "normalized": "delairegraffbotmaskop"
+  },
+  {
+    "file": "de_grendel.jpg",
+    "dbId": 212,
+    "dbName": "DE GRENDEL",
+    "normalized": "degrendel"
+  },
+  {
+    "file": "de_krans_cape_ruby.jpg",
+    "dbId": 381,
+    "dbName": "DE KRANS CAPE RUBY",
+    "normalized": "dekranscaperuby"
+  },
+  {
+    "file": "de_krans_moscato.jpg",
+    "dbId": 199,
+    "dbName": "DE KRANS MOSCATO",
+    "normalized": "dekransmoscato"
+  },
+  {
+    "file": "diemersdal.jpg",
+    "dbId": 175,
+    "dbName": "DIEMERSDAL",
+    "normalized": "diemersdal"
+  },
+  {
+    "file": "diemersdal_reserve.jpg",
+    "dbId": 203,
+    "dbName": "DIEMERSDAL RESERVE",
+    "normalized": "diemersdalreserve"
+  },
+  {
+    "file": "dom_amarula.jpg",
+    "dbId": 425,
+    "dbName": "DOM AMARULA",
+    "normalized": "domamarula"
+  },
+  {
+    "file": "dom_kahlua.jpg",
+    "dbId": 426,
+    "dbName": "DOM KAHLUA",
+    "normalized": "domkahlua"
+  },
+  {
+    "file": "dom_pedro.jpg",
+    "dbId": 424,
+    "dbName": "DOM PEDRO",
+    "normalized": "dompedro"
+  },
+  {
+    "file": "dom_perignon_blanc.jpg",
+    "dbId": 161,
+    "dbName": "DOM PERIGNON BLANC",
+    "normalized": "domperignonblanc"
+  },
+  {
+    "file": "dom_perignon_rose.jpg",
+    "dbId": 162,
+    "dbName": "DOM PERIGNON ROSE",
+    "normalized": "domperignonrose"
+  },
+  {
+    "file": "don_julio_1942_anejo.jpg",
+    "dbId": 343,
+    "dbName": "DON JULIO 1942 ANEJO",
+    "normalized": "donjulio1942anejo"
+  },
+  {
+    "file": "don_julio_blanco.jpg",
+    "dbId": 341,
+    "dbName": "DON JULIO BLANCO",
+    "normalized": "donjulioblanco"
+  },
+  {
+    "file": "don_julio_reposado.jpg",
+    "dbId": 342,
+    "dbName": "DON JULIO REPOSADO",
+    "normalized": "donjulioreposado"
+  },
+  {
+    "file": "don_magarita.jpg",
+    "dbId": 405,
+    "dbName": "DON MAGARITA",
+    "normalized": "donmagarita"
+  },
+  {
+    "file": "dragon_roll_8pc.jpg",
+    "dbId": 34,
+    "dbName": "DRAGON ROLL (8pc)",
+    "normalized": "dragonroll8pc"
+  },
+  {
+    "file": "duo_of_ice_cream.jpg",
+    "dbId": 144,
+    "dbName": "DUO OF ICE CREAM",
+    "normalized": "duooficecream"
+  },
+  {
+    "file": "earl_grey_tea.jpg",
+    "dbId": 439,
+    "dbName": "EARL GREY TEA",
+    "normalized": "earlgreytea"
+  },
+  {
+    "file": "eisbein_1kg.jpg",
+    "dbId": 89,
+    "dbName": "EISBEIN ±1kg",
+    "normalized": "eisbein1kg"
+  },
+  {
+    "file": "ernie_els_major_series.jpg",
+    "dbId": 227,
+    "dbName": "ERNIE ELS MAJOR SERIES",
+    "normalized": "ernieelsmajorseries"
+  },
+  {
+    "file": "espresso_double.jpg",
+    "dbId": 434,
+    "dbName": "ESPRESSO DOUBLE",
+    "normalized": "espressodouble"
+  },
+  {
+    "file": "espresso_single.jpg",
+    "dbId": 433,
+    "dbName": "ESPRESSO SINGLE",
+    "normalized": "espressosingle"
+  },
+  {
+    "file": "falklands_calamari.jpg",
+    "dbId": 44,
+    "dbName": "FALKLANDS CALAMARI",
+    "normalized": "falklandscalamari"
+  },
+  {
+    "file": "fat_bastard_golden_reserve.jpg",
+    "dbId": 251,
+    "dbName": "FAT BASTARD GOLDEN RESERVE",
+    "normalized": "fatbastardgoldenreserve"
+  },
+  {
+    "file": "ferreira_ruby.jpg",
+    "dbId": 379,
+    "dbName": "FERREIRA RUBY",
+    "normalized": "ferreiraruby"
+  },
+  {
+    "file": "ferreira_tawny.jpg",
+    "dbId": 380,
+    "dbName": "FERREIRA TAWNY",
+    "normalized": "ferreiratawny"
+  },
+  {
+    "file": "fillet_260g.jpg",
+    "dbId": 55,
+    "dbName": "FILLET 260g",
+    "normalized": "fillet260g"
+  },
+  {
+    "file": "fillet_360g.jpg",
+    "dbId": 56,
+    "dbName": "FILLET 360g",
+    "normalized": "fillet360g"
+  },
+  {
+    "file": "fillet_500g.jpg",
+    "dbId": 66,
+    "dbName": "FILLET 500g",
+    "normalized": "fillet500g"
+  },
+  {
+    "file": "firecracker_chicken_wings_400g.jpg",
+    "dbId": 3,
+    "dbName": "FIRECRACKER CHICKEN WINGS (400g)",
+    "normalized": "firecrackerchickenwings400g"
+  },
+  {
+    "file": "firecracker_chicken_wings_800g.jpg",
+    "dbId": 121,
+    "dbName": "FIRECRACKER CHICKEN WINGS - 800g",
+    "normalized": "firecrackerchickenwings800g"
+  },
+  {
+    "file": "five_roses_tea.jpg",
+    "dbId": 436,
+    "dbName": "FIVE ROSES TEA",
+    "normalized": "fiverosestea"
+  },
+  {
+    "file": "flash_pan_fried_chicken_livers.jpg",
+    "dbId": 1,
+    "dbName": "FLASH PAN FRIED CHICKEN LIVERS",
+    "normalized": "flashpanfriedchickenlivers"
+  },
+  {
+    "file": "flavoured_mojito_blueberry.jpg",
+    "dbId": 396,
+    "dbName": "FLAVOURED MOJITO - BLUEBERRY",
+    "normalized": "flavouredmojitoblueberry"
+  },
+  {
+    "file": "flavoured_mojito_green_apple.jpg",
+    "dbId": 394,
+    "dbName": "FLAVOURED MOJITO - GREEN APPLE",
+    "normalized": "flavouredmojitogreenapple"
+  },
+  {
+    "file": "flavoured_mojito_mango.jpg",
+    "dbId": 397,
+    "dbName": "FLAVOURED MOJITO - MANGO",
+    "normalized": "flavouredmojitomango"
+  },
+  {
+    "file": "flavoured_mojito_strawberry.jpg",
+    "dbId": 395,
+    "dbName": "FLAVOURED MOJITO - STRAWBERRY",
+    "normalized": "flavouredmojitostrawberry"
+  },
+  {
+    "file": "flying_fish_dry_apple.jpg",
+    "dbId": 284,
+    "dbName": "FLYING FISH DRY APPLE",
+    "normalized": "flyingfishdryapple"
+  },
+  {
+    "file": "flying_fish_lemon.jpg",
+    "dbId": 283,
+    "dbName": "FLYING FISH LEMON",
+    "normalized": "flyingfishlemon"
+  },
+  {
+    "file": "frangelico.jpg",
+    "dbId": 374,
+    "dbName": "FRANGELICO",
+    "normalized": "frangelico"
+  },
+  {
+    "file": "fried_halloumi_fingers.jpg",
+    "dbId": 11,
+    "dbName": "FRIED HALLOUMI FINGERS",
+    "normalized": "friedhalloumifingers"
+  },
+  {
+    "file": "frozen_mint_lemonade.jpg",
+    "dbId": 407,
+    "dbName": "FROZEN MINT LEMONADE",
+    "normalized": "frozenmintlemonade"
+  },
+  {
+    "file": "frozen_pink_grapefruit_lemonade.jpg",
+    "dbId": 408,
+    "dbName": "FROZEN PINK GRAPEFRUIT LEMONADE",
+    "normalized": "frozenpinkgrapefruitlemonade"
+  },
+  {
+    "file": "fruit_daiquiri_blueberry.jpg",
+    "dbId": 390,
+    "dbName": "FRUIT DAIQUIRI - BLUEBERRY",
+    "normalized": "fruitdaiquiriblueberry"
+  },
+  {
+    "file": "fruit_daiquiri_green_apple.jpg",
+    "dbId": 392,
+    "dbName": "FRUIT DAIQUIRI - GREEN APPLE",
+    "normalized": "fruitdaiquirigreenapple"
+  },
+  {
+    "file": "fruit_daiquiri_mango.jpg",
+    "dbId": 393,
+    "dbName": "FRUIT DAIQUIRI - MANGO",
+    "normalized": "fruitdaiquirimango"
+  },
+  {
+    "file": "fruit_daiquiri_strawberry.jpg",
+    "dbId": 391,
+    "dbName": "FRUIT DAIQUIRI - STRAWBERRY",
+    "normalized": "fruitdaiquiristrawberry"
+  },
+  {
+    "file": "fruit_juices.jpg",
+    "dbId": 418,
+    "dbName": "FRUIT JUICES",
+    "normalized": "fruitjuices"
+  },
+  {
+    "file": "full_chicken.jpg",
+    "dbId": 120,
+    "dbName": "FULL CHICKEN",
+    "normalized": "fullchicken"
+  },
+  {
+    "file": "full_rack_pork_loin_ribs_600g.jpg",
+    "dbId": 90,
+    "dbName": "FULL RACK PORK LOIN RIBS ±600g",
+    "normalized": "fullrackporkloinribs600g"
+  },
+  {
+    "file": "garlic_lemon_calamari.jpg",
+    "dbId": 8,
+    "dbName": "GARLIC LEMON CALAMARI",
+    "normalized": "garliclemoncalamari"
+  },
+  {
+    "file": "garlic_sauce.jpg",
+    "dbId": 78,
+    "dbName": "GARLIC SAUCE",
+    "normalized": "garlicsauce"
+  },
+  {
+    "file": "garlic_snails.jpg",
+    "dbId": 7,
+    "dbName": "GARLIC SNAILS",
+    "normalized": "garlicsnails"
+  },
+  {
+    "file": "ghost_corner.jpg",
+    "dbId": 246,
+    "dbName": "GHOST CORNER",
+    "normalized": "ghostcorner"
+  },
+  {
+    "file": "glenelly_glass_collection.jpg",
+    "dbId": 209,
+    "dbName": "GLENELLY GLASS COLLECTION",
+    "normalized": "glenellyglasscollection"
+  },
+  {
+    "file": "glenelly_lady_may.jpg",
+    "dbId": 269,
+    "dbName": "GLENELLY LADY MAY",
+    "normalized": "glenellyladymay"
+  },
+  {
+    "file": "glenelly_unwooded.jpg",
+    "dbId": 189,
+    "dbName": "GLENELLY UNWOODED",
+    "normalized": "glenellyunwooded"
+  },
+  {
+    "file": "glenfiddich_12_year.jpg",
+    "dbId": 301,
+    "dbName": "GLENFIDDICH 12 year",
+    "normalized": "glenfiddich12year"
+  },
+  {
+    "file": "glenfiddich_12_year_whisky_sour.jpg",
+    "dbId": 403,
+    "dbName": "GLENFIDDICH 12 YEAR WHISKY SOUR",
+    "normalized": "glenfiddich12yearwhiskysour"
+  },
+  {
+    "file": "glenfiddich_15_year.jpg",
+    "dbId": 302,
+    "dbName": "GLENFIDDICH 15 year",
+    "normalized": "glenfiddich15year"
+  },
+  {
+    "file": "glenfiddich_18_year.jpg",
+    "dbId": 303,
+    "dbName": "GLENFIDDICH 18 year",
+    "normalized": "glenfiddich18year"
+  },
+  {
+    "file": "glenfiddich_21_year.jpg",
+    "dbId": 304,
+    "dbName": "GLENFIDDICH 21 year",
+    "normalized": "glenfiddich21year"
+  },
+  {
+    "file": "glenfiddich_23_year_grand_gru.jpg",
+    "dbId": 305,
+    "dbName": "GLENFIDDICH 23 year Grand Gru",
+    "normalized": "glenfiddich23yeargrandgru"
+  },
+  {
+    "file": "glenfiddich_26_year_grande_couronne.jpg",
+    "dbId": 306,
+    "dbName": "GLENFIDDICH 26 year Grande Couronne",
+    "normalized": "glenfiddich26yeargrandecouronne"
+  },
+  {
+    "file": "glenlivet_18_year.jpg",
+    "dbId": 322,
+    "dbName": "GLENLIVET 18 year",
+    "normalized": "glenlivet18year"
+  },
+  {
+    "file": "glenmorangie_10_year.jpg",
+    "dbId": 323,
+    "dbName": "GLENMORANGIE 10 year",
+    "normalized": "glenmorangie10year"
+  },
+  {
+    "file": "glen_carlou.jpg",
+    "dbId": 211,
+    "dbName": "GLEN CARLOU",
+    "normalized": "glencarlou"
+  },
+  {
+    "file": "grants_tripple_wood_12_year.jpg",
+    "dbId": 317,
+    "dbName": "GRANTS TRIPPLE WOOD 12 year",
+    "normalized": "grantstripplewood12year"
+  },
+  {
+    "file": "greek_salad.jpg",
+    "dbId": 17,
+    "dbName": "GREEK SALAD",
+    "normalized": "greeksalad"
+  },
+  {
+    "file": "green_tea.jpg",
+    "dbId": 438,
+    "dbName": "GREEN TEA",
+    "normalized": "greentea"
+  },
+  {
+    "file": "grey_goose.jpg",
+    "dbId": 363,
+    "dbName": "GREY GOOSE",
+    "normalized": "greygoose"
+  },
+  {
+    "file": "grilled_hake.jpg",
+    "dbId": 51,
+    "dbName": "GRILLED HAKE",
+    "normalized": "grilledhake"
+  },
+  {
+    "file": "groot_constantia.jpg",
+    "dbId": 216,
+    "dbName": "GROOT CONSTANTIA",
+    "normalized": "grootconstantia"
+  },
+  {
+    "file": "groot_constantia_gouverneurs_reserve.jpg",
+    "dbId": 268,
+    "dbName": "GROOT CONSTANTIA GOUVERNEURS RESERVE",
+    "normalized": "grootconstantiagouverneursreserve"
+  },
+  {
+    "file": "groot_constantia_lady_of_abundance.jpg",
+    "dbId": 263,
+    "dbName": "GROOT CONSTANTIA LADY OF ABUNDANCE",
+    "normalized": "grootconstantialadyofabundance"
+  },
+  {
+    "file": "hake_platter_for_1.jpg",
+    "dbId": 48,
+    "dbName": "HAKE PLATTER FOR 1",
+    "normalized": "hakeplatterfor1"
+  },
+  {
+    "file": "half_chicken.jpg",
+    "dbId": 117,
+    "dbName": "HALF CHICKEN",
+    "normalized": "halfchicken"
+  },
+  {
+    "file": "halloumi_burger.jpg",
+    "dbId": 130,
+    "dbName": "HALLOUMI BURGER",
+    "normalized": "halloumiburger"
+  },
+  {
+    "file": "halloumi_salad.jpg",
+    "dbId": 18,
+    "dbName": "HALLOUMI SALAD",
+    "normalized": "halloumisalad"
+  },
+  {
+    "file": "heineken_0_0.jpg",
+    "dbId": 291,
+    "dbName": "HEINEKEN 0.0",
+    "normalized": "heineken00"
+  },
+  {
+    "file": "heineken_silver.jpg",
+    "dbId": 287,
+    "dbName": "HEINEKEN SILVER",
+    "normalized": "heinekensilver"
+  },
+  {
+    "file": "hendricks.jpg",
+    "dbId": 354,
+    "dbName": "HENDRICKS",
+    "normalized": "hendricks"
+  },
+  {
+    "file": "hennessy_very_special.jpg",
+    "dbId": 331,
+    "dbName": "HENNESSY VERY SPECIAL",
+    "normalized": "hennessyveryspecial"
+  },
+  {
+    "file": "hennessy_vsop_privilege.jpg",
+    "dbId": 332,
+    "dbName": "HENNESSY VSOP PRIVILEGE",
+    "normalized": "hennessyvsopprivilege"
+  },
+  {
+    "file": "hennessy_xo.jpg",
+    "dbId": 333,
+    "dbName": "HENNESSY XO",
+    "normalized": "hennessyxo"
+  },
+  {
+    "file": "herencia_anejo.jpg",
+    "dbId": 340,
+    "dbName": "HERENCIA ANEJO",
+    "normalized": "herenciaanejo"
+  },
+  {
+    "file": "herencia_reposado.jpg",
+    "dbId": 339,
+    "dbName": "HERENCIA REPOSADO",
+    "normalized": "herenciareposado"
+  },
+  {
+    "file": "hunters_dry.jpg",
+    "dbId": 295,
+    "dbName": "HUNTERS DRY",
+    "normalized": "huntersdry"
+  },
+  {
+    "file": "hunters_gold.jpg",
+    "dbId": 296,
+    "dbName": "HUNTERS GOLD",
+    "normalized": "huntersgold"
+  },
+  {
+    "file": "ice_tea.jpg",
+    "dbId": 412,
+    "dbName": "ICE TEA",
+    "normalized": "icetea"
+  },
+  {
+    "file": "irish_coffee.jpg",
+    "dbId": 427,
+    "dbName": "IRISH COFFEE",
+    "normalized": "irishcoffee"
+  },
+  {
+    "file": "jack_daniels.jpg",
+    "dbId": 315,
+    "dbName": "JACK DANIELS",
+    "normalized": "jackdaniels"
+  },
+  {
+    "file": "jagermeister.jpg",
+    "dbId": 377,
+    "dbName": "JAGERMEISTER",
+    "normalized": "jagermeister"
+  },
+  {
+    "file": "jalapeno_chilli_and_cheese_burger.jpg",
+    "dbId": 114,
+    "dbName": "JALAPENO CHILLI AND CHEESE BURGER",
+    "normalized": "jalapenochilliandcheeseburger"
+  },
+  {
+    "file": "jalapeno_salmon_sashimi.jpg",
+    "dbId": 40,
+    "dbName": "JALAPENO SALMON SASHIMI",
+    "normalized": "jalapenosalmonsashimi"
+  },
+  {
+    "file": "jameson.jpg",
+    "dbId": 312,
+    "dbName": "JAMESON",
+    "normalized": "jameson"
+  },
+  {
+    "file": "jameson_select_reserve.jpg",
+    "dbId": 313,
+    "dbName": "JAMESON SELECT RESERVE",
+    "normalized": "jamesonselectreserve"
+  },
+  {
+    "file": "johnnie_blonde_and_tonic.jpg",
+    "dbId": 401,
+    "dbName": "JOHNNIE BLONDE AND TONIC",
+    "normalized": "johnnieblondeandtonic"
+  },
+  {
+    "file": "johnnie_walker_black.jpg",
+    "dbId": 308,
+    "dbName": "JOHNNIE WALKER BLACK",
+    "normalized": "johnniewalkerblack"
+  },
+  {
+    "file": "johnnie_walker_blonde.jpg",
+    "dbId": 307,
+    "dbName": "JOHNNIE WALKER BLONDE",
+    "normalized": "johnniewalkerblonde"
+  },
+  {
+    "file": "johnnie_walker_blue.jpg",
+    "dbId": 311,
+    "dbName": "JOHNNIE WALKER BLUE",
+    "normalized": "johnniewalkerblue"
+  },
+  {
+    "file": "johnnie_walker_gold.jpg",
+    "dbId": 309,
+    "dbName": "JOHNNIE WALKER GOLD",
+    "normalized": "johnniewalkergold"
+  },
+  {
+    "file": "johnnie_walker_green.jpg",
+    "dbId": 310,
+    "dbName": "JOHNNIE WALKER GREEN",
+    "normalized": "johnniewalkergreen"
+  },
+  {
+    "file": "jose_cuervo_clasico.jpg",
+    "dbId": 334,
+    "dbName": "JOSE CUERVO CLASICO",
+    "normalized": "josecuervoclasico"
+  },
+  {
+    "file": "jose_cuervo_reposado.jpg",
+    "dbId": 335,
+    "dbName": "JOSE CUERVO REPOSADO",
+    "normalized": "josecuervoreposado"
+  },
+  {
+    "file": "jose_cuervo_tradicional_plata.jpg",
+    "dbId": 336,
+    "dbName": "JOSE CUERVO TRADICIONAL PLATA",
+    "normalized": "josecuervotradicionalplata"
+  },
+  {
+    "file": "jose_cuervo_tradicional_reposado.jpg",
+    "dbId": 337,
+    "dbName": "JOSE CUERVO TRADICIONAL REPOSADO",
+    "normalized": "josecuervotradicionalreposado"
+  },
+  {
+    "file": "kahlua.jpg",
+    "dbId": 373,
+    "dbName": "KAHLUA",
+    "normalized": "kahlua"
+  },
+  {
+    "file": "kahlua_coffee.jpg",
+    "dbId": 428,
+    "dbName": "KAHLUA COFFEE",
+    "normalized": "kahluacoffee"
+  },
+  {
+    "file": "kanu_natural_sweet.jpg",
+    "dbId": 237,
+    "dbName": "KANU NATURAL SWEET",
+    "normalized": "kanunaturalsweet"
+  },
+  {
+    "file": "ken_forrester_old_vine_reserve.jpg",
+    "dbId": 182,
+    "dbName": "KEN FORRESTER OLD VINE RESERVE",
+    "normalized": "kenforresteroldvinereserve"
+  },
+  {
+    "file": "kingklip_fillet.jpg",
+    "dbId": 42,
+    "dbName": "KINGKLIP FILLET",
+    "normalized": "kingklipfillet"
+  },
+  {
+    "file": "kleine_zalze_family_reserve.jpg",
+    "dbId": 228,
+    "dbName": "KLEINE ZALZE FAMILY RESERVE",
+    "normalized": "kleinezalzefamilyreserve"
+  },
+  {
+    "file": "klein_constantia.jpg",
+    "dbId": 179,
+    "dbName": "KLEIN CONSTANTIA",
+    "normalized": "kleinconstantia"
+  },
+  {
+    "file": "klipdrift_premium.jpg",
+    "dbId": 356,
+    "dbName": "KLIPDRIFT PREMIUM",
+    "normalized": "klipdriftpremium"
+  },
+  {
+    "file": "krone_night_nectar_demi_sec.jpg",
+    "dbId": 168,
+    "dbName": "KRONE NIGHT NECTAR DEMI-SEC",
+    "normalized": "kronenightnectardemisec"
+  },
+  {
+    "file": "kudu_450g.jpg",
+    "dbId": 96,
+    "dbName": "KUDU ±450g",
+    "normalized": "kudu450g"
+  },
+  {
+    "file": "kwv_10_year.jpg",
+    "dbId": 358,
+    "dbName": "KWV 10 Year",
+    "normalized": "kwv10year"
+  },
+  {
+    "file": "lagavulin_16_year.jpg",
+    "dbId": 326,
+    "dbName": "LAGAVULIN 16 year",
+    "normalized": "lagavulin16year"
+  },
+  {
+    "file": "lamb_chops_4_s_500g.jpg",
+    "dbId": 93,
+    "dbName": "LAMB CHOPS 4's 500g",
+    "normalized": "lambchops4s500g"
+  },
+  {
+    "file": "lamb_rump_300g.jpg",
+    "dbId": 91,
+    "dbName": "LAMB RUMP 300g",
+    "normalized": "lambrump300g"
+  },
+  {
+    "file": "lamb_shank_850g.jpg",
+    "dbId": 92,
+    "dbName": "LAMB SHANK ±850g",
+    "normalized": "lambshank850g"
+  },
+  {
+    "file": "lanzerac.jpg",
+    "dbId": 204,
+    "dbName": "LANZERAC",
+    "normalized": "lanzerac"
+  },
+  {
+    "file": "la_motte_pierneef_syrah_viognier.jpg",
+    "dbId": 254,
+    "dbName": "LA MOTTE PIERNEEF SYRAH VIOGNIER",
+    "normalized": "lamottepierneefsyrahviognier"
+  },
+  {
+    "file": "la_motte_vin_de_joie.jpg",
+    "dbId": 221,
+    "dbName": "LA MOTTE VIN DE JOIE",
+    "normalized": "lamottevindejoie"
+  },
+  {
+    "file": "le_riche.jpg",
+    "dbId": 226,
+    "dbName": "LE RICHE",
+    "normalized": "leriche"
+  },
+  {
+    "file": "le_riche_reserve.jpg",
+    "dbId": 230,
+    "dbName": "LE RICHE RESERVE",
+    "normalized": "lerichereserve"
+  },
+  {
+    "file": "le_riche_richesse.jpg",
+    "dbId": 257,
+    "dbName": "LE RICHE RICHESSE",
+    "normalized": "lericherichesse"
+  },
+  {
+    "file": "loxtonia_crispy_apple_cider.jpg",
+    "dbId": 299,
+    "dbName": "LOXTONIA CRISPY APPLE CIDER",
+    "normalized": "loxtoniacrispyapplecider"
+  },
+  {
+    "file": "loxtonia_stone_fruit_cider.jpg",
+    "dbId": 300,
+    "dbName": "LOXTONIA STONE FRUIT CIDER",
+    "normalized": "loxtoniastonefruitcider"
+  },
+  {
+    "file": "l_avenir_glenrose.jpg",
+    "dbId": 220,
+    "dbName": "L'AVENIR GLENROSE",
+    "normalized": "lavenirglenrose"
+  },
+  {
+    "file": "l_avenir_single_block.jpg",
+    "dbId": 185,
+    "dbName": "L'AVENIR SINGLE BLOCK",
+    "normalized": "lavenirsingleblock"
+  },
+  {
+    "file": "l_ormarins_brut_classique.jpg",
+    "dbId": 165,
+    "dbName": "L'ORMARINS BRUT CLASSIQUE",
+    "normalized": "lormarinsbrutclassique"
+  },
+  {
+    "file": "macallan_15_year.jpg",
+    "dbId": 321,
+    "dbName": "MACALLAN 15 year",
+    "normalized": "macallan15year"
+  },
+  {
+    "file": "macchiato.jpg",
+    "dbId": 435,
+    "dbName": "MACCHIATO",
+    "normalized": "macchiato"
+  },
+  {
+    "file": "makers_mark.jpg",
+    "dbId": 368,
+    "dbName": "MAKERS MARK",
+    "normalized": "makersmark"
+  },
+  {
+    "file": "margarita.jpg",
+    "dbId": 385,
+    "dbName": "MARGARITA",
+    "normalized": "margarita"
+  },
+  {
+    "file": "martini_gin.jpg",
+    "dbId": 387,
+    "dbName": "MARTINI (GIN)",
+    "normalized": "martinigin"
+  },
+  {
+    "file": "mashed_potatoes.jpg",
+    "dbId": 132,
+    "dbName": "MASHED POTATOES",
+    "normalized": "mashedpotatoes"
+  },
+  {
+    "file": "meerlust_red.jpg",
+    "dbId": 249,
+    "dbName": "MEERLUST RED",
+    "normalized": "meerlustred"
+  },
+  {
+    "file": "mixed_grill.jpg",
+    "dbId": 104,
+    "dbName": "MIXED GRILL",
+    "normalized": "mixedgrill"
+  },
+  {
+    "file": "mojito.jpg",
+    "dbId": 388,
+    "dbName": "MOJITO",
+    "normalized": "mojito"
+  },
+  {
+    "file": "muratie_ansela_van_de_caab.jpg",
+    "dbId": 266,
+    "dbName": "MURATIE ANSELA VAN DE CAAB",
+    "normalized": "muratieanselavandecaab"
+  },
+  {
+    "file": "musgrave_botanical.jpg",
+    "dbId": 350,
+    "dbName": "MUSGRAVE BOTANICAL",
+    "normalized": "musgravebotanical"
+  },
+  {
+    "file": "musgrave_pink.jpg",
+    "dbId": 351,
+    "dbName": "MUSGRAVE PINK",
+    "normalized": "musgravepink"
+  },
+  {
+    "file": "mushroom_sauce_chicken_breast.jpg",
+    "dbId": 119,
+    "dbName": "MUSHROOM SAUCE CHICKEN BREAST",
+    "normalized": "mushroomsaucechickenbreast"
+  },
+  {
+    "file": "mushroom_truffle_butter.jpg",
+    "dbId": 77,
+    "dbName": "MUSHROOM TRUFFLE BUTTER",
+    "normalized": "mushroomtrufflebutter"
+  },
+  {
+    "file": "mussels.jpg",
+    "dbId": 9,
+    "dbName": "MUSSELS",
+    "normalized": "mussels"
+  },
+  {
+    "file": "nederburg_wine_masters.jpg",
+    "dbId": 222,
+    "dbName": "NEDERBURG WINE MASTERS",
+    "normalized": "nederburgwinemasters"
+  },
+  {
+    "file": "neil_ellis_jonkershoek_valley.jpg",
+    "dbId": 231,
+    "dbName": "NEIL ELLIS JONKERSHOEK VALLEY",
+    "normalized": "neilellisjonkershoekvalley"
+  },
+  {
+    "file": "new_style_sashimi.jpg",
+    "dbId": 39,
+    "dbName": "NEW STYLE SASHIMI",
+    "normalized": "newstylesashimi"
+  },
+  {
+    "file": "nitida_semillion.jpg",
+    "dbId": 196,
+    "dbName": "NITIDA SEMILLION",
+    "normalized": "nitidasemillion"
+  },
+  {
+    "file": "onion_rings.jpg",
+    "dbId": 134,
+    "dbName": "ONION RINGS",
+    "normalized": "onionrings"
+  },
+  {
+    "file": "original_lemonade.jpg",
+    "dbId": 409,
+    "dbName": "ORIGINAL LEMONADE",
+    "normalized": "originallemonade"
+  },
+  {
+    "file": "orpheus_and_the_raven_7.jpg",
+    "dbId": 208,
+    "dbName": "ORPHEUS AND THE RAVEN 7",
+    "normalized": "orpheusandtheraven7"
+  },
+  {
+    "file": "ostrich_fillet_450g.jpg",
+    "dbId": 95,
+    "dbName": "OSTRICH FILLET ±450g",
+    "normalized": "ostrichfillet450g"
+  },
+  {
+    "file": "oxtail.jpg",
+    "dbId": 98,
+    "dbName": "OXTAIL",
+    "normalized": "oxtail"
+  },
+  {
+    "file": "peri_peri_sauce.jpg",
+    "dbId": 83,
+    "dbName": "PERI-PERI SAUCE",
+    "normalized": "periperisauce"
+  },
+  {
+    "file": "pierre_jourdan_belle_nectar.jpg",
+    "dbId": 167,
+    "dbName": "PIERRE JOURDAN BELLE NECTAR",
+    "normalized": "pierrejourdanbellenectar"
+  },
+  {
+    "file": "pina_colada.jpg",
+    "dbId": 389,
+    "dbName": "PINA COLADA",
+    "normalized": "pinacolada"
+  },
+  {
+    "file": "pogues_irish_whisky.jpg",
+    "dbId": 327,
+    "dbName": "POGUES IRISH WHISKY",
+    "normalized": "poguesirishwhisky"
+  },
+  {
+    "file": "pork_chops_500g.jpg",
+    "dbId": 87,
+    "dbName": "PORK CHOPS ±500g",
+    "normalized": "porkchops500g"
+  },
+  {
+    "file": "pork_tomahawk_600g.jpg",
+    "dbId": 88,
+    "dbName": "PORK TOMAHAWK ±600g",
+    "normalized": "porktomahawk600g"
+  },
+  {
+    "file": "queen_prawns_3_s.jpg",
+    "dbId": 10,
+    "dbName": "QUEEN PRAWNS 3's",
+    "normalized": "queenprawns3s"
+  },
+  {
+    "file": "rainbow_roll_prawn_4pc.jpg",
+    "dbId": 32,
+    "dbName": "RAINBOW ROLL - PRAWN (4pc)",
+    "normalized": "rainbowrollprawn4pc"
+  },
+  {
+    "file": "rainbow_roll_prawn_8pc.jpg",
+    "dbId": 29,
+    "dbName": "RAINBOW ROLL - PRAWN (8pc)",
+    "normalized": "rainbowrollprawn8pc"
+  },
+  {
+    "file": "rainbow_roll_salmon_4pc.jpg",
+    "dbId": 31,
+    "dbName": "RAINBOW ROLL - SALMON (4pc)",
+    "normalized": "rainbowrollsalmon4pc"
+  },
+  {
+    "file": "rainbow_roll_salmon_8pc.jpg",
+    "dbId": 28,
+    "dbName": "RAINBOW ROLL - SALMON (8pc)",
+    "normalized": "rainbowrollsalmon8pc"
+  },
+  {
+    "file": "rainbow_roll_vegetable_4pc.jpg",
+    "dbId": 33,
+    "dbName": "RAINBOW ROLL - VEGETABLE (4pc)",
+    "normalized": "rainbowrollvegetable4pc"
+  },
+  {
+    "file": "rainbow_roll_vegetable_8pc.jpg",
+    "dbId": 30,
+    "dbName": "RAINBOW ROLL - VEGETABLE (8pc)",
+    "normalized": "rainbowrollvegetable8pc"
+  },
+  {
+    "file": "red_bull.jpg",
+    "dbId": 421,
+    "dbName": "RED BULL",
+    "normalized": "redbull"
+  },
+  {
+    "file": "red_bull_red_edition.jpg",
+    "dbId": 423,
+    "dbName": "RED BULL RED EDITION",
+    "normalized": "redbullrededition"
+  },
+  {
+    "file": "red_bull_sugar_free.jpg",
+    "dbId": 422,
+    "dbName": "RED BULL SUGAR FREE",
+    "normalized": "redbullsugarfree"
+  },
+  {
+    "file": "red_velvet_cake.jpg",
+    "dbId": 147,
+    "dbName": "RED VELVET CAKE",
+    "normalized": "redvelvetcake"
+  },
+  {
+    "file": "remy_martin_1738.jpg",
+    "dbId": 328,
+    "dbName": "REMY MARTIN 1738",
+    "normalized": "remymartin1738"
+  },
+  {
+    "file": "remy_martin_1738_side_car.jpg",
+    "dbId": 404,
+    "dbName": "REMY MARTIN 1738 SIDE CAR",
+    "normalized": "remymartin1738sidecar"
+  },
+  {
+    "file": "remy_martin_vsop.jpg",
+    "dbId": 329,
+    "dbName": "REMY MARTIN VSOP",
+    "normalized": "remymartinvsop"
+  },
+  {
+    "file": "remy_martin_xo_excellence.jpg",
+    "dbId": 330,
+    "dbName": "REMY MARTIN XO EXCELLENCE",
+    "normalized": "remymartinxoexcellence"
+  },
+  {
+    "file": "ribeye_380g.jpg",
+    "dbId": 54,
+    "dbName": "RIBEYE 380g",
+    "normalized": "ribeye380g"
+  },
+  {
+    "file": "ribeye_500g.jpg",
+    "dbId": 65,
+    "dbName": "RIBEYE 500g",
+    "normalized": "ribeye500g"
+  },
+  {
+    "file": "ribeye_850g_900g.jpg",
+    "dbId": 69,
+    "dbName": "RIBEYE 850g - 900g",
+    "normalized": "ribeye850g900g"
+  },
+  {
+    "file": "ribeye_on_the_bone.jpg",
+    "dbId": 60,
+    "dbName": "RIBEYE ON THE BONE",
+    "normalized": "ribeyeonthebone"
+  },
+  {
+    "file": "richelieu_10_year.jpg",
+    "dbId": 357,
+    "dbName": "RICHELIEU 10 Year",
+    "normalized": "richelieu10year"
+  },
+  {
+    "file": "rock_shrimp_tempura_roll_8pc.jpg",
+    "dbId": 35,
+    "dbName": "ROCK SHRIMP TEMPURA ROLL (8pc)",
+    "normalized": "rockshrimptempuraroll8pc"
+  },
+  {
+    "file": "rooibos_tea.jpg",
+    "dbId": 437,
+    "dbName": "ROOIBOS TEA",
+    "normalized": "rooibostea"
+  },
+  {
+    "file": "roses_salmon_4_pieces.jpg",
+    "dbId": 22,
+    "dbName": "ROSES - SALMON (4 Pieces)",
+    "normalized": "rosessalmon4pieces"
+  },
+  {
+    "file": "roses_salmon_6_pieces.jpg",
+    "dbId": 23,
+    "dbName": "ROSES - SALMON (6 Pieces)",
+    "normalized": "rosessalmon6pieces"
+  },
+  {
+    "file": "rump_400g.jpg",
+    "dbId": 53,
+    "dbName": "RUMP 400g",
+    "normalized": "rump400g"
+  },
+  {
+    "file": "rump_600g.jpg",
+    "dbId": 64,
+    "dbName": "RUMP 600g",
+    "normalized": "rump600g"
+  },
+  {
+    "file": "rump_steak_boerewors_and_ribs.jpg",
+    "dbId": 107,
+    "dbName": "RUMP STEAK, BOEREWORS AND RIBS",
+    "normalized": "rumpsteakboereworsandribs"
+  },
+  {
+    "file": "rustenburg.jpg",
+    "dbId": 224,
+    "dbName": "RUSTENBURG",
+    "normalized": "rustenburg"
+  },
+  {
+    "file": "saronsberg_seismic.jpg",
+    "dbId": 256,
+    "dbName": "SARONSBERG SEISMIC",
+    "normalized": "saronsbergseismic"
+  },
+  {
+    "file": "savanna_dry.jpg",
+    "dbId": 297,
+    "dbName": "SAVANNA DRY",
+    "normalized": "savannadry"
+  },
+  {
+    "file": "savanna_lemon_non_alcoholic.jpg",
+    "dbId": 292,
+    "dbName": "SAVANNA LEMON - NON-ALCOHOLIC",
+    "normalized": "savannalemonnonalcoholic"
+  },
+  {
+    "file": "savanna_light.jpg",
+    "dbId": 298,
+    "dbName": "SAVANNA LIGHT",
+    "normalized": "savannalight"
+  },
+  {
+    "file": "savoury_rice.jpg",
+    "dbId": 137,
+    "dbName": "SAVOURY RICE",
+    "normalized": "savouryrice"
+  },
+  {
+    "file": "seafood_pasta.jpg",
+    "dbId": 127,
+    "dbName": "SEAFOOD PASTA",
+    "normalized": "seafoodpasta"
+  },
+  {
+    "file": "seared_salmon.jpg",
+    "dbId": 41,
+    "dbName": "SEARED SALMON",
+    "normalized": "searedsalmon"
+  },
+  {
+    "file": "seriously_old_dirt_by_vilafonte.jpg",
+    "dbId": 260,
+    "dbName": "SERIOUSLY OLD DIRT BY VILAFONTE",
+    "normalized": "seriouslyolddirtbyvilafonte"
+  },
+  {
+    "file": "shakes.jpg",
+    "dbId": 416,
+    "dbName": "SHAKES",
+    "normalized": "shakes"
+  },
+  {
+    "file": "shannon_elgin.jpg",
+    "dbId": 213,
+    "dbName": "SHANNON ELGIN",
+    "normalized": "shannonelgin"
+  },
+  {
+    "file": "shannon_sanctuary_peak.jpg",
+    "dbId": 176,
+    "dbName": "SHANNON SANCTUARY PEAK",
+    "normalized": "shannonsanctuarypeak"
+  },
+  {
+    "file": "side_green_salad.jpg",
+    "dbId": 142,
+    "dbName": "SIDE GREEN SALAD",
+    "normalized": "sidegreensalad"
+  },
+  {
+    "file": "singleton_12_year.jpg",
+    "dbId": 324,
+    "dbName": "SINGLETON 12 year",
+    "normalized": "singleton12year"
+  },
+  {
+    "file": "sirloin_350g.jpg",
+    "dbId": 52,
+    "dbName": "SIRLOIN 350g",
+    "normalized": "sirloin350g"
+  },
+  {
+    "file": "sirloin_500g.jpg",
+    "dbId": 63,
+    "dbName": "SIRLOIN 500g",
+    "normalized": "sirloin500g"
+  },
+  {
+    "file": "sirloin_on_the_bone_480g.jpg",
+    "dbId": 61,
+    "dbName": "SIRLOIN ON THE BONE 480g",
+    "normalized": "sirloinonthebone480g"
+  },
+  {
+    "file": "small_greek_salad.jpg",
+    "dbId": 12,
+    "dbName": "SMALL GREEK SALAD",
+    "normalized": "smallgreeksalad"
+  },
+  {
+    "file": "soft_drinks.jpg",
+    "dbId": 411,
+    "dbName": "SOFT DRINKS",
+    "normalized": "softdrinks"
+  },
+  {
+    "file": "southern_comfort_original.jpg",
+    "dbId": 371,
+    "dbName": "SOUTHERN COMFORT ORIGINAL",
+    "normalized": "southerncomfortoriginal"
+  },
+  {
+    "file": "spaghetti_bolognese.jpg",
+    "dbId": 123,
+    "dbName": "SPAGHETTI BOLOGNESE",
+    "normalized": "spaghettibolognese"
+  },
+  {
+    "file": "special_shakes.jpg",
+    "dbId": 417,
+    "dbName": "SPECIAL SHAKES",
+    "normalized": "specialshakes"
+  },
+  {
+    "file": "spier_21_gables.jpg",
+    "dbId": 207,
+    "dbName": "SPIER 21 GABLES",
+    "normalized": "spier21gables"
+  },
+  {
+    "file": "springbok_450g.jpg",
+    "dbId": 97,
+    "dbName": "SPRINGBOK ±450g",
+    "normalized": "springbok450g"
+  },
+  {
+    "file": "springbok_carpaccio.jpg",
+    "dbId": 6,
+    "dbName": "SPRINGBOK CARPACCIO",
+    "normalized": "springbokcarpaccio"
+  },
+  {
+    "file": "springfield_life_of_stone.jpg",
+    "dbId": 178,
+    "dbName": "SPRINGFIELD LIFE OF STONE",
+    "normalized": "springfieldlifeofstone"
+  },
+  {
+    "file": "steakhouse_chips.jpg",
+    "dbId": 135,
+    "dbName": "STEAKHOUSE CHIPS",
+    "normalized": "steakhousechips"
+  },
+  {
+    "file": "stella_artois.jpg",
+    "dbId": 276,
+    "dbName": "STELLA ARTOIS",
+    "normalized": "stellaartois"
+  },
+  {
+    "file": "strawberry_lemonade.jpg",
+    "dbId": 410,
+    "dbName": "STRAWBERRY LEMONADE",
+    "normalized": "strawberrylemonade"
+  },
+  {
+    "file": "sweet_chilli_sauce.jpg",
+    "dbId": 84,
+    "dbName": "SWEET CHILLI SAUCE",
+    "normalized": "sweetchillisauce"
+  },
+  {
+    "file": "sweet_pumpkin.jpg",
+    "dbId": 138,
+    "dbName": "SWEET PUMPKIN",
+    "normalized": "sweetpumpkin"
+  },
+  {
+    "file": "tanqueray.jpg",
+    "dbId": 345,
+    "dbName": "TANQUERAY",
+    "normalized": "tanqueray"
+  },
+  {
+    "file": "tanqueray_blackcurrant_royale.jpg",
+    "dbId": 347,
+    "dbName": "TANQUERAY BLACKCURRANT ROYALE",
+    "normalized": "tanquerayblackcurrantroyale"
+  },
+  {
+    "file": "tanqueray_flor_de_sevilla.jpg",
+    "dbId": 346,
+    "dbName": "TANQUERAY FLOR DE SEVILLA",
+    "normalized": "tanquerayflordesevilla"
+  },
+  {
+    "file": "tanqueray_no_10.jpg",
+    "dbId": 348,
+    "dbName": "TANQUERAY No. 10",
+    "normalized": "tanquerayno10"
+  },
+  {
+    "file": "tempura_biltong.jpg",
+    "dbId": 15,
+    "dbName": "TEMPURA BILTONG",
+    "normalized": "tempurabiltong"
+  },
+  {
+    "file": "tempura_chicken.jpg",
+    "dbId": 13,
+    "dbName": "TEMPURA CHICKEN",
+    "normalized": "tempurachicken"
+  },
+  {
+    "file": "tempura_prawn.jpg",
+    "dbId": 14,
+    "dbName": "TEMPURA PRAWN",
+    "normalized": "tempuraprawn"
+  },
+  {
+    "file": "thelema.jpg",
+    "dbId": 214,
+    "dbName": "THELEMA",
+    "normalized": "thelema"
+  },
+  {
+    "file": "the_chocolate_block.jpg",
+    "dbId": 261,
+    "dbName": "THE CHOCOLATE BLOCK",
+    "normalized": "thechocolateblock"
+  },
+  {
+    "file": "the_king_queen_platter.jpg",
+    "dbId": 109,
+    "dbName": "THE KING, QUEEN PLATTER",
+    "normalized": "thekingqueenplatter"
+  },
+  {
+    "file": "three_peppercorn_sauce.jpg",
+    "dbId": 80,
+    "dbName": "THREE PEPPERCORN SAUCE",
+    "normalized": "threepeppercornsauce"
+  },
+  {
+    "file": "tisers.jpg",
+    "dbId": 413,
+    "dbName": "'TISERS",
+    "normalized": "tisers"
+  },
+  {
+    "file": "tokara.jpg",
+    "dbId": 225,
+    "dbName": "TOKARA",
+    "normalized": "tokara"
+  },
+  {
+    "file": "tomahawk_850g_900g.jpg",
+    "dbId": 67,
+    "dbName": "TOMAHAWK 850g - 900g",
+    "normalized": "tomahawk850g900g"
+  },
+  {
+    "file": "tomahawk_french_cut_650g.jpg",
+    "dbId": 59,
+    "dbName": "TOMAHAWK (FRENCH CUT) 650g",
+    "normalized": "tomahawkfrenchcut650g"
+  },
+  {
+    "file": "tomato_and_avo_salad.jpg",
+    "dbId": 141,
+    "dbName": "TOMATO AND AVO SALAD",
+    "normalized": "tomatoandavosalad"
+  },
+  {
+    "file": "trio_of_ice_cream.jpg",
+    "dbId": 145,
+    "dbName": "TRIO OF ICE CREAM",
+    "normalized": "triooficecream"
+  },
+  {
+    "file": "trumps.jpg",
+    "dbId": 200,
+    "dbName": "TRUMPS",
+    "normalized": "trumps"
+  },
+  {
+    "file": "trumps_california_rainbow_reloaded_8pc.jpg",
+    "dbId": 37,
+    "dbName": "TRUMPS CALIFORNIA RAINBOW RELOADED (8pc)",
+    "normalized": "trumpscaliforniarainbowreloaded8pc"
+  },
+  {
+    "file": "trumps_char_grilled_chicken.jpg",
+    "dbId": 20,
+    "dbName": "TRUMPS CHAR GRILLED CHICKEN",
+    "normalized": "trumpschargrilledchicken"
+  },
+  {
+    "file": "trumps_rainbow_reloaded_10pc.jpg",
+    "dbId": 36,
+    "dbName": "TRUMPS RAINBOW RELOADED (10pc)",
+    "normalized": "trumpsrainbowreloaded10pc"
+  },
+  {
+    "file": "trumps_salad.jpg",
+    "dbId": 16,
+    "dbName": "TRUMPS SALAD",
+    "normalized": "trumpssalad"
+  },
+  {
+    "file": "trumps_salmon_sashimi.jpg",
+    "dbId": 38,
+    "dbName": "TRUMPS SALMON SASHIMI",
+    "normalized": "trumpssalmonsashimi"
+  },
+  {
+    "file": "t_bone_500g.jpg",
+    "dbId": 58,
+    "dbName": "T-BONE 500g",
+    "normalized": "tbone500g"
+  },
+  {
+    "file": "t_bone_700g.jpg",
+    "dbId": 62,
+    "dbName": "T-BONE 700g",
+    "normalized": "tbone700g"
+  },
+  {
+    "file": "t_bone_850g_900g.jpg",
+    "dbId": 68,
+    "dbName": "T-BONE 850g - 900g",
+    "normalized": "tbone850g900g"
+  },
+  {
+    "file": "t_bone_wings_and_boerewors.jpg",
+    "dbId": 108,
+    "dbName": "T-BONE, WINGS AND BOEREWORS",
+    "normalized": "tbonewingsandboerewors"
+  },
+  {
+    "file": "underberg.jpg",
+    "dbId": 378,
+    "dbName": "UNDERBERG",
+    "normalized": "underberg"
+  },
+  {
+    "file": "van_ryn_s_12_year.jpg",
+    "dbId": 359,
+    "dbName": "VAN RYN'S 12 Year",
+    "normalized": "vanryns12year"
+  },
+  {
+    "file": "veg_burger.jpg",
+    "dbId": 128,
+    "dbName": "VEG BURGER",
+    "normalized": "vegburger"
+  },
+  {
+    "file": "veg_platter.jpg",
+    "dbId": 129,
+    "dbName": "VEG PLATTER",
+    "normalized": "vegplatter"
+  },
+  {
+    "file": "veuve_clicquot_brut.jpg",
+    "dbId": 157,
+    "dbName": "VEUVE CLICQUOT BRUT",
+    "normalized": "veuveclicquotbrut"
+  },
+  {
+    "file": "veuve_clicquot_rich.jpg",
+    "dbId": 159,
+    "dbName": "VEUVE CLICQUOT RICH",
+    "normalized": "veuveclicquotrich"
+  },
+  {
+    "file": "vilafonte_series_c.jpg",
+    "dbId": 273,
+    "dbName": "VILAFONTE SERIES C",
+    "normalized": "vilafonteseriesc"
+  },
+  {
+    "file": "vilafonte_series_m.jpg",
+    "dbId": 272,
+    "dbName": "VILAFONTE SERIES M",
+    "normalized": "vilafonteseriesm"
+  },
+  {
+    "file": "wagyu_chuckeye_350g.jpg",
+    "dbId": 73,
+    "dbName": "WAGYU CHUCKEYE 350g",
+    "normalized": "wagyuchuckeye350g"
+  },
+  {
+    "file": "wagyu_denver_350g.jpg",
+    "dbId": 75,
+    "dbName": "WAGYU DENVER 350g",
+    "normalized": "wagyudenver350g"
+  },
+  {
+    "file": "wagyu_fillet_300g.jpg",
+    "dbId": 71,
+    "dbName": "WAGYU FILLET 300g",
+    "normalized": "wagyufillet300g"
+  },
+  {
+    "file": "wagyu_ribeye_300g.jpg",
+    "dbId": 70,
+    "dbName": "WAGYU RIBEYE 300g",
+    "normalized": "wagyuribeye300g"
+  },
+  {
+    "file": "wagyu_rump_350g.jpg",
+    "dbId": 74,
+    "dbName": "WAGYU RUMP 350g",
+    "normalized": "wagyurump350g"
+  },
+  {
+    "file": "wagyu_sirloin_300g.jpg",
+    "dbId": 72,
+    "dbName": "WAGYU SIRLOIN 300g",
+    "normalized": "wagyusirloin300g"
+  },
+  {
+    "file": "warwick_the_first_lady.jpg",
+    "dbId": 219,
+    "dbName": "WARWICK THE FIRST LADY",
+    "normalized": "warwickthefirstlady"
+  },
+  {
+    "file": "warwick_three_cape_ladies.jpg",
+    "dbId": 250,
+    "dbName": "WARWICK THREE CAPE LADIES",
+    "normalized": "warwickthreecapeladies"
+  },
+  {
+    "file": "warwick_trilogy.jpg",
+    "dbId": 271,
+    "dbName": "WARWICK TRILOGY",
+    "normalized": "warwicktrilogy"
+  },
+  {
+    "file": "watermelon_gin_bull.jpg",
+    "dbId": 402,
+    "dbName": "WATERMELON GIN BULL",
+    "normalized": "watermelonginbull"
+  },
+  {
+    "file": "water_250ml_la_vie.jpg",
+    "dbId": 414,
+    "dbName": "WATER 250ML LA VIE",
+    "normalized": "water250mllavie"
+  },
+  {
+    "file": "water_750ml_la_vie_trumps.jpg",
+    "dbId": 415,
+    "dbName": "WATER 750ML LA VIE (TRUMPS)",
+    "normalized": "water750mllavietrumps"
+  },
+  {
+    "file": "whitley_neill_original.jpg",
+    "dbId": 355,
+    "dbName": "WHITLEY NEILL ORIGINAL",
+    "normalized": "whitleyneilloriginal"
+  },
+  {
+    "file": "windhoek.jpg",
+    "dbId": 278,
+    "dbName": "WINDHOEK",
+    "normalized": "windhoek"
+  },
+  {
+    "file": "woodstock_original.jpg",
+    "dbId": 352,
+    "dbName": "WOODSTOCK ORIGINAL",
+    "normalized": "woodstockoriginal"
+  },
+  {
+    "file": "woodstock_tangerine.jpg",
+    "dbId": 353,
+    "dbName": "WOODSTOCK TANGERINE",
+    "normalized": "woodstocktangerine"
+  },
+  {
+    "file": "zonnebloem_blanc_de_blanc.jpg",
+    "dbId": 195,
+    "dbName": "ZONNEBLOEM BLANC DE BLANC",
+    "normalized": "zonnebloemblancdeblanc"
+  }
+]
