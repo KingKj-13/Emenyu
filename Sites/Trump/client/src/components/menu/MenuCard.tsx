@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, memo } from 'react';
-import { Heart, Plus, Star, Sparkles, Wine } from 'lucide-react';
-import { resolveImage, resolveThumbnail, FALLBACK_IMAGE } from '../../lib/imageResolver';
+import { Heart, Plus, Star, Sparkles, Wine, Video } from 'lucide-react';
+import { resolveImage, resolveThumbnail, resolveVideo, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import type { MenuItem } from '../../types/menu';
 import styles from './MenuCard.module.css';
@@ -25,6 +25,7 @@ export const MenuCard = memo(function MenuCard({
   const fullSrc = resolveImage(item);
   const imgSrc = imgStep === 0 ? thumbSrc : imgStep === 1 && fullSrc !== thumbSrc ? fullSrc : FALLBACK_IMAGE;
   const soldOut = item.available === false;
+  const hasVideo = !!resolveVideo(item);
 
   useEffect(() => {
     setImgStep(0);
@@ -85,6 +86,11 @@ export const MenuCard = memo(function MenuCard({
           >
             <Wine size={13} />
           </button>
+        )}
+        {!soldOut && hasVideo && (
+          <span className={styles.videoBadge} title="Video available" aria-hidden="true">
+            <Video size={11} />
+          </span>
         )}
       </div>
 

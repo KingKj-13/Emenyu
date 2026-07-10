@@ -101,6 +101,23 @@
   border-color: var(--color-gold);
 }
 
+.videoBadge {
+  position: absolute;
+  bottom: 8px;
+  left: 42px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(200, 165, 85, 0.3);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--color-gold);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
 .favoriteBtn {
   position: absolute;
   bottom: 8px;

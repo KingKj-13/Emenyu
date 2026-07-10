@@ -233,7 +233,7 @@ export function resolveThumbnail(item: MenuItem): string {
   return `${match[1]}/thumbnails/${stem}.webp`;
 }
 
-// 2026-07 reshoot: exactly these 16 dishes got a dedicated short clip
+// 2026-07 reshoot: exactly these 20 dishes got a dedicated short clip
 // (960x540, silent, faststart — see Sites/Trump/Video/menu-items/). This is a
 // name-keyed allowlist, not a shared/demo fallback map, so it's structurally
 // impossible for two menu items to end up pointing at the same clip. Every
@@ -255,6 +255,10 @@ const ITEM_VIDEO_MAP: Record<string, string> = {
   'jalapeno chilli and cheese burger': 'jalapeno_chilli_and_cheese_burger.mp4',
   'seafood pasta': 'seafood_pasta.mp4',
   'firecracker chicken wings (400g)': 'firecracker_chicken_wings_400g.mp4',
+  'cape malva pudding': 'cape_malva_pudding.mp4',
+  'chocolate brownie': 'chocolate_brownie.mp4',
+  'glenfiddich 12 year whisky sour': 'glenfiddich_12_year_whisky_sour.mp4',
+  'trumps': 'trumps_pinotage.mp4',
 };
 
 export function resolveVideo(item: MenuItem): string | null {
