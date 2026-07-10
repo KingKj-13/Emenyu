@@ -1,3 +1,10 @@
+// Pin the process timezone before anything else touches Date — the analytics
+// controller's hour/day-of-week/trend bucketing all use local Date getters
+// (getHours/getDay/getFullYear etc), which otherwise silently follow whatever
+// timezone the host OS happens to be configured with (commonly UTC on a fresh
+// cloud VPS) rather than the restaurant's real SAST business day.
+process.env.TZ = 'Africa/Johannesburg';
+
 const express = require('express');
 const fsPromises = require('fs').promises;
 const http = require('http');
@@ -254,6 +261,7 @@ async function startServer() {
   // Phase 04B — background push fan-out (Expo); a non-fatal side-effect of notify().
   const pushDispatcher = new PushDispatcher({ accountService, tokenService, config, logger });
   const notificationService = new NotificationService({ config, logger, socketService, auditService, pushDispatcher });
+  socketService.setNotificationService(notificationService);
   const shiftService = new ShiftService({ config, logger, auditService });
   const tableOwnershipService = new TableOwnershipService({ config, logger, auditService, notificationService });
   const operationsService = new OperationsService({ config, logger, shiftService, notificationService });
@@ -265,7 +273,7 @@ async function startServer() {
     recommendationAnalytics: createRecommendationAnalyticsController({ recommendationEventService, prismaMenuService: fileService.prismaMenu }),
     recommendationBundle: createRecommendationBundleController({ recommendationBundleService, socketService }),
     deal: createDealController({ fileService, socketService }),
-    kitchen: createKitchenController({ config, fileService, socketService }),
+    kitchen: createKitchenController({ config, fileService, socketService, notificationService }),
     menu: createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService: fileService.prismaMenu }),
     order: createOrderController({ config, fileService, socketService, orderValidationService }),
     push: createPushController({ config }),

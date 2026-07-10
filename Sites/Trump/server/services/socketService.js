@@ -22,6 +22,14 @@ class SocketService {
     // aiService to drop its reco caches immediately so owner edits show without
     // waiting out the cache TTL. Independent of socket connectivity.
     this._dataChangeListeners = [];
+    // notificationService is constructed after SocketService (it needs a live
+    // socketService to emit through) — wired in via this setter once it exists,
+    // rather than a constructor param, to avoid the circular dependency.
+    this.notifications = null;
+  }
+
+  setNotificationService(notificationService) {
+    this.notifications = notificationService;
   }
 
   // Register a callback fired on every menu/recommendation/order mutation. The
@@ -621,6 +629,15 @@ class SocketService {
       message: `${displayTable} has called for a waiter.`,
       type: 'incoming',
       timestamp
+    });
+
+    this.notifications?.notify({
+      source: 'waiter_call',
+      title: `${displayTable} is calling`,
+      body: `${displayTable} has called for a waiter.`,
+      priority: 1,
+      recipientRole: 'waiter',
+      tableId: cleanId
     });
   }
 

@@ -7,10 +7,21 @@ const { getPrisma } = require('../services/prismaClient');
 const { categoryType, beverageKind } = require('../services/categoryClassifier');
 const { getCanonicalTableId, normalizeName } = require('../utils/helpers');
 
+// A malformed `from`/`to` used to throw a Prisma validation error deep inside
+// each controller's query, caught by that method's own catch-all and reported
+// as a normal 200 with all-zero/empty data — indistinguishable from a
+// genuinely quiet period. Validate up front and drop (not throw on) a bad
+// bound instead, and self-correct a reversed range by swapping it, so a bad
+// query string degrades gracefully rather than silently lying about the data.
 function parseDateRange(from, to) {
+  let gte = from ? new Date(from) : null;
+  let lte = to ? new Date(to) : null;
+  if (gte && Number.isNaN(gte.getTime())) gte = null;
+  if (lte && Number.isNaN(lte.getTime())) lte = null;
+  if (gte && lte && gte > lte) { const t = gte; gte = lte; lte = t; }
   const ts = {};
-  if (from) ts.gte = new Date(from);
-  if (to) ts.lte = new Date(to);
+  if (gte) ts.gte = gte;
+  if (lte) ts.lte = lte;
   return Object.keys(ts).length > 0 ? { timestamp: ts } : {};
 }
 
@@ -96,13 +107,17 @@ function createAnalyticsController({ config }) {
 
     // order=desc (default) → best sellers; order=asc → worst sellers (bottom dishes).
     // Both are over items that sold at least once in the period. An optional
-    // `category` (STARTER|MAIN|DESSERT|WINE|DRINK) narrows to that categoryType —
+    // `category` (STARTER|MAIN|DESSERT|WINE|DRINK, comma-separated for several,
+    // or the shorthand `DISH` = STARTER,MAIN,DESSERT) narrows to those
+    // categoryTypes; `excludeCategory` (same format) drops them instead —
     // pulled over a wider pool then filtered in-process, since categoryType isn't
     // a stored column on OrderItem.
     async getItems(req, res) {
-      const { from, to, order, category, limit } = req.query;
+      const { from, to, order, category, excludeCategory, limit } = req.query;
       const dir = order === 'asc' ? 'asc' : 'desc';
-      const take = category ? 200 : (Math.min(Number(limit) || 10, 50));
+      const wantFilter = Boolean(category || excludeCategory);
+      const take = wantFilter ? 200 : (Math.min(Number(limit) || 10, 50));
+      const expand = spec => String(spec).toUpperCase().split(',').map(s => s.trim()).flatMap(s => s === 'DISH' ? ['STARTER', 'MAIN', 'DESSERT'] : [s]);
       try {
         const db = getPrisma();
         const orderWhere = { restaurantId, status: 'history', ...parseDateRange(from, to) };
@@ -113,9 +128,16 @@ function createAnalyticsController({ config }) {
           orderBy: { _sum: { quantity: dir } },
           take
         });
-        if (category) {
+        if (wantFilter) {
           const categoryMap = await getCategoryMap(db, restaurantId);
-          rows = rows.filter(r => classifyByName(r.name, categoryMap) === String(category).toUpperCase()).slice(0, Math.min(Number(limit) || 10, 50));
+          const include = category ? new Set(expand(category)) : null;
+          const exclude = excludeCategory ? new Set(expand(excludeCategory)) : null;
+          rows = rows.filter(r => {
+            const ct = classifyByName(r.name, categoryMap);
+            if (include && !include.has(ct)) return false;
+            if (exclude && exclude.has(ct)) return false;
+            return true;
+          }).slice(0, Math.min(Number(limit) || 10, 50));
         }
         const names = rows.map(r => r.name);
         const revenues = await db.orderItem.groupBy({

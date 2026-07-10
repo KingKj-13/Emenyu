@@ -145,12 +145,12 @@ function loadCookingMethodRules() {
       const variants = Object.keys(p.cooking_style || {}).filter(k => k !== 'conditions_default');
       variants.forEach(vKey => {
         const phraseKey = vKey.replace('conditions_', '') + '_variant';
-        const phrase = p.cooking_method_phrases?.[phraseKey]?.professional;
-        if (phrase) rules.push({ priority: p.match_priority, conditions: p.cooking_style[vKey], phrase });
+        const phrases = p.cooking_method_phrases?.[phraseKey];
+        if (phrases?.professional) rules.push({ priority: p.match_priority, conditions: p.cooking_style[vKey], phrases });
       });
       const def = p.cooking_style?.conditions_default;
-      const defPhrase = p.cooking_method_phrases?.default_variant?.professional;
-      if (def && typeof def === 'object' && defPhrase) rules.push({ priority: p.match_priority + 0.5, conditions: def, phrase: defPhrase });
+      const defPhrases = p.cooking_method_phrases?.default_variant;
+      if (def && typeof def === 'object' && defPhrases?.professional) rules.push({ priority: p.match_priority + 0.5, conditions: def, phrases: defPhrases });
     });
     rules.sort((a, b) => a.priority - b.priority);
     return rules;
@@ -160,14 +160,18 @@ function loadCookingMethodRules() {
 }
 const COOKING_METHOD_RULES = loadCookingMethodRules();
 
-function cookingMethodFor(item = {}) {
+function cookingMethodFor(item = {}, tone = 'professional') {
   const tags = item.tags || {};
   const nameL = lc(item.name);
   if (CONDIMENT_RE.test(nameL)) return '';
 
   if (COOKING_METHOD_RULES) {
     const rule = COOKING_METHOD_RULES.find(r => matchesItemConditions(item, tags, nameL, r.conditions));
-    return rule ? rule.phrase : '';
+    if (!rule) return '';
+    // Protein rules carry a {professional, friendly, luxury} phrase set; the
+    // handful of non-protein rules (condiment exclusion aside) only ever had
+    // one phrase, so `phrase` stays the fallback for those.
+    return rule.phrases ? (rule.phrases[tone] || rule.phrases.professional || '') : (rule.phrase || '');
   }
 
   // Fallback (only reached if knowledge/protein_rules.json is missing/unreadable).
@@ -234,25 +238,46 @@ function whyClauseFor({ dish, drink, tone = 'friendly' }) {
 }
 
 // ── Food + food WHY clause (starter/side/salad/dessert with no wine anchor) ──
+// Was one fixed template per course bucket (identical for every dish in that
+// bucket); now reads the target's own texture/flavour tags — the same fields
+// cookingMethodFor()/whyClauseFor() already use — so two different sides don't
+// read as the exact same sentence, and picks deterministically per dish name
+// (stable for that item, not identical across the whole bucket).
 function foodPairClauseFor({ target, source, tone = 'friendly' }) {
   if (!target) return '';
   const tt = target.tags || {};
+  const texture = Array.isArray(tt.texture) ? tt.texture : [];
+  const flavour = Array.isArray(tt.flavour) ? tt.flavour : [];
   const sourceName = source && source.name ? lc(source.name) : 'your main';
   const course = tt.course;
+  const seed = `${target.name}|foodpair|${course}`;
   if (course === 'STARTER') {
     return tone === 'luxury'
       ? 'A good way to open the table before the mains arrive.'
       : 'A nice way to open the table while the rest of the order is cooking.';
   }
-  if (course === 'SIDE') return `Goes naturally alongside the ${sourceName}.`;
-  if (course === 'SALAD') return `Adds something fresh next to the ${sourceName}.`;
+  if (course === 'SIDE') {
+    const set = texture.includes('crispy')
+      ? [`Adds a crisp contrast next to the ${sourceName}.`, `A crunchy counterpoint to the ${sourceName}.`]
+      : texture.includes('creamy')
+        ? [`A creamy side that rounds out the ${sourceName}.`, `Softens things out alongside the ${sourceName}.`]
+        : [`Goes naturally alongside the ${sourceName}.`, `An easy match for the ${sourceName}.`];
+    return pick(set, seed);
+  }
+  if (course === 'SALAD') {
+    const set = flavour.includes('tangy') || flavour.includes('citrus')
+      ? [`A sharp, fresh note next to the ${sourceName}.`, `Cuts through the ${sourceName} with something bright.`]
+      : [`Adds something fresh next to the ${sourceName}.`, `A crisp, cooling side to the ${sourceName}.`];
+    return pick(set, seed);
+  }
   if (course === 'DESSERT') {
     const rich = Number(tt.richness);
     return Number.isFinite(rich) && rich <= 1
       ? `Keeps things light rather than heavy after the ${sourceName}.`
       : `A properly sweet way to close things out after the ${sourceName}.`;
   }
-  return `A popular add-on alongside the ${sourceName}.`;
+  const set = [`A popular add-on alongside the ${sourceName}.`, `Pairs comfortably with the ${sourceName}.`, `A well-matched extra for the ${sourceName}.`];
+  return pick(set, seed);
 }
 
 // ── Conversation tips (derived) ─────────────────────────────────────────────

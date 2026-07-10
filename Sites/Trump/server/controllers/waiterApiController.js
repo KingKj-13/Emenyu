@@ -197,6 +197,13 @@ function createWaiterApiController(deps) {
             value: Number(value) || 0
           }
         });
+        // An explicit waiter decline durably suppresses that item from
+        // re-suggesting at this table (recoMemory.recordDecline) — previously
+        // this only ever wrote an analytics row; nothing actually remembered
+        // the decline, so the same card could resurface on the next refetch.
+        if (accepted === false && tableId && suggestedItem) {
+          aiService?.recoMemory?.recordDecline(getCanonicalTableId(tableId), suggestedItem);
+        }
         res.json({ ok: true });
       } catch {
         res.status(200).json({ ok: false });

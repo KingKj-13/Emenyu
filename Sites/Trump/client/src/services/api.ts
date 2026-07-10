@@ -298,7 +298,7 @@ export const api = {
     return fetchJson<unknown>(`${ENDPOINTS.analyticsummary}?${q}`);
   },
 
-  getAnalyticsItems(params: { from?: string; to?: string; order?: 'asc' | 'desc'; category?: string; limit?: number }) {
+  getAnalyticsItems(params: { from?: string; to?: string; order?: 'asc' | 'desc'; category?: string; excludeCategory?: string; limit?: number }) {
     const q = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])
     ).toString();
@@ -395,7 +395,7 @@ export const api = {
     return postJson<import('../types/waiter').OrderedTogetherResponse>(ENDPOINTS.orderedTogether, payload);
   },
 
-  cartRecommendations(payload: { cart?: unknown[]; event?: string | null; reason?: string; mode?: 'standard' | 'luxury' }) {
+  cartRecommendations(payload: { cart?: unknown[]; event?: string | null; reason?: string; mode?: 'standard' | 'luxury'; tableId?: string }) {
     return postJson<import('../types/waiter').CartRecResponse>(ENDPOINTS.cartRecommendations, payload);
   },
   sommelier(payload: { dish?: string; cart?: unknown[]; tone?: string }) {

@@ -49,6 +49,13 @@ function createBusinessRules({ file, frequencyFile } = {}) {
     minMinutesBetweenUnsolicited: frequencyRules.find(r => r.id === 'frequency:min-minutes-between-unsolicited-suggestions')?.threshold ?? 6,
     maxConsecutiveDeclines: frequencyRules.find(r => r.id === 'frequency:reduce-intensity-after-consecutive-declines')?.threshold ?? 3,
     maxConsecutiveIgnoresBeforeStop: frequencyRules.find(r => r.id === 'frequency:stop-proactive-upsell-after-ignored-suggestions')?.threshold ?? 2,
+    // NOT currently wired anywhere (verified 2026-07-10, zero other references)
+    // despite the module header comment above claiming candidateFilterPipeline
+    // applies them — the pipeline's actual cap is capPerType (by categoryType,
+    // candidateFilterPipeline.js), not a recType-based upgrade/pairing split.
+    // Left here rather than removed since business_rules.json's own spec still
+    // names these; flagged so a future recType-aware pipeline change can wire
+    // them for real instead of them silently doing nothing.
     maxUpgradeCandidates: 1,
     maxPairingCandidates: 1,
     maxUnrelatedItems: 3

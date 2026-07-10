@@ -90,8 +90,9 @@ function createRecommendationRules({ config = {}, logger = null } = {}) {
       // block it — same bypass pattern as the beverage rules below.
       const isMainReplacement = cand.isReplacement === true;
       if (enforceStage && !chef && !isMainReplacement) {
-        // R5: no starter once the table is closing (dessert in cart).
-        if (type === 'STARTER' && stage === 'CLOSING') reason = 'stage:no-starter-at-closing';
+        // R5: no starter once the table is closing (dessert in cart), or once a
+        // main is already in the cart (mid-meal — a starter reads as "too late").
+        if (type === 'STARTER' && (stage === 'CLOSING' || stage === 'MAIN')) reason = 'stage:no-starter-past-first-course';
         // R5: no second main from the algorithm when the cart already has a main,
         // and never two mains in one rec set.
         else if (type === 'MAIN' && (cartHasMain || mainsKept >= 1)) reason = 'stage:no-second-main';

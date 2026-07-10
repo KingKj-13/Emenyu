@@ -707,7 +707,11 @@ class AiService {
     const cart = this.readCart(payload);
     const [menuContext, recs] = await Promise.all([
       this.getMenuContext(),
-      this.recommend({ cart, limit: 8, reason: payload.reason, guestIntel: payload.guestIntel })
+      // tableId threaded through so recoMemory's "recently ignored"/session
+      // suppression (already built, otherwise dormant for this endpoint) can
+      // actually apply here — previously silently dropped, so a card the
+      // waiter had just ignored could resurface on the very next cart refetch.
+      this.recommend({ cart, limit: 8, reason: payload.reason, guestIntel: payload.guestIntel, tableId: payload.tableId })
     ]);
     const cartNames = new Set(cart.map(c => normalizeName(c.name)));
     const csvRecs = this.smartPairings.recommend({ cart, menuContext, limit: 4 });
@@ -723,11 +727,36 @@ class AiService {
       .map(c => fuzzyFindItem(menuContext, c.name))
       .find(m => m && m.categoryType === 'WINE') || null;
 
+    // csvRecs' `.reason` comes straight from the CSV's own `reasoning` column —
+    // a completely separate, formulaic wording system that bypasses
+    // reasonComposer/heroPairings entirely (verified: the same sentence repeats
+    // verbatim across unrelated dishes in the source CSVs). Recompute it through
+    // the same composer `recs` already uses, so both sources sound alike. Clear
+    // the CSV text first — pairingReason's Tier-1b returns an existing
+    // `target.reason` verbatim (by design, for genuinely authored overrides), so
+    // leaving the CSV string in place would make the recompute a no-op.
+    await Promise.all(csvRecs.map(async item => {
+      const isBev = ['WINE', 'DRINK'].includes(item.categoryType);
+      const anchor = isBev ? anchorDish : (anchorWine || anchorDish);
+      item.reason = await this.reason.pairingReason({ ...item, reason: '' }, anchor, { cartWine: anchorWine });
+    }));
+
     // Phase 3C: the waiter upsell reads the SAME composed reason as the cards and
     // chat (authored hero → chef → tag-true Tier-2 → never blank). One copy source.
     let merged = [...csvRecs, ...recs]
       .filter(r => !cartNames.has(normalizeName(r.name)))
       .filter((r, index, list) => list.findIndex(x => normalizeName(x.name) === normalizeName(r.name)) === index);
+
+    // csvRecs (SmartPairingEngine) has no beverage-primacy logic of its own,
+    // unlike `recs` (which already passed recommendationRules.applyCategorySafety's
+    // "max one primary beverage" rule). If both independently name a different
+    // wine/drink for the same cart, keep only the already-safety-checked one from
+    // `recs` — otherwise the waiter can see two wine recommendations for one steak.
+    const isBevCandidate = r => ['WINE', 'DRINK'].includes(r.categoryType);
+    if (recs.some(isBevCandidate)) {
+      const safeBevNames = new Set(recs.filter(isBevCandidate).map(r => normalizeName(r.name)));
+      merged = merged.filter(r => !isBevCandidate(r) || safeBevNames.has(normalizeName(r.name)));
+    }
 
     // Luxury tables: surface chef-picks and higher-priced items first, so the
     // 4-item cut favours the premium end of the menu rather than whatever
@@ -1630,6 +1659,12 @@ class AiService {
         title: 'Pairs with chicken',
         score: 84,
         keywords: ['chips', 'salad', 'garlic bread', 'coleslaw']
+      },
+      {
+        when: /beer|lager|cider|draught/,
+        title: 'Goes great with a cold one',
+        score: 86,
+        keywords: ['wings', 'biltong', 'burger', 'snails', 'calamari']
       }
     ];
 
@@ -1715,9 +1750,24 @@ class AiService {
     } else if (stage === 'wine') {
       pickFrom(menuContext.categorized.WINE || [], 'Wine pairing', UPSELL_TIMING.wine);
     } else if (stage === 'drink') {
-      pickFrom([...(menuContext.categorized.WINE || []), ...(menuContext.categorized.DRINK || [])], 'To start, something to drink', UPSELL_TIMING.drink);
+      // Restrict to primary beverage kinds (wine/cocktail/beer) — without this,
+      // the pool included soft drinks/water/coffee, and if the popularity+hash
+      // pick landed on one of those, R3 (recommendationRules.js) drops secondary
+      // beverages from headlining outright, leaving the guest with no drink
+      // candidate at all for this turn.
+      pickFrom([...(menuContext.categorized.WINE || []), ...(menuContext.categorized.DRINK || [])], 'To start, something to drink', UPSELL_TIMING.drink,
+        item => ['WINE', 'COCKTAIL', 'BEER'].includes(classifier.beverageKind(item)));
     } else if (stage === 'dessert') {
-      pickFrom(menuContext.categorized.DESSERT || [], 'Sweet finish', UPSELL_TIMING.dessert);
+      // All 6 desserts on the menu carry identical richness/sweetness tags
+      // (bootstrap defaults, verified live) so richness can't differentiate
+      // them — temperature does vary (ice creams are 'cold', cakes 'room').
+      // After a hot, heavy main, prefer a cold dessert for contrast; fall back
+      // to the unfiltered pool rather than risk zero candidates if that ever
+      // empties out (e.g. a future menu change).
+      const desserts = menuContext.categorized.DESSERT || [];
+      const mainIsHotAndHeavy = mainDish && mainDish.tags?.temperature !== 'cold' && Number(mainDish.tags?.richness) >= 3;
+      const coldDesserts = mainIsHotAndHeavy ? desserts.filter(d => d.tags?.temperature === 'cold') : [];
+      pickFrom(coldDesserts.length ? coldDesserts : desserts, 'Sweet finish', UPSELL_TIMING.dessert);
     } else if (stage === 'coffee') {
       pickFrom(menuContext.categorized.DRINK || [], 'Coffee to finish', UPSELL_TIMING.coffee, item => classifier.beverageKind(item) === 'HOT');
     } else if (stage === 'digestif') {

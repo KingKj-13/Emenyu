@@ -157,7 +157,7 @@ class TemplateNlgProvider extends NlgProvider {
   composePairingLine(item, source, tone, why) {
     const itemName = item.name;
     const sourceName = source && source.name;
-    const method = hospitality.cookingMethodFor(item);
+    const method = hospitality.cookingMethodFor(item, tone);
     const withMethod = method && !isBevCat(item) ? ` It's ${method}.` : '';
 
     if (!sourceName) {
