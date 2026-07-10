@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carmella by Sir Gaspard × eMenyu — Design Direction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Carmella core palette */
+    --gaspard-green:#172417;
+    --ink-green:#0F1A12;
+    --deep-moss:#24402E;
+    --cream:#F7F2E8;
+    --paper:#FBF7EF;
+    --brass:#B08D57;
+    --gold:#C9A96A;
+    --terracotta:#B65C33;
+    --olive:#6B7A4F;
+    --ink:#1C2418;
+    /* golden hour */
+    --gh-bg:#141F17;
+    --gh-amber:#D9A05B;
+    /* trump reference */
+    --trump-navy:#040E1A;
+    --trump-gold:#D0A94B;
+    --serif:'Fraunces', Georgia, serif;
+    --sans:'Inter', system-ui, sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.55}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 32px}
+
+  /* ---------- header ---------- */
+  header{background:var(--gaspard-green);color:var(--cream);padding:72px 0 56px;position:relative;overflow:hidden}
+  header::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 80% -20%, rgba(201,169,106,.18), transparent 55%)}
+  .eyebrow{font-family:var(--sans);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:18px}
+  h1{font-family:var(--serif);font-weight:400;font-size:54px;line-height:1.08;max-width:820px}
+  h1 em{font-style:italic;color:var(--gold)}
+  .sub{margin-top:20px;font-size:17px;color:#D8D2C2;max-width:640px}
+  .meta-row{margin-top:34px;display:flex;gap:28px;flex-wrap:wrap;font-size:13px;color:#A9A492}
+  .meta-row b{color:var(--cream);font-weight:600}
+
+  /* ---------- sections ---------- */
+  section{padding:64px 0}
+  section.alt{background:#F1EADC}
+  section.dark{background:var(--ink-green);color:var(--cream)}
+  .kicker{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--terracotta);font-weight:600;margin-bottom:10px}
+  .dark .kicker{color:var(--gold)}
+  h2{font-family:var(--serif);font-weight:500;font-size:34px;margin-bottom:14px}
+  .lede{font-size:16.5px;max-width:760px;color:#4A4A3F;margin-bottom:36px}
+  .dark .lede{color:#C9C4B2}
+  h3{font-family:var(--serif);font-weight:600;font-size:20px;margin-bottom:8px}
+
+  /* principles */
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+  .card{background:#fff;border:1px solid #E4DCC9;border-radius:14px;padding:26px}
+  .card .num{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--brass);margin-bottom:10px;display:block}
+  .card p{font-size:14px;color:#55554A}
+
+  /* comparison table */
+  table.compare{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #E4DCC9}
+  table.compare th, table.compare td{padding:14px 18px;text-align:left;font-size:14px;border-bottom:1px solid #EEE8D8;vertical-align:top}
+  table.compare th{font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+  th.trump-col{background:var(--trump-navy);color:var(--trump-gold)}
+  th.carm-col{background:var(--gaspard-green);color:var(--gold)}
+  th.dim-col{background:#F1EADC;color:#8A8672;width:150px}
+  td.dim{font-weight:600;color:#6B6753;font-size:13px;background:#FAF6EC}
+  tr:last-child td{border-bottom:none}
+
+  /* palette */
+  .swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:34px}
+  .sw{border-radius:12px;overflow:hidden;border:1px solid #E4DCC9;background:#fff}
+  .sw .chip{height:86px}
+  .sw .lbl{padding:10px 12px}
+  .sw .lbl b{display:block;font-size:12.5px}
+  .sw .lbl span{font-size:11px;color:#8A8672;font-family:ui-monospace,monospace}
+  .type-samples{background:#fff;border:1px solid #E4DCC9;border-radius:14px;padding:34px 38px}
+  .ts-row{display:flex;align-items:baseline;gap:26px;padding:16px 0;border-bottom:1px dashed #E4DCC9}
+  .ts-row:last-child{border-bottom:none}
+  .ts-tag{width:170px;flex-shrink:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8A8672}
+
+  /* chapters */
+  .chapter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:26px}
+  .chip-tab{font-family:var(--serif);font-size:15px;padding:10px 20px;border-radius:999px;border:1px solid #CDBFA0;color:#5A5544;background:#FDFBF4}
+  .chip-tab.active{background:var(--gaspard-green);color:var(--gold);border-color:var(--gaspard-green)}
+  .chap-note{font-size:13px;color:#77735F;max-width:720px}
+  .chap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:28px}
+  .chap-card{background:#fff;border:1px solid #E4DCC9;border-radius:14px;padding:20px}
+  .chap-card .when{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass);margin-bottom:6px}
+  .chap-card h4{font-family:var(--serif);font-size:17px;font-weight:600;margin-bottom:6px}
+  .chap-card p{font-size:12.5px;color:#6B6753}
+
+  /* phones */
+  .phones{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;align-items:start}
+  .phone{border-radius:30px;overflow:hidden;border:6px solid #23231E;box-shadow:0 18px 44px rgba(20,25,15,.22);background:var(--paper)}
+  .phone .screen{height:560px;overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .p-note{margin-top:14px;font-size:12.5px;color:#6B6753}
+  .p-note b{color:var(--ink)}
+  .dark .p-note{color:#B7B2A0}.dark .p-note b{color:var(--cream)}
+
+  /* phone 1 — morning */
+  .m-top{background:var(--paper);padding:14px 14px 8px;border-bottom:1px solid #EAE2CF}
+  .m-greet{font-family:var(--serif);font-style:italic;font-size:11.5px;color:var(--brass)}
+  .m-title{font-family:var(--serif);font-size:19px;font-weight:600;color:var(--ink);line-height:1.15}
+  .m-tabs{display:flex;gap:6px;padding:9px 14px;background:var(--paper);overflow:hidden;border-bottom:1px solid #EAE2CF}
+  .m-tab{font-family:var(--serif);font-size:10.5px;padding:5px 11px;border-radius:999px;border:1px solid #D8CCAE;color:#6B6753;white-space:nowrap}
+  .m-tab.on{background:var(--gaspard-green);color:var(--gold);border-color:var(--gaspard-green)}
+  .m-body{flex:1;overflow:hidden;padding:12px 12px 0;background:linear-gradient(180deg,#FDFAF2, #F7F0E0)}
+  .dish{background:#fff;border:1px solid #EAE0C8;border-radius:14px;overflow:hidden;margin-bottom:11px}
+  .dish img{width:100%;height:96px;object-fit:cover;display:block}
+  .dish .d-in{padding:9px 11px}
+  .dish h5{font-family:var(--serif);font-size:13px;font-weight:600}
+  .dish .story{font-family:var(--serif);font-style:italic;font-size:10.5px;color:#8A8266;margin:2px 0 5px}
+  .d-foot{display:flex;justify-content:space-between;align-items:center}
+  .d-foot .pr{font-size:12px;font-weight:700;color:var(--deep-moss)}
+  .d-foot .add{font-size:10px;font-weight:600;color:var(--paper);background:var(--gaspard-green);padding:4px 10px;border-radius:999px}
+  .sugg-strip{background:var(--gaspard-green);color:var(--cream);border-radius:12px;padding:9px 11px;margin-bottom:11px;display:flex;gap:9px;align-items:center}
+  .sugg-strip img{width:38px;height:38px;border-radius:9px;object-fit:cover}
+  .sugg-strip .s-t{font-size:10px;color:var(--gold);letter-spacing:.08em;text-transform:uppercase}
+  .sugg-strip .s-b{font-family:var(--serif);font-style:italic;font-size:11px;line-height:1.3}
+
+  /* phone 2 — item */
+  .i-img{height:190px;position:relative}
+  .i-img img{width:100%;height:100%;object-fit:cover;display:block}
+  .i-img .b-chip{position:absolute;top:10px;left:10px;background:rgba(23,36,23,.85);color:var(--gold);font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px}
+  .i-body{padding:13px 14px;background:var(--paper);flex:1;display:flex;flex-direction:column}
+  .i-body h5{font-family:var(--serif);font-size:17px;font-weight:600}
+  .i-body .story{font-family:var(--serif);font-style:italic;font-size:11px;color:#8A8266;margin:3px 0 6px}
+  .i-body .desc{font-size:10.5px;color:#55554A}
+  .tag-row{display:flex;gap:5px;margin:8px 0}
+  .tag{font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid #CDBFA0;color:#6B6753;padding:3px 7px;border-radius:999px}
+  .pair-box{border:1px solid #E0D5B8;background:#fff;border-radius:12px;padding:9px 10px;margin-top:auto}
+  .pair-box .p-t{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--terracotta);font-weight:700;margin-bottom:6px}
+  .pair-item{display:flex;align-items:center;gap:8px;padding:4px 0}
+  .pair-item img{width:30px;height:30px;border-radius:8px;object-fit:cover}
+  .pair-item .n{font-size:10.5px;font-weight:600;flex:1}
+  .pair-item .p{font-size:10px;color:var(--deep-moss);font-weight:700}
+  .i-cta{display:flex;gap:8px;padding:11px 14px;background:var(--paper);border-top:1px solid #EAE2CF}
+  .i-cta .btn{flex:1;text-align:center;font-size:11.5px;font-weight:600;padding:10px;border-radius:999px}
+  .btn.primary{background:var(--gaspard-green);color:var(--gold)}
+  .btn.ghost{border:1px solid #CDBFA0;color:#5A5544}
+
+  /* phone 3 — chat */
+  .c-head{background:var(--gaspard-green);color:var(--cream);padding:13px 14px;display:flex;align-items:center;gap:10px}
+  .g-seal{width:34px;height:34px;border-radius:50%;background:var(--gold);color:var(--gaspard-green);font-family:var(--serif);font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center}
+  .c-head .who b{font-family:var(--serif);font-size:14px;display:block}
+  .c-head .who span{font-size:9.5px;color:#C9C4B2;font-style:italic}
+  .c-body{flex:1;background:linear-gradient(180deg,#F4EEDF,#EFE6D2);padding:12px;overflow:hidden}
+  .bub{max-width:86%;font-size:11px;padding:9px 12px;border-radius:14px;margin-bottom:9px;line-height:1.45}
+  .bub.user{background:var(--deep-moss);color:#fff;margin-left:auto;border-bottom-right-radius:4px}
+  .bub.gaspard{background:#fff;border:1px solid #E4D9BD;color:#3A3A30;border-bottom-left-radius:4px;font-family:var(--serif)}
+  .bub.gaspard .g-item{display:flex;gap:8px;align-items:center;background:var(--paper);border:1px solid #EAE0C8;border-radius:10px;padding:6px;margin-top:7px;font-family:var(--sans)}
+  .bub.gaspard .g-item img{width:34px;height:34px;border-radius:8px;object-fit:cover}
+  .bub.gaspard .g-item .n{font-size:10px;font-weight:600;flex:1}
+  .bub.gaspard .g-item .p{font-size:9.5px;font-weight:700;color:var(--deep-moss)}
+  .chips-row{display:flex;gap:6px;padding:9px 12px;background:#EFE6D2;overflow:hidden}
+  .q-chip{font-size:9.5px;white-space:nowrap;border:1px solid #C9BB98;border-radius:999px;padding:5px 10px;color:#5A5544;background:#FBF7EC}
+  .c-input{display:flex;gap:8px;padding:10px 12px;background:var(--paper);border-top:1px solid #EAE2CF;align-items:center}
+  .c-input .field{flex:1;border:1.5px solid var(--brass);border-radius:999px;padding:8px 13px;font-size:10.5px;color:#8A8672;font-style:italic}
+  .c-input .send{width:32px;height:32px;border-radius:50%;background:var(--gaspard-green);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px}
+
+  /* phone 4 — golden hour */
+  .gh .m-top,.gh .m-tabs{background:var(--gh-bg);border-color:#243428}
+  .gh .m-greet{color:var(--gh-amber)}
+  .gh .m-title{color:#F1E9D6}
+  .gh .m-tab{border-color:#3A4A3C;color:#9FA893}
+  .gh .m-tab.on{background:var(--gh-amber);color:var(--gh-bg);border-color:var(--gh-amber)}
+  .gh .m-body{background:linear-gradient(180deg,#18251B,#101A13)}
+  .gh .dish{background:#1E2C21;border-color:#2C3E2F}
+  .gh .dish h5{color:#F1E9D6}
+  .gh .dish .story{color:#B8A582}
+  .gh .d-foot .pr{color:var(--gh-amber)}
+  .gh .d-foot .add{background:var(--gh-amber);color:var(--gh-bg)}
+  .gh .sugg-strip{background:#2A1F12;border:1px solid #4A3820}
+  .gh .sugg-strip .s-t{color:var(--gh-amber)}
+
+  /* voice guide */
+  .voice-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:26px}
+  .rules .rule{display:flex;gap:12px;padding:13px 0;border-bottom:1px dashed #3A4A3C}
+  .rules .rule:last-child{border-bottom:none}
+  .rules .yn{font-size:11px;font-weight:700;letter-spacing:.08em;flex-shrink:0;width:52px}
+  .yn.y{color:#8FBF7F}.yn.n{color:#D98B6A}
+  .rules p{font-size:13.5px;color:#C9C4B2}
+  .rules p b{color:var(--cream)}
+  .convo{background:#101A13;border:1px solid #243428;border-radius:16px;padding:20px}
+  .convo .c-lbl{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+  .line{margin-bottom:12px}
+  .line .spk{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#7E8A76;margin-bottom:3px}
+  .line .txt{font-size:13px;color:#E6E0CE}
+  .line .txt.g{font-family:var(--serif);font-style:italic;color:#EFE7CE}
+
+  /* daypart */
+  .timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-radius:16px;overflow:hidden;border:1px solid #E4DCC9}
+  .tl{padding:26px 24px}
+  .tl .t-when{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
+  .tl h4{font-family:var(--serif);font-size:19px;margin-bottom:8px}
+  .tl p{font-size:13px}
+  .tl ul{margin:10px 0 0 16px;font-size:12.5px}
+  .tl.morning{background:#FDF9EE;color:#4A4A3F}.tl.morning .t-when{color:var(--terracotta)}
+  .tl.midday{background:#F3EDDE;color:#4A4A3F}.tl.midday .t-when{color:var(--olive)}
+  .tl.golden{background:var(--gh-bg);color:#C9C4B2}.tl.golden .t-when{color:var(--gh-amber)}.tl.golden h4{color:#F1E9D6}
+
+  /* upsell table */
+  table.upsell{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #E4DCC9;font-size:13px}
+  table.upsell th{background:var(--gaspard-green);color:var(--gold);font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:12px 16px;text-align:left}
+  table.upsell td{padding:12px 16px;border-bottom:1px solid #EEE8D8;vertical-align:top}
+  table.upsell tr:last-child td{border-bottom:none}
+  table.upsell td.g{font-family:var(--serif);font-style:italic;color:#5A5240}
+  table.upsell td .why{color:#8A8672;font-size:12px}
+
+  /* qa list */
+  .qa{background:#fff;border:1px solid #E4DCC9;border-radius:14px;padding:26px 30px}
+  .qa li{margin:0 0 10px 18px;font-size:13.5px;color:#4A4A3F}
+  .qa li b{color:var(--terracotta)}
+
+  footer{background:var(--gaspard-green);color:#A9A492;padding:34px 0;font-size:12.5px}
+  footer b{color:var(--gold);font-family:var(--serif)}
+
+  @media (max-width:980px){
+    .grid4,.chap-grid,.phones,.swatches{grid-template-columns:repeat(2,1fr)}
+    .grid3,.timeline{grid-template-columns:1fr}
+    .voice-grid,.grid2{grid-template-columns:1fr}
+    h1{font-size:38px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap" style="position:relative;z-index:1">
+    <div class="eyebrow">eMenyu · Design Direction · v1 · July 2026</div>
+    <h1>Carmella by Sir Gaspard<br><em>The menu as a living journal</em></h1>
+    <p class="sub">A warm, literary, daylight-driven ordering experience for an all-day European café in Fourways — the same eMenyu engine that powers Trumps Prime Grillhouse, wearing a completely different soul.</p>
+    <div class="meta-row">
+      <div><b>Client</b> · Carmella by Sir Gaspard, Cedar Square, Johannesburg</div>
+      <div><b>Hours</b> · 06:30 – 19:00 daily</div>
+      <div><b>Architecture</b> · Order-to-table with waiter service (Trump demo pattern)</div>
+      <div><b>Assets</b> · 201 dish images · full menu PDF</div>
+    </div>
+  </div>
+</header>
+
+<!-- 1 · BRAND READ -->
+<section>
+  <div class="wrap">
+    <div class="kicker">01 · The brand read</div>
+    <h2>Gaspard isn't a restaurant. He's a character.</h2>
+    <p class="lede">Their brand is a fictional 1948 European café keeper whose menu reads like a travel journal — dishes are memories with names like <i>Burrata in Venice</i>, <i>Prawns in Maputo</i>, <i>A Day in Paris</i>, <i>Morning in Jozi</i>. Sections are chapters: The Morning Pages, The Global Table, The Memory Course. Our job is not to invent a concept — it's to digitise the one they already wrote.</p>
+    <div class="grid4">
+      <div class="card"><span class="num">Principle I</span><h3>Unhurried, never slow</h3><p>Calm pacing, generous whitespace, soft transitions — but every interaction resolves in under two taps. The feeling is leisure; the mechanics are speed.</p></div>
+      <div class="card"><span class="num">Principle II</span><h3>Every plate carries a story</h3><p>Each dish card gets a one-line story in italic serif before the ingredients — "a memory of the Amalfi coast" — matching their belief that every plate carries a whisper of history.</p></div>
+      <div class="card"><span class="num">Principle III</span><h3>Paper, daylight &amp; garden green</h3><p>Cream paper surfaces, forest green (#172417 — their own theme colour), brass accents. The interface behaves like pages of a journal, not panels of an app.</p></div>
+      <div class="card"><span class="num">Principle IV</span><h3>The host, not the algorithm</h3><p>All AI touchpoints speak as Gaspard — a warm host with opinions and memories. Recommendations feel like hospitality, never like a sales engine.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 · SAME ENGINE, DIFFERENT SOUL -->
+<section class="alt">
+  <div class="wrap">
+    <div class="kicker">02 · Same engine, different soul</div>
+    <h2>Trump demo vs. Carmella</h2>
+    <p class="lede">Identical architecture — table-aware menu, chapter navigation, bundles, item cards, cart, call-waiter, AI assistant — reskinned so completely that no guest would guess the two share code. This spread is also your sales slide: proof that eMenyu adapts to any brand.</p>
+    <table class="compare">
+      <tr><th class="dim-col">Dimension</th><th class="trump-col">Trumps Prime Grillhouse</th><th class="carm-col">Carmella by Sir Gaspard</th></tr>
+      <tr><td class="dim">Mood</td><td>Cinematic steakhouse. Dark, glossy, high-contrast.</td><td>Literary café. Daylit, papery, warm.</td></tr>
+      <tr><td class="dim">Palette</td><td>Midnight navy #040E1A · champagne gold · white caps</td><td>Cream paper #F7F2E8 · Gaspard green #172417 · brass #B08D57 · terracotta accents</td></tr>
+      <tr><td class="dim">Typography</td><td>Engraved serif in ALL CAPS, wide tracking</td><td>Fraunces — a soft literary serif, mixed case, real italics for stories</td></tr>
+      <tr><td class="dim">Texture &amp; motion</td><td>Glass-blur overlays, glow edges</td><td>Paper grain, hairline rules, wax-seal monogram, page-turn fades</td></tr>
+      <tr><td class="dim">Bundles</td><td>"The Steak Lover", "The Sushi Lover" — appetite personas</td><td>"Gaspard's Tables" — journeys: <i>A Morning in Paris</i>, <i>The Mediterranean Table</i>, <i>The Celebration Table</i></td></tr>
+      <tr><td class="dim">AI persona</td><td>Neutral sommelier (wine-glass FAB, "Ask anything about our menu…")</td><td><b>Ask Gaspard</b> — the host himself, first person, in character</td></tr>
+      <tr><td class="dim">Theme behaviour</td><td>Always dark — one fixed mood</td><td><b>Day-part adaptive</b> — the menu brightens at 06:30 and deepens after 15:00, like the room itself</td></tr>
+      <tr><td class="dim">Kept as-is</td><td colspan="2">Table badge · chapter tabs + sub-chips · bundle carousel with one-tap full order · pairing icons on cards · bell (call waiter) · bottom cart bar · waiter fulfils the order</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- 3 · PALETTE & TYPE -->
+<section>
+  <div class="wrap">
+    <div class="kicker">03 · Palette &amp; typography</div>
+    <h2>Paper and garden green</h2>
+    <p class="lede">Anchored on the forest green already in their site's theme colour. Cream does the daytime work; green carries identity; brass replaces Trump's gold at a quieter volume; terracotta is the single warm signal reserved for Gaspard's suggestions.</p>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#172417"></div><div class="lbl"><b>Gaspard Green</b><span>#172417 · identity, headers, CTAs</span></div></div>
+      <div class="sw"><div class="chip" style="background:#24402E"></div><div class="lbl"><b>Deep Moss</b><span>#24402E · prices, secondary</span></div></div>
+      <div class="sw"><div class="chip" style="background:#F7F2E8;border-bottom:1px solid #E4DCC9"></div><div class="lbl"><b>Cream Paper</b><span>#F7F2E8 · daytime surface</span></div></div>
+      <div class="sw"><div class="chip" style="background:#B08D57"></div><div class="lbl"><b>Brass</b><span>#B08D57 · rules, seals, icons</span></div></div>
+      <div class="sw"><div class="chip" style="background:#B65C33"></div><div class="lbl"><b>Terracotta</b><span>#B65C33 · "Gaspard suggests" only</span></div></div>
+      <div class="sw"><div class="chip" style="background:#D9A05B"></div><div class="lbl"><b>Golden Hour</b><span>#D9A05B · after-15:00 accent</span></div></div>
+    </div>
+    <div class="type-samples">
+      <div class="ts-row"><div class="ts-tag">Chapter title</div><div style="font-family:var(--serif);font-size:34px;font-weight:500">The Morning Pages</div></div>
+      <div class="ts-row"><div class="ts-tag">Dish name</div><div style="font-family:var(--serif);font-size:21px;font-weight:600">Burrata in Venice</div></div>
+      <div class="ts-row"><div class="ts-tag">Story line</div><div style="font-family:var(--serif);font-style:italic;font-size:16px;color:#8A8266">"Gaspard first tasted this beside a canal, and never quite recovered."</div></div>
+      <div class="ts-row"><div class="ts-tag">Description</div><div style="font-size:14px;color:#55554A">Creamy burrata, sweet cherry tomatoes, pine nuts and basil</div></div>
+      <div class="ts-row"><div class="ts-tag">Price</div><div style="font-size:16px;font-weight:700;color:#24402E">R 170</div></div>
+      <div class="ts-row"><div class="ts-tag">Label / chip</div><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#6B6753">Vegetarian · Contains nuts · Serves 4</div></div>
+    </div>
+    <p class="chap-note" style="margin-top:18px">Type stack: <b>Fraunces</b> (display &amp; stories — has the bookish warmth their brand voice needs) + <b>Inter</b> (UI, labels, numbers). Both free via Google Fonts — zero licensing cost for the client.</p>
+  </div>
+</section>
+
+<!-- 4 · CHAPTERS -->
+<section class="alt">
+  <div class="wrap">
+    <div class="kicker">04 · Navigation</div>
+    <h2>Chapters, not categories</h2>
+    <p class="lede">Their PDF already names every section like a book — we keep every word. The chapter bar replaces Trump's category tabs; each chapter opens with the client's own intro prose ("Gaspard believed mornings should begin gently…") as a swipeable opener page.</p>
+    <div class="chapter-bar">
+      <span class="chip-tab active">The Morning Pages</span>
+      <span class="chip-tab">The Global Table</span>
+      <span class="chip-tab">The Companions</span>
+      <span class="chip-tab">The Interludes</span>
+      <span class="chip-tab">The Memory Course</span>
+      <span class="chip-tab">The Family's Toast</span>
+      <span class="chip-tab">The Gaspard Cellar</span>
+      <span class="chip-tab">Slow Drinks</span>
+    </div>
+    <div class="chap-grid">
+      <div class="chap-card"><div class="when">06:30 – 11:30 · leads in the morning</div><h4>The Morning Pages</h4><p>Breakfasts, omelettes, French toast, croissants, oats. Carmella's Breakfast R150 · A Day in Paris R100 · Nicole in Thessaloniki R140.</p></div>
+      <div class="chap-card"><div class="when">11:30 onwards</div><h4>The Global Table</h4><p>Starters, salads and mains named for cities — Burrata in Venice, Athens, Catch in Cape Town, Marrakech Flame, Delhi Butter Road.</p></div>
+      <div class="chap-card"><div class="when">All day · sharing</div><h4>The Interludes</h4><p>Khuli's sandwiches, wraps, bowls and the serves-4 platters — the group-order and celebration engine.</p></div>
+      <div class="chap-card"><div class="when">15:00 – 19:00 · golden hour</div><h4>The Family's Toast + Memory Course</h4><p>Cocktails step forward with cakes and desserts — "in the afternoon our mixologists take center stage."</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · SCREENS -->
+<section class="dark">
+  <div class="wrap">
+    <div class="kicker">05 · Key screens</div>
+    <h2>Four moments in the flow</h2>
+    <p class="lede">Built with the client's real dishes, prices and AI-generated photography. Same skeleton as Trump — new skin, new voice.</p>
+    <div class="phones">
+
+      <!-- PHONE 1 : morning browse -->
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="m-top">
+            <div class="m-greet">Good morning · Table 4</div>
+            <div class="m-title">The Morning Pages</div>
+          </div>
+          <div class="m-tabs">
+            <span class="m-tab on">Morning Pages</span><span class="m-tab">Global Table</span><span class="m-tab">Interludes</span>
+          </div>
+          <div class="m-body">
+            <div class="sugg-strip">
+              <img src="../images/017_a_day_in_paris.jpg" alt="">
+              <div><div class="s-t">Gaspard suggests</div><div class="s-b">"A croissant is only half a morning — a cappuccino completes it." · +R35</div></div>
+            </div>
+            <div class="dish">
+              <img src="../images/001_carmella_s_breakfast.jpg" alt="">
+              <div class="d-in"><h5>Carmella's Breakfast</h5><div class="story">The house's namesake — a full, generous start.</div>
+              <div class="d-foot"><span class="pr">R 150</span><span class="add">Add</span></div></div>
+            </div>
+            <div class="dish">
+              <img src="../images/015_nicole_in_thessaloniki.jpg" alt="">
+              <div class="d-in"><h5>Nicole in Thessaloniki</h5><div class="story">Greek yoghurt, seasonal fruit, flaked almonds.</div>
+              <div class="d-foot"><span class="pr">R 140</span><span class="add">Add</span></div></div>
+            </div>
+          </div>
+        </div></div>
+        <p class="p-note"><b>Morning browse.</b> Daylight palette, greeting is time- and table-aware. The terracotta-free cream UI keeps food photography loudest; Gaspard's strip is the only sell on screen.</p>
+      </div>
+
+      <!-- PHONE 2 : item card -->
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="i-img">
+            <img src="../images/045_marrakech_flame.jpg" alt="">
+            <span class="b-chip">Sir Gaspard's Mains</span>
+          </div>
+          <div class="i-body">
+            <h5>Marrakech Flame</h5>
+            <div class="story">"From the night markets — honey, chili, and a golden char."</div>
+            <div class="desc">Tender lamb chops glazed with wild honey, chili and spice; grilled and kissed with heat.</div>
+            <div class="tag-row"><span class="tag">Spicy</span><span class="tag">Halaal-friendly*</span><span class="tag">Gluten-free</span></div>
+            <div class="pair-box">
+              <div class="p-t">Gaspard suggests</div>
+              <div class="pair-item"><img src="../images/124_beyerskloof_pinotage.jpg" alt=""><span class="n">Beyerskloof Pinotage · glass</span><span class="p">+R 95</span></div>
+              <div class="pair-item"><img src="../images/053_couscous.jpg" alt=""><span class="n">Couscous, steamed &amp; oiled</span><span class="p">+R 50</span></div>
+            </div>
+          </div>
+          <div class="i-cta"><span class="btn ghost">Ask Gaspard</span><span class="btn primary">Add to table · R 255</span></div>
+        </div></div>
+        <p class="p-note"><b>Item card.</b> Story line above ingredients; allergen/diet chips; pairing box replaces Trump's wine-icon overlay with named, priced, one-tap add-ons. (*dietary tags to be confirmed with client.)</p>
+      </div>
+
+      <!-- PHONE 3 : Ask Gaspard -->
+      <div>
+        <div class="phone"><div class="screen">
+          <div class="c-head">
+            <div class="g-seal">G</div>
+            <div class="who"><b>Ask Gaspard</b><span>your host since 1948</span></div>
+          </div>
+          <div class="c-body">
+            <div class="bub user">Something sweet, but I have a nut allergy</div>
+            <div class="bub gaspard">Then we shall be careful together. My lemon crème brûlée from Positano is nut-free and quietly spectacular —
+              <div class="g-item"><img src="../images/077_positano_lemon_cr_me_br_l_e.jpg" alt=""><span class="n">Positano Lemon Crème Brûlée</span><span class="p">R 100</span></div>
+              <div class="g-item"><img src="../images/158_flat_white.jpg" alt=""><span class="n">Flat White — my 4 o'clock ritual</span><span class="p">R 40</span></div>
+            </div>
+          </div>
+          <div class="chips-row">
+            <span class="q-chip">What's good this morning?</span><span class="q-chip">Pair my cake</span><span class="q-chip">We're celebrating</span>
+          </div>
+          <div class="c-input"><div class="field">Ask Gaspard anything…</div><div class="send">➤</div></div>
+        </div></div>
+        <p class="p-note"><b>Ask Gaspard.</b> Same chat pattern as Trump's sommelier — persona'd header, allergy-aware answers in serif italic, tappable dish cards inside replies, quick chips that change by day-part.</p>
+      </div>
+
+      <!-- PHONE 4 : golden hour -->
+      <div>
+        <div class="phone gh"><div class="screen">
+          <div class="m-top">
+            <div class="m-greet">Golden hour · Table 4</div>
+            <div class="m-title">The Family's Toast</div>
+          </div>
+          <div class="m-tabs">
+            <span class="m-tab">Memory Course</span><span class="m-tab on">Family's Toast</span><span class="m-tab">Cellar</span>
+          </div>
+          <div class="m-body">
+            <div class="sugg-strip">
+              <img src="../images/085_slice_of_cake.jpg" alt="">
+              <div><div class="s-t">Gaspard suggests</div><div class="s-b">"Cake at golden hour, with an espresso martini — as it should be."</div></div>
+            </div>
+            <div class="dish">
+              <img src="../images/099_sir_gaspard_s_garden_spritz.jpg" alt="">
+              <div class="d-in"><h5>Sir Gaspard's Garden Spritz</h5><div class="story">A South African twist — Inverroche gin, elderflower, MCC.</div>
+              <div class="d-foot"><span class="pr">R 120</span><span class="add">Add</span></div></div>
+            </div>
+            <div class="dish">
+              <img src="../images/098_hozanna_velvet_shot_espresso_martini.jpg" alt="">
+              <div class="d-in"><h5>Hozanna Velvet Shot</h5><div class="story">A refined energy boost for after-dark indulgence.</div>
+              <div class="d-foot"><span class="pr">R 100</span><span class="add">Add</span></div></div>
+            </div>
+          </div>
+        </div></div>
+        <p class="p-note"><b>After 15:00.</b> The same screens deepen to evening green and amber; cocktails and the Memory Course rise to the top. One codebase, two moods — the flagship demo of eMenyu's adaptive theming.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- 6 · VOICE GUIDE -->
+<section class="dark" style="padding-top:0">
+  <div class="wrap">
+    <div class="kicker">06 · Voice guide</div>
+    <h2>How Gaspard speaks</h2>
+    <p class="lede">One persona across chat, suggestion strips, pairing boxes and waiter-facing prompts. Warm, brief, opinionated — a host with memories, never a salesman with targets.</p>
+    <div class="voice-grid">
+      <div class="rules">
+        <div class="rule"><span class="yn y">DO</span><p><b>First person, present tense.</b> "I'd pour the Pinotage with this" — not "Customers also ordered".</p></div>
+        <div class="rule"><span class="yn y">DO</span><p><b>One reason, rooted in taste or memory.</b> Every suggestion carries a short why: "the honey glaze wants a bold red."</p></div>
+        <div class="rule"><span class="yn y">DO</span><p><b>Respect the guest's constraints first.</b> Allergies and diets are repeated back and never overridden. Safety over charm, always.</p></div>
+        <div class="rule"><span class="yn y">DO</span><p><b>Keep it to two sentences.</b> Gaspard is charming because he is brief.</p></div>
+        <div class="rule"><span class="yn n">DON'T</span><p><b>No discounts language, no urgency.</b> Never "only 2 left!" or "deal". Scarcity talk breaks the 1948 spell.</p></div>
+        <div class="rule"><span class="yn n">DON'T</span><p><b>No tech vocabulary.</b> Gaspard doesn't say AI, algorithm, recommendation engine — he says "if I may suggest".</p></div>
+        <div class="rule"><span class="yn n">DON'T</span><p><b>Never invent menu facts.</b> Ingredients, allergens and availability come only from the menu data. If unsure: "let me call someone from the team."</p></div>
+      </div>
+      <div class="convo">
+        <div class="c-lbl">Sample exchanges</div>
+        <div class="line"><div class="spk">Guest</div><div class="txt">What should I order? First time here.</div></div>
+        <div class="line"><div class="spk">Gaspard</div><div class="txt g">"Then let's make it memorable. Guests fall for the Marrakech Flame — lamb, wild honey, a little fire. Shall I add couscous alongside?"</div></div>
+        <div class="line"><div class="spk">Guest</div><div class="txt">We're here for a birthday, table of 6.</div></div>
+        <div class="line"><div class="spk">Gaspard</div><div class="txt g">"A celebration! The Best of the Best platter feeds the table while you decide — and our kitchen bakes celebration cakes to order. Shall I ask the team to tell you more?"</div></div>
+        <div class="line"><div class="spk">Guest</div><div class="txt">Which coffee with the coco cake?</div></div>
+        <div class="line"><div class="spk">Gaspard</div><div class="txt g">"The Mauritius Coco Cake takes a cortado beautifully — small, strong, no argument from the coconut."</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 · DAY-PART -->
+<section>
+  <div class="wrap">
+    <div class="kicker">07 · Day-part intelligence</div>
+    <h2>The menu follows the sun</h2>
+    <p class="lede">Carmella is three restaurants in one day. eMenyu's time-aware rules re-order chapters, re-tone the palette and re-brief Gaspard — automatically, per the restaurant's config (including the 15:00 close on public holidays).</p>
+    <div class="timeline">
+      <div class="tl morning">
+        <div class="t-when">06:30 – 11:30 · The Morning Pages</div>
+        <h4>Begin gently</h4>
+        <p>Lightest palette. Breakfast chapter first, coffee attached to everything.</p>
+        <ul>
+          <li>Croissants &amp; scones pair with cappuccinos</li>
+          <li>Juices &amp; ginger shots as add-ons</li>
+          <li>Gaspard chip: "What's good this morning?"</li>
+        </ul>
+      </div>
+      <div class="tl midday">
+        <div class="t-when">11:30 – 15:00 · The Global Table</div>
+        <h4>Travel by plate</h4>
+        <p>Full menu. Starters, salads, city-named mains; wine appears by the glass.</p>
+        <ul>
+          <li>Mains suggest Companions (all R50) + cellar pairings</li>
+          <li>Groups of 4+ see platters early</li>
+          <li>Business-lunch mode: "fast &amp; light" filter</li>
+        </ul>
+      </div>
+      <div class="tl golden">
+        <div class="t-when">15:00 – 19:00 · The Family's Toast</div>
+        <h4>The mixologists take center stage</h4>
+        <p>Palette deepens to evening green &amp; amber. Cocktails and the Memory Course lead.</p>
+        <ul>
+          <li>Cakes pair with espresso martinis &amp; cortados</li>
+          <li>Garden Spritz as the signature suggestion</li>
+          <li>Virgin cocktails offered with equal pride</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 · UPSELL MAP -->
+<section class="alt">
+  <div class="wrap">
+    <div class="kicker">08 · Upsell map</div>
+    <h2>Where the revenue lives</h2>
+    <p class="lede">Real items, real prices, from their menu. Every suggestion passes the test: would a good waiter say this? Targets shown as attach-rate opportunities — to be validated against dashboard data after launch.</p>
+    <table class="upsell">
+      <tr><th style="width:26%">Guest orders…</th><th style="width:34%">Gaspard suggests…</th><th>Why it works</th></tr>
+      <tr><td>A Day in Paris — croissant · R100</td><td class="g">Cappuccino +R35 or fresh Red Juice +R70</td><td class="why">The classic café ritual; near-zero friction, high attach potential on the biggest morning seller.</td></tr>
+      <tr><td>Any Memory Course dessert · R80–110</td><td class="g">Flat White +R40 (day) · Hozanna Velvet Shot +R100 (golden hour)</td><td class="why">Cake↔coffee is Carmella's signature pairing — their handcrafted cakes are the margin heroes.</td></tr>
+      <tr><td>Marrakech Flame · R255</td><td class="g">Beyerskloof Pinotage glass +R95 · Couscous +R50</td><td class="why">Honey-chili lamb + SA Pinotage is a story Gaspard can tell in one line; sides are pure increment.</td></tr>
+      <tr><td>Iron Fillet · R265 / Oslo's Flame · R265</td><td class="g">Warwick First Lady Cab +R95 · Chardonnay +R95 · Zakai's potatoes +R50</td><td class="why">Premium mains signal willingness to spend; glass-pour wines convert far better than bottles.</td></tr>
+      <tr><td>Texan Burger · R170</td><td class="g">Femi's fries +R50 · milkshake +R63</td><td class="why">Familiar pattern; milkshakes lift the casual-lunch ticket without feeling upsold.</td></tr>
+      <tr><td>Party of 4+ detected (table config)</td><td class="g">A platter for the table while you browse — R255</td><td class="why">Platters land before mains are chosen; adds a full course to group tickets.</td></tr>
+      <tr><td>"We're celebrating" (chat or occasion prompt)</td><td class="g">Simon Sweet Tooth platter · bespoke celebration cakes · catering enquiry → WhatsApp handoff</td><td class="why">Routes diners into Carmella's highest-margin businesses: custom cakes &amp; catering. The menu becomes a lead channel.</td></tr>
+      <tr><td>Bill requested before dessert</td><td class="g">"A mekate for the road? They travel well." +R90</td><td class="why">Last-moment dessert save — gentle, once, never repeated if declined.</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- 9 · QA + NEXT -->
+<section>
+  <div class="wrap">
+    <div class="kicker">09 · Content QA &amp; next steps</div>
+    <h2>Found while reading their menu</h2>
+    <p class="lede">Worth fixing before launch — and a nice moment in your pitch: eMenyu catches what print missed.</p>
+    <div class="grid2">
+      <div class="qa">
+        <h3 style="margin-bottom:12px">Menu data fixes</h3>
+        <ul>
+          <li><b>Duplicate name:</b> the chicken burger is titled "Texan Beef Burger" in the PDF — should be Texan Chicken Burger (image 044 confirms).</li>
+          <li><b>Copy-paste descriptions:</b> Sweet 16, Virgin Strawberry Daiquiri and Innocent Passion carry the descriptions of the cocktails above them; Lemon Meringue has the waffle's "Belgian perfection" line.</li>
+          <li><b>Spelling:</b> "Vegeterian Wrap" → Vegetarian.</li>
+          <li><b>Availability flags:</b> Ceviche in Lima, Naples Aubergine, Fruit Tarts, Assini → map to eMenyu's live availability toggles instead of "ask for availability".</li>
+          <li><b>Missing prices:</b> several champagne/wine glass prices blank in the PDF — confirm with client.</li>
+        </ul>
+      </div>
+      <div class="qa">
+        <h3 style="margin-bottom:12px">Build sequence</h3>
+        <ul>
+          <li>Client sign-off on this direction (palette, chapters, Gaspard persona).</li>
+          <li>Menu data entry: 201 items + images mapped to chapters, allergens &amp; dietary tags confirmed by the kitchen.</li>
+          <li>Theme skin on the Trump architecture: tokens above + Fraunces/Inter + light/golden-hour modes.</li>
+          <li>Gaspard prompt-pack: persona rules (§06), pairing map (§08), day-part briefs (§07).</li>
+          <li>Story lines: ~60 one-liners for hero dishes (I can draft these next).</li>
+          <li>Dashboard: track attach rate on Gaspard suggestions vs. Trump baseline.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <b>eMenyu</b> &nbsp;·&nbsp; Design direction prepared for Carmella by Sir Gaspard · July 2026 · v1 &nbsp;·&nbsp; All dish names, prices and copy from the client's menu PDF; photography AI-generated (client-supplied).
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carmella by Sir Gaspard — eMenyu Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green:#172417; --moss:#24402E; --ink:#1C2418;
+    --paper:#FBF7EF; --cream:#F7F2E8;
+    --brass:#B08D57; --gold:#C9A96A; --terra:#B65C33;
+    --amber:#D9A05B; --ghbg:#141F17;
+    --serif:'Fraunces',Georgia,serif; --sans:'Inter',system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{font-family:var(--sans);background:var(--green);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:26px 12px 40px}
+  .stage-head{color:#C9C4B2;text-align:center;margin-bottom:16px}
+  .stage-head .k{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+  .stage-head h1{font-family:var(--serif);font-weight:400;font-size:26px;color:var(--cream);margin:6px 0 4px}
+  .stage-head p{font-size:12px;max-width:520px}
+  .dp-switch{display:flex;gap:8px;margin:14px 0 20px}
+  .dp-btn{font-family:var(--sans);font-size:12px;font-weight:600;padding:8px 16px;border-radius:999px;border:1px solid #3A4A3C;background:transparent;color:#C9C4B2;cursor:pointer}
+  .dp-btn.on{background:var(--gold);color:var(--green);border-color:var(--gold)}
+
+  /* ============ PHONE ============ */
+  .phone{width:min(400px,100vw - 8px);height:min(830px,calc(100vh - 170px));min-height:560px;border-radius:34px;border:7px solid #21211C;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.5);position:relative;display:flex;flex-direction:column;background:var(--bg)}
+  .phone, .sheet{
+    --bg:var(--paper); --bg2:#F3EDDE; --card:#FFFFFF; --line:#EAE0C8;
+    --txt:var(--ink); --txt2:#55554A; --story:#8A8266;
+    --acc:var(--green); --accTxt:var(--gold); --price:var(--moss); --chipline:#D8CCAE;
+  }
+  .phone[data-theme="golden"], .phone[data-theme="golden"] .sheet{
+    --bg:var(--ghbg); --bg2:#101A13; --card:#1E2C21; --line:#2C3E2F;
+    --txt:#F1E9D6; --txt2:#B7B2A0; --story:#B8A582;
+    --acc:var(--amber); --accTxt:var(--ghbg); --price:var(--amber); --chipline:#3A4A3C;
+  }
+  .phone[data-theme="midday"]{ --bg:var(--cream); --bg2:#EFE7D4; }
+
+  /* header */
+  .hd{background:var(--bg);padding:14px 16px 10px;border-bottom:1px solid var(--line);z-index:5}
+  .hd-row{display:flex;align-items:center;justify-content:space-between}
+  .greet{font-family:var(--serif);font-style:italic;font-size:12px;color:var(--brass)}
+  .wordmark{font-family:var(--serif);font-size:22px;font-weight:600;color:var(--txt);line-height:1.1}
+  .wordmark span{display:block;font-size:9px;font-weight:400;letter-spacing:.28em;text-transform:uppercase;color:var(--brass);margin-top:2px}
+  .hd-icons{display:flex;gap:8px}
+  .icon-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--chipline);background:var(--card);color:var(--txt);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;position:relative}
+  .icon-btn .badge{position:absolute;top:-4px;right:-4px;background:var(--terra);color:#fff;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .tbl-badge{font-size:10px;font-weight:600;letter-spacing:.08em;border:1px solid var(--chipline);border-radius:999px;padding:3px 9px;color:var(--txt2)}
+
+  /* chapter bar */
+  .chapbar{display:flex;gap:7px;padding:10px 14px;overflow-x:auto;scrollbar-width:none;background:var(--bg);border-bottom:1px solid var(--line)}
+  .chapbar::-webkit-scrollbar{display:none}
+  .chap{font-family:var(--serif);font-size:12.5px;white-space:nowrap;padding:7px 14px;border-radius:999px;border:1px solid var(--chipline);color:var(--txt2);cursor:pointer;flex-shrink:0;background:transparent}
+  .chap.on{background:var(--acc);color:var(--accTxt);border-color:var(--acc)}
+  .secbar{display:flex;gap:6px;padding:8px 14px 2px;overflow-x:auto;scrollbar-width:none}
+  .secbar::-webkit-scrollbar{display:none}
+  .sec{font-size:10.5px;font-weight:600;white-space:nowrap;padding:5px 11px;border-radius:999px;color:var(--txt2);border:1px dashed var(--chipline);cursor:pointer;flex-shrink:0}
+  .sec.on{color:var(--terra);border:1px solid var(--terra)}
+  .phone[data-theme="golden"] .sec.on{color:var(--amber);border-color:var(--amber)}
+
+  /* body */
+  .body{flex:1;overflow-y:auto;padding:12px 14px 90px;background:linear-gradient(180deg,var(--bg),var(--bg2))}
+  .chap-intro{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--story);margin:2px 2px 12px;line-height:1.4}
+  .strip{background:var(--green);color:var(--cream);border-radius:14px;padding:10px 12px;margin-bottom:12px;display:flex;gap:10px;align-items:center;cursor:pointer}
+  .phone[data-theme="golden"] .strip{background:#2A1F12;border:1px solid #4A3820}
+  .strip img{width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0}
+  .strip .t{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+  .phone[data-theme="golden"] .strip .t{color:var(--amber)}
+  .strip .b{font-family:var(--serif);font-style:italic;font-size:12px;line-height:1.35}
+  .bundles{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px;scrollbar-width:none}
+  .bundles::-webkit-scrollbar{display:none}
+  .bundle{flex:0 0 210px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+  .bundle h6{font-family:var(--serif);font-size:14px;font-weight:600;color:var(--txt)}
+  .bundle .bl{font-family:var(--serif);font-style:italic;font-size:10.5px;color:var(--story);margin:3px 0 8px;line-height:1.35}
+  .bundle .bi{font-size:10px;color:var(--txt2);margin-bottom:8px;line-height:1.5}
+  .bundle .bf{display:flex;justify-content:space-between;align-items:center}
+  .bundle .bp{font-weight:700;font-size:13px;color:var(--price)}
+  .sec-title{font-family:var(--serif);font-size:17px;font-weight:600;color:var(--txt);margin:16px 2px 4px}
+  .sec-note{font-size:10.5px;color:var(--story);margin:0 2px 10px;font-style:italic}
+  .card-i{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:12px;cursor:pointer}
+  .card-i img{width:100%;height:130px;object-fit:cover;display:block}
+  .card-i .in{padding:10px 12px}
+  .card-i h5{font-family:var(--serif);font-size:15px;font-weight:600;color:var(--txt)}
+  .card-i .sub{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--brass)}
+  .card-i .story{font-family:var(--serif);font-style:italic;font-size:11px;color:var(--story);margin:3px 0 6px;line-height:1.35}
+  .cf{display:flex;justify-content:space-between;align-items:center}
+  .price{font-size:13px;font-weight:700;color:var(--price)}
+  .avail{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--terra);border:1px solid var(--terra);padding:2px 7px;border-radius:999px;margin-left:7px}
+  .addb{font-size:11px;font-weight:600;background:var(--acc);color:var(--accTxt);padding:6px 14px;border-radius:999px;border:none;cursor:pointer}
+
+  /* FAB + cartbar */
+  .fab{position:absolute;right:14px;bottom:86px;width:52px;height:52px;border-radius:50%;background:var(--gold);color:var(--green);font-family:var(--serif);font-weight:700;font-size:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(0,0,0,.32);cursor:pointer;z-index:6;border:none}
+  .cartbar{position:absolute;left:12px;right:12px;bottom:12px;background:var(--acc);color:var(--accTxt);border-radius:999px;padding:13px 20px;display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:13.5px;cursor:pointer;z-index:6;box-shadow:0 10px 26px rgba(0,0,0,.3)}
+  .hidden{display:none !important}
+
+  /* sheets */
+  .overlay{position:absolute;inset:0;background:rgba(15,22,15,.55);backdrop-filter:blur(3px);z-index:10;display:flex;flex-direction:column;justify-content:flex-end}
+  .sheet{background:var(--bg);border-radius:24px 24px 0 0;max-height:88%;display:flex;flex-direction:column;overflow:hidden;animation:up .28s ease}
+  @keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+  .sheet-scroll{overflow-y:auto}
+  .grab{width:40px;height:4px;border-radius:2px;background:var(--chipline);margin:10px auto 2px;flex-shrink:0}
+  .it-img{height:200px;position:relative}
+  .it-img img{width:100%;height:100%;object-fit:cover}
+  .it-img .cls{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;background:rgba(23,36,23,.75);color:#F1E9D6;border:none;font-size:15px;cursor:pointer}
+  .it-body{padding:14px 18px 6px}
+  .it-body h4{font-family:var(--serif);font-size:21px;font-weight:600;color:var(--txt)}
+  .it-body .sub{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass)}
+  .it-body .story{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--story);margin:4px 0 7px}
+  .it-body .desc{font-size:12.5px;color:var(--txt2);line-height:1.5}
+  .tags{display:flex;gap:5px;flex-wrap:wrap;margin:10px 0 4px}
+  .tag{font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--chipline);color:var(--txt2);padding:3px 8px;border-radius:999px}
+  .blk{margin:12px 18px;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:11px 12px}
+  .blk .bt{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--terra);font-weight:700;margin-bottom:8px}
+  .phone[data-theme="golden"] .blk .bt{color:var(--amber)}
+  .vrow{display:flex;align-items:center;gap:9px;padding:6px 0;cursor:pointer;font-size:12.5px;color:var(--txt)}
+  .vrow .dot{width:15px;height:15px;border-radius:50%;border:2px solid var(--chipline);flex-shrink:0}
+  .vrow.sel .dot{border-color:var(--terra);background:var(--terra)}
+  .vrow .vp{margin-left:auto;font-weight:700;font-size:12px;color:var(--price)}
+  .prow{display:flex;align-items:center;gap:9px;padding:6px 0;cursor:pointer}
+  .prow img{width:34px;height:34px;border-radius:9px;object-fit:cover}
+  .prow .pn{font-size:11.5px;font-weight:600;color:var(--txt);line-height:1.25}
+  .prow .pn i{display:block;font-family:var(--serif);font-weight:400;font-size:10px;color:var(--story)}
+  .prow .box{margin-left:auto;width:17px;height:17px;border-radius:5px;border:2px solid var(--chipline);flex-shrink:0}
+  .prow.sel .box{background:var(--terra);border-color:var(--terra)}
+  .it-cta{display:flex;gap:10px;padding:12px 18px;border-top:1px solid var(--line);align-items:center;background:var(--bg)}
+  .qty{display:flex;align-items:center;gap:12px;border:1px solid var(--chipline);border-radius:999px;padding:8px 14px;color:var(--txt)}
+  .qty button{border:none;background:none;font-size:16px;color:var(--brass);cursor:pointer;font-weight:700}
+  .cta{flex:1;background:var(--acc);color:var(--accTxt);border:none;border-radius:999px;padding:13px;font-size:13px;font-weight:700;cursor:pointer}
+
+  /* cart sheet */
+  .crow{display:flex;gap:10px;align-items:center;padding:10px 18px;border-bottom:1px dashed var(--line)}
+  .crow img{width:46px;height:46px;border-radius:11px;object-fit:cover}
+  .crow .cn{flex:1;font-size:12.5px;font-weight:600;color:var(--txt)}
+  .crow .cn i{display:block;font-size:10.5px;color:var(--story);font-weight:400}
+  .crow .cq{display:flex;gap:9px;align-items:center;font-size:12px;color:var(--txt)}
+  .crow .cq button{border:1px solid var(--chipline);background:none;width:22px;height:22px;border-radius:50%;color:var(--brass);cursor:pointer;font-weight:700}
+  .ttl{display:flex;justify-content:space-between;padding:13px 18px 2px;font-size:14px;font-weight:700;color:var(--txt)}
+  .waiter-note{font-family:var(--serif);font-style:italic;font-size:11.5px;color:var(--story);padding:4px 18px 8px}
+  .confirm{padding:40px 26px;text-align:center}
+  .confirm .seal{width:58px;height:58px;border-radius:50%;background:var(--gold);color:var(--green);font-family:var(--serif);font-size:26px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+  .confirm h4{font-family:var(--serif);font-size:20px;color:var(--txt);margin-bottom:8px}
+  .confirm p{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--story)}
+
+  /* chat */
+  .chat-head{background:var(--green);color:var(--cream);padding:13px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+  .chat-head .seal{width:36px;height:36px;border-radius:50%;background:var(--gold);color:var(--green);font-family:var(--serif);font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center}
+  .chat-head b{font-family:var(--serif);font-size:15px;display:block}
+  .chat-head span{font-size:9.5px;color:#C9C4B2;font-style:italic}
+  .chat-head .cls2{margin-left:auto;background:none;border:none;color:#C9C4B2;font-size:17px;cursor:pointer}
+  .chat-body{flex:1;overflow-y:auto;padding:14px;background:var(--bg2);min-height:220px}
+  .bub{max-width:86%;font-size:12px;padding:9px 13px;border-radius:15px;margin-bottom:10px;line-height:1.45}
+  .bub.u{background:var(--moss);color:#fff;margin-left:auto;border-bottom-right-radius:4px}
+  .phone[data-theme="golden"] .bub.u{background:var(--amber);color:var(--ghbg)}
+  .bub.g{background:var(--card);border:1px solid var(--line);color:var(--txt);border-bottom-left-radius:4px;font-family:var(--serif)}
+  .gi{display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:6px 8px;margin-top:7px;font-family:var(--sans);cursor:pointer}
+  .gi img{width:34px;height:34px;border-radius:8px;object-fit:cover}
+  .gi .n{font-size:10.5px;font-weight:600;flex:1;color:var(--txt)}
+  .gi .p{font-size:10px;font-weight:700;color:var(--price)}
+  .chat-chips{display:flex;gap:6px;padding:9px 12px;overflow-x:auto;background:var(--bg2);scrollbar-width:none;flex-shrink:0}
+  .chat-chips::-webkit-scrollbar{display:none}
+  .qc{font-size:10px;white-space:nowrap;border:1px solid var(--chipline);border-radius:999px;padding:6px 11px;color:var(--txt2);background:var(--bg);cursor:pointer;flex-shrink:0}
+  .chat-in{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:var(--bg);flex-shrink:0}
+  .chat-in input{flex:1;border:1.5px solid var(--brass);border-radius:999px;padding:10px 15px;font-size:12px;background:var(--card);color:var(--txt);outline:none;font-family:var(--sans)}
+  .chat-in button{width:40px;height:40px;border-radius:50%;background:var(--green);color:var(--gold);border:none;font-size:15px;cursor:pointer}
+
+  .toast{position:absolute;left:50%;transform:translateX(-50%);bottom:150px;background:var(--green);color:var(--cream);font-family:var(--serif);font-style:italic;font-size:12.5px;padding:11px 20px;border-radius:999px;z-index:30;box-shadow:0 10px 26px rgba(0,0,0,.35);white-space:nowrap;animation:up .25s ease}
+  .stage-foot{color:#7E8A76;font-size:11px;margin-top:16px;text-align:center;max-width:520px}
+</style>
+</head>
+<body>
+
+<div class="stage-head">
+  <div class="k">eMenyu · Interactive Prototype · v1</div>
+  <h1>Carmella by Sir Gaspard</h1>
+  <p>Same architecture as the Trumps demo — order-to-table with waiter service — wearing the Living Journal skin. Ask Gaspard is scripted here; production uses the prompt pack.</p>
+</div>
+<div class="dp-switch" id="dpSwitch">
+  <button class="dp-btn" data-dp="auto">Auto</button>
+  <button class="dp-btn" data-dp="morning">Morning</button>
+  <button class="dp-btn" data-dp="midday">Midday</button>
+  <button class="dp-btn" data-dp="golden">Golden hour</button>
+</div>
+
+<div class="phone" id="phone" data-theme="morning">
+  <div class="hd">
+    <div class="hd-row">
+      <div>
+        <div class="greet" id="greet">Good morning · The Morning Pages</div>
+        <div class="wordmark">Carmella<span>by Sir Gaspard</span></div>
+      </div>
+      <div class="hd-icons">
+        <div class="tbl-badge" style="align-self:center">Table 4</div>
+        <button class="icon-btn" id="bellBtn" title="Call the team">🔔</button>
+        <button class="icon-btn" id="cartBtn" title="Your table">🧺<span class="badge hidden" id="cartBadge">0</span></button>
+      </div>
+    </div>
+  </div>
+  <div class="chapbar" id="chapbar"></div>
+  <div class="secbar hidden" id="secbar"></div>
+  <div class="body" id="body"></div>
+
+  <button class="fab" id="fabChat" title="Ask Gaspard">G</button>
+  <div class="cartbar hidden" id="cartbar"><span id="cbLeft">🧺 0 items</span><span id="cbRight">R 0</span></div>
+  <div id="sheetRoot"></div>
+  <div id="toastRoot"></div>
+</div>
+
+<div class="stage-foot">Prototype consumes <b>carmella-menu-data.json</b> · keep this file, the .js data file and the dish images in the same folder. Orders are simulated — nothing is sent anywhere.</div>
+
+<script src="carmella-menu-data.js"></script>
+<script>
+const D = window.CARMELLA_DATA;
+const R = n => 'R ' + n;
+const $ = s => document.querySelector(s);
+
+/* ---------- index ---------- */
+const ITEMS = {};
+D.chapters.forEach(ch => ch.sections.forEach(sec => sec.items.forEach(it => {
+  it._chapter = ch.id; it._section = sec.name; ITEMS[it.id] = it;
+})));
+const priceOf = it => {
+  if (it.price != null) return it.price;
+  const vs = (it.variants||[]).filter(v => !v.isAddon);
+  return vs.length ? Math.min(...vs.map(v => v.price)) : 0;
+};
+const priceLabel = it => it.price != null ? R(it.price) : 'from ' + R(priceOf(it));
+const IMGBASE = '../images/'; // point this at your local dish-image folder (images are NOT committed)
+const imgOf = it => IMGBASE + (it.img || (it.variants||[]).find(v => v.img)?.img || '');
+
+/* ---------- state ---------- */
+let daypartMode = 'auto';
+let cart = []; // {id, variant:null|{name,price}, qty}
+let activeChapter = null, activeSection = 0;
+
+function currentDaypart(){
+  if (daypartMode !== 'auto') return daypartMode;
+  const h = new Date().getHours() + new Date().getMinutes()/60;
+  if (h < 11.5) return 'morning';
+  if (h < 15) return 'midday';
+  return 'golden';
+}
+const dpConf = () => D.dayparts.find(d => d.id === currentDaypart());
+
+/* ---------- header / theme ---------- */
+function applyTheme(){
+  const dp = dpConf();
+  $('#phone').dataset.theme = dp.id;
+  $('#greet').textContent = dp.greeting + ' · ' + dp.name;
+  document.querySelectorAll('.dp-btn').forEach(b => b.classList.toggle('on', b.dataset.dp === daypartMode));
+}
+
+/* ---------- chapters ---------- */
+function orderedChapters(){
+  const lead = dpConf().leadChapters;
+  const rest = D.chapters.map(c => c.id).filter(id => !lead.includes(id));
+  return [...lead, ...rest].map(id => D.chapters.find(c => c.id === id));
+}
+function renderChapbar(){
+  const bar = $('#chapbar'); bar.innerHTML = '';
+  orderedChapters().forEach(ch => {
+    const b = document.createElement('button');
+    b.className = 'chap' + (ch.id === activeChapter ? ' on' : '');
+    b.textContent = ch.name;
+    b.onclick = () => { activeChapter = ch.id; activeSection = 0; renderAll(false); };
+    bar.appendChild(b);
+  });
+}
+function renderSecbar(ch){
+  const bar = $('#secbar');
+  if (ch.sections.length < 2){ bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden'); bar.innerHTML = '';
+  ch.sections.forEach((s,i) => {
+    const b = document.createElement('button');
+    b.className = 'sec' + (i === activeSection ? ' on' : '');
+    b.textContent = s.name;
+    b.onclick = () => { activeSection = i; renderBody(); };
+    bar.appendChild(b);
+  });
+}
+
+/* ---------- body ---------- */
+function stripHTML(){
+  const s = dpConf().suggestStrip, it = ITEMS[s.itemId];
+  return `<div class="strip" data-open="${it.id}">
+    <img src="${imgOf(it)}" alt="">
+    <div><div class="t">Gaspard suggests</div><div class="b">“${s.line}”</div></div>
+  </div>`;
+}
+function bundlesHTML(){
+  return `<div class="bundles">` + D.bundles.map(b => `
+    <div class="bundle">
+      <h6>${b.name}</h6><div class="bl">“${b.line}”</div>
+      <div class="bi">${b.itemIds.map(i => ITEMS[i].name).join(' · ')}</div>
+      <div class="bf"><span class="bp">${R(b.total)}</span><button class="addb" data-bundle="${b.id}">Add table</button></div>
+    </div>`).join('') + `</div>`;
+}
+function cardHTML(it){
+  const avail = it.availability === 'ask' ? '<span class="avail">ask kitchen</span>' : '';
+  return `<div class="card-i" data-open="${it.id}">
+    <img src="${imgOf(it)}" loading="lazy" alt="">
+    <div class="in">
+      ${it.subtitle ? `<div class="sub">${it.subtitle}</div>` : ''}
+      <h5>${it.name}</h5>
+      ${it.story ? `<div class="story">“${it.story}”</div>` : (it.desc ? `<div class="story" style="font-style:normal">${it.desc}</div>` : '')}
+      <div class="cf"><span><span class="price">${priceLabel(it)}</span>${avail}</span>
+      <button class="addb" data-add="${it.id}">Add</button></div>
+    </div>
+  </div>`;
+}
+function renderBody(){
+  const ch = D.chapters.find(c => c.id === activeChapter);
+  renderSecbar(ch);
+  const isLead = dpConf().leadChapters[0] === ch.id;
+  const sec = ch.sections[activeSection];
+  $('#body').innerHTML =
+    `<div class="chap-intro">“${ch.intro}”</div>` +
+    (isLead ? stripHTML() + bundlesHTML() : '') +
+    `<div class="sec-title">${sec.name}</div>` +
+    (sec.note ? `<div class="sec-note">${sec.note}</div>` : '') +
+    sec.items.map(cardHTML).join('');
+  $('#body').scrollTop = 0;
+}
+function renderAll(resetChapter = true){
+  applyTheme();
+  if (resetChapter || !activeChapter) activeChapter = dpConf().leadChapters[0];
+  renderChapbar(); renderBody(); renderCartbar();
+}
+
+/* ---------- cart ---------- */
+function addToCart(id, variant = null, qty = 1){
+  const key = id + '|' + (variant ? variant.name : '');
+  const ex = cart.find(c => c.key === key);
+  if (ex) ex.qty += qty; else cart.push({key, id, variant, qty});
+  renderCartbar(); toast(ITEMS[id].name + ' added to the table');
+}
+const lineTotal = c => (c.variant ? c.variant.price : ITEMS[c.id].price ?? priceOf(ITEMS[c.id])) * c.qty;
+const cartTotal = () => cart.reduce((s,c) => s + lineTotal(c), 0);
+const cartCount = () => cart.reduce((s,c) => s + c.qty, 0);
+function renderCartbar(){
+  const n = cartCount();
+  $('#cartbar').classList.toggle('hidden', n === 0);
+  $('#cartBadge').classList.toggle('hidden', n === 0);
+  $('#cartBadge').textContent = n;
+  $('#cbLeft').textContent = '🧺 ' + n + (n === 1 ? ' item' : ' items');
+  $('#cbRight').textContent = R(cartTotal());
+}
+
+/* ---------- sheets ---------- */
+function closeSheet(){ $('#sheetRoot').innerHTML = ''; }
+function sheet(html){
+  $('#sheetRoot').innerHTML = `<div class="overlay" id="ovl"><div class="sheet">${html}</div></div>`;
+  $('#ovl').addEventListener('click', e => { if (e.target.id === 'ovl') closeSheet(); });
+}
+
+/* item sheet */
+function openItem(id){
+  const it = ITEMS[id];
+  const vs = (it.variants||[]).filter(v => !v.isAddon);
+  const addons = (it.variants||[]).filter(v => v.isAddon);
+  const pairs = (D.pairings[id]||[]).map(p => ({...p, item: ITEMS[p.id]}));
+  let selV = 0, qty = 1, selPairs = new Set(), selAddons = new Set();
+  const availNote = it.availability === 'ask' ? `<div class="sec-note" style="margin:8px 0 0">Subject to today's kitchen — Gaspard will gladly ask.</div>` : '';
+  sheet(`
+    <div class="sheet-scroll">
+      <div class="it-img"><img src="${imgOf(it)}" alt=""><button class="cls" id="clsBtn">✕</button></div>
+      <div class="it-body">
+        ${it.subtitle ? `<div class="sub">${it.subtitle}</div>` : ''}
+        <h4>${it.name}</h4>
+        ${it.story ? `<div class="story">“${it.story}”</div>` : ''}
+        ${it.desc ? `<div class="desc">${it.desc}</div>` : ''}
+        ${(it.tags||[]).length ? `<div class="tags">${it.tags.map(t => `<span class="tag">${t.replace(/-/g,' ')}</span>`).join('')}</div>` : ''}
+        ${availNote}
+      </div>
+      ${vs.length ? `<div class="blk"><div class="bt">Choose</div>${vs.map((v,i) =>
+        `<div class="vrow${i===0?' sel':''}" data-v="${i}"><span class="dot"></span>${v.name}<span class="vp">${R(v.price)}</span></div>`).join('')}</div>` : ''}
+      ${addons.length ? `<div class="blk"><div class="bt">Extras</div>${addons.map((v,i) =>
+        `<div class="prow" data-a="${i}"><span class="pn">${v.name}</span><span class="vp" style="margin-left:auto;font-weight:700;font-size:12px;color:var(--price)">+${R(v.price)}</span><span class="box" style="margin-left:10px"></span></div>`).join('')}</div>` : ''}
+      ${pairs.length ? `<div class="blk"><div class="bt">Gaspard suggests</div>${pairs.map((p,i) =>
+        `<div class="prow" data-p="${i}"><img src="${imgOf(p.item)}"><span class="pn">${p.item.name}<i>“${p.note}”</i></span><span class="vp" style="font-weight:700;font-size:12px;color:var(--price)">+${R(priceOf(p.item))}</span><span class="box" style="margin-left:10px"></span></div>`).join('')}</div>` : ''}
+      <div style="height:8px"></div>
+    </div>
+    <div class="it-cta">
+      <div class="qty"><button id="qm">−</button><span id="qv">1</span><button id="qp">+</button></div>
+      <button class="cta" id="addCta"></button>
+    </div>
+  `);
+  const base = () => vs.length ? vs[selV].price : (it.price ?? priceOf(it));
+  const ctaTotal = () => {
+    let t = base() * qty;
+    selAddons.forEach(i => t += addons[i].price * qty);
+    selPairs.forEach(i => t += priceOf(pairs[i].item));
+    return t;
+  };
+  const paint = () => {
+    $('#qv').textContent = qty;
+    $('#addCta').textContent = 'Add to the table · ' + R(ctaTotal());
+    document.querySelectorAll('.vrow').forEach(el => el.classList.toggle('sel', +el.dataset.v === selV));
+    document.querySelectorAll('[data-a]').forEach(el => el.classList.toggle('sel', selAddons.has(+el.dataset.a)));
+    document.querySelectorAll('[data-p]').forEach(el => el.classList.toggle('sel', selPairs.has(+el.dataset.p)));
+  };
+  paint();
+  $('#clsBtn').onclick = closeSheet;
+  $('#qm').onclick = () => { qty = Math.max(1, qty-1); paint(); };
+  $('#qp').onclick = () => { qty++; paint(); };
+  document.querySelectorAll('.vrow').forEach(el => el.onclick = () => { selV = +el.dataset.v; paint(); });
+  document.querySelectorAll('[data-a]').forEach(el => el.onclick = () => { const i=+el.dataset.a; selAddons.has(i)?selAddons.delete(i):selAddons.add(i); paint(); });
+  document.querySelectorAll('[data-p]').forEach(el => el.onclick = () => { const i=+el.dataset.p; selPairs.has(i)?selPairs.delete(i):selPairs.add(i); paint(); });
+  $('#addCta').onclick = () => {
+    addToCart(id, vs.length ? vs[selV] : null, qty);
+    selAddons.forEach(i => addToCart(id, addons[i], qty));
+    selPairs.forEach(i => addToCart(pairs[i].id, null, 1));
+    closeSheet();
+  };
+}
+
+/* cart sheet */
+function openCart(){
+  if (!cart.length) return;
+  sheet(`
+    <div class="grab"></div>
+    <div class="it-body" style="padding-bottom:2px"><h4>Your table · Table 4</h4></div>
+    <div class="sheet-scroll" id="cartRows"></div>
+    <div class="ttl"><span>Total</span><span id="cartTtl"></span></div>
+    <div class="waiter-note">“Send it through — a member of the team will confirm at your table and take care of the rest.” — Gaspard</div>
+    <div class="it-cta"><button class="cta" id="sendBtn">Send to the kitchen</button></div>
+  `);
+  const paint = () => {
+    $('#cartRows').innerHTML = cart.map((c,i) => `
+      <div class="crow"><img src="${imgOf(ITEMS[c.id])}">
+        <span class="cn">${ITEMS[c.id].name}${c.variant ? `<i>${c.variant.name}</i>` : ''}</span>
+        <span class="cq"><button data-m="${i}">−</button>${c.qty}<button data-pl="${i}">+</button></span>
+        <span class="price" style="width:64px;text-align:right">${R(lineTotal(c))}</span>
+      </div>`).join('');
+    $('#cartTtl').textContent = R(cartTotal());
+    document.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const c = cart[+b.dataset.m]; c.qty--; if (c.qty<1) cart.splice(+b.dataset.m,1); renderCartbar(); cart.length ? paint() : closeSheet(); });
+    document.querySelectorAll('[data-pl]').forEach(b => b.onclick = () => { cart[+b.dataset.pl].qty++; renderCartbar(); paint(); });
+  };
+  paint();
+  $('#sendBtn').onclick = () => {
+    sheet(`<div class="confirm"><div class="seal">G</div>
+      <h4>Gaspard has your order</h4>
+      <p>“Consider it done. A member of the team is on their way to Table 4 to confirm — now, back to the conversation.”</p>
+      <div class="it-cta" style="border:none;padding:26px 0 6px"><button class="cta" id="okBtn">Merci, Gaspard</button></div></div>`);
+    cart = []; renderCartbar();
+    $('#okBtn').onclick = closeSheet;
+  };
+}
+
+/* ---------- Ask Gaspard (scripted demo) ---------- */
+const gReply = (q) => {
+  const t = q.toLowerCase();
+  const dp = currentDaypart();
+  const has = re => re.test(t);
+  const inCart = id => cart.some(c => c.id === id);
+  if (has(/nut|allerg|intoleran/)) return {txt:"Noted — we shall be careful together, and I've told the team. The Positano lemon crème brûlée is made without nuts, and pairs beautifully with a flat white.", items:['positano-lemon-creme-brulee','flat-white']};
+  if (has(/vegan\b/)) return {txt:"Gladly. Our roasted seasonal vegetables and couscous are fully plant-based, and the squeezed juices are yours entirely. For anything else, I'll happily ask the kitchen.", items:['mcs','couscous','green-juice']};
+  if (has(/vegetarian|veggie|no meat/)) return {txt:"Then let me open the garden gate: burrata from Venice to begin, and Como Basilico after — Lake Como never disappoints a vegetarian.", items:['burrata-in-venice','como-basilico']};
+  if (has(/celebrat|birthday|anniversar|party/)) return {txt:"A celebration! Simon Sweet Tooth feeds the table's happiness, and our kitchen bakes celebration cakes to order — shall I ask the team to tell you more?", items:['simon-sweet-tooth','slice-of-cake'], action:'celebrate'};
+  if (has(/wine/)) return inCart('marrakech-flame')
+    ? {txt:"With your Marrakech Flame? The Beyerskloof Pinotage — the honey glaze wants a bold red.", items:['beyerskloof-pinotage']}
+    : {txt:"By the glass, I'd pour the Warwick First Lady — Chardonnay if your plate swims, Cabernet if it grazes.", items:['warwick-first-lady-chardonnay','warwick-first-lady-cab']};
+  if (has(/coffee.*cake|cake.*coffee|pair/)) return {txt:"The Mauritius Coco Cake takes a cortado beautifully — small, strong, no argument from the coconut.", items:['mauritius-coco-cake','cortado']};
+  if (has(/cocktail|drink|spritz|toast/) && dp === 'golden') return {txt:"The mixologists are at center stage. My own Garden Spritz — and its virgin twin, offered with equal pride.", items:['sir-gaspards-garden-spritz','garden-virgin-spritz']};
+  if (has(/light|healthy|salad|fresh/)) return dp === 'morning'
+    ? {txt:"Gently, then — Nicole in Thessaloniki. Fruit, Greek yoghurt, and no regrets.", items:['nicole-in-thessaloniki']}
+    : {txt:"Something composed: the Sir Gaspard salad, or the salmon bowl if the sea calls.", items:['sir-gaspard-salad','salmon-bowl']};
+  if (has(/breakfast|morning/)) return {txt:"Mornings should begin gently. Carmella's Breakfast if you're hungry; A Day in Paris if you're dreaming.", items:['carmellas-breakfast','a-day-in-paris']};
+  if (has(/popular|best|famous|signature|recommend|what should/)) return {txt:"Guests fall for the Marrakech Flame — honey, chili, a golden char. And Athens gathers the whole Aegean into one bowl of orzo.", items:['marrakech-flame','athens']};
+  if (has(/kid|child/)) return {txt:"For the little ones — a cupcake and a milkshake buys you at least twenty minutes of peace.", items:['cupcake','milkshake-chocolate']};
+  if (has(/steak|beef|meat/)) return {txt:"The Iron Fillet — herb-crusted, wine-finished, quietly serious. Zakai's golden potatoes belong beside it.", items:['iron-fillet','zakais']};
+  if (has(/fish|seafood|prawn/)) return {txt:"From the coast: Catch in Cape Town, or the prawns as Maputo makes them — garlic butter and a little fire.", items:['catch-in-cape-town','prawns-in-maputo']};
+  return {txt:"Tell me the mood — hungry, curious, or celebrating? If in doubt, the Marrakech Flame has never lost an argument.", items:['marrakech-flame']};
+};
+function openChat(){
+  const dp = dpConf();
+  sheet(`
+    <div class="chat-head"><div class="seal">G</div>
+      <div><b>Ask Gaspard</b><span>your host since 1948</span></div>
+      <button class="cls2" id="chatCls">✕</button></div>
+    <div class="chat-body" id="chatBody">
+      <div class="bub g">“Welcome to Carmella. ${dp.id==='morning' ? 'The morning pages are open — where shall we begin?' : dp.id==='golden' ? 'The mixologists are at center stage. What are we toasting?' : 'The Global Table is set. Where shall we travel?'}”</div>
+    </div>
+    <div class="chat-chips">${dp.gaspardChips.map(c => `<button class="qc">${c}</button>`).join('')}</div>
+    <div class="chat-in"><input id="chatIn" placeholder="Ask Gaspard anything…"><button id="chatSend">➤</button></div>
+  `);
+  $('#chatCls').onclick = closeSheet;
+  const body = $('#chatBody');
+  const ask = q => {
+    if (!q.trim()) return;
+    body.insertAdjacentHTML('beforeend', `<div class="bub u">${q.replace(/</g,'&lt;')}</div>`);
+    const r = gReply(q);
+    setTimeout(() => {
+      body.insertAdjacentHTML('beforeend', `<div class="bub g">“${r.txt}”${(r.items||[]).map(id => {
+        const it = ITEMS[id];
+        return `<div class="gi" data-open-chat="${id}"><img src="${imgOf(it)}"><span class="n">${it.name}</span><span class="p">${priceLabel(it)}</span></div>`;
+      }).join('')}</div>`);
+      body.scrollTop = body.scrollHeight;
+      body.querySelectorAll('[data-open-chat]').forEach(el => el.onclick = () => { closeSheet(); openItem(el.dataset.openChat); });
+    }, 420);
+    body.scrollTop = body.scrollHeight;
+    $('#chatIn').value = '';
+  };
+  $('#chatSend').onclick = () => ask($('#chatIn').value);
+  $('#chatIn').addEventListener('keydown', e => { if (e.key === 'Enter') ask($('#chatIn').value); });
+  document.querySelectorAll('.qc').forEach(c => c.onclick = () => ask(c.textContent));
+}
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg){
+  clearTimeout(toastT);
+  $('#toastRoot').innerHTML = `<div class="toast">${msg}</div>`;
+  toastT = setTimeout(() => $('#toastRoot').innerHTML = '', 2200);
+}
+
+/* ---------- global events ---------- */
+document.addEventListener('click', e => {
+  const open = e.target.closest('[data-open]');
+  const add = e.target.closest('[data-add]');
+  const bun = e.target.closest('[data-bundle]');
+  if (add){ e.stopPropagation(); const it = ITEMS[add.dataset.add]; (it.variants && it.variants.length) ? openItem(it.id) : addToCart(it.id); return; }
+  if (bun){ e.stopPropagation(); const b = D.bundles.find(x => x.id === bun.dataset.bundle);
+    b.itemIds.forEach(id => { const it = ITEMS[id]; const vs = (it.variants||[]).filter(v=>!v.isAddon); addToCart(id, vs.length ? vs[0] : null, 1); });
+    toast(b.name + ' — added for the table'); return; }
+  if (open) openItem(open.dataset.open);
+});
+$('#cartBtn').onclick = openCart;
+$('#cartbar').onclick = openCart;
+$('#fabChat').onclick = openChat;
+$('#bellBtn').onclick = () => toast('The team has been called to Table 4');
+$('#dpSwitch').addEventListener('click', e => {
+  const b = e.target.closest('.dp-btn'); if (!b) return;
+  daypartMode = b.dataset.dp; renderAll(true);
+});
+
+renderAll(true);
+</script>
+</body>
+</html>
