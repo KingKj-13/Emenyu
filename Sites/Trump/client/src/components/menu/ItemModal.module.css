@@ -173,13 +173,13 @@
   height: 36px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(198, 162, 75, 0.4);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.4);
   border-radius: 50%;
-  background: rgba(198, 162, 75, 0.08);
+  background: rgba(var(--color-gold-rgb), 0.08);
   color: var(--color-gold);
   transition: background 160ms ease;
 }
-.qtyBtn:hover { background: rgba(198, 162, 75, 0.18); }
+.qtyBtn:hover { background: rgba(var(--color-gold-rgb), 0.18); }
 
 .qtyValue {
   font-size: 20px;
@@ -202,7 +202,7 @@
   transition: border-color 160ms ease;
 }
 .noteInput::placeholder { color: rgba(201,187,165,0.4); }
-.noteInput:focus:not(:focus-visible) { border-color: rgba(198,162,75,0.4); }
+.noteInput:focus:not(:focus-visible) { border-color: rgba(var(--color-gold-rgb),0.4); }
 
 .unavailableBanner {
   margin-bottom: 12px;
@@ -231,11 +231,11 @@
   font-size: 14px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  box-shadow: 0 4px 16px rgba(198,162,75,0.28);
+  box-shadow: 0 4px 16px rgba(var(--color-gold-rgb),0.28);
   transition: box-shadow 180ms ease, transform 180ms ease;
 }
 .addBtn:hover {
-  box-shadow: 0 8px 28px rgba(198,162,75,0.42);
+  box-shadow: 0 8px 28px rgba(var(--color-gold-rgb),0.42);
   transform: translateY(-1px);
 }
 .addBtn:disabled {

@@ -10,7 +10,7 @@
   gap: 4px;
   padding: 4px;
   background: rgba(0,15,24,0.8);
-  border: 1px solid rgba(198,162,75,0.2);
+  border: 1px solid rgba(var(--color-gold-rgb),0.2);
   border-radius: var(--radius-pill);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
@@ -30,8 +30,8 @@
 }
 
 .typeBtnActive {
-  background: rgba(198,162,75,0.15);
-  border-color: rgba(198,162,75,0.4);
+  background: rgba(var(--color-gold-rgb),0.15);
+  border-color: rgba(var(--color-gold-rgb),0.4);
   color: var(--color-gold);
 }
 
@@ -49,7 +49,7 @@
   background:
     radial-gradient(circle at 50% 30%, rgba(30,85,108,0.5), transparent 60%),
     linear-gradient(160deg, #00101a, #021d2c 65%, #00080d);
-  border: 1px solid rgba(198,162,75,0.4);
+  border: 1px solid rgba(var(--color-gold-rgb),0.4);
 }
 
 .coverTitle {
@@ -105,7 +105,7 @@
   z-index: 90;
   padding: 6px 14px;
   background: rgba(0,15,24,0.8);
-  border: 1px solid rgba(198,162,75,0.2);
+  border: 1px solid rgba(var(--color-gold-rgb),0.2);
   border-radius: var(--radius-pill);
   color: var(--muted);
   font-size: 12px;

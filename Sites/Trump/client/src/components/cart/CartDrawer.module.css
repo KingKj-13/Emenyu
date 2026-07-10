@@ -17,7 +17,7 @@
   display: flex;
   flex-direction: column;
   background: linear-gradient(160deg, #001828, #020f1c);
-  border-left: 1px solid rgba(198,162,75,0.2);
+  border-left: 1px solid rgba(var(--color-gold-rgb),0.2);
   box-shadow: -24px 0 64px rgba(0,0,0,0.5);
 }
 
@@ -70,8 +70,8 @@
 }
 
 .tabActive {
-  background: rgba(198,162,75,0.12);
-  border-color: rgba(198,162,75,0.3);
+  background: rgba(var(--color-gold-rgb),0.12);
+  border-color: rgba(var(--color-gold-rgb),0.3);
   color: var(--color-gold);
 }
 
@@ -130,10 +130,10 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(198,162,75,0.28);
+  box-shadow: 0 4px 16px rgba(var(--color-gold-rgb),0.28);
   transition: box-shadow 180ms ease, transform 180ms ease;
 }
-.emptyBrowseBtn:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(198,162,75,0.4); }
+.emptyBrowseBtn:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(var(--color-gold-rgb),0.4); }
 
 .emptyBillLink {
   display: flex;
@@ -200,11 +200,11 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(198,162,75,0.28);
+  box-shadow: 0 4px 16px rgba(var(--color-gold-rgb),0.28);
   transition: box-shadow 180ms ease, transform 180ms ease, filter 160ms ease;
 }
 
-.submitBtn:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(198,162,75,0.4); }
+.submitBtn:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(var(--color-gold-rgb),0.4); }
 .submitBtn:disabled { filter: brightness(0.7); cursor: not-allowed; transform: none; }
 
 .billFooter {
@@ -215,15 +215,15 @@
 .billBtn {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   width: 100%; padding: 9px;
-  border: 1px solid rgba(198,162,75,0.25);
+  border: 1px solid rgba(var(--color-gold-rgb),0.25);
   border-radius: 8px;
-  background: rgba(198,162,75,0.05);
+  background: rgba(var(--color-gold-rgb),0.05);
   color: var(--color-gold);
   font-size: 12px; font-weight: 600;
   cursor: pointer;
   transition: background 160ms ease;
 }
-.billBtn:hover { background: rgba(198,162,75,0.12); }
+.billBtn:hover { background: rgba(var(--color-gold-rgb),0.12); }
 
 .successMsg {
   display: flex;
@@ -356,15 +356,15 @@
   height: 34px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(198,162,75,0.38);
+  border: 1px solid rgba(var(--color-gold-rgb),0.38);
   border-radius: 50%;
-  background: rgba(198,162,75,0.08);
+  background: rgba(var(--color-gold-rgb),0.08);
   color: var(--color-gold);
   flex-shrink: 0;
   transition: background 160ms ease, transform 160ms ease;
 }
 
 .favoriteAdd:hover {
-  background: rgba(198,162,75,0.16);
+  background: rgba(var(--color-gold-rgb),0.16);
   transform: translateY(-1px);
 }

@@ -139,7 +139,7 @@ export function SplitBillModal() {
             ))}
             <div className="w-line" style={{ marginTop: 12, fontWeight: 600 }}>
               <span className="name">{customRemaining === 0 ? 'Balanced' : customRemaining > 0 ? 'Remaining' : 'Over by'}</span>
-              <span className="price" style={{ color: customRemaining === 0 ? 'var(--w-gold, #c6a24b)' : customRemaining < 0 ? '#fca5a5' : undefined }}>
+              <span className="price" style={{ color: customRemaining === 0 ? 'var(--w-gold, #c8a555)' : customRemaining < 0 ? '#fca5a5' : undefined }}>
                 {money(Math.abs(customRemaining))}
               </span>
             </div>

@@ -26,8 +26,8 @@
 }
 
 .optionActive {
-  border-color: rgba(198,162,75,0.5);
-  background: rgba(198,162,75,0.1);
+  border-color: rgba(var(--color-gold-rgb),0.5);
+  background: rgba(var(--color-gold-rgb),0.1);
   color: var(--color-gold);
 }
 
@@ -47,12 +47,12 @@
   width: 80px;
   padding: 7px 10px;
   background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(198,162,75,0.3);
+  border: 1px solid rgba(var(--color-gold-rgb),0.3);
   border-radius: var(--radius-card);
   color: var(--color-cream);
   font-size: 14px;
   text-align: center;
 }
-.customInput:focus:not(:focus-visible) { border-color: rgba(198,162,75,0.6); }
+.customInput:focus:not(:focus-visible) { border-color: rgba(var(--color-gold-rgb),0.6); }
 
 .customPct { font-size: 14px; color: var(--color-gold); font-weight: 700; }

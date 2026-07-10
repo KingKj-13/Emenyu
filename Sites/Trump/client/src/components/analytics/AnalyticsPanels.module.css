@@ -20,8 +20,8 @@
   cursor: pointer;
   transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
 }
-.rangeBtn:hover { border-color: rgba(198, 162, 75, 0.3); color: var(--color-cream); }
-.rangeBtnActive { border-color: var(--color-gold); color: var(--color-gold); background: rgba(198, 162, 75, 0.08); }
+.rangeBtn:hover { border-color: rgba(var(--color-gold-rgb), 0.3); color: var(--color-cream); }
+.rangeBtnActive { border-color: var(--color-gold); color: var(--color-gold); background: rgba(var(--color-gold-rgb), 0.08); }
 
 .tileGrid {
   display: grid;
@@ -32,7 +32,7 @@
 .tile {
   padding: 16px 18px;
   background: rgba(6, 32, 48, 0.7);
-  border: 1px solid rgba(198, 162, 75, 0.15);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.15);
   border-radius: var(--radius-card);
 }
 .tileValue {
@@ -53,7 +53,7 @@
 
 .callout {
   margin-bottom: var(--space-3, 16px); padding: 12px 14px; border-radius: var(--radius-card);
-  background: rgba(198, 162, 75, 0.08); border: 1px solid rgba(198, 162, 75, 0.25);
+  background: rgba(var(--color-gold-rgb), 0.08); border: 1px solid rgba(var(--color-gold-rgb), 0.25);
   font-size: 13px; color: var(--color-cream);
 }
 .calloutLabel { color: var(--color-gold); font-weight: 700; }

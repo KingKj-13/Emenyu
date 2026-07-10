@@ -101,7 +101,7 @@
   cursor: pointer;
   transition: transform 150ms ease, box-shadow 150ms ease;
 }
-.addBtn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(198, 162, 75, 0.32); }
+.addBtn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(var(--color-gold-rgb), 0.32); }
 .addBtnDone {
   background: rgba(113, 128, 106, 0.9);
   color: #fff;

@@ -384,7 +384,7 @@
 
 .orderCard {
   background: rgba(6,32,48,0.7);
-  border: 1px solid rgba(198,162,75,0.15);
+  border: 1px solid rgba(var(--color-gold-rgb),0.15);
   border-radius: var(--radius-card);
   padding: 16px;
 }
@@ -486,7 +486,7 @@
   font-size: 10px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--color-gold);
-  border-bottom: 1px solid rgba(198,162,75,0.15);
+  border-bottom: 1px solid rgba(var(--color-gold-rgb),0.15);
 }
 
 .menuItemList { display: flex; flex-direction: column; gap: 1px; }
@@ -550,8 +550,8 @@
   display: flex; align-items: center; gap: 8px;
   padding: 10px 14px;
   margin-bottom: 12px;
-  background: rgba(198,162,75,0.06);
-  border: 1px solid rgba(198,162,75,0.2);
+  background: rgba(var(--color-gold-rgb),0.06);
+  border: 1px solid rgba(var(--color-gold-rgb),0.2);
   border-radius: 8px;
 }
 
@@ -574,7 +574,7 @@
 .bulkDeleteBtn { border-color: rgba(239,68,68,0.25); color: #fca5a5; }
 .bulkDeleteBtn:hover { background: rgba(239,68,68,0.1); }
 
-.menuItemSelected { background: rgba(198,162,75,0.06) !important; }
+.menuItemSelected { background: rgba(var(--color-gold-rgb),0.06) !important; }
 
 .menuItemCheck {
   flex-shrink: 0;
@@ -588,16 +588,16 @@
    editing is dangerous). */
 .itemEditBtn {
   padding: 4px 7px;
-  border: 1px solid rgba(198,162,75,0.25);
+  border: 1px solid rgba(var(--color-gold-rgb),0.25);
   border-radius: 5px;
   background: transparent;
-  color: rgba(198,162,75,0.75);
+  color: rgba(var(--color-gold-rgb),0.75);
   font-size: 11px;
   cursor: pointer;
   transition: background 160ms ease, color 160ms ease;
   flex-shrink: 0;
 }
-.itemEditBtn:hover { background: rgba(198,162,75,0.12); color: var(--color-gold, #c6a24b); }
+.itemEditBtn:hover { background: rgba(var(--color-gold-rgb),0.12); color: var(--color-gold); }
 
 .itemDeleteBtn {
   padding: 4px 7px;
@@ -647,9 +647,9 @@
   align-items: center;
   gap: 4px;
   padding: 2px 7px;
-  border: 1px solid rgba(198,162,75,0.18);
+  border: 1px solid rgba(var(--color-gold-rgb),0.18);
   border-radius: var(--radius-pill);
-  background: rgba(198,162,75,0.07);
+  background: rgba(var(--color-gold-rgb),0.07);
   color: var(--color-sand);
   font-size: 10px;
   letter-spacing: 0;
@@ -672,9 +672,9 @@
   gap: 6px;
   min-height: 34px;
   padding: 7px 10px;
-  border: 1px solid rgba(198,162,75,0.24);
+  border: 1px solid rgba(var(--color-gold-rgb),0.24);
   border-radius: 6px;
-  background: rgba(198,162,75,0.06);
+  background: rgba(var(--color-gold-rgb),0.06);
   color: var(--color-gold);
   font-size: 11px;
   font-weight: 700;
@@ -685,8 +685,8 @@
 .mediaUploadBtn:hover,
 .youtubeSaveBtn:hover,
 .mediaClearBtn:hover {
-  background: rgba(198,162,75,0.12);
-  border-color: rgba(198,162,75,0.42);
+  background: rgba(var(--color-gold-rgb),0.12);
+  border-color: rgba(var(--color-gold-rgb),0.42);
 }
 
 .mediaFileInput {
@@ -717,7 +717,7 @@
   color: var(--color-cream);
   font-size: 12px;
 }
-.youtubeInput:focus:not(:focus-visible) { border-color: rgba(198,162,75,0.42); }
+.youtubeInput:focus:not(:focus-visible) { border-color: rgba(var(--color-gold-rgb),0.42); }
 .youtubeInput::placeholder { color: rgba(201,187,165,0.38); }
 
 .mediaClearBtn {
@@ -753,8 +753,8 @@
   cursor: pointer;
   transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
 }
-.rangeBtn:hover { border-color: rgba(198,162,75,0.3); color: var(--color-cream); }
-.rangeBtnActive { border-color: var(--color-gold); color: var(--color-gold); background: rgba(198,162,75,0.08); }
+.rangeBtn:hover { border-color: rgba(var(--color-gold-rgb),0.3); color: var(--color-cream); }
+.rangeBtnActive { border-color: var(--color-gold); color: var(--color-gold); background: rgba(var(--color-gold-rgb),0.08); }
 
 .summaryCards {
   display: grid;
@@ -765,7 +765,7 @@
 .summaryCard {
   padding: 16px 18px;
   background: rgba(6,32,48,0.7);
-  border: 1px solid rgba(198,162,75,0.15);
+  border: 1px solid rgba(var(--color-gold-rgb),0.15);
   border-radius: var(--radius-card);
 }
 
@@ -855,7 +855,7 @@
 
 .hourBarFill {
   width: 100%;
-  background: rgba(198,162,75,0.6);
+  background: rgba(var(--color-gold-rgb),0.6);
   border-radius: 2px 2px 0 0;
   min-height: 2px;
   transition: height 400ms ease;
@@ -878,15 +878,15 @@
 .printAllBtn {
   display: flex; align-items: center; gap: 6px;
   padding: 7px 14px;
-  border: 1px solid rgba(198,162,75,0.3);
+  border: 1px solid rgba(var(--color-gold-rgb),0.3);
   border-radius: var(--radius-pill);
-  background: rgba(198,162,75,0.06);
+  background: rgba(var(--color-gold-rgb),0.06);
   color: var(--color-gold);
   font-size: 12px; font-weight: 600;
   cursor: pointer;
   transition: background 160ms ease;
 }
-.printAllBtn:hover { background: rgba(198,162,75,0.14); }
+.printAllBtn:hover { background: rgba(var(--color-gold-rgb),0.14); }
 
 .qrGrid {
   display: grid;
@@ -898,7 +898,7 @@
   display: flex; flex-direction: column; align-items: center; gap: 8px;
   padding: 14px 12px;
   background: rgba(6,32,48,0.7);
-  border: 1px solid rgba(198,162,75,0.15);
+  border: 1px solid rgba(var(--color-gold-rgb),0.15);
   border-radius: var(--radius-card);
 }
 
@@ -935,7 +935,7 @@
 .resvDateInput {
   padding: 7px 12px;
   background: rgba(6,32,48,0.7);
-  border: 1px solid rgba(198,162,75,0.2);
+  border: 1px solid rgba(var(--color-gold-rgb),0.2);
   border-radius: 8px;
   color: var(--color-cream);
   font-size: 13px;
@@ -949,7 +949,7 @@
 .resvCard {
   padding: 14px 16px;
   background: rgba(6,32,48,0.6);
-  border: 1px solid rgba(198,162,75,0.12);
+  border: 1px solid rgba(var(--color-gold-rgb),0.12);
   border-radius: var(--radius-card);
 }
 
@@ -1020,18 +1020,18 @@
   transition: border-color 160ms ease, background 160ms ease;
 }
 .tableCardAdmin:hover { background: rgba(255,255,255,0.06); }
-.tableCardActive { border-color: rgba(198,162,75,0.3); background: rgba(198,162,75,0.06); }
-.tableCardSelected { border-color: var(--color-gold); box-shadow: 0 0 0 2px rgba(198,162,75,0.25); }
+.tableCardActive { border-color: rgba(var(--color-gold-rgb),0.3); background: rgba(var(--color-gold-rgb),0.06); }
+.tableCardSelected { border-color: var(--color-gold); box-shadow: 0 0 0 2px rgba(var(--color-gold-rgb),0.25); }
 .tableCardName { font-size: 12px; font-weight: 700; color: var(--color-cream); margin-bottom: 6px; }
 .tableCardCount { font-size: 11px; color: var(--color-sand); }
 .tableCardTotal { font-size: 13px; font-weight: 700; color: var(--color-gold); margin-top: 2px; }
 .tableCardEmpty { font-size: 11px; color: rgba(255,255,255,0.25); }
 
 .tableOverridePanel {
-  border: 1px solid rgba(198,162,75,0.2);
+  border: 1px solid rgba(var(--color-gold-rgb),0.2);
   border-radius: 12px;
   padding: 20px;
-  background: rgba(198,162,75,0.04);
+  background: rgba(var(--color-gold-rgb),0.04);
   margin-top: 8px;
 }
 .overrideTitle { margin: 0 0 16px; font-size: 15px; font-weight: 700; color: var(--color-cream); }
@@ -1048,8 +1048,8 @@
   cursor: pointer;
   transition: all 140ms ease;
 }
-.discountPresetBtn:hover { border-color: rgba(198,162,75,0.4); color: var(--color-gold); }
-.discountPresetActive { border-color: var(--color-gold); color: var(--color-gold); background: rgba(198,162,75,0.1); }
+.discountPresetBtn:hover { border-color: rgba(var(--color-gold-rgb),0.4); color: var(--color-gold); }
+.discountPresetActive { border-color: var(--color-gold); color: var(--color-gold); background: rgba(var(--color-gold-rgb),0.1); }
 .customDiscountInput {
   width: 100px;
   padding: 6px 10px;
@@ -1106,8 +1106,8 @@
 .dealItemChip {
   padding: 3px 10px;
   border-radius: 20px;
-  background: rgba(198,162,75,0.1);
-  border: 1px solid rgba(198,162,75,0.2);
+  background: rgba(var(--color-gold-rgb),0.1);
+  border: 1px solid rgba(var(--color-gold-rgb),0.2);
   font-size: 12px;
   color: var(--color-gold);
 }
@@ -1125,7 +1125,7 @@
 }
 .dealClearTime {
   padding: 4px 10px;
-  border: 1px solid rgba(198,162,75,0.3);
+  border: 1px solid rgba(var(--color-gold-rgb),0.3);
   border-radius: 6px;
   background: transparent;
   color: var(--color-gold);
@@ -1143,7 +1143,7 @@
   cursor: pointer;
   transition: all 140ms ease;
 }
-.dealDayActive { border-color: rgba(198,162,75,0.4); color: var(--color-gold); background: rgba(198,162,75,0.1); }
+.dealDayActive { border-color: rgba(var(--color-gold-rgb),0.4); color: var(--color-gold); background: rgba(var(--color-gold-rgb),0.1); }
 .saveDealBtn {
   align-self: flex-start;
   padding: 10px 24px;
@@ -1180,7 +1180,7 @@
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
-  border: 1px solid rgba(198,162,75,0.3);
+  border: 1px solid rgba(var(--color-gold-rgb),0.3);
   border-radius: 20px;
   background: transparent;
   color: var(--color-gold);
@@ -1189,7 +1189,7 @@
   cursor: pointer;
   transition: background 140ms ease;
 }
-.notifBtn:hover { background: rgba(198,162,75,0.1); }
+.notifBtn:hover { background: rgba(var(--color-gold-rgb),0.1); }
 .notifBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 .notifActive {
   display: flex;
@@ -1289,7 +1289,7 @@
 }
 .dmStatus { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; }
 .dmStatusOk { color: #4ade80; background: rgba(34, 197, 94, 0.12); }
-.dmStatusPartial { color: #c6a24b; background: rgba(198, 162, 75, 0.15); }
+.dmStatusPartial { color: #c8a555; background: rgba(var(--color-gold-rgb), 0.15); }
 .dmStatusMissing { color: #fca5a5; background: rgba(239, 68, 68, 0.12); }
 
 .dmFiles {

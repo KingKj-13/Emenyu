@@ -8,13 +8,13 @@
   display: grid;
   place-items: center;
   border-radius: 50%;
-  border: 1px solid rgba(198,162,75,0.35);
-  background: rgba(198,162,75,0.08);
-  color: var(--color-gold, #c6a24b);
+  border: 1px solid rgba(var(--color-gold-rgb),0.35);
+  background: rgba(var(--color-gold-rgb),0.08);
+  color: var(--color-gold);
   transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
   flex-shrink: 0;
 }
-.trigger:hover { border-color: rgba(198,162,75,0.55); background: rgba(198,162,75,0.14); }
+.trigger:hover { border-color: rgba(var(--color-gold-rgb),0.55); background: rgba(var(--color-gold-rgb),0.14); }
 .trigger:active { transform: scale(0.95); }
 .trigger:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -31,7 +31,7 @@
   overflow-y: auto;
   padding: 6px;
   background: linear-gradient(160deg, #001828, #020f1c);
-  border: 1px solid rgba(198,162,75,0.3);
+  border: 1px solid rgba(var(--color-gold-rgb),0.3);
   border-radius: 10px;
   box-shadow: 0 16px 40px rgba(0,0,0,0.5);
 }
@@ -45,4 +45,4 @@
   text-align: left;
   transition: background 140ms ease, color 140ms ease;
 }
-.item:hover { background: rgba(198,162,75,0.14); color: var(--color-gold, #c6a24b); }
+.item:hover { background: rgba(var(--color-gold-rgb),0.14); color: var(--color-gold); }

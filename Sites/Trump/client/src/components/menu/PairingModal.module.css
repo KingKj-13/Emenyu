@@ -12,7 +12,7 @@
   align-items: flex-start;
   justify-content: space-between;
   padding: 20px 20px 16px;
-  border-bottom: 1px solid rgba(198,162,75,0.15);
+  border-bottom: 1px solid rgba(var(--color-gold-rgb),0.15);
   flex-shrink: 0;
 }
 
