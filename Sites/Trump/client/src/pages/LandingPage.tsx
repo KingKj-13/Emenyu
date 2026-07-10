@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Beef, Fish, Salad, UtensilsCrossed, Wine, Sparkles, Martini, ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
+import { LANDING_BRAND_NAME, BRAND_TAGLINE, MAINS_CATEGORY_TITLE } from '../constants/api';
 import styles from './LandingPage.module.css';
 
 const sec = (t: string, s: string) => `/${t}/menu?section=${encodeURIComponent(s)}`;
@@ -27,7 +28,7 @@ const CATEGORIES: Category[] = [
   { key: 'wine', label: 'Wine', sub: 'The cellar', glow: 'rgba(122, 64, 130, 0.32)', icon: Wine, to: t => drink(t, 'Red Wine') },
   { key: 'cocktails', label: 'Cocktails', sub: 'Signature pours', glow: 'rgba(162, 102, 42, 0.19)', icon: Martini, to: t => drink(t, 'Cocktails') },
   { key: 'setmenu', label: 'Set Menu', sub: 'Curated combos', glow: 'rgba(128, 118, 52, 0.26)', icon: Sparkles, to: t => `/${t}/setmenu` },
-  { key: 'mains', label: 'Mains', sub: 'Steaks, seafood and grill', glow: 'rgba(150, 72, 38, 0.19)', icon: Beef, to: t => sec(t, 'Trumps Premium Steaks') },
+  { key: 'mains', label: 'Mains', sub: 'Steaks, seafood and grill', glow: 'rgba(150, 72, 38, 0.19)', icon: Beef, to: t => sec(t, MAINS_CATEGORY_TITLE) },
   { key: 'starters', label: 'Starters', sub: 'To begin', glow: 'rgba(74, 122, 78, 0.45)', icon: Salad, to: t => sec(t, 'Starters') },
   { key: 'sushi', label: 'Sushi & Sashimi', sub: 'From the sea', glow: 'rgba(58, 112, 152, 0.25)', icon: Fish, to: t => sec(t, 'Sushi') },
 ];
@@ -55,10 +56,10 @@ export function LandingPage() {
     <div className={styles.page}>
       <div className={styles.inner}>
         <header className={styles.header}>
-          <span className={styles.monogram} aria-hidden>T</span>
+          <span className={styles.monogram} aria-hidden>{LANDING_BRAND_NAME.charAt(0)}</span>
           <span className={styles.eyebrow}>Welcome to</span>
-          <h1 className={styles.brand}>Trumps</h1>
-          <div className={styles.brandSub}>Prime Grillhouse</div>
+          <h1 className={styles.brand}>{LANDING_BRAND_NAME}</h1>
+          <div className={styles.brandSub}>{BRAND_TAGLINE}</div>
           <div className={styles.pill}>
             <span className={styles.dot} /> {tableLabel} · Scan · Order · Savour
           </div>

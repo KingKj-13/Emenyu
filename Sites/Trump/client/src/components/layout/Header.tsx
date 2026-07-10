@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Menu, BookOpen, Grid, ShoppingCart, User } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useCart } from '../../hooks/useCart';
+import { BRAND_NAME, BRAND_TAGLINE } from '../../constants/api';
 import styles from './Header.module.css';
 
 export function Header() {
@@ -10,7 +11,7 @@ export function Header() {
 
   return (
     <header className={styles.header} role="banner">
-      <Link to={`/${tableId}`} className={styles.brand} aria-label="Trumps Prime Grillhouse — back to start">
+      <Link to={`/${tableId}`} className={styles.brand} aria-label={`${BRAND_NAME} ${BRAND_TAGLINE} — back to start`}>
         <div className={styles.brandMark} aria-hidden="true">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 19V5h16v14" />

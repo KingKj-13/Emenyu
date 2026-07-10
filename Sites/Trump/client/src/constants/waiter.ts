@@ -1,8 +1,9 @@
 // Static config for the waiter app. Brand name is a display label only —
 // it does not change the shared menu data.
 import type { SpeechTone, WaiterRole } from '../types/waiter';
+import { BRAND_NAME } from './api';
 
-export const BRAND_NAME = 'Trump';
+export { BRAND_NAME };
 export const SHIFT_START = '17:00';
 export const DEFAULT_SECTION = [5, 7, 12, 18, 21, 24];
 export const WAITER_ROLES: WaiterRole[] = ['Head Waiter', 'Server', 'Runner'];

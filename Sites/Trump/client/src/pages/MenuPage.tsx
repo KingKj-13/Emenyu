@@ -28,6 +28,7 @@ import { useApp } from '../context/AppContext';
 import { buildMenuSections, flattenMenu, normalizeName } from '../lib/menuUtils';
 import { resolveImage, resolveThumbnail } from '../lib/imageResolver';
 import { FOOD_CHAPTERS } from '../constants/chapters';
+import { MAINS_CATEGORY_TITLE, PASTAS_CATEGORY_TITLE } from '../constants/api';
 import type { MenuItem } from '../types/menu';
 import styles from './MenuPage.module.css';
 
@@ -46,11 +47,11 @@ const SETMENU_TITLES = new Set([
 const SECTION_ICON_COMPONENTS: Record<string, ComponentType<{ size?: number }>> = {
   'To Start': Salad, 'Tempura': Sandwich, 'Bespoke Salads': Salad,
   'Sushi & Sashimi': Fish, 'Signature Seafood': Fish,
-  'Trumps Premium Steaks': Beef, 'Pork & Ribs': Drumstick,
+  [MAINS_CATEGORY_TITLE]: Beef, 'Pork & Ribs': Drumstick,
   'Lamb': Beef, 'Venison & Game': Beef, 'Oxtail & Beef Ribs': Beef,
   'Signature Combos': Star, 'Signature Platters': UtensilsCrossed,
   'Gourmet Burgers': Sandwich, 'Chicken Dishes': Drumstick,
-  'Trumps Pastas': Soup, 'Vegetarian': Leaf,
+  [PASTAS_CATEGORY_TITLE]: Soup, 'Vegetarian': Leaf,
   'Sides & Extras': UtensilsCrossed, 'Dessert & Cakes': CakeSlice,
   'Sparkling': Wine, 'White Wine': Wine, 'Red Wine': Wine,
   'Beer & Cider': Beer, 'Spirits': Martini,

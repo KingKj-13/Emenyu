@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef, ty
 import { getSocket } from '../services/socket';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../services/api';
-import { RESTAURANT_ID } from '../constants/api';
+import { RESTAURANT_ID, DEMO_MODE } from '../constants/api';
 import { clockTime } from '../lib/waiterFormat';
 import type { MenuItem } from '../types/menu';
 import type { WaiterTab, WaiterRole, OrderLine, ServiceNotes, WaiterAlert, GuestEvent } from '../types/waiter';
@@ -113,6 +113,15 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     const socket = socketRef.current;
     socket.emit('joinAsWaiter', { restaurantId: RESTAURANT_ID, name });
     socket.emit('joinAdmin', { restaurantId: RESTAURANT_ID });
+  }, []);
+
+  // Public demo build only: skip the manual "clock in" screen entirely so
+  // /waiter opens straight into a populated dashboard, no login/setup step.
+  useEffect(() => {
+    if (DEMO_MODE) {
+      startShift('Demo Waiter', 'Head Waiter', DEFAULT_SECTION);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const endShift = useCallback(() => {

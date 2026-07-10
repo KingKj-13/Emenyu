@@ -56,6 +56,13 @@ export default function App() {
                 </Suspense>
               </ProtectedRoute>
             } />
+            <Route path="/admin" element={
+              <ProtectedRoute roles={['owner', 'manager']}>
+                <Suspense fallback={<LoadingFallback />}>
+                  <AdminPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
             <Route path="/Owner" element={
               <ProtectedRoute roles={['owner']}>
                 <Suspense fallback={<LoadingFallback />}>
@@ -64,6 +71,15 @@ export default function App() {
               </ProtectedRoute>
             } />
             <Route path="/Waiter" element={
+              <ProtectedRoute roles={['owner', 'manager', 'waiter']}>
+                <Suspense fallback={<LoadingFallback />}>
+                  <WaiterPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            {/* Public demo aliases (Sites/Demo build only) — clean lowercase
+                paths with no table id / auth step, per the public demo URLs. */}
+            <Route path="/waiter" element={
               <ProtectedRoute roles={['owner', 'manager', 'waiter']}>
                 <Suspense fallback={<LoadingFallback />}>
                   <WaiterPage />
@@ -82,6 +98,7 @@ export default function App() {
                 <ReservationPage />
               </Suspense>
             } />
+            <Route path="/menu" element={<MenuPage />} />
             <Route path="/:tableId/menu" element={<MenuPage />} />
             <Route path="/:tableId/book" element={<MenuPage sectionFilter="book" />} />
             <Route path="/:tableId/drinks" element={<MenuPage sectionFilter="drinks" />} />

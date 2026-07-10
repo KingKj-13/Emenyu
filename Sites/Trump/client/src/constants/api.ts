@@ -1,7 +1,24 @@
-export const BASE_PATH = '/Trump';
-export const API_PREFIX = '/Trump';
-export const RESTAURANT_ID = 'trump';
-export const SOCKET_PATH = '/Trump/socket.io';
+// Build-time overrides let the exact same client bundle be rebuilt once more
+// for the public "Demo Steakhouse" tenant (VITE_BASE_PATH=/demo etc. — see
+// Sites/Demo/), while Trump's own default build is byte-identical to before.
+export const BASE_PATH = import.meta.env.VITE_BASE_PATH || '/Trump';
+export const API_PREFIX = BASE_PATH;
+export const RESTAURANT_ID = import.meta.env.VITE_RESTAURANT_ID || 'trump';
+export const SOCKET_PATH = `${BASE_PATH}/socket.io`;
+export const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+export const BRAND_NAME = import.meta.env.VITE_BRAND_NAME || 'Trump';
+// LandingPage's h1 has always read "Trumps" (its own stylized form, distinct
+// from the "Trump" used elsewhere) — same override, different Trump-default,
+// so a demo build sets VITE_BRAND_NAME once and both render identically.
+export const LANDING_BRAND_NAME = import.meta.env.VITE_BRAND_NAME || 'Trumps';
+export const BRAND_TAGLINE = import.meta.env.VITE_BRAND_TAGLINE || 'Prime Grillhouse';
+export const QR_BASE = import.meta.env.VITE_QR_BASE || 'https://emenyu.com/Trump';
+// The one menu category whose *apiKey* (not just display label) is brand-prefixed
+// in the live Trump data — everything downstream (landing-page deep links, the
+// chapter list's category filter, the icon map) must key off the same value a
+// given tenant's real MenuCategory.title uses. Defaults preserve Trump exactly.
+export const MAINS_CATEGORY_TITLE = import.meta.env.VITE_MAINS_CATEGORY_TITLE || 'Trumps Premium Steaks';
+export const PASTAS_CATEGORY_TITLE = import.meta.env.VITE_PASTAS_CATEGORY_TITLE || 'Trumps Pastas';
 
 export const ENDPOINTS = {
   menu: `${API_PREFIX}/api/menu`,

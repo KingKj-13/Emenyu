@@ -220,8 +220,8 @@ function registerProcessHandlers({ server, socketService, accountService, fileSe
   });
 }
 
-async function startServer() {
-  const config = createConfig(path.resolve(__dirname, '..'));
+async function startServer(baseDirOverride) {
+  const config = createConfig(baseDirOverride || path.resolve(__dirname, '..'));
   const logger = createLogger(config);
   const fileService = new FileService(config, { logger });
   await fileService.ensureBaseFiles();
@@ -274,7 +274,7 @@ async function startServer() {
     recommendationBundle: createRecommendationBundleController({ recommendationBundleService, socketService }),
     deal: createDealController({ fileService, socketService }),
     kitchen: createKitchenController({ config, fileService, socketService, notificationService }),
-    menu: createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService: fileService.prismaMenu }),
+    menu: createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService: fileService.prismaMenu, config }),
     order: createOrderController({ config, fileService, socketService, orderValidationService }),
     push: createPushController({ config }),
     rating: createRatingController({ config }),
@@ -336,12 +336,15 @@ async function startServer() {
   );
 
   const staticOptions = createStaticOptions(config);
-  const clientDist = path.join(__dirname, '../client/dist');
+  // Overridable so a second tenant process (e.g. Sites/Demo) can reuse Trump's
+  // real client build / Images / Video without duplicating either on disk.
+  const clientDist = config.directories.clientDist;
+  const mediaDir = config.directories.media;
   app.use('/Trump', express.static(clientDist, staticOptions));
   app.use('/trump', express.static(clientDist, staticOptions));
-  app.use(express.static(config.directories.base, staticOptions));
-  app.use('/Trump', express.static(config.directories.base, staticOptions));
-  app.use('/trump', express.static(config.directories.base, staticOptions));
+  app.use(express.static(mediaDir, staticOptions));
+  app.use('/Trump', express.static(mediaDir, staticOptions));
+  app.use('/trump', express.static(mediaDir, staticOptions));
 
   // Legacy login URL — React Router handles this via SPA fallback below
   app.post(['/api/auth/login', '/Trump/api/auth/login', '/trump/api/auth/login'], auth.login);
@@ -415,7 +418,7 @@ async function startServer() {
     cron.schedule('0 3 * * *', async () => {
       logger.info('media_enrichment_cron_start');
       try {
-        const result = await mediaEnrichmentService.enrichBatch({ limit: 50, restaurantId: 'trump' });
+        const result = await mediaEnrichmentService.enrichBatch({ limit: 50, restaurantId: config.restaurantId });
         logger.info('media_enrichment_cron_done', result);
       } catch (e) {
         logger.warn('media_enrichment_cron_error', { error: e.message });

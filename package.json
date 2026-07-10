@@ -6,7 +6,10 @@
     "db:check": "node scripts/check-postgres.js",
     "auth:migrate": "node Sites/Trump/scripts/migrate-auth-to-postgres.js",
     "menu:migrate": "node Sites/Trump/scripts/migrate-menu-to-postgres.js",
-    "orders:migrate": "node Sites/Trump/scripts/migrate-orders-to-postgres.js"
+    "orders:migrate": "node Sites/Trump/scripts/migrate-orders-to-postgres.js",
+    "demo:seed": "node Sites/Trump/scripts/seed-demo-restaurant.js",
+    "demo:seed:apply": "node Sites/Trump/scripts/seed-demo-restaurant.js --apply",
+    "demo:seed:clear": "node Sites/Trump/scripts/seed-demo-restaurant.js --clear"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

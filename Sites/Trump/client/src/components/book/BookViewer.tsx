@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { BookPage } from './BookPage';
 import { getChapterItems } from '../../lib/menuUtils';
 import { FOOD_CHAPTERS, DRINKS_CHAPTERS } from '../../constants/chapters';
+import { BRAND_NAME } from '../../constants/api';
 import { useApp } from '../../context/AppContext';
 import type { MenuData, MenuItem, Chapter } from '../../types/menu';
 import '../../animations/BookFlip.css';
@@ -144,7 +145,7 @@ export function BookViewer({ menuData, onItemClick, onAddToCart, onPairingClick 
       </div>
 
       <div className="bookStage">
-        <section className="bookScene" aria-label="Trumps menu book">
+        <section className="bookScene" aria-label={`${BRAND_NAME} menu book`}>
           <button
             className="pageArrow pageArrowPrev"
             onClick={goPrev}

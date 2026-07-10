@@ -17,6 +17,7 @@ import { AuditViewer } from '../components/operations/AuditViewer';
 import { AIPerformancePanel } from '../components/analytics/AIPerformancePanel';
 import { ChefIntelligencePanel } from '../components/analytics/ChefIntelligencePanel';
 import { CustomerJourneyPanel } from '../components/analytics/CustomerJourneyPanel';
+import { BRAND_NAME, BRAND_TAGLINE, QR_BASE } from '../constants/api';
 
 type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles' | 'servicedesk' | 'operations' | 'audit' | 'aiperformance' | 'chefintel' | 'journey';
 
@@ -549,15 +550,15 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
       <div className={styles.console}>
         <div className={styles.topChrome}>
           <div className={styles.lights}><span /><span /><span /></div>
-          <div className={styles.urlPill}><span className={styles.urlDot} /> emenyu.com/admin · Trumps Prime Grillhouse</div>
+          <div className={styles.urlPill}><span className={styles.urlDot} /> emenyu.com/admin · {BRAND_NAME} {BRAND_TAGLINE}</div>
           <div className={styles.chromeRight}><NotificationBell scope="all" /><NotificationButton /></div>
         </div>
         <div className={styles.body}>
           <aside className={styles.sidebar}>
             <div className={styles.brand}>
-              <div className={styles.brandLogo}>T</div>
+              <div className={styles.brandLogo}>{BRAND_NAME.charAt(0)}</div>
               <div>
-                <div className={styles.brandName}>Trump</div>
+                <div className={styles.brandName}>{BRAND_NAME}</div>
                 <div className={styles.brandSub}>{(user?.role || 'manager').toUpperCase()} CONSOLE</div>
               </div>
             </div>
@@ -1035,7 +1036,6 @@ function ReservationsPanel({ reservations, date, onDateChange, onStatusChange, o
 }
 
 const TABLE_COUNT = 15;
-const QR_BASE = 'https://emenyu.com/Trump';
 
 function QrCodesPanel() {
   const [qrUrls, setQrUrls] = useState<Record<string, string>>({});
@@ -2484,7 +2484,7 @@ function NewAccountModal({ currentRole, onClose, onSubmit }: {
   }
 
   const shareText = [
-    apkUrl ? `Download the Trump Waiter app: ${apkUrl}` : '',
+    apkUrl ? `Download the ${BRAND_NAME} Waiter app: ${apkUrl}` : '',
     `Username: ${created ?? ''}`,
   ].filter(Boolean).join('\n');
 

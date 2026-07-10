@@ -17,6 +17,7 @@ dont_upload/
 
 # Dependencies and build output
 node_modules/
+*.tsbuildinfo
 venv/
 __pycache__/
 *.pyc

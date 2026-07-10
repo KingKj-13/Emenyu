@@ -5,6 +5,10 @@
 .env
 .env.*
 !.env.example
+# Client build-time branding config (no secrets — just prefix/brand strings
+# Vite needs at build time for the Trump vs. Demo Steakhouse builds).
+!Sites/Trump/client/.env
+!Sites/Trump/client/.env.demo
 *.pem
 *.key
 *.crt

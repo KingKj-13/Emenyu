@@ -42,7 +42,7 @@ function sanitizeChefRec(body = {}, { partial = false } = {}) {
   return { value: out };
 }
 
-function createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService }) {
+function createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService, config }) {
   // Phase 05 — menu response cache. MEASURED: an uncached GET /api/menu re-runs
   // loadMenu (Prisma load + deserialization of ~440 items, ~150ms warm) on EVERY
   // request, capping throughput at ~12 req/s and ballooning latency to ~800ms p50
@@ -247,7 +247,7 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
 
     async getMediaStatus(req, res) {
       try {
-        const status = await mediaEnrichmentService.getStatus('trump');
+        const status = await mediaEnrichmentService.getStatus(config.restaurantId);
         res.json(status);
       } catch (e) {
         res.status(500).json({ error: e.message });
@@ -257,7 +257,7 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
     async triggerMediaEnrich(req, res) {
       try {
         const { limit = 20 } = req.body || {};
-        const result = await mediaEnrichmentService.enrichBatch({ limit, restaurantId: 'trump', retry: false });
+        const result = await mediaEnrichmentService.enrichBatch({ limit, restaurantId: config.restaurantId, retry: false });
         res.json(result);
       } catch (e) {
         res.status(500).json({ error: e.message });
@@ -267,7 +267,7 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
     async retryMediaEnrich(req, res) {
       try {
         const { limit = 20 } = req.body || {};
-        const result = await mediaEnrichmentService.enrichBatch({ limit, restaurantId: 'trump', retry: true });
+        const result = await mediaEnrichmentService.enrichBatch({ limit, restaurantId: config.restaurantId, retry: true });
         res.json(result);
       } catch (e) {
         res.status(500).json({ error: e.message });
