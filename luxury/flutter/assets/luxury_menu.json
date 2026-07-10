@@ -13,7 +13,7 @@
                     "category": "Starters",
                     "subcategory": "Caviar",
                     "name": "Oscietra Caviar (30g)",
-                    "price": 2800,
+                    "price": 580,
                     "origin": {
                         "country": "Italy",
                         "region": "Lombardy"
@@ -33,7 +33,7 @@
                     "category": "Starters",
                     "subcategory": "Oysters",
                     "name": "Gillardeau Oysters No.2",
-                    "price": 380,
+                    "price": 350,
                     "origin": {
                         "country": "France",
                         "region": "Marennes-Oléron"
@@ -73,7 +73,7 @@
                     "category": "Starters",
                     "subcategory": "Seafood",
                     "name": "Bluefin Tuna Tataki",
-                    "price": 420,
+                    "price": 450,
                     "origin": {
                         "country": "Japan",
                         "region": "Tokyo Bay"
@@ -99,7 +99,7 @@
                     "category": "Steaks",
                     "subcategory": "Japanese Wagyu",
                     "name": "Japanese A5 Wagyu Strip",
-                    "price": 3600,
+                    "price": 590,
                     "origin": {
                         "country": "Japan",
                         "region": "Miyazaki"
@@ -119,7 +119,7 @@
                     "category": "Steaks",
                     "subcategory": "Dry Aged",
                     "name": "45-Day Dry-Aged Tomahawk",
-                    "price": 2200,
+                    "price": 580,
                     "origin": {
                         "country": "Australia",
                         "region": "Victoria"
@@ -139,7 +139,7 @@
                     "category": "Steaks",
                     "subcategory": "Australian Wagyu",
                     "name": "Australian Full-Blood Wagyu Ribeye",
-                    "price": 1450,
+                    "price": 560,
                     "origin": {
                         "country": "Australia",
                         "region": "Queensland"
@@ -165,7 +165,7 @@
                     "category": "Seafood",
                     "subcategory": "Lobster",
                     "name": "Whole Maine Lobster",
-                    "price": 950,
+                    "price": 680,
                     "origin": {
                         "country": "United States",
                         "region": "Maine"
@@ -185,7 +185,7 @@
                     "category": "Seafood",
                     "subcategory": "Crab",
                     "name": "Alaskan King Crab Legs",
-                    "price": 1100,
+                    "price": 690,
                     "origin": {
                         "country": "United States",
                         "region": "Alaska"
@@ -205,7 +205,7 @@
                     "category": "Seafood",
                     "subcategory": "Fish",
                     "name": "Chilean Sea Bass",
-                    "price": 520,
+                    "price": 480,
                     "origin": {
                         "country": "Chile",
                         "region": "Patagonia"
@@ -231,7 +231,7 @@
                     "category": "Champagne",
                     "subcategory": "Vintage Champagne",
                     "name": "Dom Pérignon Vintage 2013",
-                    "price": 7200,
+                    "price": 4800,
                     "origin": {
                         "country": "France",
                         "region": "Champagne"
@@ -251,7 +251,7 @@
                     "category": "Champagne",
                     "subcategory": "Prestige Cuvée",
                     "name": "Krug Grande Cuvée",
-                    "price": 8900,
+                    "price": 5600,
                     "origin": {
                         "country": "France",
                         "region": "Champagne"
@@ -271,7 +271,7 @@
                     "category": "Champagne",
                     "subcategory": "Prestige Cuvée",
                     "name": "Louis Roederer Cristal",
-                    "price": 13200,
+                    "price": 8200,
                     "origin": {
                         "country": "France",
                         "region": "Champagne"
@@ -291,7 +291,7 @@
                     "category": "Champagne",
                     "subcategory": "Vintage Champagne",
                     "name": "Bollinger La Grande Année",
-                    "price": 5100,
+                    "price": 3200,
                     "origin": {
                         "country": "France",
                         "region": "Champagne"
@@ -311,7 +311,7 @@
                     "category": "Champagne",
                     "subcategory": "Blanc de Blancs",
                     "name": "Ruinart Blanc de Blancs",
-                    "price": 3400,
+                    "price": 2100,
                     "origin": {
                         "country": "France",
                         "region": "Champagne"
@@ -337,7 +337,7 @@
                     "category": "Wines",
                     "subcategory": "Red Wine",
                     "name": "Château Margaux 2016",
-                    "price": 29500,
+                    "price": 18500,
                     "origin": {
                         "country": "France",
                         "region": "Bordeaux"
@@ -357,7 +357,7 @@
                     "category": "Wines",
                     "subcategory": "Red Wine",
                     "name": "Château Lafite Rothschild 2015",
-                    "price": 33500,
+                    "price": 21000,
                     "origin": {
                         "country": "France",
                         "region": "Pauillac, Bordeaux"
@@ -377,7 +377,7 @@
                     "category": "Wines",
                     "subcategory": "Red Wine",
                     "name": "Opus One 2018",
-                    "price": 16200,
+                    "price": 10500,
                     "origin": {
                         "country": "United States",
                         "region": "Napa Valley"
@@ -397,7 +397,7 @@
                     "category": "Wines",
                     "subcategory": "Red Wine",
                     "name": "Sassicaia 2019",
-                    "price": 12800,
+                    "price": 8200,
                     "origin": {
                         "country": "Italy",
                         "region": "Bolgheri, Tuscany"
@@ -417,7 +417,7 @@
                     "category": "Wines",
                     "subcategory": "Red Wine",
                     "name": "Penfolds Grange 2017",
-                    "price": 18200,
+                    "price": 11500,
                     "origin": {
                         "country": "Australia",
                         "region": "South Australia"
@@ -443,7 +443,7 @@
                     "category": "Whisky",
                     "subcategory": "Single Malt Scotch",
                     "name": "The Macallan 18 Double Cask",
-                    "price": 480,
+                    "price": 380,
                     "origin": {
                         "country": "Scotland",
                         "region": "Speyside"
@@ -463,7 +463,7 @@
                     "category": "Whisky",
                     "subcategory": "Single Malt Scotch",
                     "name": "Glenfiddich 21 Gran Reserva",
-                    "price": 520,
+                    "price": 420,
                     "origin": {
                         "country": "Scotland",
                         "region": "Speyside"
@@ -483,7 +483,7 @@
                     "category": "Whisky",
                     "subcategory": "Japanese Whisky",
                     "name": "Hibiki 21",
-                    "price": 850,
+                    "price": 650,
                     "origin": {
                         "country": "Japan",
                         "region": "Osaka"
@@ -503,7 +503,7 @@
                     "category": "Whisky",
                     "subcategory": "Blended Scotch",
                     "name": "Johnnie Walker Blue Label",
-                    "price": 380,
+                    "price": 280,
                     "origin": {
                         "country": "Scotland",
                         "region": "Various Distilleries"
@@ -523,7 +523,7 @@
                     "category": "Whisky",
                     "subcategory": "Islay Single Malt",
                     "name": "Lagavulin 16",
-                    "price": 280,
+                    "price": 220,
                     "origin": {
                         "country": "Scotland",
                         "region": "Islay"
@@ -549,7 +549,7 @@
                     "category": "Desserts",
                     "subcategory": "Chocolate",
                     "name": "Valrhona Chocolate Soufflé",
-                    "price": 195,
+                    "price": 180,
                     "origin": {
                         "country": "France",
                         "region": "Tain-l'Hermitage"
@@ -569,7 +569,7 @@
                     "category": "Desserts",
                     "subcategory": "Classic Dessert",
                     "name": "Vanilla Bean Crème Brûlée",
-                    "price": 165,
+                    "price": 150,
                     "origin": {
                         "country": "France",
                         "region": "Paris"
@@ -589,7 +589,7 @@
                     "category": "Desserts",
                     "subcategory": "Cheese",
                     "name": "Artisan Cheese Selection",
-                    "price": 320,
+                    "price": 280,
                     "origin": {
                         "country": "France",
                         "region": "Various Regions"
