@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { BookPage } from './BookPage';
 import { getChapterItems } from '../../lib/menuUtils';
 import { FOOD_CHAPTERS, DRINKS_CHAPTERS } from '../../constants/chapters';
-import { BRAND_NAME } from '../../constants/api';
+import { BRAND_NAME, LANDING_BRAND_NAME, BRAND_TAGLINE } from '../../constants/api';
 import { useApp } from '../../context/AppContext';
 import type { MenuData, MenuItem, Chapter } from '../../types/menu';
 import '../../animations/BookFlip.css';
@@ -212,14 +212,14 @@ export function BookViewer({ menuData, onItemClick, onAddToCart, onPairingClick 
             >
               <span className="coverFace">
                 <div className={styles.coverFront}>
-                  <div className={styles.coverTitle}>TRUMPS</div>
-                  <div className={styles.coverSub}>PRIME GRILLHOUSE</div>
+                  <div className={styles.coverTitle}>{LANDING_BRAND_NAME}</div>
+                  <div className={styles.coverSub}>{BRAND_TAGLINE.toUpperCase()}</div>
                   <div className={styles.coverLine} />
                   <div className={styles.coverInstruction}>Tap to open</div>
                 </div>
               </span>
               <span className="coverFace coverBack" aria-hidden="true">
-                <span style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(34px,6vw,70px)', fontWeight: 900, letterSpacing: '0.08em', color: 'rgba(247,251,255,0.9)' }}>TRUMPS</span>
+                <span style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(34px,6vw,70px)', fontWeight: 900, letterSpacing: '0.08em', color: 'rgba(247,251,255,0.9)' }}>{LANDING_BRAND_NAME}</span>
               </span>
             </button>
           </div>

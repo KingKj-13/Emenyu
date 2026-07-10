@@ -38,7 +38,7 @@ export const RECOMMENDED_ORDERS: PersonaOrder[] = [
     blurb: 'Flame-grilled, dry-aged, unapologetic.',
     accent: '#a52b2d',
     courses: [
-      { course: 'Drink', name: 'TRUMPS', price: 225 },
+      { course: 'Drink', name: 'House Old Fashioned', price: 225 },
       { course: 'Starter', name: 'BEEF BILTONG', price: 155 },
       { course: 'Main', name: 'RIBEYE 380g', price: 369 },
       { course: 'Dessert', name: 'DEATH BY CHOCOLATE CAKE', price: 119 },

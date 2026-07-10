@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Printer, Users, Minus, Plus } from 'lucide-react';
 import { formatPrice } from '../../lib/menuUtils';
+import { LANDING_BRAND_NAME, BRAND_TAGLINE } from '../../constants/api';
 import styles from './ReceiptView.module.css';
 
 interface ReceiptItem {
@@ -33,8 +34,8 @@ export function ReceiptView({ tableId, items, onClose }: ReceiptViewProps) {
       <div className={styles.receipt} onClick={e => e.stopPropagation()}>
         <div className={styles.receiptInner} id="receipt-print-area">
           <div className={styles.header}>
-            <h1 className={styles.restaurantName}>TRUMPS</h1>
-            <p className={styles.restaurantSub}>Prime Grillhouse</p>
+            <h1 className={styles.restaurantName}>{LANDING_BRAND_NAME}</h1>
+            <p className={styles.restaurantSub}>{BRAND_TAGLINE}</p>
             <div className={styles.divider} />
             <div className={styles.meta}>
               <span>{tableId.replace(/^table/, 'Table ')}</span>

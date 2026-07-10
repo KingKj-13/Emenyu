@@ -71,12 +71,12 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         TRUMP_HOST: '127.0.0.1',
-        TRUMP_PORT: 3013
+        TRUMP_PORT: 3014
       },
       env_production: {
         NODE_ENV: 'production',
         TRUMP_HOST: '127.0.0.1',
-        TRUMP_PORT: 3013
+        TRUMP_PORT: 3014
       }
     }
   ]

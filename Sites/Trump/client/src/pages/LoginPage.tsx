@@ -4,6 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useApp } from '../context/AppContext';
 import { Spinner } from '../components/ui/Spinner';
+import { LANDING_BRAND_NAME } from '../constants/api';
 import styles from './LoginPage.module.css';
 
 export function LoginPage() {
@@ -54,8 +55,8 @@ export function LoginPage() {
       <div className={styles.panel}>
         <div className={styles.brand}>
           {/* Same circled-T monogram as the customer landing screen — one brand, one mark. */}
-          <div className={styles.brandMark} aria-hidden>T</div>
-          <h1 className={styles.title}>TRUMPS</h1>
+          <div className={styles.brandMark} aria-hidden>{LANDING_BRAND_NAME.charAt(0)}</div>
+          <h1 className={styles.title}>{LANDING_BRAND_NAME}</h1>
           <div className={styles.line} />
           <p className={styles.subtitle}>Staff Portal</p>
         </div>

@@ -15,6 +15,7 @@ import { api } from '../services/api';
 import { formatPrice } from '../lib/menuUtils';
 import { sastTodayStartIso } from '../lib/businessDay';
 import { ASSISTANT_NAME } from '../constants/config';
+import { BRAND_NAME } from '../constants/api';
 import type { RecommendationAnalytics, RecoInsightsResult } from '../types/menu';
 import type { FloorState, LeaderboardRow, WaiterTask } from '../types/waiter';
 import styles from './OwnerDashboard.module.css';
@@ -177,7 +178,7 @@ export function OwnerDashboard() {
       <div className={styles.page}>
         <header className={styles.topbar}>
           <div className={styles.brand}>
-            <span className={styles.brandTitle}>TRUMPS</span>
+            <span className={styles.brandTitle}>{BRAND_NAME}</span>
             <span className={styles.brandSub}>OWNER DASHBOARD</span>
           </div>
           <div className={styles.topActions}>
