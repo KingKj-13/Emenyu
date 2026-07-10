@@ -16,11 +16,21 @@
 const path = require('path');
 const dotenv = require('dotenv');
 
+// An explicit DATABASE_URL already in the shell environment (e.g. pointing at
+// the demo tenant's own dedicated DB) must win over every file below — capture
+// it before any dotenv.config() call has a chance to touch process.env.
+const explicitDatabaseUrl = process.env.DATABASE_URL;
+
 dotenv.config({ path: path.resolve(__dirname, '..', '..', '..', '.env'), quiet: true });
 dotenv.config({ path: path.resolve(__dirname, '..', '.env'), quiet: true });
 // Local dev override: .env.local (gitignored) repoints DATABASE_URL at the local
-// database so this never touches prod unless explicitly pointed there.
-dotenv.config({ path: path.resolve(__dirname, '..', '..', '..', '.env.local'), override: true, quiet: true });
+// database so this never touches prod unless explicitly pointed there. Skipped
+// entirely when the caller already passed DATABASE_URL explicitly.
+if (!explicitDatabaseUrl) {
+  dotenv.config({ path: path.resolve(__dirname, '..', '..', '..', '.env.local'), override: true, quiet: true });
+} else {
+  process.env.DATABASE_URL = explicitDatabaseUrl;
+}
 
 const { getPrisma } = require('../server/services/prismaClient');
 const { PrismaOrderService } = require('../server/services/prismaOrderService');
@@ -50,9 +60,9 @@ const CATEGORIES = [
     title: 'Starters',
     items: [
       { name: 'Springbok Carpaccio', price: 125, description: 'Thinly sliced, parmesan, rocket, truffle oil.', allergens: 'Dairy', img: 'Images/springbok_carpaccio.jpg' },
-      { name: 'Calamari Tubes & Tentacles', price: 145, description: 'Lightly fried, lemon aioli.', allergens: 'Shellfish, Gluten' },
-      { name: 'Soup of the Day', price: 85, description: "Chef's daily selection.", allergens: 'Dairy' },
-      { name: 'Beef Biltong Board', price: 135, description: 'Cured biltong, droëwors, mustard.', allergens: '' },
+      { name: 'Calamari Tubes & Tentacles', price: 145, description: 'Lightly fried, lemon aioli.', allergens: 'Shellfish, Gluten', img: 'Images/garlic_lemon_calamari.jpg' },
+      { name: 'Fried Halloumi Fingers', price: 89, description: 'Crumbed, sweet chilli dip.', allergens: 'Dairy, Gluten', img: 'Images/fried_halloumi_fingers.jpg' },
+      { name: 'Beef Biltong Board', price: 135, description: 'Cured biltong, droëwors, mustard.', allergens: '', img: 'Images/beef_biltong.jpg' },
       { name: 'Flash Pan Fried Chicken Livers', price: 99, description: 'Peri-peri butter, toasted ciabatta.', allergens: 'Gluten, Dairy', img: 'Images/flash_pan_fried_chicken_livers.jpg' },
       { name: 'Chicken Trinchado', price: 125, description: 'Portuguese spiced chicken livers, chilli.', allergens: 'Gluten, Dairy', img: 'Images/chicken_trinchado.jpg' },
       { name: 'Firecracker Chicken Wings (400g)', price: 155, description: 'Sticky chilli glaze, sesame.', allergens: '', img: 'Images/firecracker_chicken_wings_400g.jpg', popular: true },
@@ -63,10 +73,10 @@ const CATEGORIES = [
     title: 'Premium Steaks',
     items: [
       { name: 'Wagyu Ribeye 300g', price: 485, description: 'Full-blood Wagyu, chimichurri.', allergens: '', img: 'Images/wagyu_ribeye_300g.jpg', chefPick: true },
-      { name: 'Ribeye 400g', price: 365, description: 'Dry-aged, bone marrow butter.', allergens: 'Dairy', popular: true },
-      { name: 'Tomahawk 900g (for two)', price: 950, description: 'Charcoal grilled, rock salt.', allergens: '', chefPick: true },
-      { name: 'Fillet 250g', price: 395, description: 'Center-cut tenderloin, peppercorn sauce.', allergens: 'Dairy' },
-      { name: 'Sirloin 350g', price: 325, description: 'Grass-fed, garlic butter.', allergens: 'Dairy' },
+      { name: 'Ribeye 380g', price: 365, description: 'Dry-aged, bone marrow butter.', allergens: 'Dairy', img: 'Images/ribeye_380g.jpg', popular: true },
+      { name: 'Tomahawk 900g (for two)', price: 950, description: 'Charcoal grilled, rock salt.', allergens: '', img: 'Images/tomahawk_850g_900g.jpg', chefPick: true },
+      { name: 'Fillet 260g', price: 395, description: 'Center-cut tenderloin, peppercorn sauce.', allergens: 'Dairy', img: 'Images/fillet_260g.jpg' },
+      { name: 'Sirloin 350g', price: 325, description: 'Grass-fed, garlic butter.', allergens: 'Dairy', img: 'Images/sirloin_350g.jpg' },
       { name: 'T-Bone 500g', price: 445, description: 'Charcoal grilled, served with jus.', allergens: '', img: 'Images/t_bone_500g.jpg' },
       { name: 'Beef Ribs (3 pce) ±1kg', price: 385, description: 'Slow-braised, sticky glaze.', allergens: '', img: 'Images/beef_ribs_3_pce_1kg.jpg' },
       { name: 'Oxtail', price: 355, description: 'Slow-braised, red wine jus, gremolata.', allergens: '', img: 'Images/oxtail.jpg' },
@@ -77,71 +87,71 @@ const CATEGORIES = [
     title: 'Seafood',
     items: [
       { name: 'Kingklip & Prawn', price: 325, description: 'Line-caught kingklip, garlic prawns, lemon butter.', allergens: 'Fish, Shellfish, Dairy', img: 'Images/kingklip_and_prawn.jpg' },
-      { name: 'Prawn Linguine', price: 325, description: 'Garlic, chilli, white wine.', allergens: 'Shellfish, Gluten' },
-      { name: 'Butter Garlic Prawns', price: 295, description: 'Sizzling pan, toasted bread.', allergens: 'Shellfish, Dairy, Gluten', popular: true },
-      { name: 'Seared Salmon', price: 310, description: 'Crispy skin, citrus beurre blanc.', allergens: 'Fish, Dairy' },
+      { name: 'Prawn and Calamari', price: 325, description: 'Garlic, chilli, white wine.', allergens: 'Shellfish, Gluten', img: 'Images/prawn_and_calamari.jpg' },
+      { name: 'Butter Garlic Prawns', price: 295, description: 'Sizzling pan, toasted bread.', allergens: 'Shellfish, Dairy, Gluten', img: 'Images/queen_prawns_3_s.jpg', popular: true },
+      { name: 'Seared Salmon', price: 310, description: 'Crispy skin, citrus beurre blanc.', allergens: 'Fish, Dairy', img: 'Images/seared_salmon.jpg' },
     ]
   },
   {
     title: 'Burgers',
     items: [
-      { name: 'Classic Beef Burger', price: 145, description: 'Beef patty, cheddar, house sauce.', allergens: 'Gluten, Dairy' },
-      { name: 'Bacon Cheeseburger', price: 165, description: 'Double beef, bacon, cheddar.', allergens: 'Gluten, Dairy', popular: true },
-      { name: 'Mushroom Swiss Burger', price: 155, description: 'Sauteed mushroom, swiss cheese.', allergens: 'Gluten, Dairy' },
-      { name: 'Veg Burger', price: 135, description: 'Grilled vegetable patty, avo.', allergens: 'Gluten' },
+      { name: 'Classic Cheese Burger', price: 145, description: 'Beef patty, cheddar, house sauce.', allergens: 'Gluten, Dairy', img: 'Images/cheese_burger.jpg' },
+      { name: 'Bacon Cheeseburger', price: 165, description: 'Double beef, bacon, cheddar.', allergens: 'Gluten, Dairy', img: 'Images/bacon_and_cheese_burger.jpg', popular: true },
+      { name: 'BBQ Peri-Peri Beef Burger', price: 155, description: 'Smoky peri-peri glaze, onion rings.', allergens: 'Gluten, Dairy', img: 'Images/bbq_peri_peri_beef_burger.jpg' },
+      { name: 'Veg Burger', price: 135, description: 'Grilled vegetable patty, avo.', allergens: 'Gluten', img: 'Images/veg_burger.jpg' },
       { name: 'Jalapeno Chilli and Cheese Burger', price: 175, description: 'Double beef, jalapeno, molten cheese.', allergens: 'Gluten, Dairy', img: 'Images/jalapeno_chilli_and_cheese_burger.jpg' },
     ]
   },
   {
     title: 'Pastas',
     items: [
-      { name: 'Beef Fillet Pasta', price: 289, description: 'Tagliatelle, creamy peppercorn sauce.', allergens: 'Gluten, Dairy' },
-      { name: 'Chicken Alfredo', price: 245, description: 'Fettuccine, parmesan cream sauce.', allergens: 'Gluten, Dairy' },
+      { name: 'Beef Fillet Pasta', price: 289, description: 'Tagliatelle, creamy peppercorn sauce.', allergens: 'Gluten, Dairy', img: 'Images/beef_fillet_pasta.jpg' },
+      { name: 'Chicken Alfredo', price: 245, description: 'Fettuccine, parmesan cream sauce.', allergens: 'Gluten, Dairy', img: 'Images/alfredo.jpg' },
       { name: 'Seafood Pasta', price: 310, description: 'Prawns, calamari, tomato & chilli.', allergens: 'Shellfish, Gluten, Dairy', img: 'Images/seafood_pasta.jpg' },
     ]
   },
   {
     title: 'Sides',
     items: [
-      { name: 'Steakhouse Chips', price: 55, description: 'Triple-cooked, rock salt.', allergens: '' },
-      { name: 'Creamed Spinach', price: 65, description: 'Nutmeg, parmesan.', allergens: 'Dairy' },
-      { name: 'Mashed Potatoes', price: 55, description: 'Butter, cream.', allergens: 'Dairy' },
-      { name: 'Onion Rings', price: 60, description: 'Beer-battered, crispy.', allergens: 'Gluten' },
+      { name: 'Steakhouse Chips', price: 55, description: 'Triple-cooked, rock salt.', allergens: '', img: 'Images/steakhouse_chips.jpg' },
+      { name: 'Creamed Spinach', price: 65, description: 'Nutmeg, parmesan.', allergens: 'Dairy', img: 'Images/creamed_spinach.jpg' },
+      { name: 'Mashed Potatoes', price: 55, description: 'Butter, cream.', allergens: 'Dairy', img: 'Images/mashed_potatoes.jpg' },
+      { name: 'Onion Rings', price: 60, description: 'Beer-battered, crispy.', allergens: 'Gluten', img: 'Images/onion_rings.jpg' },
     ]
   },
   {
     title: 'Desserts',
     items: [
-      { name: 'Death By Chocolate Cake', price: 119, description: 'Molten centre, vanilla ice cream.', allergens: 'Gluten, Dairy, Eggs', popular: true },
-      { name: 'Crème Brûlée', price: 99, description: 'Vanilla custard, caramelised sugar.', allergens: 'Dairy, Eggs' },
+      { name: 'Red Velvet Cake', price: 119, description: 'Cream cheese frosting, red velvet sponge.', allergens: 'Gluten, Dairy, Eggs', img: 'Images/red_velvet_cake.jpg', popular: true },
+      { name: 'Duo of Ice Cream', price: 89, description: "Chef's daily selection, two scoops.", allergens: 'Dairy', img: 'Images/duo_of_ice_cream.jpg' },
       { name: 'Cape Malva Pudding', price: 95, description: 'Warm sponge, butterscotch sauce.', allergens: 'Gluten, Dairy, Eggs', img: 'Images/cape_malva_pudding.jpg' },
-      { name: 'Trio of Ice Cream', price: 89, description: "Chef's daily selection.", allergens: 'Dairy' },
+      { name: 'Trio of Ice Cream', price: 99, description: "Chef's daily selection, three scoops.", allergens: 'Dairy', img: 'Images/trio_of_ice_cream.jpg' },
       { name: 'Chocolate Brownie', price: 89, description: 'Warm, gooey centre, vanilla ice cream.', allergens: 'Gluten, Dairy, Eggs', img: 'Images/chocolate_brownie.jpg' },
     ]
   },
   {
     title: 'Red Wine',
     items: [
-      { name: 'Cabernet Sauvignon', price: 225, description: 'Full-bodied, dark berry, oak.', allergens: 'Sulphites' },
-      { name: 'Shiraz', price: 245, description: 'Peppery, dark fruit, smooth tannin.', allergens: 'Sulphites' },
-      { name: 'Merlot', price: 210, description: 'Soft, plum, easy-drinking.', allergens: 'Sulphites' },
-      { name: 'Pinotage', price: 230, description: 'South African classic, smoky red fruit.', allergens: 'Sulphites' },
+      { name: 'Cabernet Sauvignon', price: 225, description: 'Full-bodied, dark berry, oak.', allergens: 'Sulphites', img: 'Images/nederburg_wine_masters.jpg' },
+      { name: 'Shiraz', price: 245, description: 'Peppery, dark fruit, smooth tannin.', allergens: 'Sulphites', img: 'Images/la_motte_pierneef_syrah_viognier.jpg' },
+      { name: 'Merlot', price: 210, description: 'Soft, plum, easy-drinking.', allergens: 'Sulphites', img: 'Images/meerlust_red.jpg' },
+      { name: 'Pinotage', price: 230, description: 'South African classic, smoky red fruit.', allergens: 'Sulphites', img: 'Images/beyerskloof_reserve.jpg' },
     ]
   },
   {
     title: 'White Wine',
     items: [
-      { name: 'Sauvignon Blanc', price: 195, description: 'Crisp, citrus, grassy notes.', allergens: 'Sulphites' },
-      { name: 'Chardonnay', price: 210, description: 'Buttery, oaked, tropical fruit.', allergens: 'Sulphites' },
+      { name: 'Sauvignon Blanc', price: 195, description: 'Crisp, citrus, grassy notes.', allergens: 'Sulphites', img: 'Images/durbanville_hills_174.jpg' },
+      { name: 'Chardonnay', price: 210, description: 'Buttery, oaked, tropical fruit.', allergens: 'Sulphites', img: 'Images/boschendal_1685_194.jpg' },
     ]
   },
   {
     title: 'Cocktails',
     items: [
-      { name: 'Espresso Martini', price: 145, description: 'Vodka, coffee liqueur, espresso.', allergens: '' },
-      { name: 'Mojito', price: 135, description: 'White rum, mint, lime, soda.', allergens: '' },
-      { name: 'Margarita', price: 140, description: 'Tequila, triple sec, lime.', allergens: '' },
-      { name: 'Old Fashioned', price: 155, description: 'Bourbon, bitters, orange.', allergens: '' },
+      { name: 'Cosmopolitan', price: 145, description: 'Vodka, triple sec, cranberry, lime.', allergens: '', img: 'Images/cosmopolitan.jpg' },
+      { name: 'Mojito', price: 135, description: 'White rum, mint, lime, soda.', allergens: '', img: 'Images/mojito.jpg' },
+      { name: 'Margarita', price: 140, description: 'Tequila, triple sec, lime.', allergens: '', img: 'Images/margarita.jpg' },
+      { name: 'Pina Colada', price: 150, description: 'White rum, coconut cream, pineapple.', allergens: 'Dairy', img: 'Images/pina_colada.jpg' },
     ]
   },
 ];
@@ -158,15 +168,15 @@ const TABLE_COUNT = 10;
 
 // Historical baskets for analytics / "ordered together" signal (kind='history').
 const HISTORY_BASKETS = [
-  { t: 'table2', w: 'Demo Waiter', cov: 2, days: 9, items: [{ n: 'Ribeye 400g' }, { n: 'Creamed Spinach' }, { n: 'Steakhouse Chips' }, { n: 'Cabernet Sauvignon' }] },
-  { t: 'table4', w: 'Demo Waiter', cov: 2, days: 8, items: [{ n: 'Ribeye 400g' }, { n: 'Mashed Potatoes' }, { n: 'Cabernet Sauvignon' }] },
+  { t: 'table2', w: 'Demo Waiter', cov: 2, days: 9, items: [{ n: 'Ribeye 380g' }, { n: 'Creamed Spinach' }, { n: 'Steakhouse Chips' }, { n: 'Cabernet Sauvignon' }] },
+  { t: 'table4', w: 'Demo Waiter', cov: 2, days: 8, items: [{ n: 'Ribeye 380g' }, { n: 'Mashed Potatoes' }, { n: 'Cabernet Sauvignon' }] },
   { t: 'table6', w: 'Demo Waiter', cov: 4, days: 7, items: [{ n: 'Wagyu Ribeye 300g', q: 2 }, { n: 'Steakhouse Chips', q: 2 }, { n: 'Shiraz', q: 2 }] },
-  { t: 'table3', w: 'Demo Waiter', cov: 2, days: 6, items: [{ n: 'Tomahawk 900g (for two)' }, { n: 'Onion Rings' }, { n: 'Pinotage' }, { n: 'Death By Chocolate Cake' }] },
+  { t: 'table3', w: 'Demo Waiter', cov: 2, days: 6, items: [{ n: 'Tomahawk 900g (for two)' }, { n: 'Onion Rings' }, { n: 'Pinotage' }, { n: 'Red Velvet Cake' }] },
   { t: 'table7', w: 'Demo Waiter', cov: 2, days: 5, items: [{ n: 'Butter Garlic Prawns' }, { n: 'Sauvignon Blanc' }] },
-  { t: 'table1', w: 'Demo Waiter', cov: 2, days: 4, items: [{ n: 'Prawn Linguine' }, { n: 'Chardonnay' }] },
-  { t: 'table8', w: 'Demo Waiter', cov: 5, days: 3, items: [{ n: 'Bacon Cheeseburger', q: 3 }, { n: 'Classic Beef Burger', q: 2 }, { n: 'Mojito', q: 3 }] },
+  { t: 'table1', w: 'Demo Waiter', cov: 2, days: 4, items: [{ n: 'Prawn and Calamari' }, { n: 'Chardonnay' }] },
+  { t: 'table8', w: 'Demo Waiter', cov: 5, days: 3, items: [{ n: 'Bacon Cheeseburger', q: 3 }, { n: 'Classic Cheese Burger', q: 2 }, { n: 'Mojito', q: 3 }] },
   { t: 'table5', w: 'Demo Waiter', cov: 2, days: 2, items: [{ n: 'Beef Fillet Pasta' }, { n: 'Merlot' }, { n: 'Cape Malva Pudding' }] },
-  { t: 'table9', w: 'Demo Waiter', cov: 3, days: 1, items: [{ n: 'Fillet 250g' }, { n: 'Sirloin 350g' }, { n: 'Steakhouse Chips' }, { n: 'Shiraz' }] },
+  { t: 'table9', w: 'Demo Waiter', cov: 3, days: 1, items: [{ n: 'Fillet 260g' }, { n: 'Sirloin 350g' }, { n: 'Steakhouse Chips' }, { n: 'Shiraz' }] },
 ];
 
 // Live/in-progress orders so the waiter dashboard opens looking mid-service.
@@ -266,11 +276,11 @@ async function main() {
   const findItem = name => itemsByName.get(normalizedName(name));
   const BUNDLES = [
     { slug: 'steak', persona: 'The Steak Lover', icon: '🥩', description: 'Flame-grilled, unapologetic.', accent: '#a52b2d',
-      items: [{ course: 'Drink', n: 'Old Fashioned' }, { course: 'Starter', n: 'Beef Biltong Board' }, { course: 'Main', n: 'Ribeye 400g' }, { course: 'Dessert', n: 'Death By Chocolate Cake' }] },
+      items: [{ course: 'Drink', n: 'Pina Colada' }, { course: 'Starter', n: 'Beef Biltong Board' }, { course: 'Main', n: 'Ribeye 380g' }, { course: 'Dessert', n: 'Red Velvet Cake' }] },
     { slug: 'seafood', persona: 'The Seafood Lover', icon: '🦐', description: 'From the coast, line to plate.', accent: '#3a6e8f',
-      items: [{ course: 'Drink', n: 'Chardonnay' }, { course: 'Starter', n: 'Calamari Tubes & Tentacles' }, { course: 'Main', n: 'Kingklip & Prawn' }, { course: 'Dessert', n: 'Crème Brûlée' }] },
+      items: [{ course: 'Drink', n: 'Chardonnay' }, { course: 'Starter', n: 'Calamari Tubes & Tentacles' }, { course: 'Main', n: 'Kingklip & Prawn' }, { course: 'Dessert', n: 'Duo of Ice Cream' }] },
     { slug: 'burger', persona: 'The Burger Lover', icon: '🍔', description: 'Casual and satisfying.', accent: '#b5651d',
-      items: [{ course: 'Drink', n: 'Mojito' }, { course: 'Starter', n: 'Soup of the Day' }, { course: 'Main', n: 'Bacon Cheeseburger' }, { course: 'Dessert', n: 'Trio of Ice Cream' }] },
+      items: [{ course: 'Drink', n: 'Mojito' }, { course: 'Starter', n: 'Fried Halloumi Fingers' }, { course: 'Main', n: 'Bacon Cheeseburger' }, { course: 'Dessert', n: 'Trio of Ice Cream' }] },
     { slug: 'pasta', persona: 'The Pasta Lover', icon: '🍝', description: 'Comfort, twirled to perfection.', accent: '#5c7a4f',
       items: [{ course: 'Drink', n: 'Sauvignon Blanc' }, { course: 'Starter', n: 'Springbok Carpaccio' }, { course: 'Main', n: 'Beef Fillet Pasta' }, { course: 'Dessert', n: 'Cape Malva Pudding' }] },
   ];
@@ -295,7 +305,7 @@ async function main() {
   const redWines = find(/cabernet|shiraz|merlot|pinotage/);
   const whiteWines = find(/sauvignon blanc|chardonnay/);
   const sides = find(/chips|spinach|mashed potatoes|onion rings/);
-  const desserts = find(/chocolate cake|brûlée|malva|ice cream/);
+  const desserts = find(/red velvet|malva|ice cream|brownie/);
   const steaks = find(/wagyu|ribeye|tomahawk|fillet|sirloin|t-bone/);
   const seafoods = find(/kingklip|prawn|salmon/).filter(i => !/linguine/.test(i.name.toLowerCase()));
 
