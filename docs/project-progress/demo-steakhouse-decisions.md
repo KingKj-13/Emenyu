@@ -23,7 +23,13 @@ The full architecture rationale (why a second process, why nginx does the prefix
 - **Q: The "Mains" tile on the landing page and the steaks category's icon lookup key off the literal string `"Trumps Premium Steaks"` — the actual live MenuCategory.title, not just cosmetic text. Rename it too, or leave it?**
   A: Made it a build-time constant (`MAINS_CATEGORY_TITLE`, default unchanged) used consistently everywhere it's referenced (LandingPage nav link, chapters.ts apiKey + title, MenuPage icon map). This one had to change for the demo build (set to whatever the demo's steaks category is actually named), otherwise the "Mains" tile would 404 into an empty section. Trump's default value is untouched.
 
-## Not yet decided (will need a human call, not a recommended-default one)
+## Deploy
 
-- Exact live prod nginx syntax (pulling the current config via SSH before finalizing the snippet — the backed-up copy in the repo may be stale after later hardening phases).
-- Whether/when to actually push the PM2 app + nginx block to production (per standing instruction to confirm before touching shared/production infra — not skipping this one).
+- **Q: Which port for the demo Node process?** A: Planned 3013, but that's already `trump-staging` on the shared box (not documented anywhere I had access to) — found via `ss -ltnp` before starting, switched to **3014** everywhere (ecosystem.config.js, Sites/Demo/.env, nginx) before it ever collided in a way that could have affected trump-staging. No harm done, just a port pick I had to correct once live.
+- **Q: PM2 memory cap for the demo process, given the box is a shared 1GB droplet already under memory pressure?** A: Set `max_memory_restart: 384M` (vs Trump's 768M) since this is low-traffic sales-demo load, not real customer traffic. Actual measured usage after a stable few minutes: ~100MB, comparable to Trump's own ~115MB — plenty of headroom under the cap.
+- **Q: Deployed as instructed** (2026-07-10) — committed to git (`c7f3bf4` on `feat/chatbot-reco-rework`), synced to prod via tar+scp (no rsync/git on the box), `emenuy-demo-api` PM2 app running on port 3014, `demo-steakhouse` seeded directly against the production DB, nginx config backed up (`/root/mysite-nginx-backup-20260710T185321Z.conf` on the box) then updated + reloaded. Verified live:
+  - https://emenyu.com/demo/menu, /demo/waiter, /demo/admin — all serve "Demo Steakhouse", auto-authenticated, no login step
+  - https://emenyu.com/demo/api/menu — the 10 seeded categories only
+  - Socket.IO handshake, media passthrough (reusing Trump's real Images folder) — both working
+  - Trump's real site (https://emenyu.com/Trump/...) — unaffected, same 24 menu sections, real row counts unchanged (439 items) before/after every step
+- Rollback path if anything regresses later: `pm2 delete emenuy-demo-api`, restore the nginx backup file above + reload, `node scripts/seed-demo-restaurant.js --clear` (removes only `demo-steakhouse` rows) — Trump's own process/data was never modified in a way that needs rolling back.
