@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useApp } from '../context/AppContext';
 import { Spinner } from '../components/ui/Spinner';
 import styles from './LoginPage.module.css';
 
 export function LoginPage() {
   const { user, login } = useAuth();
+  const { tableId } = useApp();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -104,7 +106,7 @@ export function LoginPage() {
         </form>
 
         <p className={styles.back}>
-          <a href="/Trump/table1">← Back to menu</a>
+          <Link to={`/${tableId}`}>← Back to menu</Link>
         </p>
       </div>
     </div>

@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../services/api';
 import { formatPrice } from '../../lib/menuUtils';
+import { sastTodayStartIso } from '../../lib/businessDay';
 import { ASSISTANT_NAME } from '../../constants/config';
 import type { RecommendationAnalytics, RecoInsightsResult, RecoTally } from '../../types/menu';
 import styles from './AnalyticsPanels.module.css';
@@ -22,7 +23,7 @@ function dateRange(r: Range) {
   const now = new Date();
   const to = now.toISOString();
   const from = cfg.days === 0
-    ? new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+    ? sastTodayStartIso()
     : new Date(Date.now() - cfg.days * 86400000).toISOString();
   return { from, to };
 }
@@ -30,7 +31,7 @@ function dateRange(r: Range) {
 const pct = (v?: number) => `${Math.round((v || 0) * 100)}%`;
 // Same severity palette as OwnerDashboard's Insight component — one shared
 // convention across every "what to act on" panel in the app.
-const SEVERITY: Record<string, string> = { high: '#e0696b', medium: '#c6a24b', low: '#6f9a7a' };
+const SEVERITY: Record<string, string> = { high: '#e0696b', medium: '#c8a555', low: '#6f9a7a' };
 
 export function AIPerformancePanel() {
   const [range, setRange] = useState<Range>('7d');

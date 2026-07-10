@@ -2,20 +2,15 @@ import { useState } from 'react';
 import { useWaiter } from '../../context/WaiterContext';
 import { useAuth } from '../../hooks/useAuth';
 import { BRAND_NAME, SHIFT_START, DEFAULT_SECTION, WAITER_ROLES } from '../../constants/waiter';
+import { timeGreeting } from '../../lib/greeting';
 import type { WaiterRole } from '../../types/waiter';
 
 const today = new Date().toLocaleDateString('en-ZA', { weekday: 'long' });
-function timeGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning.';
-  if (h < 17) return 'Good afternoon.';
-  return 'Good evening.';
-}
 
 export function StartShiftScreen() {
   const { startShift } = useWaiter();
   const { user } = useAuth();
-  const [name, setName] = useState(user?.label && user.label !== 'Waiter' ? user.label : 'Demetri');
+  const [name, setName] = useState(user?.label && user.label !== 'Waiter' ? user.label : '');
   const [role, setRole] = useState<WaiterRole>('Head Waiter');
   const section = DEFAULT_SECTION;
 
@@ -32,7 +27,7 @@ export function StartShiftScreen() {
       <div style={{ marginTop: 'min(12vh, 90px)' }}>
         <p className="w-eyebrow">{BRAND_NAME} · {today} Service</p>
         <h1 className="w-display" style={{ fontSize: 46, marginTop: 14 }}>
-          {timeGreeting()}<br /><em className="w-gold-text" style={{ fontStyle: 'italic' }}>Who's on the floor?</em>
+          {timeGreeting()}.<br /><em className="w-gold-text" style={{ fontStyle: 'italic' }}>Who's on the floor?</em>
         </h1>
       </div>
 
@@ -64,7 +59,7 @@ export function StartShiftScreen() {
         Start Service
       </button>
       <p style={{ textAlign: 'center', color: 'var(--w-text3)', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 18 }}>
-        Shift started {SHIFT_START} · {section.length} tables in your section
+        Standard service window: {SHIFT_START} · {section.length} tables in your section
       </p>
     </div>
   );

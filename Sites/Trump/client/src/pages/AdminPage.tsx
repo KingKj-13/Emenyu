@@ -7,6 +7,7 @@ import { api } from '../services/api';
 import { Spinner } from '../components/ui/Spinner';
 import { Badge } from '../components/ui/Badge';
 import { formatPrice, formatTableLabel } from '../lib/menuUtils';
+import { sastTodayStartIso } from '../lib/businessDay';
 import type { ChefRec, ChefRecInput, ChefRecType, ChefBeverageKind, RecommendationAnalytics, RecoTally, RecoInsightsResult, RecoInsight, BundleAdmin, BundleInput, BundleItemInput } from '../types/menu';
 import type { WaiterTask } from '../types/waiter';
 import styles from './AdminPage.module.css';
@@ -219,8 +220,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     const now = new Date();
     const to = now.toISOString();
     if (range === 'today') {
-      const from = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      return { from, to };
+      return { from: sastTodayStartIso(), to };
     }
     if (range === '7d') {
       const from = new Date(Date.now() - 7 * 86400000).toISOString();
@@ -532,7 +532,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     bundles: { eyebrow: 'CURATED MENUS', title: 'Recommended orders', sub: `${bundles.length} persona bundle${bundles.length !== 1 ? 's' : ''} · the menu "Not sure what to order?" strip`, actions: refreshAction },
     deals: { eyebrow: 'OFFERS', title: 'Deals', sub: 'Bundle dishes into featured set menus', actions: <button className={styles.actionBtnGold} onClick={openNewDeal}><Plus size={14} /> New deal</button> },
     qrcodes: { eyebrow: 'TABLE QR CODES', title: 'QR codes', sub: 'Each links a guest straight to its table session' },
-    reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top dishes, peak hours & guest ratings', actions: <button className={styles.actionBtn} onClick={exportReportsCsv}><Download size={14} /> Export CSV</button> },
+    reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top items, peak hours & guest ratings', actions: <button className={styles.actionBtn} onClick={exportReportsCsv}><Download size={14} /> Export CSV</button> },
     aiperformance: { eyebrow: 'ANALYTICS', title: 'AI Performance', sub: 'Recommendations made, accepted, and the revenue behind them' },
     chefintel: { eyebrow: 'ANALYTICS', title: 'Chef Intelligence', sub: 'Best & worst sellers, wine pairings, pricing tier & trends' },
     journey: { eyebrow: 'ANALYTICS', title: 'Customer Journey', sub: 'One table’s visit, course by course' },
@@ -549,7 +549,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
       <div className={styles.console}>
         <div className={styles.topChrome}>
           <div className={styles.lights}><span /><span /><span /></div>
-          <div className={styles.urlPill}><span className={styles.urlDot} /> emenyu.io/admin · Trumps Prime Grillhouse</div>
+          <div className={styles.urlPill}><span className={styles.urlDot} /> emenyu.com/admin · Trumps Prime Grillhouse</div>
           <div className={styles.chromeRight}><NotificationBell scope="all" /><NotificationButton /></div>
         </div>
         <div className={styles.body}>
@@ -914,8 +914,8 @@ function LiveChatMonitor() {
       {alerts.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
           {alerts.map((a, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, padding: '8px 10px', borderRadius: 8, background: 'rgba(198,162,75,0.12)', border: '1px solid rgba(198,162,75,0.3)' }}>
-              <Bell size={14} style={{ color: '#c6a24b', flexShrink: 0 }} />
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, padding: '8px 10px', borderRadius: 8, background: 'rgba(var(--color-gold-rgb),0.12)', border: '1px solid rgba(var(--color-gold-rgb),0.3)' }}>
+              <Bell size={14} style={{ color: '#c8a555', flexShrink: 0 }} />
               <span>{a.message || `${a.displayTable || 'A table'} called a waiter.`}</span>
               {a.timestamp && <span style={{ marginLeft: 'auto', opacity: 0.6 }}>{a.timestamp}</span>}
             </div>
@@ -961,13 +961,13 @@ function ChatLogList({ logs }: { logs: unknown[] }) {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'rgba(198,162,75,0.15)',
+  pending: 'rgba(var(--color-gold-rgb),0.15)',
   confirmed: 'rgba(34,197,94,0.12)',
   seated: 'rgba(99,102,241,0.15)',
   cancelled: 'rgba(239,68,68,0.1)'
 };
 const STATUS_TEXT: Record<string, string> = {
-  pending: '#c6a24b',
+  pending: '#c8a555',
   confirmed: '#4ade80',
   seated: '#818cf8',
   cancelled: '#fca5a5'
@@ -1685,7 +1685,7 @@ const titleCase = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
 
 const chefField: CSSProperties = {
   width: '100%', padding: '9px 11px', background: 'rgba(0,0,0,0.35)',
-  border: '1px solid var(--color-line, rgba(198,162,75,0.22))', borderRadius: 8,
+  border: '1px solid var(--color-line, rgba(var(--color-gold-rgb),0.22))', borderRadius: 8,
   color: 'var(--color-cream, #f3ead6)', fontSize: 13, outline: 'none'
 };
 const chefLabel: CSSProperties = {
@@ -1737,13 +1737,13 @@ function ChefRecsPanel({ recs, menuItems, onCreate, onUpdate, onDelete }: {
   return (
     <div>
       <p style={{ color: 'var(--color-sand, #b8a88a)', fontSize: 13, lineHeight: 1.55, maxWidth: 720, marginBottom: 18 }}>
-        Chef recommendations <strong style={{ color: 'var(--color-gold, #c6a24b)' }}>always win</strong> — they show ahead of
+        Chef recommendations <strong style={{ color: 'var(--color-gold)' }}>always win</strong> — they show ahead of
         every automatic suggestion across the guest app, chatbot, item pairings and the waiter upsell screen. Put several
         beverages in one rotation group and the engine rotates between them for different guests. Category-safety rules
         (one beverage, never wine + cocktail, no dessert → starter) still apply.
       </p>
 
-      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-line, rgba(198,162,75,0.18))', borderRadius: 12, padding: 18, marginBottom: 24 }}>
+      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-line, rgba(var(--color-gold-rgb),0.18))', borderRadius: 12, padding: 18, marginBottom: 24 }}>
         <h3 style={{ margin: '0 0 14px', fontSize: 15, color: 'var(--color-cream, #f3ead6)' }}>Add chef recommendation</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
           <div>
@@ -1813,7 +1813,7 @@ function ChefRecsPanel({ recs, menuItems, onCreate, onUpdate, onDelete }: {
         groupNames.map(name => (
           <div key={name} style={{ marginBottom: 18 }}>
             <h3 style={{ fontSize: 14, color: 'var(--color-cream, #f3ead6)', margin: '0 0 8px' }}>
-              With <span style={{ color: 'var(--color-gold, #c6a24b)' }}>{name}</span>
+              With <span style={{ color: 'var(--color-gold)' }}>{name}</span>
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {groups.get(name)!.map(r => (
@@ -1839,7 +1839,7 @@ function ChefRecRow({ rec, onUpdate, onDelete }: {
   const kindLabel = rec.recType === 'BEVERAGE' ? `${rec.recType} · ${rec.beverageKind}` : rec.recType;
 
   return (
-    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(198,162,75,0.14))', borderRadius: 10, padding: '12px 14px', opacity: rec.active ? 1 : 0.55 }}>
+    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(var(--color-gold-rgb),0.14))', borderRadius: 10, padding: '12px 14px', opacity: rec.active ? 1 : 0.55 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
         <div>
           <strong style={{ color: 'var(--color-cream, #f3ead6)' }}>→ {rec.targetName}</strong>
@@ -1917,13 +1917,13 @@ function RecoActionItems({ insights }: { insights: RecoInsight[] }) {
       <h3 className={styles.reportSectionTitle}>Action items ({insights.length})</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {insights.slice(0, 12).map((ins, i) => (
-          <div key={i} style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(198,162,75,0.14))', borderLeft: `3px solid ${SEVERITY_COLOR[ins.severity] || '#9aa6b2'}`, borderRadius: 8, padding: '10px 12px' }}>
+          <div key={i} style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(var(--color-gold-rgb),0.14))', borderLeft: `3px solid ${SEVERITY_COLOR[ins.severity] || '#9aa6b2'}`, borderRadius: 8, padding: '10px 12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: SEVERITY_COLOR[ins.severity] || '#9aa6b2' }}>{ins.severity}</span>
               <strong style={{ color: 'var(--color-cream, #f3ead6)', fontSize: 13 }}>{ins.title}</strong>
             </div>
             <div style={{ color: 'var(--color-sand, #b8a88a)', fontSize: 12, marginTop: 3 }}>{ins.detail}</div>
-            <div style={{ color: 'var(--color-gold, #c6a24b)', fontSize: 12, marginTop: 4 }}>→ {ins.action}</div>
+            <div style={{ color: 'var(--color-gold)', fontSize: 12, marginTop: 4 }}>→ {ins.action}</div>
           </div>
         ))}
       </div>
@@ -2041,7 +2041,7 @@ function BundleRow({ bundle, onUpdate, onDelete }: {
   const dirty = JSON.stringify(items) !== JSON.stringify(bundle.items || []);
 
   return (
-    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(198,162,75,0.14))', borderRadius: 10, padding: '12px 14px', marginBottom: 12, opacity: bundle.active ? 1 : 0.55 }}>
+    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(var(--color-gold-rgb),0.14))', borderRadius: 10, padding: '12px 14px', marginBottom: 12, opacity: bundle.active ? 1 : 0.55 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
         <strong style={{ color: 'var(--color-cream, #f3ead6)' }}>{bundle.icon} {bundle.persona}</strong>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -2101,7 +2101,7 @@ function BundlesPanel({ bundles, onCreate, onUpdate, onDelete }: {
         to a built-in set only if the database is unavailable.
       </p>
 
-      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-line, rgba(198,162,75,0.18))', borderRadius: 12, padding: 18, marginBottom: 24 }}>
+      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-line, rgba(var(--color-gold-rgb),0.18))', borderRadius: 12, padding: 18, marginBottom: 24 }}>
         <h3 style={{ margin: '0 0 14px', fontSize: 15, color: 'var(--color-cream, #f3ead6)' }}>Add bundle</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
           <div><label style={chefLabel}>Persona</label><input style={chefField} placeholder="The Steak Lover" value={persona} onChange={e => setPersona(e.target.value)} /></div>
@@ -2629,10 +2629,10 @@ function ServiceDeskPanel({ tasks, onChange }: { tasks: WaiterTask[]; onChange: 
       {approvals.length === 0 ? (
         <div className={styles.emptyState}><p>No approvals waiting.</p></div>
       ) : approvals.map(t => (
-        <div key={t.id} style={{ ...card, borderColor: 'rgba(198,162,75,0.4)' }}>
+        <div key={t.id} style={{ ...card, borderColor: 'rgba(var(--color-gold-rgb),0.4)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontWeight: 600, color: '#c6a24b' }}>🎂 {t.title} · Table {deskTableNum(t.tableId)}</div>
+              <div style={{ fontWeight: 600, color: '#c8a555' }}>🎂 {t.title} · Table {deskTableNum(t.tableId)}</div>
               <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>{t.message}</div>
               <div style={{ fontSize: 12, opacity: 0.55, marginTop: 4 }}>Requested by {t.waiterName || t.requestedBy || 'waiter'}</div>
             </div>

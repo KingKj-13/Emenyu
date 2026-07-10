@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { api } from '../../services/api';
 import { formatPrice } from '../../lib/menuUtils';
+import { sastTodayStartIso } from '../../lib/businessDay';
 import { ASSISTANT_NAME } from '../../constants/config';
 import type { ChefRec } from '../../types/menu';
 import styles from './AnalyticsPanels.module.css';
@@ -18,7 +19,7 @@ const RANGES: { key: Range; label: string; days: number }[] = [
 ];
 
 interface Item { name: string; quantity: number; revenue: number; categoryType?: string }
-interface MenuRow { dbId: number; name: string; price: number; category: string }
+interface MenuRow { dbId: number; name: string; price: number; category: string; categoryType?: string }
 
 function rangeFor(days: number, offsetDays = 0) {
   const to = new Date(Date.now() - offsetDays * 86400000);
@@ -42,20 +43,22 @@ export function ChefIntelligencePanel() {
     const now = new Date();
     const to = now.toISOString();
     const from = cfg.days === 0
-      ? new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+      ? sastTodayStartIso()
       : new Date(Date.now() - cfg.days * 86400000).toISOString();
     const windowDays = Math.max(1, cfg.days || 1);
     const recentWindow = rangeFor(windowDays, 0);
     const priorWindow = rangeFor(windowDays, windowDays);
 
+    // "Dishes" here must never include drinks — excludeCategory pulls a wider
+    // pool server-side and filters before slicing to the display limit.
     const [ti, bi, reco, menu, recs, recentItems, priorItems] = await Promise.all([
-      api.getAnalyticsItems({ from, to, order: 'desc', limit: 8 }).catch(() => []),
-      api.getAnalyticsItems({ from, to, order: 'asc', limit: 8 }).catch(() => []),
+      api.getAnalyticsItems({ from, to, order: 'desc', limit: 8, excludeCategory: 'WINE,DRINK' }).catch(() => []),
+      api.getAnalyticsItems({ from, to, order: 'asc', limit: 8, excludeCategory: 'WINE,DRINK' }).catch(() => []),
       api.getRecommendationAnalytics({ from, to }).catch(() => null),
       api.getAdminMenuItems().catch(() => []),
       api.getChefRecs().catch(() => []),
-      api.getAnalyticsItems({ ...recentWindow, order: 'desc', limit: 50 }).catch(() => []),
-      api.getAnalyticsItems({ ...priorWindow, order: 'desc', limit: 50 }).catch(() => []),
+      api.getAnalyticsItems({ ...recentWindow, order: 'desc', limit: 50, excludeCategory: 'WINE,DRINK' }).catch(() => []),
+      api.getAnalyticsItems({ ...priorWindow, order: 'desc', limit: 50, excludeCategory: 'WINE,DRINK' }).catch(() => []),
     ]);
 
     setTopItems(ti as Item[]);
@@ -69,7 +72,9 @@ export function ChefIntelligencePanel() {
       .map(row => ({ name: row.name || '—', revenue: row.revenue, acceptanceRate: row.acceptanceRate, impressions: row.impressions }));
     setWineItems(wine);
 
-    const menuRows = (menu as MenuRow[]) || [];
+    // "Highest-priced dishes" — exclude wine/spirits so a premium bottle
+    // doesn't get labeled a dish.
+    const menuRows = ((menu as MenuRow[]) || []).filter(m => m.categoryType !== 'WINE' && m.categoryType !== 'DRINK');
     setPremiumItems([...menuRows].sort((a, b) => b.price - a.price).slice(0, 8));
 
     const priorMap = new Map((priorItems as Item[]).map(i => [i.name, i.quantity]));

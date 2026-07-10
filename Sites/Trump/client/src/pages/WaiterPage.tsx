@@ -42,6 +42,7 @@ import { ShiftPanel } from '../components/operations/ShiftPanel';
 import { OwnershipPanel } from '../components/operations/OwnershipPanel';
 import { TableTimeline } from '../components/operations/TableTimeline';
 import { NotificationBell } from '../components/operations/NotificationBell';
+import { Spinner } from '../components/ui/Spinner';
 import type {
   CartRec,
   CartRecResponse,
@@ -151,9 +152,16 @@ function useFloorAndTasks() {
   const { alerts } = useWaiter();
   const [floor, setFloor] = useState<FloorState | null>(null);
   const [tasks, setTasks] = useState<WaiterTask[]>([]);
+  // Every consumer of this hook previously had no way to tell "still loading"
+  // apart from "genuinely no active tables" — both looked identical (floor
+  // null / tasks []), so on-shift staff briefly saw a false "nothing here"
+  // message on every mount instead of a loading indicator.
+  const [loading, setLoading] = useState(true);
   const load = useCallback(() => {
-    api.getFloor().then(setFloor).catch(() => setFloor(null));
-    api.getWaiterTasks({ status: 'all' }).then(setTasks).catch(() => setTasks([]));
+    Promise.allSettled([
+      api.getFloor().then(setFloor).catch(() => setFloor(null)),
+      api.getWaiterTasks({ status: 'all' }).then(setTasks).catch(() => setTasks([])),
+    ]).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -173,7 +181,7 @@ function useFloorAndTasks() {
     };
   }, [load]);
 
-  return { floor, tasks, alerts, reload: load };
+  return { floor, tasks, alerts, reload: load, loading };
 }
 
 function TopBar() {
@@ -252,7 +260,7 @@ function TableCard({ table, status, intel, event, hasUpdate, onOpen }: {
 
 function HomeScreen() {
   const { shift, selectTable, setTab, events, unseenTableUpdates } = useWaiter();
-  const { floor, tasks, alerts } = useFloorAndTasks();
+  const { floor, tasks, alerts, loading } = useFloorAndTasks();
   const tables = floor?.tables || [];
   const myTables = tables.filter(t => shift.section.includes(t.number));
   const ranked = [...myTables].sort((a, b) => {
@@ -271,7 +279,9 @@ function HomeScreen() {
     <main className="wv-screen">
       <section className="wv-priority">
         <p className="wv-kicker">Next best action</p>
-        {next ? (
+        {loading ? (
+          <div className="wv-empty" style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}><Spinner size={28} /></div>
+        ) : next ? (
           <>
             <h1>{next.isLuxury ? next.displayName : `Table ${next.number}`}</h1>
             <p>{statusCopy(statusForTable(next, alerts, tasks))} · {next.guests || 0} guests · {money(next.spend || 0)}</p>
@@ -308,7 +318,7 @@ function HomeScreen() {
             onOpen={() => selectTable(table.tableId)}
           />
         ))}
-        {!ranked.length && <p className="wv-empty">No assigned tables found for this shift.</p>}
+        {!loading && !ranked.length && <p className="wv-empty">No assigned tables found for this shift.</p>}
       </div>
     </main>
   );
@@ -381,7 +391,6 @@ function AiRecommendationPanel({ recs, onAdd, onDecline, statusByName, isLuxury 
         <span className={`wv-status-chip st-${status}`}>{STATUS_LABEL[status]}</span>
       </div>
       <h3>{rec.name}</h3>
-      <p>{rec.reason || 'Best available pairing for this cart.'}</p>
       <div className="wv-rec-metrics">
         {typeof rec.confidence === 'number' && <span className="wv-metric-chip">Confidence {Math.round(rec.confidence * 100)}%</span>}
         {typeof rec.expectedValue === 'number' && rec.expectedValue > 0 && <span className="wv-metric-chip">EV {moneyExact(rec.expectedValue)}</span>}
@@ -502,17 +511,26 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
   }, [selectedTableId]);
 
   useEffect(() => {
+    // Guards against an out-of-order network resolution: if the waiter adds an
+    // item quickly, this effect re-fires with the updated cart, but the PRIOR
+    // (pre-add) request's promise can still resolve after the new one — without
+    // this flag its stale data would clobber the fresh response and make the
+    // just-added item look like it's still being recommended.
+    let cancelled = false;
     api.cartRecommendations({
       cart: order.map(line => ({ name: line.name, price: line.price, qty: line.quantity })),
       event: event?.type || null,
       mode: table.isLuxury ? 'luxury' : 'standard',
+      tableId: table.tableId,
     })
       .then(data => {
+        if (cancelled) return;
         setRecData(data);
         const top = data?.recommendations?.[0];
         if (top) setStatusByName(prev => (prev[top.name] ? prev : { ...prev, [top.name]: 'suggested' }));
       })
-      .catch(() => setRecData(null));
+      .catch(() => { if (!cancelled) setRecData(null); });
+    return () => { cancelled = true; };
   }, [cartSig, event?.type, order, table.tableId, table.isLuxury]);
 
   // Phase 2 (Waiter Experience): a suggested recommendation that sits untouched
@@ -769,7 +787,7 @@ function AddItems({ onDone }: { onDone: () => void }) {
 
 function TablesScreen() {
   const { selectedTableId, selectTable, unseenTableUpdates } = useWaiter();
-  const { floor, tasks, alerts } = useFloorAndTasks();
+  const { floor, tasks, alerts, loading } = useFloorAndTasks();
   const [subView, setSubView] = useState<TableSubView>('details');
   const [query, setQuery] = useState('');
   const tables = floor?.tables || [];
@@ -803,7 +821,13 @@ function TablesScreen() {
           </button>
         ))}
       </div>
-      {selected ? <TableDetails table={selected} onAddMode={() => setSubView('add')} /> : <p className="wv-empty">No tables loaded.</p>}
+      {selected ? (
+        <TableDetails table={selected} onAddMode={() => setSubView('add')} />
+      ) : loading ? (
+        <div className="wv-empty" style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}><Spinner size={28} /></div>
+      ) : (
+        <p className="wv-empty">No tables loaded.</p>
+      )}
     </main>
   );
 }

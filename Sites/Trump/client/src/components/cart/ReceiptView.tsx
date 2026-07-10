@@ -34,7 +34,7 @@ export function ReceiptView({ tableId, items, onClose }: ReceiptViewProps) {
         <div className={styles.receiptInner} id="receipt-print-area">
           <div className={styles.header}>
             <h1 className={styles.restaurantName}>TRUMPS</h1>
-            <p className={styles.restaurantSub}>Premium Restaurant & Bar</p>
+            <p className={styles.restaurantSub}>Prime Grillhouse</p>
             <div className={styles.divider} />
             <div className={styles.meta}>
               <span>{tableId.replace(/^table/, 'Table ')}</span>

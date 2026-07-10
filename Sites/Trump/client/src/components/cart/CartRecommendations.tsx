@@ -27,7 +27,7 @@ function recommendationImage(rec: Rec): string {
 
 export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
   const { addItem, setIsOpen } = useCart();
-  const { setPendingItemName } = useApp();
+  const { setPendingItemName, tableId } = useApp();
   const [recs, setRecs] = useState<Rec[]>([]);
 
   const debouncedKey = useDebounce(JSON.stringify(cartItems.map(i => i.name)), 600);
@@ -36,7 +36,10 @@ export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
     if (cartItems.length === 0) { setRecs([]); return; }
     let cancelled = false;
 
-    api.getRecommendations({ items: cartItems.map(i => ({ name: i.name, price: i.price })) })
+    // tableId activates the server's session-scoped "recently ignored"
+    // suppression (recommendationMemory.js) — without it, a card the guest
+    // just scrolled past could resurface on the very next cart change.
+    api.getRecommendations({ items: cartItems.map(i => ({ name: i.name, price: i.price })), tableId })
       .then((data: unknown) => {
         if (cancelled) return;
         const next = Array.isArray(data) ? (data as Rec[]) : [];

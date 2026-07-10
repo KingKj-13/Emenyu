@@ -11,6 +11,12 @@ import type { RecommendationItem } from './RecommendationCard';
 
 export type Course = 'STARTER' | 'MAIN' | 'DESSERT' | 'DRINK' | 'WINE' | 'SIDE' | 'OTHER';
 
+// The 3 planned slots are unbounded elsewhere in the pipeline, but the
+// "extras beyond 3 continue in the scroll row" leftovers had no cap at all —
+// the one path in the recommendation system with no budget ceiling. Matches
+// the ~4-item cap every other recommendation surface already enforces.
+const MAX_JOURNEY_LEFTOVERS = 4;
+
 type Classifiable = {
   name: string;
   description?: string;
@@ -179,6 +185,7 @@ export function planJourney(current: MenuItem, pool: RecommendationItem[]): Jour
   const slots = order.filter((s): s is JourneySlot => s !== null);
   const leftovers = avail
     .filter(cand => !used.has(cand))
+    .slice(0, MAX_JOURNEY_LEFTOVERS)
     .map((rec): JourneySlot => ({ rec, slotLabel: courseLabel(courseOf(rec)), youChoice: false }));
   return { slots, narrative, leftovers };
 }

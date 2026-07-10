@@ -205,7 +205,13 @@ export function RecommendationCard({
   }
 
   // ── Existing variants (compact / detailed / waiter) — unchanged ──
-  const tagText = item.chef ? "Chef's pick" : item.source_title;
+  // source_title is a candidate-generation rule label ("People also ordered",
+  // "Goes well together"...), not sommelier copy — on ~98% of cards (everything
+  // that isn't chef-authored) it read as generic marketing text sitting right
+  // above the actual composed reason. Chef's pick stays; the rule-name label
+  // for everything else doesn't add anything the reason text below it doesn't
+  // already say better.
+  const tagText = item.chef ? "Chef's pick" : undefined;
 
   return (
     <div className={`${styles.card} ${styles[variant]} ${item.chef ? styles.chef : ''} ${large ? styles.large : ''}`}>

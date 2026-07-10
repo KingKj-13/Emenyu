@@ -12,6 +12,7 @@ import { useConciergeTiming, type TriggerReason } from '../../hooks/useConcierge
 import { requestNotificationPermissionOnce, showConciergeNotification } from '../../lib/browserNotify';
 import { getContextChips } from './conciergeChips';
 import { QuickActionMenu } from './QuickActionMenu';
+import { timeGreeting, isEvening } from '../../lib/greeting';
 import type { ChatSuggestionItem, ChatResponse } from '../../types/menu';
 import styles from './ChatPanel.module.css';
 
@@ -68,7 +69,7 @@ function highlightKeywords(content: string, names: string[]) {
 
 export function ChatPanel({ onItemClick }: ChatPanelProps) {
   const { chatOpen, setChatOpen, tableId } = useApp();
-  const { items: cartItems, addItem, removeAt } = useCart();
+  const { items: cartItems, addItem, removeAt, justAdded } = useCart();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -84,6 +85,11 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
   // arrives via a clicked browser notification.
   const [flashLatest, setFlashLatest] = useState(false);
   const [justAccepted, setJustAccepted] = useState(false);
+  // A guest just browsing (no cart yet) previously saw a static, motionless
+  // launcher with no cue a chat concierge exists at all — the only emphasis
+  // (notifyDot) is gated behind an actual suggestion, which needs a cart.
+  // This fires once per browser session regardless of cart state.
+  const [showEntranceHint, setShowEntranceHint] = useState(false);
 
   const shownItemNamesRef = useRef<Set<string>>(new Set());
   const chatOpenRef = useRef(chatOpen);
@@ -91,6 +97,16 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
 
   useEffect(() => {
     api.getConfig().then(c => { if (c?.assistantName) setAssistantName(c.assistantName); }).catch(() => { /* keep default */ });
+  }, []);
+
+  useEffect(() => {
+    if (sessionStorage.getItem('chatLauncherHintShown')) return;
+    const timer = window.setTimeout(() => {
+      setShowEntranceHint(true);
+      sessionStorage.setItem('chatLauncherHintShown', '1');
+      window.setTimeout(() => setShowEntranceHint(false), 3200);
+    }, 2500);
+    return () => window.clearTimeout(timer);
   }, []);
 
   // Phase 5 (AI Concierge): fetch a proactive recommendation from Recommendation
@@ -101,6 +117,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
       const recs = await api.getRecommendations({
         cart: cartItems,
         proactive: true,
+        tableId,
         ...(reason === 'dessert' ? { reason: 'dessert' } : {}),
       }) as ChatSuggestionItem[];
       const top = (recs || []).find(r => r?.name && !shownItemNamesRef.current.has(r.name)) || null;
@@ -139,7 +156,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
         });
       }
     } catch { /* a missed proactive nudge is not worth surfacing an error for */ }
-  }, [cartItems, setChatOpen]);
+  }, [cartItems, setChatOpen, tableId]);
 
   const { recordIgnored } = useConciergeTiming({
     cartItems,
@@ -153,12 +170,24 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
     if (chatOpen) setHasUnseenSuggestion(false);
   }, [chatOpen]);
 
+  // `justAdded` fires from CartContext.addItem() — the one function every
+  // accept path (this chat's own card, the cart-strip card, ItemModal) already
+  // calls. Pausing the proactive timer here means an accept from ANY of those
+  // surfaces backs off the next nudge, not only an accept made inside chat.
+  useEffect(() => {
+    if (!justAdded) return;
+    setJustAccepted(true);
+    const timer = window.setTimeout(() => setJustAccepted(false), POST_ACCEPT_PAUSE_MS);
+    return () => window.clearTimeout(timer);
+  }, [justAdded]);
+
   function callWaiter() {
     getSocket().emit('callWaiter', { restaurantId: RESTAURANT_ID, tableId });
     setWaiterCalled(true);
     window.setTimeout(() => setWaiterCalled(false), 2600);
   }
   const endRef = useRef<HTMLDivElement>(null);
+  const lastMessageRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -173,7 +202,16 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
   // messages arrive while it's already open.
   useEffect(() => {
     if (!chatOpen) return;
-    endRef.current?.scrollIntoView({ behavior: 'auto' });
+    // Anchor to the TOP of the newest message, not the very bottom of the
+    // panel — a reply + its enlarged suggestion card can together be taller
+    // than the visible chat window, so scrolling all the way to the end only
+    // ever showed the card's price/Add button, with the reply text and dish
+    // name (what actually makes it "the newest message") scrolled off above.
+    if (messages.length === 0) {
+      endRef.current?.scrollIntoView({ behavior: 'auto' });
+    } else {
+      lastMessageRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
   }, [chatOpen, messages]);
 
   async function sendMessage(text: string) {
@@ -205,13 +243,11 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
   // detour through the item modal. Reuses the same CartContext every other
   // add-to-cart path in the app already uses.
   function addFromChat(item: ChatSuggestionItem) {
+    // Scenario 4 (record acceptance, stop recommending immediately after) is
+    // now handled by the `justAdded` effect above — addItem() firing it covers
+    // every accept path, not just this one.
     addItem({ name: item.name, price: item.price, img: item.img, description: item.description, source: 'guest', categoryType: item.categoryType, beverageKind: item.beverageKind });
     trackAccepted(item, CHAT_RECO_CTX);
-    // Scenario 4: record acceptance, stop recommending — do not immediately
-    // suggest anything else, even if the cart's new state would otherwise
-    // qualify for a fresh proactive nudge.
-    setJustAccepted(true);
-    window.setTimeout(() => setJustAccepted(false), POST_ACCEPT_PAUSE_MS);
   }
 
   // A same-role swap (Phase 1 Replacement Logic: item.replacement). Only
@@ -245,13 +281,14 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
       {waiterCalled && <div className={styles.calledPill} role="status"><Check size={13} strokeWidth={3} /> Waiter notified</div>}
 
       <button
-        className={styles.launcher}
-        onClick={() => setChatOpen(!chatOpen)}
+        className={`${styles.launcher} ${!chatOpen && showEntranceHint ? styles.launcherHint : ''}`}
+        onClick={() => { setChatOpen(!chatOpen); setShowEntranceHint(false); }}
         aria-label={chatOpen ? 'Close concierge chat' : 'Open concierge chat'}
         aria-expanded={chatOpen}
       >
         {chatOpen ? <X size={20} /> : <span className={styles.aiBadge} aria-hidden="true">🍷</span>}
         {!chatOpen && hasUnseenSuggestion && <span className={styles.notifyDot} aria-hidden="true" />}
+        {!chatOpen && showEntranceHint && !hasUnseenSuggestion && <span className={styles.launcherLabel}>Ask me</span>}
       </button>
 
       <AnimatePresence>
@@ -287,12 +324,12 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
             <div className={styles.messages} aria-live="polite" aria-atomic="false">
               {messages.length === 0 && (
                 <div className={styles.welcome}>
-                  <p>Good evening — I'm your sommelier tonight. How may I look after your table?</p>
+                  <p>{timeGreeting()} — I'm your sommelier {isEvening() ? 'tonight' : 'today'}. How may I look after your table?</p>
                 </div>
               )}
 
               {messages.map((msg, i) => (
-                <div key={i}>
+                <div key={i} ref={i === messages.length - 1 ? lastMessageRef : undefined}>
                   <div className={`${styles.message} ${msg.role === 'user' ? styles.userMsg : styles.assistantMsg}`}>
                     {msg.role === 'assistant'
                       ? highlightKeywords(msg.content, (msg.suggestions || []).map(s => s.name))

@@ -3,14 +3,17 @@
 // trend / day-of-week / ratings) and the recommendation analytics + insight
 // engine — no analytics are re-implemented here; this file only fetches and frames
 // data the server already computes. Operational depth still lives in /Admin.
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp, Star, LogOut, Sparkles, SlidersHorizontal, ArrowUpRight } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { Spinner } from '../components/ui/Spinner';
 import { useAuth } from '../hooks/useAuth';
+import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
+import { useSocketEvent } from '../hooks/useSocket';
 import { api } from '../services/api';
 import { formatPrice } from '../lib/menuUtils';
+import { sastTodayStartIso } from '../lib/businessDay';
 import { ASSISTANT_NAME } from '../constants/config';
 import type { RecommendationAnalytics, RecoInsightsResult } from '../types/menu';
 import type { FloorState, LeaderboardRow, WaiterTask } from '../types/waiter';
@@ -42,7 +45,7 @@ function rangeParams(r: RangeKey) {
   // — which are timestamped after 00:00 — get excluded. Mirrors AdminPage.
   const to = now.toISOString();
   const from = cfg.days === 0
-    ? new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+    ? sastTodayStartIso()
     : new Date(Date.now() - cfg.days * 86400000).toISOString();
   return { from, to, bucket: cfg.bucket };
 }
@@ -54,6 +57,7 @@ function shortDate(key: string) {
 }
 
 export function OwnerDashboard() {
+  useHomeBackGuard();
   const { user, logout } = useAuth();
   const [range, setRange] = useState<RangeKey>('today');
   const [loading, setLoading] = useState(true);
@@ -81,8 +85,10 @@ export function OwnerDashboard() {
     const leaderboardPeriod = r === 'today' ? 'today' : r === '7d' ? 'week' : 'month';
     const [s, ti, bi, h, dw, tr, rt, ra, ri, tb, di, de, pr, fl, lb, tk] = await Promise.all([
       api.getAnalyticsSummary(p).catch(() => null),
-      api.getAnalyticsItems({ ...p, order: 'desc' }).catch(() => []),
-      api.getAnalyticsItems({ ...p, order: 'asc' }).catch(() => []),
+      // "Top/Bottom dishes" must never include drinks — excludeCategory pulls
+      // a wider pool server-side and filters before slicing to the display limit.
+      api.getAnalyticsItems({ ...p, order: 'desc', excludeCategory: 'WINE,DRINK' }).catch(() => []),
+      api.getAnalyticsItems({ ...p, order: 'asc', excludeCategory: 'WINE,DRINK' }).catch(() => []),
       api.getAnalyticsHours(p).catch(() => []),
       api.getAnalyticsDayOfWeek(p).catch(() => []),
       api.getAnalyticsTrend({ ...p, bucket }).catch(() => ({ bucket, points: [] })),
@@ -90,7 +96,9 @@ export function OwnerDashboard() {
       api.getRecommendationAnalytics({ from, to }).catch(() => null),
       api.getRecommendationInsights({ from, to }).catch(() => null),
       api.getAnalyticsTables(p).catch(() => []),
-      api.getAnalyticsItems({ ...p, order: 'desc', category: 'DRINK', limit: 5 }).catch(() => []),
+      // "Top drinks" subtitle promises wine + cocktails + beer + soft drinks —
+      // WINE and DRINK are separate categoryType buckets, so both must be requested.
+      api.getAnalyticsItems({ ...p, order: 'desc', category: 'WINE,DRINK', limit: 5 }).catch(() => []),
       api.getAnalyticsItems({ ...p, order: 'desc', category: 'DESSERT', limit: 5 }).catch(() => []),
       api.getAnalyticsPairings(p).catch(() => []),
       api.getFloor().catch(() => null),
@@ -118,8 +126,22 @@ export function OwnerDashboard() {
 
   useEffect(() => { load(range); }, [range, load]);
 
+  // Every KPI/panel here previously only refetched on a range change or a
+  // manual reselect of the same button — an owner watching the dashboard
+  // during service never saw it update as orders came in. Debounced (one
+  // timer, reset on each event) so a burst of orders/status changes in quick
+  // succession triggers one reload, not one per event.
+  const reloadTimer = useRef<number | undefined>(undefined);
+  const reloadSoon = useCallback(() => {
+    window.clearTimeout(reloadTimer.current);
+    reloadTimer.current = window.setTimeout(() => load(range), 1500);
+  }, [range, load]);
+  useEffect(() => () => window.clearTimeout(reloadTimer.current), []);
+  useSocketEvent('orderPlaced', reloadSoon);
+  useSocketEvent('kitchenStatusUpdate', reloadSoon);
+
   const totals = reco?.totals;
-  const donaldRevenue = totals?.revenue || 0;
+  const recoRevenue = totals?.revenue || 0;
   const covers = summary?.covers || 0;
   const avgPerCover = covers > 0 ? (summary!.revenue / covers) : 0;
 
@@ -144,8 +166,8 @@ export function OwnerDashboard() {
   // Honest revenue-uplift: recommendation-attributed revenue as a share of the
   // OTHER (non-attributed) revenue in the same period — not a fabricated
   // counterfactual, just the two real totals the server already computes.
-  const baseline = Math.max(0, (summary?.revenue || 0) - donaldRevenue);
-  const upliftPct = baseline > 0 ? (donaldRevenue / baseline) * 100 : null;
+  const baseline = Math.max(0, (summary?.revenue || 0) - recoRevenue);
+  const upliftPct = baseline > 0 ? (recoRevenue / baseline) * 100 : null;
 
   // A few light, plain-English callouts derived from the server's own aggregates.
   const businessInsights = buildBusinessInsights(dow, reco);
@@ -187,7 +209,7 @@ export function OwnerDashboard() {
               <div className={styles.heroIcon}><Sparkles size={20} /></div>
               <div className={styles.heroBody}>
                 <div className={styles.heroLabel}>{ASSISTANT_NAME.toUpperCase()} ADDED TO YOUR TICKETS</div>
-                <div className={styles.heroValue}>{formatPrice(donaldRevenue)}</div>
+                <div className={styles.heroValue}>{formatPrice(recoRevenue)}</div>
                 <div className={styles.heroSub}>
                   {totals && totals.impressions > 0
                     ? `${totals.ordered} orders generated · ${pct(totals.acceptanceRate)} acceptance · ${formatPrice(totals.revenuePerImpression || 0)}/impression${upliftPct != null ? ` · +${Math.round(upliftPct)}% over non-AI revenue` : ''}`
@@ -438,7 +460,7 @@ function FunnelStep({ value, label, sub, gold }: { value: number; label: string;
   );
 }
 
-const SEVERITY: Record<string, string> = { high: '#e0696b', medium: '#c6a24b', low: '#6f9a7a' };
+const SEVERITY: Record<string, string> = { high: '#e0696b', medium: '#c8a555', low: '#6f9a7a' };
 function Insight({ severity, title, detail, action }: { severity: string; title: string; detail: string; action?: string }) {
   return (
     <div className={styles.insight} style={{ borderLeftColor: SEVERITY[severity] || '#9aa6b2' }}>

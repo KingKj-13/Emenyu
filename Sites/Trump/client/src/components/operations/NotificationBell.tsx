@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Bell } from 'lucide-react';
 import { opsApi } from '../../services/opsApi';
+import { getSocket } from '../../services/socket';
 import type { NotificationRow } from '../../types/operations';
 
 const PRIORITY_LABEL: Record<number, string> = { 1: 'Urgent', 2: 'High', 3: 'Normal', 4: 'Low', 5: 'Info' };
@@ -50,8 +51,9 @@ function timeAgo(iso: string): string {
 }
 
 // Phase 03B — notification center bell + drawer. `scope='all'` is the owner/manager
-// view (every staff notification). Unread count polls every 20s (no socket push for
-// notifications yet); the drawer fetches the list on open.
+// view (every staff notification). The 20s poll is now just a safety-net fallback —
+// the server emits a live 'notification' socket event per row (emitNotification),
+// so the bell refreshes instantly in the normal case.
 export function NotificationBell({ scope }: { scope?: 'all' }) {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -75,6 +77,16 @@ export function NotificationBell({ scope }: { scope?: 'all' }) {
     return () => window.clearInterval(timer.current);
   }, [refreshCount]);
   useEffect(() => { if (open) loadList(); }, [open, loadList]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    const onNotification = () => {
+      refreshCount();
+      if (open) loadList();
+    };
+    socket.on('notification', onNotification);
+    return () => { socket.off('notification', onNotification); };
+  }, [open, refreshCount, loadList]);
 
   async function ack(id: number) {
     try { await opsApi.ackNotification(id); await Promise.all([loadList(), refreshCount()]); } catch { /* ignore */ }

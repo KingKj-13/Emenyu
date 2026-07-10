@@ -226,7 +226,11 @@ export function ItemModal({
         }}
       >
         <div className={styles.media}>
-          {videoSrc ? (
+          {videoSrc && playMedia ? (
+            // Poster-first, same as RecommendationCard/WaiterPage: the <video> tag
+            // (and the network request it triggers) doesn't exist in the DOM at all
+            // until the 3s dwell timer has already elapsed — before that, guests see
+            // only the plain photo below, identical to an item with no video.
             <>
               <video
                 ref={videoRef}
@@ -242,7 +246,7 @@ export function ItemModal({
                 <img
                   src={imgSrc}
                   alt={item.name}
-                  className={`${styles.imageOverlay}${playMedia && videoReady ? ` ${styles.imageOverlayHidden}` : ''}`}
+                  className={`${styles.imageOverlay}${videoReady ? ` ${styles.imageOverlayHidden}` : ''}`}
                   onError={() => setImgError(true)}
                 />
               )}
