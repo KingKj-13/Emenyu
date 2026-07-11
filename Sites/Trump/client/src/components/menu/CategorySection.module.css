@@ -58,6 +58,16 @@
   color: var(--color-cream);
 }
 
+/* Chapter narrative opener (Carmella's "chapters"; empty/absent elsewhere). */
+.intro {
+  margin: 6px 0 0;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--color-sand);
+  max-width: 60ch;
+}
+
 .divider {
   width: 60px;
   height: 2px;

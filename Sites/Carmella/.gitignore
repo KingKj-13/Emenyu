@@ -1,0 +1,32 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies and build output (this dir has no package.json of its own —
+# server.js requires Trump's node_modules — but keep the pattern for parity)
+node_modules/
+client/dist/
+
+# Runtime data and local-only state
+logs/
+uploads/
+orders/
+history/
+tables/
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+data/accounts.json
+data/chat_logs.json
+
+# Raw dish photography (~1.4GB) stays local-only — only the optimized WebP
+# renditions (Images/optimized/, Images/thumbnails/) are committed. See
+# emenyu-carmella/ARCHITECTURE_DECISIONS.md.
+Images/*.jpg
+Images/*.jpeg
+Images/*.png
+
+*.log
+*.tmp
+pm2*.log

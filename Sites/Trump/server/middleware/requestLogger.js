@@ -1,12 +1,17 @@
 const crypto = require('crypto');
 
-const HEALTH_PATHS = new Set(['/healthz', '/readyz', '/Trump/healthz', '/Trump/readyz', '/trump/healthz', '/trump/readyz']);
+const { tenantPaths } = require('../utils/helpers');
 
 function getPathWithoutQuery(req) {
   return String(req.originalUrl || req.url || '').split('?')[0] || '/';
 }
 
-function createRequestLogger(logger) {
+function createRequestLogger(logger, config = {}) {
+  const healthPaths = new Set([
+    ...tenantPaths(config, '/healthz'),
+    ...tenantPaths(config, '/readyz')
+  ]);
+
   return function requestLogger(req, res, next) {
     const requestId = req.headers['x-request-id'] || crypto.randomUUID();
     const startedAt = process.hrtime.bigint();
@@ -15,7 +20,7 @@ function createRequestLogger(logger) {
 
     res.on('finish', () => {
       const path = getPathWithoutQuery(req);
-      if (HEALTH_PATHS.has(path)) {
+      if (healthPaths.has(path)) {
         return;
       }
 

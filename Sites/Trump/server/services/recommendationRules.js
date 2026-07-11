@@ -110,16 +110,28 @@ function createRecommendationRules({ config = {}, logger = null } = {}) {
         // those protect what ends up on the table, not how it got there.
         const isReplacement = cand.isReplacement === true;
         // R4: don't recommend a beverage of a kind already on the table — unless
-        // it's an upgrade replacement of that exact kind.
+        // it's an upgrade replacement of that exact kind. Always enforced (chef
+        // or not) — a chef pairing still shouldn't duplicate what's on the table.
         if (cartKinds.has(kind) && !isReplacement) reason = 'beverage:already-in-cart';
-        // R1/R3: total beverage cap (a replacement doesn't consume a cap slot).
-        else if (!isReplacement && beveragesKept >= maxBeverages) reason = 'beverage:max-reached';
+        // R1: total beverage cap (a replacement doesn't consume a cap slot).
+        // Bypassed for chef candidates — per the "chef recommendations always
+        // win" invariant (see recommend()'s chef-tier comment), a curated
+        // pairing list (e.g. Carmella's cappuccino+juice for one dish) is the
+        // authoritative diversity decision, not the algorithmic cap's job to
+        // second-guess.
+        else if (!chef && !isReplacement && beveragesKept >= maxBeverages) reason = 'beverage:max-reached';
         // R2 + one-primary: only one primary beverage; never wine+cocktail.
+        // Always enforced — two competing primary pours is a table-setting
+        // problem regardless of source.
         else if (PRIMARY_BEVERAGES.has(kind) && primaryKept) reason = 'beverage:second-primary';
-        // R3: a soft/hot beverage must not headline (no primary yet) unless closing
-        //     (a coffee/digestif with dessert is fine); water never headlines.
-        else if (!PRIMARY_BEVERAGES.has(kind) && !primaryKept && stage !== 'CLOSING') reason = 'beverage:secondary-headline';
-        else if (kind === 'SOFT' && isWaterish(cand.item) && !primaryKept && stage !== 'CLOSING') reason = 'beverage:water-headline';
+        // R3: a soft/hot beverage must not headline (no primary yet) unless
+        // closing (a coffee/digestif with dessert is fine); water never
+        // headlines. This is a steakhouse-style upsell heuristic ("lead with
+        // wine, not coffee") that does not generalize to every tenant (a café
+        // pairing a croissant with a cappuccino is exactly right) — bypassed
+        // for chef candidates for the same reason as R1.
+        else if (!chef && !PRIMARY_BEVERAGES.has(kind) && !primaryKept && stage !== 'CLOSING') reason = 'beverage:secondary-headline';
+        else if (!chef && kind === 'SOFT' && isWaterish(cand.item) && !primaryKept && stage !== 'CLOSING') reason = 'beverage:water-headline';
 
         if (!reason) {
           if (!isReplacement) beveragesKept += 1;

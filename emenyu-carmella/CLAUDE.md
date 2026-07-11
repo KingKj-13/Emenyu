@@ -30,3 +30,8 @@ Day-parts: morning 06:30–11:30 · midday 11:30–15:00 · golden 15:00–19:00
 ## Open questions (blocked on client — don't guess)
 - Dietary/allergen tags in the JSON are provisional until the kitchen confirms.
 - Missing wine glass prices; "Decaf R6" intent; qaLog fixes need sign-off.
+- Real table count (currently a placeholder: 20).
+
+## Implementation status (2026-07-11)
+
+Phases 0–5 built and verified in local dev; not yet deployed to production. See `docs/MONDAY_DEMO.md` for the full status, feature checklist, known issues, and exact remaining deploy steps, and `ARCHITECTURE_DECISIONS.md` for the reasoning behind every non-obvious choice made while building it (7 entries, AD-001–AD-007). Treat both as living documents — update them, don't replace them, as work continues.

@@ -32,6 +32,7 @@ export const CategorySection = memo(function CategorySection({
         />
         <h2 className={styles.title}>{section.title}</h2>
       </button>
+      {section.intro && <p className={styles.intro}>{section.intro}</p>}
       <div className={styles.divider} aria-hidden="true" />
 
       <div

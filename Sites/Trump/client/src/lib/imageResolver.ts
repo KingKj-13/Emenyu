@@ -227,7 +227,10 @@ export function resolveImage(item: MenuItem): string {
 // guaranteed).
 export function resolveThumbnail(item: MenuItem): string {
   const full = resolveImage(item);
-  const match = full.match(/^(\/(?:Trump|trump)\/(?:Images|uploads))\/([^/]+)\.(?:jpe?g|png|webp)$/i);
+  // BASE_PATH-driven (not a hardcoded "/Trump"/"trump" literal) so every tenant's
+  // thumbnails resolve correctly, not just Trump's.
+  const basePattern = BASE_PATH.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = full.match(new RegExp(`^(${basePattern}/(?:Images|uploads))/([^/]+)\\.(?:jpe?g|png|webp)$`, 'i'));
   if (!match) return full;
   const stem = match[2];
   return `${match[1]}/thumbnails/${stem}.webp`;

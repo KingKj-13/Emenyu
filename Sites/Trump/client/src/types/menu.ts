@@ -1,9 +1,21 @@
+export interface MenuItemVariant {
+  dbId?: number;
+  name: string;
+  price: number;
+  img?: string;
+  isAddon?: boolean;
+}
+
 export interface MenuItem {
   id?: string;
   dbId?: number;
   name: string;
   price: number;
   description?: string;
+  // Narrative copy (Carmella's "story" lines) and a short display subtitle.
+  // Optional/empty for tenants that don't use them (e.g. Trump).
+  story?: string;
+  subtitle?: string;
   calories?: string;
   allergens?: string;
   spice?: string;
@@ -14,6 +26,9 @@ export interface MenuItem {
   videoVisible?: boolean;
   visible?: boolean;
   available?: boolean;
+  // Three-state superset of `available` (available | ask | unavailable) — see
+  // ARCHITECTURE_DECISIONS.md AD-002. Falls back to `available` when absent.
+  availability?: 'available' | 'ask' | 'unavailable';
   chefPick?: boolean;
   popular?: boolean;
   types?: string;
@@ -23,6 +38,9 @@ export interface MenuItem {
   // consumes these instead of re-deriving the category locally.
   categoryType?: string;
   beverageKind?: string;
+  // Multi-choice items (e.g. Carmella's "Amy's Choice"). Absent/empty for
+  // single-price items.
+  variants?: MenuItemVariant[];
 }
 
 // Chef-controlled per-item recommendation (Phase 3, Task 8 owner controls).
@@ -156,7 +174,10 @@ export interface MenuSubSection {
 export interface MenuCategory {
   visible?: boolean;
   items?: MenuItem[];
-  [subKey: string]: MenuSubSection | MenuItem[] | boolean | undefined;
+  // Chapter narrative opener (Carmella's "chapters"); absent for tenants
+  // whose categories don't carry one.
+  intro?: string;
+  [subKey: string]: MenuSubSection | MenuItem[] | boolean | string | undefined;
 }
 
 export interface MenuData {
@@ -165,6 +186,9 @@ export interface MenuData {
 
 export interface MenuSection {
   title: string;
+  // Chapter narrative opener (Carmella's "chapters"); absent for tenants
+  // whose categories don't carry one.
+  intro?: string;
   items: MenuItem[];
   subSections: { title: string; items: MenuItem[] }[];
 }
@@ -172,6 +196,28 @@ export interface MenuSection {
 export interface Deal {
   items: MenuItem[];
   price: number;
+}
+
+// Carmella's day-part engine (see ARCHITECTURE_DECISIONS.md AD-004). Absent
+// from GET /api/config for tenants with no DayPart rows (Trump, Demo).
+export interface DayPart {
+  slug: string;
+  name: string;
+  from: string;
+  to: string;
+  greeting: string;
+  leadChapters: string[];
+  gaspardChips: string[];
+  suggestStrip: { itemId: string; line: string; attachId: string | null } | null;
+}
+
+export interface AppConfig {
+  assistantName: string;
+  assistantPersona?: string;
+  brandName: string;
+  waiterApkUrl?: string;
+  waiterLatestVersion?: string;
+  currentDayPart?: DayPart;
 }
 
 export interface ChatSuggestionItem {

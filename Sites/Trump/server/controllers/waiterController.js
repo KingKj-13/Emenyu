@@ -20,7 +20,7 @@ function createWaiterController({ config, fileService, socketService, orderValid
   return {
     serveWaiterPage(req, res) {
       // The waiter app is the React SPA (client/dist). React Router (basename
-      // "/Trump") renders the /Waiter route. Served at /Trump/Waiter.
+      // config.publicBasePath) renders the /Waiter route.
       res.sendFile(path.join(config.directories.base, 'client', 'dist', 'index.html'));
     },
 

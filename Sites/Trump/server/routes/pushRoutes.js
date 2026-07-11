@@ -1,9 +1,7 @@
-function registerPushRoutes(app, controllers, staffAuth) {
-  const paths = suffix => [
-    `/api/push/${suffix}`,
-    `/Trump/api/push/${suffix}`,
-    `/trump/api/push/${suffix}`
-  ];
+const { tenantPaths } = require('../utils/helpers');
+
+function registerPushRoutes(app, config, controllers, staffAuth) {
+  const paths = suffix => tenantPaths(config, `/api/push/${suffix}`);
 
   app.get(paths('vapid-key'), controllers.push.getVapidKey);
   app.post(paths('subscribe'), staffAuth, controllers.push.subscribe);

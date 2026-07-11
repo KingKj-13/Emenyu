@@ -69,7 +69,8 @@ export function buildMenuSections(
     });
 
     if (directItems.length > 0 || subSections.length > 0) {
-      sections.push({ title: categoryTitle, items: directItems, subSections });
+      const intro = typeof categoryValue.intro === 'string' ? categoryValue.intro : undefined;
+      sections.push({ title: categoryTitle, intro, items: directItems, subSections });
     }
   });
 

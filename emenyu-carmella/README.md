@@ -32,3 +32,14 @@ images/                            ← NOT in git — place the 201 dish JPGs he
 - Route target: `emenyu.com/Carmella/Table{n}/menu`
 - Currency ZAR · Hours 06:30–19:00 (15:00 public holidays) · WhatsApp +27 78 195 1259
 - The AI persona is "Gaspard" — see the prompt pack. Guardrails are non-negotiable.
+
+## Implementation status (2026-07-11)
+
+All phases (0 discovery → 5 launch prep) have been built and verified in local dev. Full detail in `docs/MONDAY_DEMO.md` and `ARCHITECTURE_DECISIONS.md`; quick pointers:
+
+- **Runtime:** `Sites/Carmella/` (own server process, port 3015 locally, own `.env`, own `emenyu_carmella` database). Run with `node Sites/Carmella/server.js` from the repo root, or `npm run pm2:start` once deployed (PM2 app `emenuy-carmella-api` already added to `Sites/Trump/ecosystem.config.js`).
+- **Data:** `Sites/Carmella/scripts/import-menu.js` — idempotent, re-run anytime `data/carmella-menu-data.json` changes: `node Sites/Carmella/scripts/import-menu.js`.
+- **Images:** optimized WebP + thumbnails already generated at `Sites/Carmella/Images/` (raw JPGs stay local-only, gitignored). Re-run via `node Sites/Trump/scripts/media-optimize.js --dir ../../Carmella --restaurant-id carmella --optimize` if the source photos change.
+- **Client build:** `cd Sites/Trump/client && npx vite build --mode carmella --outDir ../../Carmella/client/dist`.
+- **Docs:** the full deliverable set (architecture, database, API, AI engine, design system, admin/waiter guides, deployment, testing, performance, changelog, roadmap) lives in `docs/`.
+- **Not yet deployed to production** — see `docs/MONDAY_DEMO.md` → Deployment verification for the exact remaining steps.

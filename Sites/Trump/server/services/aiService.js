@@ -19,6 +19,8 @@ const { createBusinessRules } = require('./businessRules');
 const { createRecommendationMemory } = require('./recommendationMemory');
 const { createItemGraph } = require('./itemGraph');
 const candidateFilterPipeline = require('./candidateFilterPipeline');
+const gaspardVoice = require('./nlg/gaspardVoice');
+const { resolveDayPart } = require('../utils/dayPartResolver');
 const fs = require('fs');
 const path = require('path');
 
@@ -168,6 +170,7 @@ function publicItem(item = {}, sourceTitle = '') {
     subcategory: item.subcategory || '',
     categoryType: item.categoryType || 'MAIN',
     story: item.story || '',
+    availability: item.availability || 'available',
     source_title: sourceTitle || item.source_title || '',
     // Phase 3A: carry the structured tags so the shared reasonComposer can craft
     // tag-true copy on any surface. Absent (undefined) when the menu isn't enriched.
@@ -641,6 +644,25 @@ class AiService {
       if (occasionPrompt) {
         responseData = { ...responseData, reply: `${occasionPrompt} ${responseData.reply || ''}`.trim() };
       }
+    }
+
+    // Persona voice swap (AD-005): reuses the exact suggestions the scoring
+    // engine above already decided on — only the WORDING changes. Runs last,
+    // after exclusion-filtering and the occasion prompt, so Gaspard always
+    // talks about the final, real suggestion set, never a pre-filtered one.
+    if (this.config?.assistantPersona === 'gaspard') {
+      const dayParts = await this.fileService.loadDayParts();
+      const dayPart = dayParts.length > 0 ? resolveDayPart(dayParts) : null;
+      const isFirstTurn = !(Array.isArray(payload.history) && payload.history.length > 0);
+      responseData = {
+        ...responseData,
+        reply: gaspardVoice.composeReply({
+          message,
+          suggestions: responseData.suggestions || [],
+          dayPart,
+          isFirstTurn
+        })
+      };
     }
 
     await this.appendChatLog(requestBody, responseData);

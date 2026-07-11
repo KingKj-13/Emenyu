@@ -54,6 +54,30 @@ function normalizeBasePath(value) {
   return `/${raw.replace(/^\/+|\/+$/g, '')}`;
 }
 
+// Most routes need to answer at the bare path (local/dev with no prefix), the
+// tenant's real public base path, and that base path lower-cased (some proxies/
+// clients hit it lower-case). This used to be re-implemented per-file as a local
+// alias(p) function or an inline literal array hardcoding "/Trump"/"trump" —
+// config.publicBasePath was computed but silently ignored. tenantPaths() is the
+// single source of truth so a tenant's own publicBasePath (e.g. "/Carmella")
+// actually drives routing instead of every tenant secretly answering at /Trump.
+// Pass { includeBare: false } for mounts that must only answer under the
+// tenant prefix (e.g. the client build's static assets, historically NOT
+// served at bare '/' — only the media dir and API/HTML routes were).
+function tenantPaths(config, routePath, { includeBare = true } = {}) {
+  const suffix = routePath === '/' ? '' : routePath;
+  const base = config.publicBasePath || '';
+  const lower = base.toLowerCase();
+  const paths = includeBare ? [`${suffix || '/'}`] : [];
+  if (base) {
+    paths.push(`${base}${suffix}`);
+    if (lower !== base) {
+      paths.push(`${lower}${suffix}`);
+    }
+  }
+  return paths;
+}
+
 function getSharedPassword(isProduction) {
   return (
     process.env.TRUMP_DEFAULT_PASSWORD ||
@@ -244,6 +268,11 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     // waiterApkUrl) when older. Bump via env TRUMP_WAITER_LATEST_VERSION when you
     // publish a new APK — no code deploy needed. Keep in step with app.json version.
     waiterLatestVersion: env.TRUMP_WAITER_LATEST_VERSION || '1.0.1',
+    // Persona-vs-scoring seam (AD-005): selects which NLG voice composes the
+    // customer chat reply. The recommendation SCORING engine (recommendationScoring.js)
+    // is unaffected by this — every persona shares it unchanged. 'template' is
+    // Trump's existing Donald/Sommelier voice; 'gaspard' is Carmella's.
+    assistantPersona: env.TRUMP_ASSISTANT_PERSONA || 'template',
     host: env.TRUMP_HOST || env.HOST || '0.0.0.0',
     port,
     // Sales/investor demo tenant support (Demo Steakhouse). Unset for Trump's
@@ -811,5 +840,6 @@ module.exports = {
   normalizeName,
   safeFileName,
   sleep,
-  tableIdFromFilename
+  tableIdFromFilename,
+  tenantPaths
 };

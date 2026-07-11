@@ -117,6 +117,8 @@ export function ItemModal({
 }: ItemModalProps) {
   const [qty, setQty] = useState(1);
   const [note, setNote] = useState('');
+  const [selectedVariantName, setSelectedVariantName] = useState<string | null>(null);
+  const [selectedAddonNames, setSelectedAddonNames] = useState<string[]>([]);
   const [imgError, setImgError] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [playMedia, setPlayMedia] = useState(false);
@@ -134,6 +136,9 @@ export function ItemModal({
     setVideoReady(false);
     setImgError(false);
     setVideoError(false);
+    const baseVariants = (item.variants || []).filter(v => !v.isAddon);
+    setSelectedVariantName(baseVariants[0]?.name ?? null);
+    setSelectedAddonNames([]);
     const timer = window.setTimeout(() => setPlayMedia(true), 3000);
     return () => window.clearTimeout(timer);
   }, [open, item?.name]);
@@ -149,8 +154,27 @@ export function ItemModal({
   const videoSrc = videoError ? null : resolveVideo(item);
   const youtubeSrc = videoError ? null : resolveYouTubeEmbed(item, playMedia);
 
+  const baseVariants = (item.variants || []).filter(v => !v.isAddon);
+  const addonVariants = (item.variants || []).filter(v => v.isAddon);
+  const selectedVariant = baseVariants.find(v => v.name === selectedVariantName) ?? null;
+  const selectedAddons = addonVariants.filter(a => selectedAddonNames.includes(a.name));
+  const effectivePrice = (selectedVariant ? selectedVariant.price : item.price)
+    + selectedAddons.reduce((sum, a) => sum + a.price, 0);
+  const effectiveName = selectedVariant
+    ? [item.name, selectedVariant.name, ...selectedAddons.map(a => a.name)].join(' — ')
+    : item.name;
+
+  function toggleAddon(name: string) {
+    setSelectedAddonNames(current =>
+      current.includes(name) ? current.filter(n => n !== name) : [...current, name]
+    );
+  }
+
   function handleAdd() {
-    onAddToCart(item!, qty, note);
+    const cartItem: MenuItem = selectedVariant
+      ? { ...item!, name: effectiveName, price: effectivePrice, img: selectedVariant.img || item!.img }
+      : item!;
+    onAddToCart(cartItem, qty, note);
     setQty(1);
     setNote('');
     onClose();
@@ -287,9 +311,14 @@ export function ItemModal({
         </div>
 
         <div className={styles.body}>
-          {item.available === false && (
+          {(item.available === false || item.availability === 'unavailable') && (
             <div className={styles.unavailableBanner}>
               Sold Out
+            </div>
+          )}
+          {item.availability === 'ask' && item.available !== false && (
+            <div className={styles.unavailableBanner}>
+              Please ask your host — subject to availability today
             </div>
           )}
 
@@ -300,9 +329,44 @@ export function ItemModal({
           </div>
 
           <h2 className={styles.name}>{item.name}</h2>
-          <p className={styles.price}>{formatPrice(item.price)}</p>
+          {item.subtitle ? <p className={styles.description}>{item.subtitle}</p> : null}
+          <p className={styles.price}>{formatPrice(effectivePrice)}</p>
 
+          {item.story ? <p className={styles.story}>{item.story}</p> : null}
           {item.description ? <p className={styles.description}>{item.description}</p> : null}
+
+          {baseVariants.length > 0 && (
+            <div className={styles.variantGroup} role="radiogroup" aria-label="Choose an option">
+              {baseVariants.map(variant => (
+                <label key={variant.name} className={styles.variantOption}>
+                  <input
+                    type="radio"
+                    name="variant"
+                    checked={selectedVariantName === variant.name}
+                    onChange={() => setSelectedVariantName(variant.name)}
+                  />
+                  <span>{variant.name}</span>
+                  <span className={styles.variantPrice}>{formatPrice(variant.price)}</span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          {addonVariants.length > 0 && (
+            <div className={styles.variantGroup} aria-label="Add extras">
+              {addonVariants.map(addon => (
+                <label key={addon.name} className={styles.variantOption}>
+                  <input
+                    type="checkbox"
+                    checked={selectedAddonNames.includes(addon.name)}
+                    onChange={() => toggleAddon(addon.name)}
+                  />
+                  <span>+ {addon.name}</span>
+                  <span className={styles.variantPrice}>+{formatPrice(addon.price)}</span>
+                </label>
+              ))}
+            </div>
+          )}
 
           {item.allergens && (
             <p className={styles.allergens}>

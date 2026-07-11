@@ -1,3 +1,9 @@
+/* Tenant-scoped overrides (no-op unless data-tenant matches — see the file's
+   own header comment). Imported unconditionally so every tenant's build
+   carries the same bundle; only the active tenant's attribute makes any of
+   it apply. Trump's :root below is unaffected either way. */
+@import './styles/carmella-theme.css';
+
 :root {
   /* ── Midnight navy palette ── */
   --blue-black: #040e1a;

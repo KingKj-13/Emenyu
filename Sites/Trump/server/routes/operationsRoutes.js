@@ -1,9 +1,10 @@
 'use strict';
 // Phase 03 — staff operations routes (shifts, table ownership, notifications, owner
-// ops, audit). Multi-alias path convention (/api, /Trump/api, /trump/api).
-function alias(p) { return [`/api/${p}`, `/Trump/api/${p}`, `/trump/api/${p}`]; }
+// ops, audit). Multi-alias path convention (/api, <publicBasePath>/api, lower-cased).
+const { tenantPaths } = require('../utils/helpers');
 
-function registerOperationsRoutes(app, controllers, auth) {
+function registerOperationsRoutes(app, config, controllers, auth) {
+  const alias = p => tenantPaths(config, `/api/${p}`);
   const staff = auth.requireRoles(['owner', 'manager', 'waiter']);
   const admin = auth.requireRoles(['owner', 'manager']);
   const c = controllers.operations;

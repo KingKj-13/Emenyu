@@ -30,6 +30,7 @@ model MenuCategory {
   title        String
   slug         String
   path         String         @unique
+  intro        String         @default("")
   parentId     Int?
   parent       MenuCategory?  @relation("MenuCategoryChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children     MenuCategory[] @relation("MenuCategoryChildren")
@@ -55,6 +56,8 @@ model MenuItem {
   name           String
   normalizedName String
   description    String       @default("")
+  story          String       @default("")
+  subtitle       String       @default("")
   price          Float        @default(0)
   calories       String       @default("")
   allergens      String       @default("")
@@ -66,11 +69,16 @@ model MenuItem {
   videoVisible   Boolean      @default(true)
   visible        Boolean      @default(true)
   available      Boolean      @default(true)
+  // Superset of `available` for tenants that need a third "ask the kitchen"
+  // state (e.g. Carmella's Gaspard persona). Trump's admin UI keeps using the
+  // boolean; new UIs should read/write this instead.
+  availability   String       @default("available")   // available | ask | unavailable
   chefPick       Boolean      @default(false)
   popular        Boolean      @default(false)
   sourceTitle    String       @default("")
   sortOrder      Int          @default(0)
   metadata       Json?
+  variants       MenuItemVariant[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -80,6 +88,47 @@ model MenuItem {
   @@index([available])
   @@index([chefPick])
   @@index([popular])
+}
+
+// Carmella: multi-choice items (e.g. "Amy's Choice": Plain / Ham & cheese /
+// Extra mushroom addon). isAddon marks a variant as an add-on to the base
+// item's price rather than an alternative to it.
+model MenuItemVariant {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("trump")
+  itemId       Int
+  item         MenuItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  name         String
+  price        Float    @default(0)
+  imagePath    String   @default("")
+  isAddon      Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([restaurantId, itemId, sortOrder])
+}
+
+// Carmella: time-windowed content (greeting, lead chapters, suggestion strip,
+// chat chips) that reorders/reskins the menu by time of day. Net-new — Trump
+// has no analog today.
+model DayPart {
+  id            Int      @id @default(autoincrement())
+  restaurantId  String   @default("trump")
+  slug          String
+  name          String
+  fromTime      String                    // "HH:MM", restaurant-local time
+  toTime        String
+  greeting      String   @default("")
+  leadChapters  Json?
+  gaspardChips  Json?
+  suggestStrip  Json?
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([restaurantId, slug])
+  @@index([restaurantId, sortOrder])
 }
 
 model FeaturedItem {
@@ -118,6 +167,9 @@ model Recommendation {
 // MenuItem.id (scalar, FK-constrained in SQL). recType + beverageKind drive the
 // category-safety layer; priority/active/season/rotationGroup drive ordering and
 // rotation; reason is the chef's one-line note shown on the recommendation card.
+// Carmella: curatorial item-to-item pairings (carmella-menu-data.json's
+// `pairings` map) reuse this model with recType="PAIRING" and `reason` as the
+// pairing note — no schema change needed (see ARCHITECTURE_DECISIONS.md AD-002).
 model MenuItemRecommendation {
   id            Int       @id @default(autoincrement())
   restaurantId  String    @default("trump")
@@ -405,6 +457,10 @@ model RecommendationBundle {
   priority      Int                        @default(100)
   rotationGroup String                     @default("")
   sortOrder     Int                        @default(0)
+  // Carmella: a fixed all-in price that may differ from summing item prices
+  // (null = fall back to summing items, Trump's current behavior).
+  total         Float?
+  daypart       String                     @default("")   // "" = all day parts
   items         RecommendationBundleItem[]
   createdBy     String                     @default("system")
   createdAt     DateTime                   @default(now())
@@ -412,6 +468,7 @@ model RecommendationBundle {
 
   @@index([restaurantId, active, priority])
   @@index([restaurantId, rotationGroup])
+  @@index([restaurantId, daypart])
 }
 
 model RecommendationBundleItem {

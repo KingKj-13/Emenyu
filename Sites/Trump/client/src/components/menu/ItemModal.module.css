@@ -127,10 +127,54 @@
   line-height: 1.6;
 }
 
+/* Narrative "story" line (Carmella and any future tenant with authored
+   copy) — serif italic, sits above the description per the design brief. */
+.story {
+  margin: 0 0 10px;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--color-gold-soft, var(--color-gold));
+  line-height: 1.5;
+}
+
 .allergens {
   margin: 0 0 8px;
   font-size: 12px;
   color: rgba(201, 187, 165, 0.7);
+}
+
+.variantGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(200, 165, 85, 0.2);
+  border-radius: 10px;
+}
+
+.variantOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--color-sand);
+  cursor: pointer;
+}
+
+.variantOption input {
+  accent-color: var(--color-gold);
+  cursor: pointer;
+}
+
+.variantOption span:first-of-type {
+  flex: 1;
+}
+
+.variantPrice {
+  color: var(--color-gold);
+  font-weight: 600;
 }
 
 .calories {

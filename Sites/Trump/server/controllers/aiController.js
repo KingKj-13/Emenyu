@@ -1,13 +1,22 @@
-function createAiController({ aiService, config = {}, waiterWorkflowService = null }) {
+const { resolveDayPart } = require('../utils/dayPartResolver');
+
+function createAiController({ aiService, config = {}, waiterWorkflowService = null, fileService = null }) {
   return {
     // Public client config (Phase 3B): lets the SPA render the assistant's name
     // from server config instead of hardcoding it.
-    getConfig(req, res) {
+    async getConfig(req, res) {
+      // Day-part engine (Carmella): [] for tenants with no DayPart rows (Trump,
+      // Demo), so currentDayPart is simply omitted for them — no behavior change.
+      const dayParts = fileService ? await fileService.loadDayParts() : [];
+      const currentDayPart = dayParts.length > 0 ? resolveDayPart(dayParts) : null;
+
       res.json({
         assistantName: config.assistantName || '🍷 Your Sommelier',
+        assistantPersona: config.assistantPersona || 'template',
         brandName: config.brandName || 'Trump',
         waiterApkUrl: config.waiterApkUrl || '',
         waiterLatestVersion: config.waiterLatestVersion || '',
+        ...(currentDayPart ? { currentDayPart } : {})
       });
     },
 

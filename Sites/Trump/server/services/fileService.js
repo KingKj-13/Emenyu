@@ -156,6 +156,10 @@ class FileService {
     return (await this.prismaMenu.loadPopular()) || [];
   }
 
+  async loadDayParts() {
+    return (await this.prismaMenu.loadDayParts()) || [];
+  }
+
   async saveRecommendations(recommendations) {
     await this.prismaMenu.saveRecommendations(recommendations);
   }

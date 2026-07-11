@@ -358,7 +358,7 @@ class SocketService {
     }
     const tableId = order?.table_number || order?.tableId || '';
     if (tableId) {
-      pushService.notifyNewOrder(this.config.restaurantId, tableId).catch(() => {});
+      pushService.notifyNewOrder(this.config.restaurantId, tableId, this.config.publicBasePath).catch(() => {});
     }
   }
 
@@ -378,7 +378,7 @@ class SocketService {
       .to(this.getTableRooms(tableId))
       .emit('kitchenStatusUpdate', payload);
     if (kitchenStatus === 'ready') {
-      pushService.notifyOrderReady(this.config.restaurantId, tableId).catch(() => {});
+      pushService.notifyOrderReady(this.config.restaurantId, tableId, this.config.publicBasePath).catch(() => {});
     }
   }
 
@@ -620,7 +620,7 @@ class SocketService {
       message: `${displayTable} is calling you.`,
       timestamp
     });
-    pushService.notifyCallWaiter(this.config.restaurantId, cleanId).catch(() => {});
+    pushService.notifyCallWaiter(this.config.restaurantId, cleanId, this.config.publicBasePath).catch(() => {});
 
     this.io.to(this.getAdminRoom()).emit('waiterCallAlert', {
       restaurantId: this.config.restaurantId,

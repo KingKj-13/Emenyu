@@ -1,5 +1,5 @@
 import { ENDPOINTS } from '../constants/api';
-import type { MenuData, ChefRec, ChefRecInput, RecommendationAnalytics, RecoInsightsResult, BundleAdmin, BundleInput } from '../types/menu';
+import type { MenuData, ChefRec, ChefRecInput, RecommendationAnalytics, RecoInsightsResult, BundleAdmin, BundleInput, AppConfig } from '../types/menu';
 import type { PersonaOrder } from '../constants/recommendedOrders';
 import type { LoginPayload, LoginResponse, AuthUser } from '../types/auth';
 import type { OrderPayload } from '../types/cart';
@@ -45,8 +45,8 @@ export const api = {
     return postJson<unknown>(ENDPOINTS.chat, payload);
   },
 
-  getConfig(): Promise<{ assistantName: string; brandName: string; waiterApkUrl?: string }> {
-    return fetchJson<{ assistantName: string; brandName: string; waiterApkUrl?: string }>(ENDPOINTS.config);
+  getConfig(): Promise<AppConfig> {
+    return fetchJson<AppConfig>(ENDPOINTS.config);
   },
 
   aiPairing(payload: unknown) {

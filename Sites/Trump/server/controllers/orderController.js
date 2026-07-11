@@ -6,12 +6,12 @@ function createOrderController({ config, fileService, socketService, orderValida
   return {
     serveAdminPage(req, res) {
       // Phase 01B: the admin console is the React SPA (client/dist). React Router
-      // (basename "/Trump") renders the /Admin route. Served at /Trump/Admin.
+      // (basename config.publicBasePath) renders the /Admin route.
       res.sendFile(path.join(config.directories.base, 'client', 'dist', 'index.html'));
     },
 
     redirectRoot(req, res) {
-      res.redirect('/Trump/table1');
+      res.redirect(`${config.publicBasePath}/table1`);
     },
 
     serveMenuPage(req, res, next) {

@@ -17,7 +17,7 @@ import { AuditViewer } from '../components/operations/AuditViewer';
 import { AIPerformancePanel } from '../components/analytics/AIPerformancePanel';
 import { ChefIntelligencePanel } from '../components/analytics/ChefIntelligencePanel';
 import { CustomerJourneyPanel } from '../components/analytics/CustomerJourneyPanel';
-import { BRAND_NAME, BRAND_TAGLINE, QR_BASE } from '../constants/api';
+import { BRAND_NAME, BRAND_TAGLINE, QR_BASE, ENDPOINTS } from '../constants/api';
 
 type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles' | 'servicedesk' | 'operations' | 'audit' | 'aiperformance' | 'chefintel' | 'journey';
 
@@ -2703,7 +2703,7 @@ function NotificationButton() {
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') { setStatus('denied'); return; }
 
-      const resp = await fetch('/Trump/api/push/vapid-key').then(r => r.json());
+      const resp = await fetch(ENDPOINTS.pushVapidKey).then(r => r.json());
       const publicKey = resp?.publicKey;
       if (!publicKey) { setStatus('idle'); return; }
 
@@ -2713,7 +2713,7 @@ function NotificationButton() {
         applicationServerKey: publicKey
       });
 
-      await fetch('/Trump/api/push/subscribe', {
+      await fetch(ENDPOINTS.pushSubscribe, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sub.toJSON())

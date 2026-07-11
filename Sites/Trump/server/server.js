@@ -67,7 +67,7 @@ const { MediaEnrichmentService } = require('./services/mediaEnrichmentService');
 const { RecommendationEventService } = require('./services/recommendationEventService');
 const { RecommendationBundleService } = require('./services/recommendationBundleService');
 const { createLogger } = require('./utils/logger');
-const { createConfig, createRoleAuth } = require('./utils/helpers');
+const { createConfig, createRoleAuth, tenantPaths } = require('./utils/helpers');
 
 function loadEnvironment() {
   dotenv.config({ quiet: true });
@@ -268,7 +268,7 @@ async function startServer(baseDirOverride) {
   logger.info('nlg_mode', nlgService.status());
 
   const controllers = {
-    ai: createAiController({ aiService, config, waiterWorkflowService }),
+    ai: createAiController({ aiService, config, waiterWorkflowService, fileService }),
     analytics: createAnalyticsController({ config }),
     recommendationAnalytics: createRecommendationAnalyticsController({ recommendationEventService, prismaMenuService: fileService.prismaMenu }),
     recommendationBundle: createRecommendationBundleController({ recommendationBundleService, socketService }),
@@ -300,95 +300,103 @@ async function startServer(baseDirOverride) {
   };
   const uploadController = createUploadController(config, { logger });
 
-  app.use(createRequestLogger(logger));
+  app.use(createRequestLogger(logger, config));
   configureSecurity(app, config, logger);
   app.use(express.json({ limit: config.http.bodyLimit }));
   app.use(express.urlencoded({ extended: true, limit: config.http.urlEncodedLimit }));
 
   registerHealthRoutes(app, config, fileService, new Date().toISOString());
 
-  app.get(['/favicon.ico', '/Trump/favicon.ico', '/trump/favicon.ico'], (req, res) => {
+  app.get(tenantPaths(config, '/favicon.ico'), (req, res) => {
     res.status(204).end();
   });
 
   // Retired (Phase 01B): the vanilla admin.html is superseded by the React /Admin
   // dashboard. Redirect preserves the old bookmark and keeps the same owner/manager
-  // guard. A .html URL cannot render the SPA directly (React Router basename "/Trump"),
-  // so we redirect to the canonical /Admin route instead of serving the SPA here.
+  // guard. A .html URL cannot render the SPA directly (React Router basename is
+  // config.publicBasePath), so we redirect to the canonical /Admin route instead
+  // of serving the SPA here.
   app.get(
-    ['/admin.html', '/Trump/admin.html', '/trump/admin.html'],
+    tenantPaths(config, '/admin.html'),
     auth.requirePage(['owner', 'manager']),
     (req, res) => res.redirect(`${config.publicBasePath}/Admin`)
   );
   // Retired (Phase 01B): the vanilla waiter.html is superseded by the React /Waiter
   // app. Redirect preserves the bookmark and the same guard (a .html URL cannot
-  // render the SPA directly because React Router uses basename "/Trump").
+  // render the SPA directly because React Router basename is config.publicBasePath).
   app.get(
-    ['/waiter.html', '/Trump/waiter.html', '/trump/waiter.html'],
+    tenantPaths(config, '/waiter.html'),
     auth.requirePage(['owner', 'manager', 'waiter']),
     (req, res) => res.redirect(`${config.publicBasePath}/Waiter`)
   );
   // Retired: the vanilla owner.html is superseded by the React /Owner dashboard.
   app.get(
-    ['/owner.html', '/Trump/owner.html', '/trump/owner.html'],
+    tenantPaths(config, '/owner.html'),
     auth.requirePage(['owner']),
     (req, res) => res.redirect(`${config.publicBasePath}/Owner`)
   );
 
   const staticOptions = createStaticOptions(config);
-  // Overridable so a second tenant process (e.g. Sites/Demo) can reuse Trump's
-  // real client build / Images / Video without duplicating either on disk.
+  // Overridable so a second tenant process (e.g. Sites/Demo, Sites/Carmella) can
+  // reuse Trump's real client build / Images / Video without duplicating either
+  // on disk. Each tenant serves its own build under its own publicBasePath.
   const clientDist = config.directories.clientDist;
   const mediaDir = config.directories.media;
-  app.use('/Trump', express.static(clientDist, staticOptions));
-  app.use('/trump', express.static(clientDist, staticOptions));
+  // Client build is only ever served under the tenant prefix, never at bare '/'
+  // (unchanged from before this refactor).
+  for (const p of tenantPaths(config, '', { includeBare: false })) {
+    app.use(p, express.static(clientDist, staticOptions));
+  }
   app.use(express.static(mediaDir, staticOptions));
-  app.use('/Trump', express.static(mediaDir, staticOptions));
-  app.use('/trump', express.static(mediaDir, staticOptions));
+  for (const p of tenantPaths(config, '', { includeBare: false })) {
+    app.use(p, express.static(mediaDir, staticOptions));
+  }
 
   // Legacy login URL — React Router handles this via SPA fallback below
-  app.post(['/api/auth/login', '/Trump/api/auth/login', '/trump/api/auth/login'], auth.login);
-  app.post(['/api/auth/logout', '/Trump/api/auth/logout', '/trump/api/auth/logout'], auth.logout);
-  app.get(['/api/auth/me', '/Trump/api/auth/me', '/trump/api/auth/me'], auth.me);
+  app.post(tenantPaths(config, '/api/auth/login'), auth.login);
+  app.post(tenantPaths(config, '/api/auth/logout'), auth.logout);
+  app.get(tenantPaths(config, '/api/auth/me'), auth.me);
   app.get(
-    ['/api/auth/accounts', '/Trump/api/auth/accounts', '/trump/api/auth/accounts'],
+    tenantPaths(config, '/api/auth/accounts'),
     auth.requireRoles(['owner', 'manager']),
     auth.listAccounts
   );
   app.post(
-    ['/api/auth/accounts', '/Trump/api/auth/accounts', '/trump/api/auth/accounts'],
+    tenantPaths(config, '/api/auth/accounts'),
     auth.requireRoles(['owner', 'manager']),
     auth.createAccount
   );
   app.patch(
-    ['/api/auth/accounts/:username', '/Trump/api/auth/accounts/:username', '/trump/api/auth/accounts/:username'],
+    tenantPaths(config, '/api/auth/accounts/:username'),
     auth.requireRoles(['owner', 'manager']),
     auth.updateAccount
   );
 
-  registerAnalyticsRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
-  registerRecommendationAnalyticsRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
-  registerRecommendationBundleRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
-  registerMenuRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
-  registerDealRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
-  registerKitchenRoutes(app, controllers, auth.requireRoles(['owner', 'manager', 'kitchen']));
-  registerPushRoutes(app, controllers, auth.requireRoles(['owner', 'manager', 'waiter', 'kitchen']));
-  registerRatingRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
-  registerReservationRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
-  registerUploadRoutes(app, uploadController, auth.requireRoles(['owner', 'manager']));
-  registerWaiterApiRoutes(app, controllers, auth);
-  registerOperationsRoutes(app, controllers, auth);
-  registerAuthTokenRoutes(app, controllers, auth);
-  registerOrderRoutes(app, controllers, auth);
+  registerAnalyticsRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerRecommendationAnalyticsRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerRecommendationBundleRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerMenuRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerDealRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerKitchenRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager', 'kitchen']));
+  registerPushRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager', 'waiter', 'kitchen']));
+  registerRatingRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerReservationRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerUploadRoutes(app, config, uploadController, auth.requireRoles(['owner', 'manager']));
+  registerWaiterApiRoutes(app, config, controllers, auth);
+  registerOperationsRoutes(app, config, controllers, auth);
+  registerAuthTokenRoutes(app, config, controllers, auth);
+  registerOrderRoutes(app, config, controllers, auth);
 
-  // SPA fallback: serve React app for all /Trump/* routes with no file extension
+  // SPA fallback: serve React app for all <publicBasePath>/* routes with no
+  // file extension (never at bare '/', unchanged from before this refactor).
   const spaIndex = path.join(__dirname, '../client/dist/index.html');
   function serveSpa(req, res, next) {
     if (/\.\w+$/.test(req.path)) return next();
     res.sendFile(spaIndex);
   }
-  app.use('/Trump', serveSpa);
-  app.use('/trump', serveSpa);
+  for (const p of tenantPaths(config, '', { includeBare: false })) {
+    app.use(p, serveSpa);
+  }
 
   app.use(createErrorHandler(logger, config));
 

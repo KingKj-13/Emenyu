@@ -1,5 +1,7 @@
-function registerUploadRoutes(app, uploadController, adminAuth) {
-  const uploadPaths = ['/api/upload', '/Trump/api/upload', '/trump/api/upload'];
+const { tenantPaths } = require('../utils/helpers');
+
+function registerUploadRoutes(app, config, uploadController, adminAuth) {
+  const uploadPaths = tenantPaths(config, '/api/upload');
   app.post(uploadPaths, adminAuth, uploadController.middleware, uploadController.uploadMedia);
 }
 

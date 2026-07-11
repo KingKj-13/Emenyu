@@ -1,10 +1,9 @@
 // Waiter-AI API routes. All require a floor role. Follows the project's
-// multi-alias path convention (/api/..., /Trump/api/..., /trump/api/...).
-function alias(path) {
-  return [`/api/${path}`, `/Trump/api/${path}`, `/trump/api/${path}`];
-}
+// multi-alias path convention (/api/..., <publicBasePath>/api/..., lower-cased).
+const { tenantPaths } = require('../utils/helpers');
 
-function registerWaiterApiRoutes(app, controllers, auth) {
+function registerWaiterApiRoutes(app, config, controllers, auth) {
+  const alias = path => tenantPaths(config, `/api/${path}`);
   const waiterAuth = auth.requireRoles(['owner', 'manager', 'waiter']);
   const c = controllers.waiterApi;
 
