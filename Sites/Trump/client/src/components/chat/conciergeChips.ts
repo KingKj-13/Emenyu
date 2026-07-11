@@ -13,7 +13,7 @@ export const QUICK_ACTIONS: ConciergeChip[] = [
   { label: 'Recommend a wine', message: 'Can you recommend a wine for tonight?' },
   { label: 'Pair my drink', message: 'What food pairs with my drink?' },
   { label: "Chef's pick", message: "What's the chef's pick tonight?" },
-  { label: 'Premium upgrade', message: 'Is there a premium upgrade available for what I have?' },
+  { label: 'Treat yourself', message: 'Is there a premium upgrade available for what I have?' },
   { label: 'Dessert', message: 'What would you recommend for dessert?' },
   { label: 'Coffee', message: 'What coffee would you recommend to finish?' },
   { label: 'Vegetarian', message: 'What vegetarian options do you have?' },
@@ -54,7 +54,7 @@ export function getContextChips(cartItems: CartItem[]): ConciergeChip[] {
     return [
       { label: 'Pair my drink', message: 'What food pairs with my drink?' },
       { label: "Chef's pick", message: "What's the chef's pick tonight?" },
-      { label: 'Premium upgrade', message: 'Is there a premium upgrade available for what I have?' },
+      { label: 'Treat yourself', message: 'Is there a premium upgrade available for what I have?' },
       { label: 'Best seller', message: "What's your best seller?" },
     ];
   }

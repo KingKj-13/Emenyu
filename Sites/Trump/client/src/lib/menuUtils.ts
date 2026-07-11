@@ -15,19 +15,62 @@ function matchesSearch(item: MenuItem, query: string): boolean {
     .includes(q);
 }
 
-function shouldHideItem(item: MenuItem, activeFilters: Set<string>): boolean {
+// Protein-family "No X" filters map onto item.tags.protein, which
+// scripts/enrich-menu-tags.js populates on every item (100% coverage, with a
+// name-keyword fallback) -- unlike the legacy `allergens` string column,
+// which is only set on ~38% of items and never uses "Shellfish" as a token
+// (it uses "Seafood"), so a squid/prawn dish could slip through a "No
+// Seafood" toggle or a "calamari" search with the old text-only check.
+const PROTEIN_FILTER_KEYS = new Set(['beef', 'chicken', 'pork', 'lamb', 'seafood']);
+
+// Allergen-style "No X" filters map onto item.tags.dietary, which normalizes
+// the same allergens tokens into consistent values via DIETARY_TOKENS in
+// enrich-menu-tags.js.
+const DIETARY_EXCLUDE_TAG: Record<string, string> = {
+  egg: 'contains-egg',
+  gluten: 'contains-gluten',
+  nuts: 'contains-nuts',
+};
+
+// Exported so useFilters.ts (the identical guest-facing menu drawer) shares
+// this exact logic instead of maintaining its own copy that can drift.
+export function shouldHideItemForFilters(item: MenuItem, activeFilters: Set<string>): boolean {
   if (activeFilters.size === 0) return false;
   const allergens = String(item.allergens || '').toLowerCase();
   const fullText = [item.name, item.description, item.allergens, item.types].join(' ').toLowerCase();
+  const proteinTags = item.tags?.protein ?? [];
+  const dietaryTags = item.tags?.dietary ?? [];
+
   for (const filter of activeFilters) {
     const lower = filter.toLowerCase();
-    if (lower === 'vegan' || lower === 'vegetarian') {
-      if (!fullText.includes(lower)) return true;
+
+    if (lower === 'vegan') {
+      if (!dietaryTags.includes('vegan') && !fullText.includes('vegan')) return true;
       continue;
     }
+    if (lower === 'vegetarian') {
+      // Vegan dishes are also vegetarian even if a specific item's data only
+      // ever tagged it "vegan" and not "vegetarian".
+      const isVegetarian = dietaryTags.includes('vegetarian') || dietaryTags.includes('vegan') || fullText.includes('vegetarian');
+      if (!isVegetarian) return true;
+      continue;
+    }
+    if (PROTEIN_FILTER_KEYS.has(lower)) {
+      if (proteinTags.includes(lower) || allergens.includes(lower) || fullText.includes(lower)) return true;
+      continue;
+    }
+    if (DIETARY_EXCLUDE_TAG[lower]) {
+      if (dietaryTags.includes(DIETARY_EXCLUDE_TAG[lower]) || allergens.includes(lower) || fullText.includes(lower)) return true;
+      continue;
+    }
+    // Fallback for any filter key not explicitly mapped above.
     if (allergens.includes(lower) || fullText.includes(lower)) return true;
   }
   return false;
+}
+
+function shouldHideItem(item: MenuItem, activeFilters: Set<string>): boolean {
+  return shouldHideItemForFilters(item, activeFilters);
 }
 
 function visibleItems(items: MenuItem[], activeFilters: Set<string>, query: string): MenuItem[] {

@@ -13,8 +13,6 @@ interface AppContextValue {
   user: AuthUser | null;
   setUser: (u: AuthUser | null) => void;
   authLoading: boolean;
-  bookMode: boolean;
-  setBookMode: (v: boolean) => void;
   bookType: 'food' | 'drinks';
   setBookType: (v: 'food' | 'drinks') => void;
   chatOpen: boolean;
@@ -36,7 +34,6 @@ export function AppProvider({ children, tableIdFromUrl }: { children: ReactNode;
   const [device] = useState<DeviceIdentity>(getDeviceIdentity);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [bookMode, setBookMode] = useState(false);
   const [bookType, setBookType] = useState<'food' | 'drinks'>('food');
   const [chatOpen, setChatOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -85,8 +82,6 @@ export function AppProvider({ children, tableIdFromUrl }: { children: ReactNode;
       user,
       setUser,
       authLoading,
-      bookMode,
-      setBookMode,
       bookType,
       setBookType,
       chatOpen,

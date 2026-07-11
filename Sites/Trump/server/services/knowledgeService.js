@@ -113,23 +113,52 @@ function createKnowledgeService({ config, fileService, logger = null }) {
     return { reply: `Today's special — ${deal.name || 'Chef’s deal'}${items.length ? `: ${items.join(', ')}` : ''}${price}.` };
   }
 
+  // Expand a spoken allergen word to (a) every literal term that might appear
+  // in menu name/description/allergens text, AND (b) the structured
+  // protein/dietary tags scripts/enrich-menu-tags.js writes on every item.
+  // The tag check matters most: the legacy `allergens` column is only
+  // populated on a minority of items and never contains the literal word
+  // "shellfish" (it uses "Seafood"), so a guest saying "I'm allergic to
+  // shellfish" previously matched almost nothing and silently let unsafe
+  // dishes (e.g. a calamari/prawn dish) through as "safe".
+  const ALLERGEN_EXPANSIONS = {
+    shellfish: { terms: ['shellfish', 'seafood', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'crayfish', 'lobster', 'crab', 'clam', 'scallop'], proteinTags: ['seafood'] },
+    seafood: { terms: ['seafood', 'shellfish', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'fish', 'salmon', 'crayfish', 'lobster', 'crab'], proteinTags: ['seafood'] },
+    fish: { terms: ['fish', 'salmon', 'kingklip', 'hake', 'sole', 'sushi', 'sashimi'], proteinTags: ['seafood'] },
+    gluten: { terms: ['gluten', 'bread', 'pasta', 'crumbed', 'tempura', 'batter', 'noodle', 'flour'], dietaryTags: ['contains-gluten'] },
+    nut: { terms: ['nut', 'nuts', 'almond', 'peanut', 'cashew'], dietaryTags: ['contains-nuts'] },
+    nuts: { terms: ['nut', 'nuts', 'almond', 'peanut', 'cashew'], dietaryTags: ['contains-nuts'] },
+    egg: { terms: ['egg', 'eggs', 'benedict', 'mayo', 'mayonnaise', 'aioli', 'hollandaise', 'meringue'], dietaryTags: ['contains-egg'] },
+    dairy: { terms: ['dairy', 'cheese', 'cream', 'milk', 'butter', 'mozzarella', 'feta', 'halloumi'] },
+    lactose: { terms: ['dairy', 'cheese', 'cream', 'milk', 'butter', 'mozzarella', 'feta', 'halloumi'] },
+    soy: { terms: ['soy', 'soya', 'tofu', 'edamame'] }
+  };
+
   // Allergen guidance is conservative: we surface items that do NOT list the
-  // allergen, and always defer to the waiter for confirmation.
+  // allergen (by text OR by structured tag), and always defer to the waiter
+  // for confirmation.
   async function allergenReply(normalized, menuContext) {
-    const ALLERGENS = ['gluten', 'nut', 'nuts', 'dairy', 'lactose', 'egg', 'shellfish', 'soy'];
-    const term = ALLERGENS.find(a => normalized.includes(a));
+    const term = Object.keys(ALLERGEN_EXPANSIONS).find(a => normalized.includes(a));
     if (/halal/.test(normalized)) {
       return { reply: 'Some dishes can be prepared to preference — please ask your waiter and we’ll confirm with the kitchen.' };
     }
     if (!term || !menuContext) {
       return { reply: 'I can flag allergens from our menu data, but please always confirm with your waiter before ordering.' };
     }
+    const rule = ALLERGEN_EXPANSIONS[term];
     const safe = (menuContext.items || [])
-      .filter(it => !String(it.allergens || '').toLowerCase().includes(term) && !String(it.searchText || '').includes(term))
+      .filter(it => {
+        const proteinTags = (it.tags && it.tags.protein) || [];
+        const dietaryTags = (it.tags && it.tags.dietary) || [];
+        if (rule.proteinTags && rule.proteinTags.some(t => proteinTags.includes(t))) return false;
+        if (rule.dietaryTags && rule.dietaryTags.some(t => dietaryTags.includes(t))) return false;
+        const hay = `${String(it.allergens || '')} ${String(it.searchText || '')}`.toLowerCase();
+        return !rule.terms.some(t => hay.includes(t));
+      })
       .slice(0, 4);
     return {
       reply: safe.length
-        ? `A few options that don't list ${term} in our data: ${safe.map(i => i.name).slice(0, 3).join(', ')}. Please confirm with your waiter before ordering.`
+        ? `A few options that don't contain ${term} in our data: ${safe.map(i => i.name).slice(0, 3).join(', ')}. Please confirm with your waiter before ordering.`
         : `I can't find enough ${term}-free matches in our data — please ask your waiter so the kitchen can confirm.`,
       suggestions: safe
     };

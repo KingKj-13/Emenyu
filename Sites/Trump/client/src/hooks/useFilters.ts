@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { FILTER_OPTIONS } from '../constants/filters';
+import { shouldHideItemForFilters } from '../lib/menuUtils';
 import type { MenuItem } from '../types/menu';
 
 export function useFilters() {
@@ -20,20 +21,7 @@ export function useFilters() {
     setSearchQuery('');
   }, []);
 
-  const shouldHideItem = useCallback((item: MenuItem): boolean => {
-    if (activeFilters.size === 0) return false;
-    const allergens = String(item.allergens || '').toLowerCase();
-    const fullText = [item.name, item.description, item.allergens, item.types].join(' ').toLowerCase();
-    for (const filter of activeFilters) {
-      const lower = filter.toLowerCase();
-      if (lower === 'vegan' || lower === 'vegetarian') {
-        if (!fullText.includes(lower)) return true;
-        continue;
-      }
-      if (allergens.includes(lower) || fullText.includes(lower)) return true;
-    }
-    return false;
-  }, [activeFilters]);
+  const shouldHideItem = useCallback((item: MenuItem): boolean => shouldHideItemForFilters(item, activeFilters), [activeFilters]);
 
   const matchesSearch = useCallback((item: MenuItem): boolean => {
     if (!searchQuery) return true;

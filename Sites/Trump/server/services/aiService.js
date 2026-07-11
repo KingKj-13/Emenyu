@@ -98,10 +98,20 @@ const QUERY_INTENTS = [
 
 // When a guest excludes a category, expand it to the concrete menu terms to filter.
 const NEGATION_SYNONYMS = {
-  seafood: ['seafood', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'fish', 'salmon', 'kingklip', 'hake', 'sole', 'sushi', 'sashimi', 'linefish', 'crayfish', 'lobster'],
+  // "shellfish" is one of the most common real allergy words guests actually
+  // say ("I'm allergic to shellfish") and previously had NO entry here at
+  // all, so it fell through to the single literal word "shellfish" — which
+  // never appears in any menu item's text (the data uses "Seafood"/dish
+  // names), silently defeating the exclusion. Same list as `seafood` below.
+  seafood: ['seafood', 'shellfish', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'fish', 'salmon', 'kingklip', 'hake', 'sole', 'sushi', 'sashimi', 'linefish', 'crayfish', 'lobster', 'crab', 'clam', 'clams', 'scallop', 'scallops'],
+  shellfish: ['seafood', 'shellfish', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'crayfish', 'lobster', 'crab', 'clam', 'clams', 'scallop', 'scallops'],
+  crustacean: ['prawn', 'prawns', 'crayfish', 'lobster', 'crab'],
   fish: ['fish', 'salmon', 'kingklip', 'hake', 'sole', 'linefish', 'sushi', 'sashimi'],
   prawn: ['prawn', 'prawns'],
   prawns: ['prawn', 'prawns'],
+  // "egg" also had no entry — an "allergic to eggs" exclusion fell through to
+  // the literal word "egg", missing dishes that contain egg without naming it.
+  egg: ['egg', 'eggs', 'benedict', 'mayo', 'mayonnaise', 'aioli', 'hollandaise', 'meringue'],
   meat: ['beef', 'steak', 'rump', 'fillet', 'ribeye', 'tomahawk', 'sirloin', 'lamb', 'pork', 'chicken', 'ribs', 'wors', 'boerewors', 'game', 'venison', 'oxtail', 'biltong'],
   steak: ['steak', 'rump', 'fillet', 'ribeye', 'tomahawk', 'sirloin', 'beef'],
   beef: ['beef', 'steak', 'rump', 'fillet', 'ribeye', 'tomahawk', 'sirloin'],
@@ -366,6 +376,33 @@ function crispWhites(items = []) {
   return items
     .filter(item => item.tags && ['white', 'sparkling', 'rose'].includes(item.tags.drinkType))
     .sort((a, b) => (CRISP_RANK[a.tags.drinkType] ?? 3) - (CRISP_RANK[b.tags.drinkType] ?? 3));
+}
+
+// Full-bodied reds for a red-meat pairing -- the classic counterpart to
+// crispWhites() above. Without this, a generic "what wine pairs with steak"
+// question (no specific dish named, so nothing to read a protein tag from)
+// fell through to whatever wines happened to be listed first in the menu
+// data -- which could easily be Champagne/MCC if that's how the wine list
+// is ordered, producing exactly the wrong classic pairing for red meat.
+function fullBodiedReds(items = []) {
+  return items.filter(item => item.tags && item.tags.drinkType === 'red');
+}
+
+// A specific dish (`mentioned`) carries its own protein tag, but a generic
+// category question -- "what wine pairs with steak?" -- never resolves to a
+// specific menu item (findMentionedItem() requires the message to contain a
+// dish's full name), so `mentioned` stays null and there's nothing to read a
+// tag from. This falls back to recognizing the spoken protein word itself.
+function proteinFromMessage(mentioned, lower) {
+  if (mentioned && Array.isArray(mentioned.tags?.protein) && mentioned.tags.protein.length) {
+    return mentioned.tags.protein;
+  }
+  if (/\b(steak|beef|rump|fillet|ribeye|tomahawk|sirloin|red meat|oxtail|biltong)\b/.test(lower)) return ['beef'];
+  if (/\b(lamb|game|venison)\b/.test(lower)) return ['lamb'];
+  if (/\b(seafood|shellfish|prawn|prawns|calamari|squid|mussel|oyster|fish|salmon|kingklip|hake|sole|sushi|sashimi)\b/.test(lower)) return ['seafood'];
+  if (/\bchicken\b/.test(lower)) return ['chicken'];
+  if (/\bpork\b/.test(lower)) return ['pork'];
+  return [];
 }
 
 class AiService {
@@ -665,7 +702,21 @@ class AiService {
       };
     }
 
-    await this.appendChatLog(requestBody, responseData);
+    // Chat logging is a side effect, not part of the guest-facing reply --
+    // `responseData` above is already a complete, successfully-computed
+    // answer. appendChatLog() does an unlocked read-modify-write on one
+    // shared chat_logs.json file (every table's every turn), so concurrent
+    // chat requests can race on the rename step and intermittently throw
+    // (observed as EPERM/EBUSY on Windows). Previously that error propagated
+    // up through this unguarded `await`, discarding the already-good reply
+    // and surfacing as a fake "chat failed" error to the guest -- an
+    // identical retry then succeeded once the contention window passed,
+    // because the reply computation itself was never the problem.
+    try {
+      await this.appendChatLog(requestBody, responseData);
+    } catch (error) {
+      this.logger?.warn?.('appendChatLog failed (non-fatal, reply still returned)', { error: error?.message });
+    }
     return responseData;
   }
 
@@ -719,8 +770,18 @@ class AiService {
     const hay = (suggestion.searchText
       || [suggestion.name, suggestion.description, suggestion.category, suggestion.subcategory, suggestion.categoryType]
         .filter(Boolean).join(' ')).toLowerCase();
+    // Defense-in-depth: also check the structured protein/dietary tags
+    // enrich-menu-tags.js writes on every item (e.g. protein: ["seafood"]),
+    // not just free text — a dish can be a genuine match (a squid/prawn dish
+    // tagged protein: ["seafood"]) without the blocked word ever appearing
+    // literally in its name/description/category text.
+    const tagValues = [
+      ...((suggestion.tags && suggestion.tags.protein) || []),
+      ...((suggestion.tags && suggestion.tags.dietary) || [])
+    ];
     for (const term of blocked) {
       if (hay.includes(term)) return true;
+      if (tagValues.includes(term)) return true;
     }
     return false;
   }
@@ -975,12 +1036,26 @@ class AiService {
     // for seafood), not a mixed plate. Resolves "it" from the remembered anchor.
     if (/\bwine\b|\bcellar\b/.test(lower)) {
       const isCrisp = x => x && x.tags && ['white', 'sparkling', 'rose'].includes(x.tags.drinkType);
-      const anchorSeafood = mentioned && mentioned.tags && Array.isArray(mentioned.tags.protein) && mentioned.tags.protein.includes('seafood');
+      const isRed = x => x && x.tags && x.tags.drinkType === 'red';
+      // Resolves from the specific dish's protein tag when one was named
+      // ("a wine for the calamari"), or from the spoken protein word itself
+      // when it wasn't ("what wine pairs with steak?") -- see
+      // proteinFromMessage()'s own comment for why `mentioned` alone isn't
+      // enough to catch the generic-category case.
+      const protein = proteinFromMessage(mentioned, lower);
+      const anchorSeafood = protein.includes('seafood');
+      const anchorRedMeat = protein.some(p => ['beef', 'lamb', 'pork'].includes(p));
       let wines = suggestions.filter(s => s.categoryType === 'WINE');
       if (anchorSeafood) {
         const crisp = wines.filter(isCrisp);
         wines = (crisp.length ? crisp : crispWhites(menuContext.items).slice(0, 4).map(w => publicItem(w, 'Crisp white')));
+      } else if (anchorRedMeat) {
+        const reds = wines.filter(isRed);
+        wines = (reds.length ? reds : fullBodiedReds(menuContext.items).slice(0, 4).map(w => publicItem(w, 'Full-bodied red')));
       }
+      // Last-resort fallback (still no protein signal at all, e.g. "what
+      // wine do you have") stays list order -- there's genuinely no pairing
+      // logic to apply without something to pair against.
       if (wines.length === 0) wines = (menuContext.categorized.WINE || []).slice(0, 3).map(w => publicItem(w, 'Cellar selection'));
       wines = wines.slice(0, 4);
       const lead = mentioned ? `For the ${mentioned.name}, from the cellar I'd pour` : 'From the cellar I would pour';

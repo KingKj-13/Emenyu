@@ -56,8 +56,13 @@ function availabilityCaveat(item) {
 
 // One short, story-rooted reason per dish — never popularity statistics,
 // never sales language (hard rule from the prompt pack's "How you recommend").
+// dishMention() is always embedded mid-sentence with hardcoded closing
+// punctuation appended by composeReply() (a period, or ", and <next mention>."),
+// so its own trailing punctuation must be stripped here — otherwise a dish's
+// story/description (already a full sentence) produces a stray double period
+// ("..") or a period landing mid-sentence before "and" ("Riviera., and").
 function dishMention(item) {
-  const flavour = item.story || item.description || '';
+  const flavour = String(item.story || item.description || '').replace(/[.!?]+\s*$/, '').trim();
   const caveat = availabilityCaveat(item);
   if (flavour) {
     return `the ${item.name}${caveat} — ${flavour}`;

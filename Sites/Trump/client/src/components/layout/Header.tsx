@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Menu, BookOpen, Grid, ShoppingCart, User, ChefHat } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useCart } from '../../hooks/useCart';
@@ -6,8 +6,16 @@ import { LANDING_BRAND_NAME, BRAND_TAGLINE, DEMO_MODE } from '../../constants/ap
 import styles from './Header.module.css';
 
 export function Header() {
-  const { tableId, tableLabel, bookMode, setBookMode, user, setDrawerOpen } = useApp();
+  const { tableId, tableLabel, user, setDrawerOpen } = useApp();
   const { count, setIsOpen } = useCart();
+  // The "Book view" toggle used to flip a bookMode boolean in AppContext that
+  // only drove its own highlight styling -- it never navigated anywhere or
+  // set MenuPage's sectionFilter, so clicking it visibly highlighted but did
+  // nothing else. The real, working book view lives at its own route
+  // (App.tsx: /:tableId/book -> MenuPage sectionFilter="book"), so both
+  // buttons now navigate there/back instead of toggling a disconnected flag.
+  const location = useLocation();
+  const inBookView = location.pathname.endsWith('/book');
 
   return (
     <header className={styles.header} role="banner">
@@ -30,15 +38,15 @@ export function Header() {
             {tableLabel}
           </span>
         )}
-        <button
-          className={`${styles.viewToggle} ${!bookMode ? styles.active : ''}`}
-          onClick={() => setBookMode(false)}
+        <Link
+          to={`/${tableId}/menu`}
+          className={`${styles.viewToggle} ${!inBookView ? styles.active : ''}`}
           aria-label="Grid view"
-          aria-pressed={!bookMode}
+          aria-current={!inBookView ? 'page' : undefined}
           title="Menu grid"
         >
           <Grid size={18} />
-        </button>
+        </Link>
         {DEMO_MODE ? (
           <Link
             to="/Waiter"
@@ -49,15 +57,15 @@ export function Header() {
             <ChefHat size={18} />
           </Link>
         ) : (
-          <button
-            className={`${styles.viewToggle} ${bookMode ? styles.active : ''}`}
-            onClick={() => setBookMode(true)}
+          <Link
+            to={`/${tableId}/book`}
+            className={`${styles.viewToggle} ${inBookView ? styles.active : ''}`}
             aria-label="Book view"
-            aria-pressed={bookMode}
+            aria-current={inBookView ? 'page' : undefined}
             title="Book view"
           >
             <BookOpen size={18} />
-          </button>
+          </Link>
         )}
         <button
           className={styles.cartButton}

@@ -8,6 +8,15 @@ const { getCanonicalTableId, getTableAliases, normalizeId, tableIdFromFilename }
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 const PRISMA_RETRY_MS = 30000;
 const DEFAULT_RESTAURANT_ID = 'trump';
+// A table's cart with no activity for this long is treated as belonging to a
+// finished guest session, not a resumable one -- otherwise a brand-new guest
+// scanning the same physical table's QR code (a different visit, possibly
+// hours or a full service period later) silently inherits whatever the
+// previous occupant left behind. Explicit resets (an order being placed, or
+// a waiter archiving/completing the table) already clear the cart
+// immediately; this is only the automatic fallback for a guest who simply
+// left without ordering and without staff manually resetting the table.
+const STALE_CART_MS = 3 * 60 * 60 * 1000; // 3 hours
 const STATUS_BY_KIND = {
   orders: 'active',
   history: 'history'
@@ -576,7 +585,11 @@ class PrismaOrderService {
           }
         });
 
-        return state && Array.isArray(state.cart) ? state.cart : null;
+        if (!state || !Array.isArray(state.cart)) return null;
+        if (state.cart.length > 0 && Date.now() - new Date(state.updatedAt).getTime() > STALE_CART_MS) {
+          return [];
+        }
+        return state.cart;
       },
       null
     );

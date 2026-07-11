@@ -1,3 +1,16 @@
+// Structured tags written by scripts/enrich-menu-tags.js (server sends them
+// via metadata spread — see prismaMenuService.js's dbItemToJson). Far more
+// reliably populated than the legacy `allergens` string below: `protein` is
+// derived with a name-keyword fallback even when `allergens` is empty, and
+// `dietary` normalizes allergens tokens into consistent values like
+// "contains-gluten"/"contains-egg"/"contains-nuts"/"vegan"/"vegetarian".
+export interface MenuItemTags {
+  protein?: string[];
+  dietary?: string[];
+  flavour?: string[];
+  texture?: string[];
+}
+
 export interface MenuItemVariant {
   dbId?: number;
   name: string;
@@ -18,6 +31,7 @@ export interface MenuItem {
   subtitle?: string;
   calories?: string;
   allergens?: string;
+  tags?: MenuItemTags;
   spice?: string;
   img?: string;
   video?: string;

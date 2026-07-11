@@ -221,9 +221,28 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
     const userMsg: Message = { role: 'user', content };
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
+    const history = messages.map(m => ({ role: m.role, content: m.content }));
+    // The reply itself is deterministic/local (see aiService.js) -- an
+    // occasional failure here is almost always a transient server-side
+    // hiccup (e.g. a concurrent write on a shared log file), not a real
+    // inability to answer, since an identical retry reliably succeeds. One
+    // silent retry with a short backoff absorbs that before ever bothering
+    // the guest with an error.
+    async function attemptChat(): Promise<ChatResponse> {
+      try {
+        return await api.chat({ message: content, history, tableId, cart: cartItems }) as ChatResponse;
+      } catch (firstError) {
+        await new Promise(resolve => setTimeout(resolve, 600));
+        try {
+          return await api.chat({ message: content, history, tableId, cart: cartItems }) as ChatResponse;
+        } catch {
+          throw firstError;
+        }
+      }
+    }
+
     try {
-      const history = messages.map(m => ({ role: m.role, content: m.content }));
-      const res = await api.chat({ message: content, history, tableId, cart: cartItems }) as ChatResponse;
+      const res = await attemptChat();
       const shown = (res.suggestions || []).slice(0, 1);
       shown.forEach(s => { if (s?.name) shownItemNamesRef.current.add(s.name); });
       setMessages(prev => [...prev, {
@@ -233,7 +252,10 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
       }]);
       if (shown.length) trackImpressions(shown, CHAT_RECO_CTX);
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'I\'m having a moment — please try again shortly.' }]);
+      // Softer than the old "I'm having a moment" phrasing -- reads as a
+      // normal, retry-friendly nudge rather than something being broken,
+      // since by this point a silent retry has already genuinely failed twice.
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Ask me that again in just a moment — I want to make sure I get it right for you.' }]);
     } finally {
       setLoading(false);
     }
@@ -283,10 +305,14 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
       <button
         className={`${styles.launcher} ${!chatOpen && showEntranceHint ? styles.launcherHint : ''}`}
         onClick={() => { setChatOpen(!chatOpen); setShowEntranceHint(false); }}
-        aria-label={chatOpen ? 'Close concierge chat' : 'Open concierge chat'}
+        aria-label={chatOpen ? 'Close concierge chat' : (hasUnseenSuggestion ? `Open concierge chat — ${assistantName} has a suggestion for you` : 'Open concierge chat')}
+        title={!chatOpen && hasUnseenSuggestion ? `${assistantName} has a suggestion for you` : undefined}
         aria-expanded={chatOpen}
       >
         {chatOpen ? <X size={20} /> : <span className={styles.aiBadge} aria-hidden="true">🍷</span>}
+        {/* The dot itself must stay decorative (aria-hidden) since its meaning
+            is now carried by the button's own aria-label/title above -- a
+            screen reader shouldn't announce two separate, undescribed things. */}
         {!chatOpen && hasUnseenSuggestion && <span className={styles.notifyDot} aria-hidden="true" />}
         {!chatOpen && showEntranceHint && !hasUnseenSuggestion && <span className={styles.launcherLabel}>Ask {assistantName}</span>}
       </button>

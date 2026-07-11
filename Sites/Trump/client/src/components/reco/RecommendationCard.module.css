@@ -25,7 +25,27 @@
 }
 .main:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
 
-.img { background: rgba(255, 255, 255, 0.04); object-fit: cover; }
+/* Shimmering placeholder background shows while the real photo is still
+   downloading/decoding (an <img>'s own background paints immediately, before
+   its content does) -- once the photo loads it fully covers this via
+   object-fit: cover, so no JS load-state tracking is needed. Without this,
+   slow/large photos left a flat, static, near-invisible box that read as
+   broken rather than loading. */
+@keyframes recoCardImgShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.img {
+  background: linear-gradient(
+    110deg,
+    rgba(var(--color-gold-rgb), 0.05) 25%,
+    rgba(var(--color-gold-rgb), 0.16) 50%,
+    rgba(var(--color-gold-rgb), 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: recoCardImgShimmer 1.6s ease-in-out infinite;
+  object-fit: cover;
+}
 .imgPh { background: rgba(var(--color-gold-rgb), 0.06); }
 
 .info { display: flex; flex-direction: column; gap: var(--space-0); min-width: 0; }
