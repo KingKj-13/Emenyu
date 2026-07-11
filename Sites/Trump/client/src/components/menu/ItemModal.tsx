@@ -379,46 +379,58 @@ export function ItemModal({
           )}
 
           {open && <ItemPairings item={item} onRequestItem={onRequestItem} />}
+        </div>
 
-          <div className={styles.actions}>
-            <div className={styles.qtyRow}>
-              <button
-                className={styles.qtyBtn}
-                onClick={() => setQty(q => Math.max(1, q - 1))}
-                aria-label="Decrease quantity"
-              >
-                <Minus size={16} />
-              </button>
-              <span className={styles.qtyValue} aria-live="polite">{qty}</span>
-              <button
-                className={styles.qtyBtn}
-                onClick={() => setQty(q => q + 1)}
-                aria-label="Increase quantity"
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-
-            <textarea
-              className={styles.noteInput}
-              data-noswipe
-              placeholder="Special requests or dietary notes…"
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              rows={2}
-              aria-label="Special notes for this item"
-            />
-
+        {/* Moved out of .body (Bug #3 fix): .actions used to be the last child
+            INSIDE the scrollable .body, sticky-pinned to the bottom of the
+            modal's scroll viewport. ItemPairings loads asynchronously (an API
+            call) and can insert ~300px of real content well after the initial
+            layout settles -- since sticky elements don't reserve/vacate space
+            the way normal flow does, the already-"stuck" actions bar ended up
+            visually overlapping the freshly-loaded recommendation cards (and,
+            depending on a given dish's text length, whatever else happened to
+            fall in that same screen region). Now .actions is a true flex
+            sibling of .media/.body, outside the scrollable region entirely
+            (see the .modal/.body/.actions rewrite in ItemModal.module.css) --
+            it can no longer overlap anything, sticky or not. */}
+        <div className={styles.actions}>
+          <div className={styles.qtyRow}>
             <button
-              className={styles.addBtn}
-              onClick={handleAdd}
-              disabled={item.available === false}
-              aria-label={item.available === false ? `${item.name} is sold out` : `Add ${qty} ${item.name} to cart`}
+              className={styles.qtyBtn}
+              onClick={() => setQty(q => Math.max(1, q - 1))}
+              aria-label="Decrease quantity"
             >
-              <ShoppingCart size={18} />
-              {item.available === false ? 'Sold Out' : `Add ${qty > 1 ? `${qty} × ` : ''}${formatPrice(item.price * qty)}`}
+              <Minus size={16} />
+            </button>
+            <span className={styles.qtyValue} aria-live="polite">{qty}</span>
+            <button
+              className={styles.qtyBtn}
+              onClick={() => setQty(q => q + 1)}
+              aria-label="Increase quantity"
+            >
+              <Plus size={16} />
             </button>
           </div>
+
+          <textarea
+            className={styles.noteInput}
+            data-noswipe
+            placeholder="Special requests or dietary notes…"
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            rows={2}
+            aria-label="Special notes for this item"
+          />
+
+          <button
+            className={styles.addBtn}
+            onClick={handleAdd}
+            disabled={item.available === false}
+            aria-label={item.available === false ? `${item.name} is sold out` : `Add ${qty} ${item.name} to cart`}
+          >
+            <ShoppingCart size={18} />
+            {item.available === false ? 'Sold Out' : `Add ${qty > 1 ? `${qty} × ` : ''}${formatPrice(item.price * qty)}`}
+          </button>
         </div>
 
         {isRightSwipe && (

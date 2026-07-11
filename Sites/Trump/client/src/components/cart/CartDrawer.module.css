@@ -7,13 +7,26 @@
   backdrop-filter: blur(4px);
 }
 
+/* Bug #4 fix: `100vw` and a `position:fixed` element's `right:0` anchor are
+   not guaranteed to resolve against the same reference box in every engine.
+   Confirmed live in WebKit (Playwright's Safari engine; two static reviews
+   plus Chromium-only live testing had missed this): at multiple viewport
+   widths the drawer rendered ~6-7px offset -- bleeding past the left edge of
+   the viewport while falling short of the true right edge -- because 100vw
+   and the fixed-position containing block disagreed by roughly a
+   scrollbar's width. `100%` on a fixed-position element resolves against
+   that SAME containing block `right:0` anchors to, so the two can never
+   disagree. max-width keeps 100dvw as a last-resort safety net for any
+   engine that still gets 100% wrong on a fixed element without an explicit
+   containing block. */
 .drawer {
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
   z-index: var(--z-drawer);
-  width: min(420px, 100vw);
+  width: min(420px, 100%);
+  max-width: 100dvw;
   display: flex;
   flex-direction: column;
   background: linear-gradient(160deg, #001828, #020f1c);

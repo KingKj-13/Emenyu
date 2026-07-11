@@ -1,8 +1,16 @@
+/* Bug #3 fix: .modal now fills its parent panel's (already height-bounded,
+   overflow-y:auto) box exactly -- a box with `overflow:auto` and a
+   `max-height` resolves to EXACTLY that max-height once content needs more
+   room than that, which is precisely the case this height:100% needs to
+   track. That turns .body (below) into the one true scroll region instead of
+   the outer panel, which is what lets .actions leave the scrollable flow
+   entirely rather than needing position:sticky to stay reachable. */
 .modal {
   display: flex;
   flex-direction: column;
   position: relative;
   will-change: transform;
+  height: 100%;
 }
 
 .media {
@@ -99,7 +107,18 @@
 .favBtn:hover, .favActive { color: #e06060; border-color: rgba(224,96,96,0.5); }
 .favBtnOffset { left: 56px; }
 
-.body { padding: 20px 24px 0; }
+/* Bug #3 fix: .body is now the scrollable region (not the outer modal panel),
+   sized by flexbox to take whatever space .media and the now-sibling
+   .actions don't use. min-height:0 is required -- without it a flex child
+   refuses to shrink below its content's natural height, which would defeat
+   overflow-y:auto entirely and let content grow past .modal's bound instead
+   of scrolling within it. */
+.body {
+  padding: 20px 24px 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
 
 .chips { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 
@@ -193,15 +212,19 @@
   padding: 16px 0;
 }
 
-/* Sticky footer CTA — the primary conversion action must never require
-   scrolling past the recommendation panel to reach. Bleeds to the panel's
-   edges (negative margin matches .body's horizontal padding) and sits on
-   var(--color-glass-strong) so content scrolling underneath stays legible. */
+/* Footer CTA — the primary conversion action must never require scrolling
+   past the recommendation panel to reach. Bug #3 fix: this used to be
+   `position: sticky` INSIDE the scrollable .body, which only reserves space
+   in normal flow -- it doesn't visually vacate it. Once ItemPairings' async
+   API call resolved and inserted ~300px of real content, the already-"stuck"
+   bar ended up rendered on top of the freshly-arrived recommendation cards
+   instead of after them. Now .actions is a flex sibling of .body, OUTSIDE
+   the scrollable region entirely (see .modal/.body above) -- reachable
+   without any scrolling, same as intended, but structurally unable to
+   overlap anything since it no longer shares a stacking/scroll context with
+   the content that grows underneath it. */
 .actions {
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
-  margin: 16px -24px 0;
+  flex-shrink: 0;
   padding: 16px 24px calc(16px + env(safe-area-inset-bottom));
   background: var(--color-glass-strong);
   border-top: 1px solid var(--color-line);
