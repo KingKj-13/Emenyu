@@ -142,7 +142,21 @@ export function CartDrawer() {
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              // Bug #4, real root cause (confirmed via 6 live runs, including a
+              // fresh page with zero prior overlay interaction): this was never
+              // a positioning bug or an animation-interruption race with the
+              // item modal/hamburger drawer -- it's simply that this spring
+              // (damping:28, stiffness:280) has a slow ramp-up and takes ~600ms
+              // to visually settle, during which the drawer is genuinely,
+              // severely off-screen (~97% off-screen at 70ms, ~85% at 175ms).
+              // Anyone who looks at the screen (or a screenshot) in that window
+              // sees exactly "almost entirely off the right edge" -- not a
+              // glitch, just this spring's own opening curve, 100% reproducible
+              // every time. A short, fixed-duration tween settles fast and
+              // predictably instead, and matches the backdrop's own 0.22s fade
+              // (previously the backdrop looked "done" ~400ms before the
+              // drawer caught up, which read as janky/broken on its own).
+              transition={{ type: 'tween', duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
             >
               <div className={styles.drawerHeader}>
                 <h2 className={styles.drawerTitle}>
