@@ -25,19 +25,24 @@
 12. **Bundle cards showed a generic "gaspard" label** three times over instead of the authored journey names. The source JSON (`carmella-menu-data.json`) already carried the correct `name` field per bundle ("A Morning in Paris", "The Mediterranean Table", "The Celebration Table" — exactly matching the design spec) but `import-menu.js` discarded it and hardcoded `persona: 'gaspard'`. Fixed and re-imported (locally and in production).
 13. **AI persona showed "Your Sommelier" instead of "Gaspard"** in the chat launcher hint and across 5 files (`RecommendationJourney`, `OwnerDashboard`, `CustomerJourneyPanel`, `AIPerformancePanel`, `ChefIntelligencePanel`) — `.env.carmella` never set the build-time `VITE_ASSISTANT_NAME`, so every consumer of the shared `ASSISTANT_NAME` constant fell back to Trump's default. One env var fixed all five.
 
+### Found and fixed in a second pass (after the report below was first written)
+14. **Cart/modal overlay stacking** (previously listed as a deferred "remaining bug" — see the superseded table below) — the Header's cart button is reachable while an item modal is open, and the two had independent open-state, so tapping cart mid-browse stacked both translucent backdrops and left the cart drawer's own content hidden behind the modal. Fixed with a `useEffect` in `MenuPage.tsx` that closes the item modal when the cart opens. Confirmed pre-existing on Trump too (reproduced identically before the fix); confirmed fixed on both, locally and live in production.
+15. **Reserved terracotta never wired into AI-suggestion UI** — `emenyu-carmella/CLAUDE.md` hard rule 4 states terracotta (`#B65C33`) "must always mean 'Gaspard is speaking'"; the token (`--color-gaspard-accent`) existed but had zero consumers anywhere in the component tree — an explicitly deferred item already logged in `FUTURE_ROADMAP.md`. Wired it into the three places Gaspard's own voice/pick surfaces: the item-modal recommendation panel's heading+icon, the bundle card's persona icon, and a named dish in chat replies — via the existing `var(--color-gaspard-accent, var(--color-gold))` fallback convention, so Trump/Demo render byte-for-byte the same gold as before.
+
 Every fix above was screenshot-verified against **both** Carmella and Trump before being considered done, specifically to catch any regression on Trump's approved dark theme. None were found — see §4.
 
 ---
 
 ## 2. Remaining Bugs (known, not fixed — with reasoning)
 
+Items 1 and 5 from the original pass (cart/modal stacking; terracotta wiring) were subsequently fixed — see §1, items 14–15. What's left:
+
 | # | Issue | Severity | Why deferred |
 |---|---|---|---|
-| 1 | Opening the cart drawer while an item modal is open stacks both dark overlays; the cart's own content (item list, checkout) stays hidden behind the modal until it's closed. | Medium, edge-case | **Confirmed pre-existing on Trump too** (not a Carmella regression) — reproduced identically on both. Root cause is independent open-state for two components rather than a token/color bug; a real fix means coordinating state across `CartContext` and the modal owner, which carries meaningful regression risk this late in the pass. Fully recoverable via the modal's visible close button. |
-| 2 | ~11 transient 404s for Trump-specific dish images on first paint of the recommendation strip. | Low, cosmetic | `RecommendedOrders` seeds its initial React state from a hardcoded Trump-fallback constant before `api.getBundles()` resolves (~3s). Self-corrects every time; identified in an earlier phase of this project, still true today. |
-| 3 | Prices render in Brass/Gold; the design-direction doc's palette table specifies Deep Moss (`#24402E`) for "prices, secondary". | Low, spec-precision | Current result is internally consistent and reads as premium; "fixing" it means introducing a new semantic token distinction (price-color vs. rule/icon-color) and touching price styling across many files. Judged a refinement, not a defect. |
-| 4 | ItemModal's Add-to-cart button gradient end-stop (`#a8812c`) is a hardcoded bronze shade, not a token. | Low | Deliberately left alone — it's Trump's most-used CTA button, and tokenizing it would change Trump's approved gradient direction (light→dark becomes light→light) for a shade that doesn't visibly clash on Carmella either. |
-| 5 | Waiter app's secondary/tertiary text tones (`--w-text2`, `--w-text3`) and progress-track fill (`--w-surface3`) remain hardcoded rather than tenant-tokenized. | Low | Verified legible on both themes by contrast reasoning; not perfectly on-brand for Carmella but not broken. |
+| 1 | ~11 transient 404s for Trump-specific dish images on first paint of the recommendation strip. | Low, cosmetic | `RecommendedOrders` seeds its initial React state from a hardcoded Trump-fallback constant before `api.getBundles()` resolves (~3s). Self-corrects every time; identified in an earlier phase of this project, still true today. |
+| 2 | Prices render in Brass/Gold; the design-direction doc's palette table specifies Deep Moss (`#24402E`) for "prices, secondary". | Low, spec-precision | Current result is internally consistent and reads as premium; "fixing" it means introducing a new semantic token distinction (price-color vs. rule/icon-color) and touching price styling across many files. Judged a refinement, not a defect. |
+| 3 | ItemModal's Add-to-cart button gradient end-stop (`#a8812c`) is a hardcoded bronze shade, not a token. | Low | Deliberately left alone — it's Trump's most-used CTA button, and tokenizing it would change Trump's approved gradient direction (light→dark becomes light→light) for a shade that doesn't visibly clash on Carmella either. |
+| 4 | Waiter app's secondary/tertiary text tones (`--w-text2`, `--w-text3`) and progress-track fill (`--w-surface3`) remain hardcoded rather than tenant-tokenized. | Low | Verified legible on both themes by contrast reasoning; not perfectly on-brand for Carmella but not broken. |
 
 ---
 
@@ -62,27 +67,25 @@ No dedicated performance work was undertaken this pass — the priority order (s
 
 ## 6. Deployment Readiness
 
-- All fixes committed to git (`feat/chatbot-reco-rework`, commit `a728321`).
-- Code + freshly built `client/dist` for all three tenants uploaded to production; `server.js` updated (backed up first); Carmella's bundle data re-imported against the production DB (idempotent, same clean result as local: 0 errors).
-- All three PM2 processes (`emenuy-trump-api`, `emenuy-demo-api`, `emenuy-carmella-api`) restarted and confirmed `online` with fresh uptimes.
-- `/healthz` returns `200 ok` for all three tenants on production.
-- Live production screenshots confirm the fixes are actually serving, not just locally verified.
-- Old `client/dist` folders kept as `.old` on the production box for fast rollback; pre-existing `server.js` backed up before overwrite.
+- All fixes committed to git (`feat/chatbot-reco-rework`, commits `a728321`, `a9e7bc7`, `f2f9bb3`, `4771ff2`).
+- Code + freshly built `client/dist` for all three tenants uploaded to production across three separate deploy rounds (main polish pass, cart/modal fix, terracotta wiring); `server.js` updated (backed up first); Carmella's bundle data re-imported against the production DB (idempotent, same clean result as local: 0 errors).
+- All three PM2 processes (`emenuy-trump-api`, `emenuy-demo-api`, `emenuy-carmella-api`) restarted after every round and confirmed `online` with fresh uptimes.
+- `/healthz` returns `200 ok` for all three tenants on production after the final round.
+- Live production screenshots confirm every fix is actually serving, not just locally verified — including the cart/modal fix and the terracotta accent, both re-verified live after their respective deploys.
+- Superseded `client/dist` folders kept as `.old`/`.old2`/`.old3` on the production box for fast rollback; pre-existing `server.js` backed up before its one overwrite.
 
-## 7. Demo Readiness Score: **90/100**
+## 7. Demo Readiness Score: **95/100**
 
-The core ordering journey (browse → chapter navigation → item detail → pairing recommendation → add to cart → bundle "one-tap" order) works end-to-end, on-brand, at every viewport and every day-part, with the AI persona correctly and consistently branded as Gaspard. Zero known critical or high-severity bugs remain. The deducted 10 points reflect: the one confirmed medium-severity edge-case interaction bug (§2.1, pre-existing on Trump), a small number of low-severity spec-precision gaps, and that this session's re-verification — while extensive — did not re-exercise every admin sub-page, the reservation flow, split-bill, or the kitchen display screen (these were validated in earlier phases of the broader project, not re-tested in this pass).
+The core ordering journey (browse → chapter navigation → item detail → pairing recommendation → add to cart → bundle "one-tap" order) works end-to-end, on-brand, at every viewport and every day-part, with the AI persona correctly and consistently branded as Gaspard down to the reserved terracotta accent. Zero known critical, high, or medium-severity bugs remain — the cart/modal stacking issue (previously the one medium-severity item) is fixed and verified live. The remaining 5 points reflect only the low-severity spec-precision gaps in §2, plus that this session's re-verification — while extensive — did not re-exercise every admin sub-page, the reservation flow, split-bill, or the kitchen display screen (these were validated in earlier phases of the broader project, not re-tested in this pass).
 
 ## 8. Highest Remaining Risks
 
-1. **Cart/modal stacking edge case (§2.1)** — low probability of being triggered live, but would look unpolished if a presenter happens to tap the cart icon while an item modal is open.
-2. **Areas not re-exercised in this specific pass**: reservation flow, split-bill, kitchen display, and the full suite of owner-analytics tabs beyond the persona-name fix — validated earlier in the project's lifecycle, not re-screenshotted here.
-3. **Transient Trump-image 404s (§2.2)** — self-corrects in ~3 seconds, but would be visible if a demo happens to screen-share during that window on first load.
+1. **Areas not re-exercised in this specific pass**: reservation flow, split-bill, kitchen display, and the full suite of owner-analytics tabs beyond the persona-name fix — validated earlier in the project's lifecycle, not re-screenshotted here.
+2. **Transient Trump-image 404s (§2.1)** — self-corrects in ~3 seconds, but would be visible if a demo happens to screen-share during that window on first load.
 
 ## 9. Recommended Post-Demo Improvements
 
-1. Add mutual-exclusion between the cart drawer and item modal's open state (§2.1) — affects Trump and Demo equally, worth fixing once, not urgent for Monday.
-2. Decide formally whether prices should move to Deep Moss per the original design spec, or update the spec to reflect the Brass/Gold direction actually shipped.
-3. Replace `RecommendedOrders`' hardcoded Trump-fallback initial state with a tenant-neutral loading skeleton so no wrong-tenant content ever flashes, even for ~3 seconds.
-4. Tokenize the waiter theme's remaining secondary/tertiary text colors and progress-track fill for full cross-tenant polish.
-5. Clean up local dev `.env` files (`Sites/Demo/.env` has a stale `TRUMP_PUBLIC_BASE_PATH=/Trump`, unrelated to this work but will confuse future local testing).
+1. Decide the price-color question (§2.2) — Deep Moss per spec, or formally amend the spec to Brass/Gold.
+2. Replace `RecommendedOrders`' hardcoded Trump-fallback initial state with a tenant-neutral loading skeleton so no wrong-tenant content ever flashes, even for ~3 seconds.
+3. Tokenize the waiter theme's remaining secondary/tertiary text colors and progress-track fill for full cross-tenant polish.
+4. Clean up local dev `.env` files (`Sites/Demo/.env` has a stale `TRUMP_PUBLIC_BASE_PATH=/Trump`, unrelated to this work but will confuse future local testing).
