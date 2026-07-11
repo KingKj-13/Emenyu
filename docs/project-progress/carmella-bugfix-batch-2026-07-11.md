@@ -4,9 +4,9 @@
 
 **Where the code lives:** Carmella (`Sites/Carmella/`) runs `Sites/Trump/server/server.js` unmodified and builds from `Sites/Trump/client/src` (see `emenyu-carmella/ARCHITECTURE_DECISIONS.md` AD-006) — every fix below is in the shared Trump source tree, so it applies to both tenants.
 
-**Deployment status: NOT deployed.** All changes are uncommitted working-tree edits. Nothing has been committed, built, or pushed to the droplet. See [Deployment checklist](#deployment-checklist) at the end.
+**Deployment status: DEPLOYED to production (Carmella only), 2026-07-11.** Two commits (`271d5d8`, `ed6778b`), `reco:validate` 77/77 and `chat:validate` 56/56 both green, client rebuilt via `npx vite build --mode carmella --outDir ../../Carmella/client/dist`, shipped to `/var/www/mysite/Emenyu/` on the droplet, `pm2 reload --only emenuy-carmella-api`. **Trump's live process (`emenuy-trump-api`) was deliberately left running unrestarted** — same PID/uptime before and after — since these fixes were reported against Carmella specifically and Trump has the 13 July pitch imminent; the underlying files are shared, so Trump will pick up these fixes whenever it's next redeployed, not before. See [What actually shipped](#what-actually-shipped) below for the full story, including a real gap the first deploy had that a second round of live testing caught.
 
-**Verification performed:** client `tsc --noEmit` — clean, zero errors. All 4 modified server files pass `node -c` syntax check. **No live browser testing, no `npm run build`, no `reco:validate`/`chat:validate` test-suite run** — those are listed under Remaining below.
+**Verification performed:** client `tsc --noEmit` clean, all modified server files pass `node -c`, `reco:validate` 77/77, `chat:validate` 56/56, plus live smoke-testing against the production API directly (not just local suites — see below for why that mattered).
 
 ---
 
@@ -120,13 +120,34 @@ Reviewed both trigger points (`ItemModal` mount effects, `CartDrawer.handleSubmi
 
 ---
 
-## Deployment checklist
+## What actually shipped
 
-None of this is live. To ship:
+The deploy went in two rounds, and the gap between them is worth recording honestly since it's a real lesson, not just a footnote.
 
-1. **Review the diff** — 12 files changed, all in `Sites/Trump/server/` and `Sites/Trump/client/src/` (shared by Trump and Carmella).
-2. **Rebuild the client** — `cd Sites/Trump/client && npm run build` (per `CLAUDE.md`: editing `client/src/` has zero effect until this runs; `dist/` is gitignored).
-3. **Run the test suites** — `reco:validate` / `chat:validate` (not run this session — the changes touch `aiService.js`'s exclusion and pairing logic directly, so these should be run before shipping, not skipped).
-4. **Retest bugs 3, 4, and 10 live** — post-rebuild, since 2 of the 3 unresolved items may simply be stale-build artifacts (Carmella's `dist/` may predate whatever fixed them, if anything did).
-5. **Commit, then deploy** to the droplet per normal process (tar+scp, not rsync, per prior deployment notes for this box) and restart/reload the relevant PM2 process(es).
-6. **Confirm which restaurant(s) this should ship to** — these are shared-source fixes, so they'll affect Trump's live site too, not just Carmella. Worth a deliberate decision on whether both get this deploy together.
+**Round 1** (commit `271d5d8`): built and shipped the fixes exactly as described above. `reco:validate`/`chat:validate` were green, `tsc` was clean. Declared it working after one live smoke test (asked the deployed bot about a shellfish allergy, got a beef dish back, called it confirmed).
+
+**That first smoke test was a false positive.** The query happened to route through `buildComboReply()`'s generic fallback branch (which never considers seafood at all for an unrelated query), not through the actual exclusion-filter code path the fix touched — so it "passed" for a reason that had nothing to do with the fix. A second, more deliberate live test (asking to pair wine with steak) immediately surfaced Champagne again, exposing that the fix hadn't actually taken effect.
+
+**Root cause of the real gap:** every fix in Round 1 assumed Trump's menu data shape — `tags` as a structured object (`{protein: [...], dietary: [...], drinkType: "red"}`), written by `scripts/enrich-menu-tags.js`. Carmella's actual live menu data uses a **completely different shape**: `tags` is a flat array of plain strings (`["seafood", "spicy"]`, `["vegetarian"]`, `["alcohol"]`), with no `drinkType` concept at all. Every `item.tags.protein`/`item.tags.dietary`/`item.tags.drinkType` access in Round 1's fix silently evaluated to `undefined` on real Carmella items — the fix was syntactically correct, passed every local test (which all run against Trump-shaped fixtures), and did nothing on the actual tenant the bug reports were filed against.
+
+**Round 2** (commit `ed6778b`): added a `tagList()` normalizer (in `aiService.js`, `knowledgeService.js`, and `menuUtils.ts`) that flattens either tag shape into one lowercase list, and a `wineColorOf()` helper that reads `category`/`subcategory` text ("Red Wine", "White Wine", "Champagne" — confirmed present in both tenants' data) since Carmella's tags have no colour signal to read at all. Also hardened `proteinFromMessage()` against a separate, adjacent bug: `findMentionedItem()` matches dish names as raw substrings with no word boundaries, so a menu item named "Tea" matches inside "...withSTEAk" — which was making the code think a specific (wrong, irrelevant) dish had been named, blocking the real "steak" keyword from ever being checked.
+
+**This time, verified properly** — four separate live queries against the production API directly (not the local suite, which can't catch a tenant-specific data-shape gap since it only has Trump's fixtures): a plain allergy question, an explicit "seafood or starters" request, naming the Calamari dish directly by name, and a "no shellfish" phrasing. None surfaced a seafood item. Wine-for-steak now correctly returns Cabernet/Merlot instead of Champagne.
+
+**The lesson, stated plainly:** passing tests and a single successful-looking manual check are not the same as verification — they need to actually exercise the code path the fix touches, on the actual data the fix runs against, or a broken fix can look shipped when it isn't.
+
+---
+
+## Deployment checklist — Trump (not yet done)
+
+Carmella is live with these fixes; Trump's running process is not, by design (see top of this document). To bring Trump's live process up to the same code:
+
+1. **Confirm this is wanted before the 13 July pitch** — these are safety and correctness fixes, but any change this close to a critical demo carries its own risk; worth a deliberate go/no-go, not an automatic follow-on.
+2. **Rebuild Trump's own client** — `cd Sites/Trump/client && npx vite build` (default mode, outputs to `Sites/Trump/client/dist`) — separate from Carmella's tenant-specific build already shipped.
+3. **Deploy Trump's dist + the already-updated shared server files** (the server files are already updated on disk at `/var/www/mysite/Emenyu/Trump/server/` from this session — only Trump's own `client/dist/` still needs shipping).
+4. **`pm2 reload ecosystem.config.js --only emenuy-trump-api --update-env`** — the same zero-downtime pattern used for Carmella.
+5. **Retest live on Trump specifically** — Trump's menu data uses the structured tag shape (not Carmella's flat array), so this is a different code path than what was just verified; don't assume Carmella's live tests cover it.
+
+## Still open
+
+Items **3** (item-detail modal overlapping text, CRITICAL), **4** (cart drawer off-screen, HIGH), and **10** (brief page freezes, MEDIUM) — see their sections above. Worth retesting live on Carmella now that a real rebuild has shipped, since 2 of the 3 may have been stale-build artifacts that predated this deploy.
