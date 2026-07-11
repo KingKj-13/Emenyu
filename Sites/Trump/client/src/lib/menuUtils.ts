@@ -15,21 +15,38 @@ function matchesSearch(item: MenuItem, query: string): boolean {
     .includes(q);
 }
 
-// Protein-family "No X" filters map onto item.tags.protein, which
-// scripts/enrich-menu-tags.js populates on every item (100% coverage, with a
-// name-keyword fallback) -- unlike the legacy `allergens` string column,
-// which is only set on ~38% of items and never uses "Shellfish" as a token
-// (it uses "Seafood"), so a squid/prawn dish could slip through a "No
-// Seafood" toggle or a "calamari" search with the old text-only check.
+// Two different tag shapes exist across tenants' real data (see
+// MenuItemTagsField's own comment in types/menu.ts): Trump's is a structured
+// object (tags.protein: [...], tags.dietary: [...]); Carmella's is a flat
+// array of plain category strings (tags: ["seafood","spicy"]). Checking only
+// `.protein`/`.dietary` silently no-ops on Carmella's flat-array items
+// (item.tags.protein is undefined there) -- this normalizes either shape
+// into one flat, lowercased list so a single check works against both.
+function tagList(item: MenuItem): string[] {
+  const tags = item.tags;
+  if (Array.isArray(tags)) return tags.map(t => String(t).toLowerCase());
+  if (tags && typeof tags === 'object') {
+    return [...(tags.protein ?? []), ...(tags.dietary ?? [])].map(t => String(t).toLowerCase());
+  }
+  return [];
+}
+
+// Protein-family "No X" filters map onto the protein-ish tag values, which
+// scripts/enrich-menu-tags.js populates on every Trump item (100% coverage,
+// with a name-keyword fallback) and Carmella's data carries directly in its
+// flat tag array -- unlike the legacy `allergens` string column, which is
+// only set on ~38% of items and never uses "Shellfish" as a token (it uses
+// "Seafood"), so a squid/prawn dish could slip through a "No Seafood" toggle
+// or a "calamari" search with the old text-only check.
 const PROTEIN_FILTER_KEYS = new Set(['beef', 'chicken', 'pork', 'lamb', 'seafood']);
 
-// Allergen-style "No X" filters map onto item.tags.dietary, which normalizes
-// the same allergens tokens into consistent values via DIETARY_TOKENS in
-// enrich-menu-tags.js.
-const DIETARY_EXCLUDE_TAG: Record<string, string> = {
-  egg: 'contains-egg',
-  gluten: 'contains-gluten',
-  nuts: 'contains-nuts',
+// Allergen-style "No X" filters -- Trump's data normalizes these into
+// "contains-x" tag values (DIETARY_TOKENS in enrich-menu-tags.js); check both
+// that form and the bare word, since Carmella's flat tags may use either.
+const DIETARY_EXCLUDE_TAGS: Record<string, string[]> = {
+  egg: ['contains-egg', 'egg'],
+  gluten: ['contains-gluten', 'gluten'],
+  nuts: ['contains-nuts', 'nuts', 'nut'],
 };
 
 // Exported so useFilters.ts (the identical guest-facing menu drawer) shares
@@ -38,29 +55,28 @@ export function shouldHideItemForFilters(item: MenuItem, activeFilters: Set<stri
   if (activeFilters.size === 0) return false;
   const allergens = String(item.allergens || '').toLowerCase();
   const fullText = [item.name, item.description, item.allergens, item.types].join(' ').toLowerCase();
-  const proteinTags = item.tags?.protein ?? [];
-  const dietaryTags = item.tags?.dietary ?? [];
+  const tags = tagList(item);
 
   for (const filter of activeFilters) {
     const lower = filter.toLowerCase();
 
     if (lower === 'vegan') {
-      if (!dietaryTags.includes('vegan') && !fullText.includes('vegan')) return true;
+      if (!tags.includes('vegan') && !fullText.includes('vegan')) return true;
       continue;
     }
     if (lower === 'vegetarian') {
       // Vegan dishes are also vegetarian even if a specific item's data only
       // ever tagged it "vegan" and not "vegetarian".
-      const isVegetarian = dietaryTags.includes('vegetarian') || dietaryTags.includes('vegan') || fullText.includes('vegetarian');
+      const isVegetarian = tags.includes('vegetarian') || tags.includes('vegan') || fullText.includes('vegetarian');
       if (!isVegetarian) return true;
       continue;
     }
     if (PROTEIN_FILTER_KEYS.has(lower)) {
-      if (proteinTags.includes(lower) || allergens.includes(lower) || fullText.includes(lower)) return true;
+      if (tags.includes(lower) || allergens.includes(lower) || fullText.includes(lower)) return true;
       continue;
     }
-    if (DIETARY_EXCLUDE_TAG[lower]) {
-      if (dietaryTags.includes(DIETARY_EXCLUDE_TAG[lower]) || allergens.includes(lower) || fullText.includes(lower)) return true;
+    if (DIETARY_EXCLUDE_TAGS[lower]) {
+      if (DIETARY_EXCLUDE_TAGS[lower].some(t => tags.includes(t)) || allergens.includes(lower) || fullText.includes(lower)) return true;
       continue;
     }
     // Fallback for any filter key not explicitly mapped above.

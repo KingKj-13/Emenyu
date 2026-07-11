@@ -358,15 +358,55 @@ function itemQuantity(item = {}) {
 const MEAT_PROTEINS = new Set(['beef', 'chicken', 'lamb', 'pork', 'seafood', 'game']);
 const MEAT_TEXT = /beef|steak|chicken|wings|lamb|pork|ribs|bacon|prawn|calamari|salmon|fish|seafood|sushi|sashimi|oxtail|game|venison|ostrich|biltong|wors/;
 function dietaryOk(item = {}, diets = []) {
-  const tags = item.tags || {};
-  const dietary = Array.isArray(tags.dietary) ? tags.dietary : [];
-  const protein = Array.isArray(tags.protein) ? tags.protein : [];
-  const hasMeat = tags.protein
-    ? protein.some(p => MEAT_PROTEINS.has(p))
+  const tags = tagList(item);
+  const hasTagData = tags.length > 0;
+  const hasMeat = hasTagData
+    ? tags.some(t => MEAT_PROTEINS.has(t))
     : MEAT_TEXT.test(`${item.allergens || ''} ${item.searchText || item.name || ''}`.toLowerCase());
-  if (diets.includes('vegan')) return tags.dietary ? dietary.includes('vegan') : !hasMeat;
-  if (diets.includes('vegetarian')) return dietary.includes('vegetarian') || !hasMeat;
+  if (diets.includes('vegan')) return tags.includes('vegan') || (!hasTagData && !hasMeat);
+  if (diets.includes('vegetarian')) return tags.includes('vegetarian') || tags.includes('vegan') || (!hasTagData && !hasMeat) || (hasTagData && !hasMeat);
   return true;
+}
+
+// Menu data has TWO different tag shapes across tenants, both live in
+// production: Trump's is a structured object (tags.protein: ["seafood"],
+// tags.dietary: [...], tags.drinkType: "red"|"white"|...), written by
+// scripts/enrich-menu-tags.js. Carmella's is a flat array of plain category
+// strings (tags: ["seafood","spicy"], tags: ["vegetarian"], tags:
+// ["alcohol"]), with no drinkType at all. Every check below has to work
+// against both, or it silently no-ops on whichever tenant it wasn't written
+// against (this exact gap is what let a "no seafood" exclusion pass straight
+// through on live Carmella data, since item.tags.protein is undefined when
+// item.tags is really a flat array).
+function tagList(item) {
+  const tags = item?.tags;
+  if (Array.isArray(tags)) return tags.map(t => String(t).toLowerCase());
+  if (tags && typeof tags === 'object') {
+    return [
+      ...(Array.isArray(tags.protein) ? tags.protein : []),
+      ...(Array.isArray(tags.dietary) ? tags.dietary : [])
+    ].map(t => String(t).toLowerCase());
+  }
+  return [];
+}
+
+// Wine colour: Trump's data has tags.drinkType directly; Carmella's flat tag
+// array never encodes colour at all (every wine is just tagged ["alcohol"]).
+// Both tenants DO consistently use "Red Wine"/"White Wine"/"Rosé Wine"/
+// "Sparkling Wine"/"Champagne" in category or subcategory text, so that's
+// the one signal guaranteed to work everywhere -- tags.drinkType is used
+// first when it's actually present (Trump), text is the fallback (both).
+function wineColorOf(item) {
+  const tags = item?.tags;
+  if (tags && typeof tags === 'object' && !Array.isArray(tags) && tags.drinkType) {
+    return tags.drinkType;
+  }
+  const text = `${item?.category || ''} ${item?.subcategory || ''}`.toLowerCase();
+  if (/champagne|sparkling|cap classique|prosecco|\bmcc\b/.test(text)) return 'sparkling';
+  if (/ros[eé]/.test(text)) return 'rose';
+  if (/red wine/.test(text)) return 'red';
+  if (/white wine/.test(text)) return 'white';
+  return null;
 }
 
 // Phase 3B: crisp "white" pours for a seafood/light pairing, still whites first
@@ -374,8 +414,10 @@ function dietaryOk(item = {}, diets = []) {
 const CRISP_RANK = { white: 0, rose: 1, sparkling: 2 };
 function crispWhites(items = []) {
   return items
-    .filter(item => item.tags && ['white', 'sparkling', 'rose'].includes(item.tags.drinkType))
-    .sort((a, b) => (CRISP_RANK[a.tags.drinkType] ?? 3) - (CRISP_RANK[b.tags.drinkType] ?? 3));
+    .map(item => ({ item, color: wineColorOf(item) }))
+    .filter(({ color }) => ['white', 'sparkling', 'rose'].includes(color))
+    .sort((a, b) => (CRISP_RANK[a.color] ?? 3) - (CRISP_RANK[b.color] ?? 3))
+    .map(({ item }) => item);
 }
 
 // Full-bodied reds for a red-meat pairing -- the classic counterpart to
@@ -385,17 +427,26 @@ function crispWhites(items = []) {
 // data -- which could easily be Champagne/MCC if that's how the wine list
 // is ordered, producing exactly the wrong classic pairing for red meat.
 function fullBodiedReds(items = []) {
-  return items.filter(item => item.tags && item.tags.drinkType === 'red');
+  return items.filter(item => wineColorOf(item) === 'red');
 }
 
+const PROTEIN_WORDS = new Set(['beef', 'chicken', 'lamb', 'pork', 'seafood']);
+
 // A specific dish (`mentioned`) carries its own protein tag, but a generic
-// category question -- "what wine pairs with steak?" -- never resolves to a
-// specific menu item (findMentionedItem() requires the message to contain a
-// dish's full name), so `mentioned` stays null and there's nothing to read a
-// tag from. This falls back to recognizing the spoken protein word itself.
+// category question -- "what wine pairs with steak?" -- doesn't always fail
+// to resolve `mentioned` the way it should: findMentionedItem() matches on a
+// raw, word-boundary-free substring of the whole message (e.g. a menu item
+// literally named "Tea" matches inside "...withSTEAk", since "tea" is a
+// literal substring of "steak"), so `mentioned` can end up pointing at an
+// unrelated, non-food item -- which, read naively, looks like a confirmed
+// signal and blocks the real "steak" word in the message from ever being
+// checked. Only a tag that actually names a real protein counts; anything
+// else (a non-food item's tags, or Trump's "none") falls through to the
+// spoken-word check below instead of short-circuiting past it.
 function proteinFromMessage(mentioned, lower) {
-  if (mentioned && Array.isArray(mentioned.tags?.protein) && mentioned.tags.protein.length) {
-    return mentioned.tags.protein;
+  const mentionedProtein = tagList(mentioned).filter(t => PROTEIN_WORDS.has(t));
+  if (mentionedProtein.length) {
+    return mentionedProtein;
   }
   if (/\b(steak|beef|rump|fillet|ribeye|tomahawk|sirloin|red meat|oxtail|biltong)\b/.test(lower)) return ['beef'];
   if (/\b(lamb|game|venison)\b/.test(lower)) return ['lamb'];
@@ -770,15 +821,11 @@ class AiService {
     const hay = (suggestion.searchText
       || [suggestion.name, suggestion.description, suggestion.category, suggestion.subcategory, suggestion.categoryType]
         .filter(Boolean).join(' ')).toLowerCase();
-    // Defense-in-depth: also check the structured protein/dietary tags
-    // enrich-menu-tags.js writes on every item (e.g. protein: ["seafood"]),
-    // not just free text — a dish can be a genuine match (a squid/prawn dish
-    // tagged protein: ["seafood"]) without the blocked word ever appearing
-    // literally in its name/description/category text.
-    const tagValues = [
-      ...((suggestion.tags && suggestion.tags.protein) || []),
-      ...((suggestion.tags && suggestion.tags.dietary) || [])
-    ];
+    // Defense-in-depth: also check the item's tags (both shapes -- see
+    // tagList()'s own comment), not just free text — a dish can be a genuine
+    // match (a squid/prawn dish tagged seafood) without the blocked word
+    // ever appearing literally in its name/description/category text.
+    const tagValues = tagList(suggestion);
     for (const term of blocked) {
       if (hay.includes(term)) return true;
       if (tagValues.includes(term)) return true;
@@ -1035,8 +1082,8 @@ class AiService {
     // Phase 3B: "a wine for it" — return a colour-appropriate wine (crisp white
     // for seafood), not a mixed plate. Resolves "it" from the remembered anchor.
     if (/\bwine\b|\bcellar\b/.test(lower)) {
-      const isCrisp = x => x && x.tags && ['white', 'sparkling', 'rose'].includes(x.tags.drinkType);
-      const isRed = x => x && x.tags && x.tags.drinkType === 'red';
+      const isCrisp = x => ['white', 'sparkling', 'rose'].includes(wineColorOf(x));
+      const isRed = x => wineColorOf(x) === 'red';
       // Resolves from the specific dish's protein tag when one was named
       // ("a wine for the calamari"), or from the spoken protein word itself
       // when it wasn't ("what wine pairs with steak?") -- see
@@ -1234,13 +1281,14 @@ class AiService {
     }
 
     const recs = await this.recommend({ cart: [newDish], intent, menuContext, limit: 6 });
-    const goesLighter = (newDish.tags && Array.isArray(newDish.tags.protein) && newDish.tags.protein.includes('seafood'))
+    const goesLighter = tagList(newDish).includes('seafood')
       || (slots.proteinWanted || []).includes('seafood') || slots.body === 'light';
 
-    // Pick the new drink off tags.drinkType (never mistake a dish for a wine): a
-    // crisp white/sparkling for a lighter/seafood swap, otherwise any wine pour.
-    const isCrisp = x => x && x.tags && ['white', 'sparkling', 'rose'].includes(x.tags.drinkType);
-    const isAnyWine = x => x && (x.categoryType === 'WINE' || (x.tags && ['white', 'sparkling', 'rose', 'red'].includes(x.tags.drinkType)));
+    // Pick the new drink off its resolved colour (never mistake a dish for a
+    // wine): a crisp white/sparkling for a lighter/seafood swap, otherwise
+    // any wine pour.
+    const isCrisp = x => ['white', 'sparkling', 'rose'].includes(wineColorOf(x));
+    const isAnyWine = x => x && (x.categoryType === 'WINE' || ['white', 'sparkling', 'rose', 'red'].includes(wineColorOf(x)));
     const newWine = goesLighter
       ? (recs.find(isCrisp) || crispWhites(menuContext.items)[0])
       : recs.find(isAnyWine);

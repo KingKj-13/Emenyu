@@ -113,30 +113,48 @@ function createKnowledgeService({ config, fileService, logger = null }) {
     return { reply: `Today's special — ${deal.name || 'Chef’s deal'}${items.length ? `: ${items.join(', ')}` : ''}${price}.` };
   }
 
+  // Menu data has TWO different tag shapes across tenants: Trump's is a
+  // structured object (tags.protein: [...], tags.dietary: [...]); Carmella's
+  // is a flat array of plain category strings (tags: ["seafood","spicy"]).
+  // This normalizes either into one flat, lowercased list so a single check
+  // works against both -- checking only `.protein`/`.dietary` silently no-ops
+  // on Carmella's flat-array items (item.tags.protein is undefined there).
+  function tagList(item) {
+    const tags = item && item.tags;
+    if (Array.isArray(tags)) return tags.map(t => String(t).toLowerCase());
+    if (tags && typeof tags === 'object') {
+      return [
+        ...(Array.isArray(tags.protein) ? tags.protein : []),
+        ...(Array.isArray(tags.dietary) ? tags.dietary : [])
+      ].map(t => String(t).toLowerCase());
+    }
+    return [];
+  }
+
   // Expand a spoken allergen word to (a) every literal term that might appear
-  // in menu name/description/allergens text, AND (b) the structured
-  // protein/dietary tags scripts/enrich-menu-tags.js writes on every item.
+  // in menu name/description/allergens text, AND (b) the tag values that
+  // indicate it, in whichever tag shape a given tenant's data actually uses.
   // The tag check matters most: the legacy `allergens` column is only
   // populated on a minority of items and never contains the literal word
   // "shellfish" (it uses "Seafood"), so a guest saying "I'm allergic to
   // shellfish" previously matched almost nothing and silently let unsafe
   // dishes (e.g. a calamari/prawn dish) through as "safe".
   const ALLERGEN_EXPANSIONS = {
-    shellfish: { terms: ['shellfish', 'seafood', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'crayfish', 'lobster', 'crab', 'clam', 'scallop'], proteinTags: ['seafood'] },
-    seafood: { terms: ['seafood', 'shellfish', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'fish', 'salmon', 'crayfish', 'lobster', 'crab'], proteinTags: ['seafood'] },
-    fish: { terms: ['fish', 'salmon', 'kingklip', 'hake', 'sole', 'sushi', 'sashimi'], proteinTags: ['seafood'] },
-    gluten: { terms: ['gluten', 'bread', 'pasta', 'crumbed', 'tempura', 'batter', 'noodle', 'flour'], dietaryTags: ['contains-gluten'] },
-    nut: { terms: ['nut', 'nuts', 'almond', 'peanut', 'cashew'], dietaryTags: ['contains-nuts'] },
-    nuts: { terms: ['nut', 'nuts', 'almond', 'peanut', 'cashew'], dietaryTags: ['contains-nuts'] },
-    egg: { terms: ['egg', 'eggs', 'benedict', 'mayo', 'mayonnaise', 'aioli', 'hollandaise', 'meringue'], dietaryTags: ['contains-egg'] },
-    dairy: { terms: ['dairy', 'cheese', 'cream', 'milk', 'butter', 'mozzarella', 'feta', 'halloumi'] },
-    lactose: { terms: ['dairy', 'cheese', 'cream', 'milk', 'butter', 'mozzarella', 'feta', 'halloumi'] },
-    soy: { terms: ['soy', 'soya', 'tofu', 'edamame'] }
+    shellfish: { terms: ['shellfish', 'seafood', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'crayfish', 'lobster', 'crab', 'clam', 'scallop'], tags: ['seafood', 'shellfish'] },
+    seafood: { terms: ['seafood', 'shellfish', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'fish', 'salmon', 'crayfish', 'lobster', 'crab'], tags: ['seafood', 'shellfish'] },
+    fish: { terms: ['fish', 'salmon', 'kingklip', 'hake', 'sole', 'sushi', 'sashimi'], tags: ['seafood'] },
+    gluten: { terms: ['gluten', 'bread', 'pasta', 'crumbed', 'tempura', 'batter', 'noodle', 'flour'], tags: ['contains-gluten', 'gluten'] },
+    nut: { terms: ['nut', 'nuts', 'almond', 'peanut', 'cashew'], tags: ['contains-nuts', 'nuts', 'nut'] },
+    nuts: { terms: ['nut', 'nuts', 'almond', 'peanut', 'cashew'], tags: ['contains-nuts', 'nuts', 'nut'] },
+    egg: { terms: ['egg', 'eggs', 'benedict', 'mayo', 'mayonnaise', 'aioli', 'hollandaise', 'meringue'], tags: ['contains-egg', 'egg'] },
+    dairy: { terms: ['dairy', 'cheese', 'cream', 'milk', 'butter', 'mozzarella', 'feta', 'halloumi'], tags: ['dairy'] },
+    lactose: { terms: ['dairy', 'cheese', 'cream', 'milk', 'butter', 'mozzarella', 'feta', 'halloumi'], tags: ['dairy'] },
+    soy: { terms: ['soy', 'soya', 'tofu', 'edamame'], tags: ['soy'] }
   };
 
   // Allergen guidance is conservative: we surface items that do NOT list the
-  // allergen (by text OR by structured tag), and always defer to the waiter
-  // for confirmation.
+  // allergen (by text OR by tag), and always defer to the waiter for
+  // confirmation.
   async function allergenReply(normalized, menuContext) {
     const term = Object.keys(ALLERGEN_EXPANSIONS).find(a => normalized.includes(a));
     if (/halal/.test(normalized)) {
@@ -148,10 +166,8 @@ function createKnowledgeService({ config, fileService, logger = null }) {
     const rule = ALLERGEN_EXPANSIONS[term];
     const safe = (menuContext.items || [])
       .filter(it => {
-        const proteinTags = (it.tags && it.tags.protein) || [];
-        const dietaryTags = (it.tags && it.tags.dietary) || [];
-        if (rule.proteinTags && rule.proteinTags.some(t => proteinTags.includes(t))) return false;
-        if (rule.dietaryTags && rule.dietaryTags.some(t => dietaryTags.includes(t))) return false;
+        const tags = tagList(it);
+        if (rule.tags.some(t => tags.includes(t))) return false;
         const hay = `${String(it.allergens || '')} ${String(it.searchText || '')}`.toLowerCase();
         return !rule.terms.some(t => hay.includes(t));
       })
