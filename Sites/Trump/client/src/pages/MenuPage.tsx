@@ -65,7 +65,7 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   const focusSection = searchParams.get('section');
   const { setTableId, pendingItemName, setPendingItemName } = useApp();
   const { menuData, loading, error } = useMenu();
-  const { addItem } = useCart();
+  const { addItem, isOpen: cartOpen } = useCart();
   const { activeFilters, searchQuery, setSearchQuery, toggleFilter, clearFilters, filterOptions } = useFilters();
   const { favorites, toggle: toggleFavorite } = useFavorites();
   const { addItem: addRecent } = useRecentlyViewed();
@@ -214,6 +214,15 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
       window.history.go(-depth);
     }
   }, [setStack]);
+
+  // The cart button in Header is reachable while an item modal is open (it's
+  // part of the persistent app chrome, not disabled/hidden by the modal) --
+  // without this, opening the cart stacked both overlays' translucent
+  // backdrops on top of each other and left the cart drawer's own content
+  // hidden behind the modal (--z-modal sits above --z-drawer by design).
+  useEffect(() => {
+    if (cartOpen && modalOpen) closeItemModal();
+  }, [cartOpen, modalOpen, closeItemModal]);
 
   const goBackItem = useCallback(() => {
     if (itemStackRef.current.length > 1) {
