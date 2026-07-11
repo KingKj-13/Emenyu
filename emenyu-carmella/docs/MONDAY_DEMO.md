@@ -4,20 +4,27 @@ Status as of 2026-07-11. Everything below was built and verified live during thi
 
 ## Deployment verification
 
-**Not yet deployed to production.** Everything below is verified against local dev processes only:
+**Deployed to production as of 2026-07-11.** `https://emenyu.com/Carmella/` is live.
 
-| Tenant | Port | Public path (local) | Database | Status |
+| Tenant | Port | Public path | Database | Status |
 |---|---|---|---|---|
-| Trump | 3012 | `/Trump` | prod Postgres (134.122.99.78) — unreachable from this dev sandbox, falls back to JSON per the hybrid-persistence design | Routing/static/auth verified live; menu content unverifiable here (network) |
-| Demo Steakhouse | 3014 | `/Trump` internally (nginx rewrites `/demo/*` in prod) | `emenyu_demo` (local) | Verified live, healthy |
-| **Carmella** | 3015 | `/Carmella` (native, no rewrite needed) | `emenyu_carmella` (local, dedicated) | Verified live end-to-end |
+| Trump | 3012 | `/Trump` | `emenyu` (prod) | Live, restarted with the shared-code fixes, verified (health/menu/static all 200) |
+| Demo Steakhouse | 3014 | `/Trump` internally (nginx rewrites `/demo/*`) | `emenyu_demo` (prod) | Live, restarted, verified |
+| **Carmella** | 3015 | `/Carmella` (native, no rewrite needed) | `emenyu_carmella` (prod, dedicated) | **Live**, verified end-to-end including the Gaspard pairing fix (AD-007) against real production traffic |
+| Luxury / company site | 8010 / static | `/Trump_Lux/*` / `/` | — | Untouched, verified still healthy after the nginx reload |
 
-**Before this can go live on the droplet:**
-1. Deploy the updated `Sites/Trump/server`, `Sites/Trump/client`, and new `Sites/Carmella/` to the droplet (rsync/tar per existing deploy convention — no `.git` on the server).
-2. Add the `emenyu_carmella` database on the production Postgres instance and run `npx prisma migrate deploy` against it (schema migration `20260710120000_carmella_phase1_schema` — see DATABASE.md).
-3. **Run the same migration against production's `emenyu` (Trump) and `emenyu_demo` (Demo) databases** — this is a shared-schema change; skipping either will break their `GET /api/menu` exactly as it did in local dev before this was caught (see ARCHITECTURE_DECISIONS.md AD-002 migration-implication note).
-4. Add the `emenuy-carmella-api` PM2 app (already added to `Sites/Trump/ecosystem.config.js`) and start it.
-5. Add an nginx `server`/`location` block routing `emenyu.com/Carmella/*` → `127.0.0.1:3015` (a direct reverse proxy, **not** a path-rewrite hack — Carmella's routing is native, see AD-001).
+Deployment steps actually performed (for the record — see `DEPLOYMENT.md` for the general runbook this followed):
+1. Full backup of Trump's code/config/nginx + a `pg_dump` of the live `emenyu` database before touching anything (`/var/www/mysite/Emenyu/deploy-backups/carmella-deploy-20260711/`).
+2. Created `emenyu_carmella`; ran the shared migration against `emenyu`, `emenyu_demo`, and `emenyu_carmella` (discovered and correctly handled: the server's `Trump/prisma/migrations` folder on disk was 6 migrations behind what was actually recorded applied in `emenyu`'s own `_prisma_migrations` history — uploading the complete folder resolved this automatically, no data was at risk).
+3. Uploaded updated Trump server code + freshly rebuilt Trump/Demo/Carmella client bundles.
+4. Created Carmella's `.env` directly on the server with freshly generated secrets (never reused the local dev secrets).
+5. Ran the menu import against the production `emenyu_carmella` database (same counts as local: 190 items, 61 variants, etc.).
+6. Started `emenuy-carmella-api` via PM2; verified locally on-server before exposing it.
+7. Added an nginx location block for `/Carmella/*` (direct proxy to port 3015, no path-rewrite — mirrors Trump's pattern, not Demo's), backed up the config, ran `nginx -t` before reloading.
+8. Restarted Trump's and Demo's PM2 processes to load the shared-code fixes; verified both immediately after.
+9. Full public-domain verification across all 5 surfaces (Carmella, Trump, Demo, Luxury, company site) — all green.
+
+**Rollback path if needed:** `/var/www/mysite/Emenyu/deploy-backups/carmella-deploy-20260711/` has the pre-deploy Trump server code, client dist, ecosystem.config.js, nginx config, and a full `pg_dump` of `emenyu`.
 6. Copy `Sites/Carmella/Images/` (optimized WebP + thumbnails, ~15MB) to the server; raw JPGs never leave this machine.
 7. Real TLS/HSTS/CSP already apply automatically (shared `middleware/security.js`, unchanged).
 

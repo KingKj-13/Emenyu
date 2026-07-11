@@ -6,7 +6,7 @@
 
 .card {
   width: 100%; max-width: 540px;
-  background: rgba(6,32,48,0.6);
+  background: rgba(var(--color-ink-rgb), 0.6);
   border: 1px solid rgba(var(--color-gold-rgb),0.2);
   border-radius: var(--radius-card); padding: 32px 28px;
 }

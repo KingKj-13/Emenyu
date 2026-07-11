@@ -188,7 +188,7 @@ async function importBundles(prisma, data, jsonItemIdToDbId, stats) {
       data: {
         restaurantId: RESTAURANT_ID,
         slug: bundle.id,
-        persona: 'gaspard',
+        persona: String(bundle.name || 'gaspard'),
         description: String(bundle.line || ''),
         active: true,
         priority: 100,

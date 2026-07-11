@@ -66,7 +66,7 @@
   line-height: 0.98;
   letter-spacing: 0.01em;
   color: var(--color-gold-soft);
-  text-shadow: 0 2px 30px rgba(200, 165, 85, 0.18);
+  text-shadow: 0 2px 30px rgba(var(--color-gold-rgb), 0.18);
 }
 
 .brandSub {
@@ -86,7 +86,7 @@
   gap: 9px;
   margin-top: 12px;
   padding: 8px 18px;
-  border: 1px solid rgba(200, 165, 85, 0.32);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.32);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.02);
   font-family: var(--font-label);
@@ -183,7 +183,7 @@
   color: var(--muted);
 }
 
-.tile:hover { transform: translateY(-2px); border-color: rgba(200, 165, 85, 0.28); box-shadow: 0 22px 54px rgba(0, 0, 0, 0.55); }
+.tile:hover { transform: translateY(-2px); border-color: rgba(var(--color-gold-rgb), 0.28); box-shadow: 0 22px 54px rgba(0, 0, 0, 0.55); }
 .tile:active { transform: translateY(0); }
 
 /* ───────── Full-menu CTA ───────── */
@@ -199,16 +199,16 @@
   padding: 14px 20px;
   text-align: left;
   flex: none;
-  border: 1px solid rgba(200, 165, 85, 0.40);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.40);
   border-radius: 18px;
   background:
-    radial-gradient(120% 180% at 100% 50%, rgba(200, 165, 85, 0.14), transparent 60%),
+    radial-gradient(120% 180% at 100% 50%, rgba(var(--color-gold-rgb), 0.14), transparent 60%),
     linear-gradient(180deg, var(--color-panel-soft) 0%, var(--color-panel) 100%);
   transition: transform var(--transition-med), border-color var(--transition-med);
   animation: landingRise 0.5s var(--ease-premium) both;
   animation-delay: 40ms;
 }
-.cta:hover { transform: translateY(-2px); border-color: rgba(200, 165, 85, 0.62); }
+.cta:hover { transform: translateY(-2px); border-color: rgba(var(--color-gold-rgb), 0.62); }
 .cta:active { transform: translateY(0); }
 
 .ctaText { display: flex; flex-direction: column; gap: 4px; }
@@ -235,7 +235,7 @@
   border-radius: 50%;
   background: linear-gradient(160deg, var(--color-gold-soft), var(--color-gold));
   color: #1a1206;
-  box-shadow: 0 6px 18px rgba(200, 165, 85, 0.35);
+  box-shadow: 0 6px 18px rgba(var(--color-gold-rgb), 0.35);
 }
 .ctaArrow svg { width: 22px; height: 22px; }
 

@@ -1,6 +1,6 @@
 .bar {
   padding: 16px clamp(16px, 4vw, 48px);
-  background: rgba(0, 15, 24, 0.6);
+  background: rgba(var(--color-ink-rgb), 0.6);
   border-bottom: 1px solid var(--color-line);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);

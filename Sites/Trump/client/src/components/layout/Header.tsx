@@ -18,7 +18,7 @@ export function Header() {
             <path d="M8 19V9h8v10" />
           </svg>
         </div>
-        <div>
+        <div className={styles.brandText}>
           <p className={styles.brandTitle}>{LANDING_BRAND_NAME}</p>
           <p className={styles.brandSubtitle}>{BRAND_TAGLINE.toUpperCase()}</p>
         </div>

@@ -461,7 +461,7 @@ function FunnelStep({ value, label, sub, gold }: { value: number; label: string;
   );
 }
 
-const SEVERITY: Record<string, string> = { high: '#e0696b', medium: '#c8a555', low: '#6f9a7a' };
+const SEVERITY: Record<string, string> = { high: '#e0696b', medium: 'var(--color-gold)', low: '#6f9a7a' };
 function Insight({ severity, title, detail, action }: { severity: string; title: string; detail: string; action?: string }) {
   return (
     <div className={styles.insight} style={{ borderLeftColor: SEVERITY[severity] || '#9aa6b2' }}>

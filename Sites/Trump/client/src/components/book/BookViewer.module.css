@@ -9,7 +9,7 @@
   display: flex;
   gap: 4px;
   padding: 4px;
-  background: rgba(0,15,24,0.8);
+  background: rgba(var(--color-ink-rgb), 0.8);
   border: 1px solid rgba(var(--color-gold-rgb),0.2);
   border-radius: var(--radius-pill);
   -webkit-backdrop-filter: blur(12px);
@@ -104,7 +104,7 @@
   transform: translateX(-50%);
   z-index: 90;
   padding: 6px 14px;
-  background: rgba(0,15,24,0.8);
+  background: rgba(var(--color-ink-rgb), 0.8);
   border: 1px solid rgba(var(--color-gold-rgb),0.2);
   border-radius: var(--radius-pill);
   color: var(--muted);

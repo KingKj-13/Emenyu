@@ -17,9 +17,24 @@
    just reads "the primary text token" / "the base surface token" and gets
    correct contrast for whichever mode is active. */
 
-[data-tenant='carmella'] {
+/* `html[data-tenant=...]` (element + attribute), not bare `[data-tenant=...]`:
+   :root and a bare attribute selector have IDENTICAL specificity (0,0,1,0), so
+   whichever rule comes later in the cascade wins regardless of "intent" — and
+   since this file is @imported at the TOP of index.css (before :root), a bare
+   attribute selector here was silently LOSING to :root's values every time
+   (verified live: data-tenant="carmella" was correctly set on <html>, but
+   getComputedStyle still returned Trump's #040e1a). Adding the `html` type
+   selector raises specificity to (0,0,1,1), which reliably beats :root's
+   (0,0,1,0) regardless of source order. */
+html[data-tenant='carmella'] {
+  /* body's own background (index.css) is a literal gradient, not a --color-*
+     token — override the whole property here for the light modes rather
+     than leaving Trump's navy/blue/red gradient showing through. */
+  --body-background: radial-gradient(ellipse at 30% 0%, rgba(201, 169, 106, 0.10), transparent 55%), #F7F2E8;
+
   /* ── Base palette (midday — the default before the config fetch resolves) ── */
   --color-ink:          #F7F2E8; /* cream-paper: base surface */
+  --color-ink-rgb:      247, 242, 232;
   --color-coal:         #FBF7EF; /* paper-light: raised surface */
   --color-panel:        #FFFDF8;
   --color-panel-soft:   #FFFFFF;
@@ -45,19 +60,38 @@
   --font-heading: 'Fraunces', 'Cormorant Garamond', Georgia, serif;
   --font-body:    'Inter', Manrope, ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-label:   'Inter', Manrope, sans-serif;
+
+  /* Legacy pre-semantic tokens (17 usages app-wide, mostly "light icon/text on
+     a dark chip") — predate the --color-* naming but still consumed directly
+     by a handful of components (Header's icon buttons, Button, BookViewer,
+     LandingPage). Without an override here they'd stay Trump's near-white
+     values, which is invisible on Carmella's light-mode chips. */
+  --white: #172417;
+  --muted: rgba(23, 36, 23, 0.72);
+  /* Media-placeholder background (ItemModal) — kept deliberately dark
+     regardless of day-part mode, matching the "photo loads over a dark
+     backdrop" pattern every tenant uses. */
+  --blue-black: #1B2A1C;
 }
 
 /* Morning (06:30–11:30): paper-light surface, otherwise identical to midday. */
-[data-tenant='carmella'][data-theme='morning'] {
-  --color-ink:  #FBF7EF;
-  --color-coal: #FFFDF8;
+html[data-tenant='carmella'][data-theme='morning'] {
+  --body-background: radial-gradient(ellipse at 30% 0%, rgba(201, 169, 106, 0.08), transparent 55%), #FBF7EF;
+  --color-ink:     #FBF7EF;
+  --color-ink-rgb: 251, 247, 239;
+  --color-coal:    #FFFDF8;
 }
 
 /* Golden hour (15:00–19:00): the one dark mode — matches the shared component
    CSS's original dark-surface assumption most closely, so needs the least
    re-purposing of any mode. */
-[data-tenant='carmella'][data-theme='golden'] {
+html[data-tenant='carmella'][data-theme='golden'] {
+  --body-background:
+    radial-gradient(ellipse at 30% 0%,   rgba(217, 160, 91, 0.16), transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(182, 92, 51, 0.08), transparent 40%),
+    #141F17;
   --color-ink:          #141F17; /* golden-bg */
+  --color-ink-rgb:      20, 31, 23;
   --color-coal:         #172417;
   --color-panel:        #1B2A1C;
   --color-panel-soft:   #1F301F;
@@ -70,4 +104,7 @@
   --color-gold-dim:     rgba(217, 160, 91, 0.5);
   --color-gold-rgb:     217, 160, 91;
   --color-overlay:      rgba(0, 0, 0, 0.7);
+  /* Dark mode again — restore the "light icon on dark chip" assumption. */
+  --white: #F7F2E8;
+  --muted: rgba(247, 242, 232, 0.72);
 }

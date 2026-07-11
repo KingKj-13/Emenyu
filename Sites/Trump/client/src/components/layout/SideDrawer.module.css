@@ -12,8 +12,8 @@
   right: 0;
   bottom: 0;
   width: min(320px, 92vw);
-  background: rgba(4, 14, 26, 0.97);
-  border-left: 1px solid rgba(200, 165, 85, 0.18);
+  background: rgba(var(--color-ink-rgb), 0.97);
+  border-left: 1px solid rgba(var(--color-gold-rgb), 0.18);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   z-index: var(--z-drawer);
@@ -35,7 +35,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 16px 16px;
-  border-bottom: 1px solid rgba(200, 165, 85, 0.12);
+  border-bottom: 1px solid rgba(var(--color-gold-rgb), 0.12);
   flex-shrink: 0;
 }
 
@@ -54,7 +54,7 @@
   height: 32px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(200, 165, 85, 0.25);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.25);
   border-radius: 50%;
   background: transparent;
   color: var(--color-sand);
@@ -63,7 +63,7 @@
 }
 
 .closeBtn:hover {
-  border-color: rgba(200, 165, 85, 0.6);
+  border-color: rgba(var(--color-gold-rgb), 0.6);
   color: var(--color-gold);
 }
 
@@ -98,7 +98,7 @@
 }
 
 .searchInput::placeholder { color: rgba(201, 187, 165, 0.35); }
-.searchInput:focus { outline: none; border-color: rgba(200, 165, 85, 0.4); }
+.searchInput:focus { outline: none; border-color: rgba(var(--color-gold-rgb), 0.4); }
 
 .chips {
   display: flex;
@@ -120,13 +120,13 @@
 }
 
 .chip:hover {
-  border-color: rgba(200, 165, 85, 0.4);
+  border-color: rgba(var(--color-gold-rgb), 0.4);
   color: var(--color-cream);
 }
 
 .chipActive {
-  border-color: rgba(200, 165, 85, 0.6);
-  background: rgba(200, 165, 85, 0.12);
+  border-color: rgba(var(--color-gold-rgb), 0.6);
+  background: rgba(var(--color-gold-rgb), 0.12);
   color: var(--color-gold);
 }
 
@@ -140,9 +140,9 @@
 .clearAll {
   align-self: flex-start;
   padding: 6px 14px;
-  border: 1px solid rgba(200, 165, 85, 0.3);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.3);
   border-radius: 20px;
-  background: rgba(200, 165, 85, 0.06);
+  background: rgba(var(--color-gold-rgb), 0.06);
   color: var(--color-gold);
   font-size: 11px;
   font-weight: 600;
@@ -150,7 +150,7 @@
   transition: background 160ms;
 }
 
-.clearAll:hover { background: rgba(200, 165, 85, 0.14); }
+.clearAll:hover { background: rgba(var(--color-gold-rgb), 0.14); }
 
 .quickSection {
   padding: 14px 16px 16px;
@@ -173,7 +173,7 @@
   justify-content: center;
   gap: 7px;
   padding: 16px 10px;
-  border: 1px solid rgba(200, 165, 85, 0.18);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.18);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.025);
   color: var(--color-sand);
@@ -187,14 +187,14 @@
 }
 
 .quickTile:hover {
-  border-color: rgba(200, 165, 85, 0.45);
-  background: rgba(200, 165, 85, 0.07);
+  border-color: rgba(var(--color-gold-rgb), 0.45);
+  background: rgba(var(--color-gold-rgb), 0.07);
   color: var(--color-gold);
 }
 
 .quickTileActive {
-  border-color: rgba(200, 165, 85, 0.55);
-  background: rgba(200, 165, 85, 0.1);
+  border-color: rgba(var(--color-gold-rgb), 0.55);
+  background: rgba(var(--color-gold-rgb), 0.1);
   color: var(--color-gold);
 }
 
@@ -212,7 +212,7 @@
 .bookTypeBtn {
   flex: 1;
   padding: 8px 10px;
-  border: 1px solid rgba(200, 165, 85, 0.2);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.2);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.03);
   color: var(--color-sand);
@@ -223,13 +223,13 @@
 }
 
 .bookTypeBtnActive {
-  border-color: rgba(200, 165, 85, 0.6);
-  background: rgba(200, 165, 85, 0.12);
+  border-color: rgba(var(--color-gold-rgb), 0.6);
+  background: rgba(var(--color-gold-rgb), 0.12);
   color: var(--color-gold);
 }
 
 .bookTypeBtn:hover:not(.bookTypeBtnActive) {
-  border-color: rgba(200, 165, 85, 0.3);
+  border-color: rgba(var(--color-gold-rgb), 0.3);
   color: var(--color-cream);
 }
 
@@ -258,14 +258,14 @@
 }
 
 .navLink:hover {
-  background: rgba(200, 165, 85, 0.07);
+  background: rgba(var(--color-gold-rgb), 0.07);
   color: var(--color-gold);
 }
 
 .staff {
   margin-top: auto;
   padding: 18px 16px 24px;
-  border-top: 1px solid rgba(200, 165, 85, 0.12);
+  border-top: 1px solid rgba(var(--color-gold-rgb), 0.12);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -276,7 +276,7 @@
   align-items: center;
   gap: 10px;
   padding: 11px 14px;
-  border: 1px solid rgba(200, 165, 85, 0.2);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.2);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.025);
   color: var(--color-sand);
@@ -286,7 +286,7 @@
 }
 
 .staffBtn:hover {
-  border-color: rgba(200, 165, 85, 0.45);
-  background: rgba(200, 165, 85, 0.07);
+  border-color: rgba(var(--color-gold-rgb), 0.45);
+  background: rgba(var(--color-gold-rgb), 0.07);
   color: var(--color-gold);
 }

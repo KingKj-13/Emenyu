@@ -288,7 +288,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
       >
         {chatOpen ? <X size={20} /> : <span className={styles.aiBadge} aria-hidden="true">🍷</span>}
         {!chatOpen && hasUnseenSuggestion && <span className={styles.notifyDot} aria-hidden="true" />}
-        {!chatOpen && showEntranceHint && !hasUnseenSuggestion && <span className={styles.launcherLabel}>Ask me</span>}
+        {!chatOpen && showEntranceHint && !hasUnseenSuggestion && <span className={styles.launcherLabel}>Ask {assistantName}</span>}
       </button>
 
       <AnimatePresence>

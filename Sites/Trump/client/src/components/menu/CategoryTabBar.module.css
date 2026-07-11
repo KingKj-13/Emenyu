@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   z-index: var(--z-tabs);
-  background: rgba(0, 12, 20, 0.92);
+  background: rgba(var(--color-ink-rgb), 0.92);
   border-bottom: 1px solid rgba(var(--color-gold-rgb), 0.14);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
@@ -27,7 +27,7 @@
   border-radius: 20px;
   background: transparent;
   /* Unselected tabs must still read as tappable, not disabled. */
-  color: rgba(201, 187, 165, 0.74);
+  color: var(--color-sand);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -61,7 +61,7 @@
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
   /* Unselected tabs must still read as tappable, not disabled. */
-  color: rgba(201, 187, 165, 0.8);
+  color: var(--color-sand);
   font-family: var(--font-heading, inherit);
   font-size: 13px;
   font-weight: 700;

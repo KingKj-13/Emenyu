@@ -5,6 +5,11 @@
 @import './styles/carmella-theme.css';
 
 :root {
+  --body-background:
+    radial-gradient(ellipse at 30% 0%,   rgba(20, 60, 100, 0.22), transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(120, 30, 30, 0.10), transparent 40%),
+    #040e1a;
+
   /* ── Midnight navy palette ── */
   --blue-black: #040e1a;
   --blue-deep:  #071424;
@@ -17,22 +22,23 @@
 
   /* ── Semantic colour tokens ── */
   --color-ink:          #040e1a;
+  --color-ink-rgb:      4, 14, 26;
   --color-coal:         #071424;
   --color-panel:        #081828;
   --color-panel-soft:   #0d2236;
   --color-glass:        rgba(8, 24, 40, 0.72);
-  --color-glass-strong: rgba(4, 14, 26, 0.94);
+  --color-glass-strong: rgba(var(--color-ink-rgb), 0.94);
   --color-cream:        #f7f1e8;
   --color-sand:         #c9bba5;
   --color-gold:         #c8a555;
   --color-gold-soft:    #e2c880;
-  --color-gold-dim:     rgba(200, 165, 85, 0.6);
+  --color-gold-dim:     rgba(var(--color-gold-rgb), 0.6);
   --color-gold-rgb:     200, 165, 85;
   --color-burgundy:     #a52b2d;
   --color-moss:         #71806a;
   --color-teal:         #4d7f82;
-  --color-line:         rgba(200, 165, 85, 0.15);
-  --color-overlay:      rgba(4, 14, 26, 0.85);
+  --color-line:         rgba(var(--color-gold-rgb), 0.15);
+  --color-overlay:      rgba(var(--color-ink-rgb), 0.85);
   /* One canonical danger/error text color — was previously 3 near-identical
      hardcoded reds (#e08080, #e06060, #fca5a5) scattered across pages. */
   --color-danger-text:  #fca5a5;
@@ -121,10 +127,12 @@ body {
   min-height: 100vh;
   min-height: -webkit-fill-available;
   min-height: 100dvh;
-  background:
-    radial-gradient(ellipse at 30% 0%,   rgba(20, 60, 100, 0.22), transparent 50%),
-    radial-gradient(ellipse at 80% 100%, rgba(120, 30, 30, 0.10), transparent 40%),
-    #040e1a;
+  /* Token-driven so a tenant's theme can override the whole background (see
+     carmella-theme.css) — was a literal hardcoded gradient + #040e1a, which
+     bypassed every color token and rendered Trump's dark navy for every
+     tenant regardless of its own theme. --body-background here is Trump's
+     exact original value, so Trump's own render is byte-for-byte unchanged. */
+  background: var(--body-background);
   color: var(--color-cream);
   font-family: var(--font-body);
   line-height: 1.5;
@@ -160,13 +168,13 @@ select:focus-visible {
 
 a { color: var(--color-gold); text-decoration: none; }
 
-::selection { background: rgba(200, 165, 85, 0.28); }
+::selection { background: rgba(var(--color-gold-rgb), 0.28); }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--blue-black); }
-::-webkit-scrollbar-thumb { background: rgba(200, 165, 85, 0.38); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(200, 165, 85, 0.58); }
+::-webkit-scrollbar-thumb { background: rgba(var(--color-gold-rgb), 0.38); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(var(--color-gold-rgb), 0.58); }
 
 /* Utility classes */
 .visually-hidden {

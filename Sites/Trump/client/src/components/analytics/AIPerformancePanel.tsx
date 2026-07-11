@@ -31,7 +31,7 @@ function dateRange(r: Range) {
 const pct = (v?: number) => `${Math.round((v || 0) * 100)}%`;
 // Same severity palette as OwnerDashboard's Insight component — one shared
 // convention across every "what to act on" panel in the app.
-const SEVERITY: Record<string, string> = { high: '#e0696b', medium: '#c8a555', low: '#6f9a7a' };
+const SEVERITY: Record<string, string> = { high: '#e0696b', medium: 'var(--color-gold)', low: '#6f9a7a' };
 
 export function AIPerformancePanel() {
   const [range, setRange] = useState<Range>('7d');

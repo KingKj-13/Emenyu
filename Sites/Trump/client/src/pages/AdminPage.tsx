@@ -550,7 +550,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
       <div className={styles.console}>
         <div className={styles.topChrome}>
           <div className={styles.lights}><span /><span /><span /></div>
-          <div className={styles.urlPill}><span className={styles.urlDot} /> emenyu.com/admin · {BRAND_NAME} {BRAND_TAGLINE}</div>
+          <div className={styles.urlPill}><span className={styles.urlDot} /><span className={styles.urlText}>emenyu.com/admin · {BRAND_NAME} {BRAND_TAGLINE}</span></div>
           <div className={styles.chromeRight}><NotificationBell scope="all" /><NotificationButton /></div>
         </div>
         <div className={styles.body}>
@@ -916,7 +916,7 @@ function LiveChatMonitor() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
           {alerts.map((a, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, padding: '8px 10px', borderRadius: 8, background: 'rgba(var(--color-gold-rgb),0.12)', border: '1px solid rgba(var(--color-gold-rgb),0.3)' }}>
-              <Bell size={14} style={{ color: '#c8a555', flexShrink: 0 }} />
+              <Bell size={14} style={{ color: 'var(--color-gold)', flexShrink: 0 }} />
               <span>{a.message || `${a.displayTable || 'A table'} called a waiter.`}</span>
               {a.timestamp && <span style={{ marginLeft: 'auto', opacity: 0.6 }}>{a.timestamp}</span>}
             </div>
@@ -968,7 +968,7 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: 'rgba(239,68,68,0.1)'
 };
 const STATUS_TEXT: Record<string, string> = {
-  pending: '#c8a555',
+  pending: 'var(--color-gold)',
   confirmed: '#4ade80',
   seated: '#818cf8',
   cancelled: '#fca5a5'
@@ -2632,7 +2632,7 @@ function ServiceDeskPanel({ tasks, onChange }: { tasks: WaiterTask[]; onChange: 
         <div key={t.id} style={{ ...card, borderColor: 'rgba(var(--color-gold-rgb),0.4)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontWeight: 600, color: '#c8a555' }}>🎂 {t.title} · Table {deskTableNum(t.tableId)}</div>
+              <div style={{ fontWeight: 600, color: 'var(--color-gold)' }}>🎂 {t.title} · Table {deskTableNum(t.tableId)}</div>
               <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>{t.message}</div>
               <div style={{ fontSize: 12, opacity: 0.55, marginTop: 4 }}>Requested by {t.waiterName || t.requestedBy || 'waiter'}</div>
             </div>

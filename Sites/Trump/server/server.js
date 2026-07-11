@@ -389,7 +389,18 @@ async function startServer(baseDirOverride) {
 
   // SPA fallback: serve React app for all <publicBasePath>/* routes with no
   // file extension (never at bare '/', unchanged from before this refactor).
-  const spaIndex = path.join(__dirname, '../client/dist/index.html');
+  // MUST use config.directories.clientDist, not a __dirname-relative path:
+  // server.js is one shared file required by every tenant process (Trump,
+  // Demo, Carmella all `require('../Trump/server/server')`), so __dirname is
+  // ALWAYS Trump's own directory regardless of which tenant is running. This
+  // was previously hardcoded to Trump's own client/dist/index.html for every
+  // tenant — silently "worked" for Demo only because Demo's React Router
+  // basename is also literally "/Trump" (see AD-001), so serving Trump's own
+  // compiled shell happened to match. Carmella's native "/Carmella" basename
+  // exposed it as a hard blank-page bug: Trump's compiled index.html has
+  // basename="/Trump" baked in, which cannot match a "/Carmella/..." URL, so
+  // React Router renders nothing.
+  const spaIndex = path.join(config.directories.clientDist, 'index.html');
   function serveSpa(req, res, next) {
     if (/\.\w+$/.test(req.path)) return next();
     res.sendFile(spaIndex);
