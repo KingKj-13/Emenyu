@@ -50,9 +50,12 @@
   gap: 12px;
   padding: 14px 16px 10px;
 }
+/* The persona icon marks this whole card as a Gaspard-curated bundle --
+   reserved terracotta where the tenant defines it, gold fallback elsewhere
+   (see RecommendationJourney.module.css for the same pattern). */
 .icon {
   display: inline-flex;
-  color: var(--color-gold);
+  color: var(--color-gaspard-accent, var(--color-gold));
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
 }
 .headText { display: flex; flex-direction: column; min-width: 0; }

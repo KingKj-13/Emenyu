@@ -237,9 +237,12 @@
   line-height: 1.55;
 }
 
+/* Gaspard naming a specific dish in conversation -- reserved terracotta
+   where the tenant defines it, gold fallback everywhere else (see
+   RecommendationJourney.module.css for the same pattern). */
 .dishName {
   font-weight: 700;
-  color: var(--color-gold);
+  color: var(--color-gaspard-accent, var(--color-gold));
 }
 
 .userMsg {
