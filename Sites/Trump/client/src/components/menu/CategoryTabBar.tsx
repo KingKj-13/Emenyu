@@ -13,9 +13,19 @@ const GROUP_ORDER: Group[] = ['Starters', 'Mains', 'Dessert', 'Drinks'];
 
 function groupOf(title: string): Group {
   const t = title.toLowerCase();
-  if (/wine|beer|cider|spirit|liqueur|cocktail|mocktail|champagne|sparkling|beverage|whisk|gin|vodka|\brum\b|tequila|brandy|cognac|coffee|\btea\b|juice|water|shake|tiser|cordial|soft\s*&?\s*hot|after-dinner|draught/.test(t)) return 'Drinks';
+  // "liquor"/"smoothie"/"crusher" added alongside the pre-existing
+  // "spirit"/"shake" keywords — none of Trump's own section titles contain
+  // these words (its spirits section is literally named "Spirits"), so this
+  // is purely additive for tenants (Carmella) whose section titles use them;
+  // it fixes a real bug where an entire Liquor/Smoothies/Crushers section
+  // fell through to the "Mains" tab for lack of a matching keyword (demo
+  // validation report Bug H-4 — the tab bar defaulting almost everything
+  // into one bloated "Mains" pill).
+  if (/wine|beer|cider|spirit|liquor|liqueur|cocktail|mocktail|champagne|sparkling|beverage|whisk|gin|vodka|\brum\b|tequila|brandy|cognac|coffee|\btea\b|juice|water|shake|smoothie|crusher|tiser|cordial|soft\s*&?\s*hot|after-dinner|draught/.test(t)) return 'Drinks';
   if (/dessert|cake|\bsweet\b|ice cream|gelato/.test(t)) return 'Dessert';
-  if (/start|salad|tempura|meze|snack|biltong|appetiser|appetizer/.test(t)) return 'Starters';
+  // "breakfast" added — Trump has no section titled that; Carmella's Morning
+  // Pages chapter otherwise fell to the "Mains" fallback (same bug as above).
+  if (/start|salad|tempura|meze|snack|biltong|appetiser|appetizer|breakfast/.test(t)) return 'Starters';
   return 'Mains';
 }
 

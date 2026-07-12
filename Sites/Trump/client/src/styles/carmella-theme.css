@@ -108,3 +108,34 @@ html[data-tenant='carmella'][data-theme='golden'] {
   --white: #F7F2E8;
   --muted: rgba(247, 242, 232, 0.72);
 }
+
+/* Priority 9 (demo polish) — the Day/Night toggle sets [data-theme] on <html>
+   globally, so without this the Admin console (a separate staff tool, not
+   part of the guest-facing day-part experience) silently re-themed itself
+   light/dark depending on whichever mode a *different browser tab* (or the
+   real server clock, before any manual toggle) last resolved to. Manager
+   feedback was explicit: Admin must always look the same "premium green"
+   regardless of time of day. Re-declaring every token the console reads,
+   scoped to the stable data-admin-console marker (see AdminPage.tsx),
+   pins it to golden mode's values regardless of [data-theme]. !important
+   is deliberate here: this needs to beat data-theme="morning"/"midday" at
+   equal specificity regardless of source order, and nothing else should
+   ever need to override an admin-only marker this narrow. */
+html[data-tenant='carmella'] [data-admin-console] {
+  --color-ink:          #141F17 !important;
+  --color-ink-rgb:      20, 31, 23 !important;
+  --color-coal:         #172417 !important;
+  --color-panel:        #1B2A1C !important;
+  --color-panel-soft:   #1F301F !important;
+  --color-glass:        rgba(217, 160, 91, 0.06) !important;
+  --color-glass-strong: rgba(0, 0, 0, 0.4) !important;
+  --color-cream:        #F7F2E8 !important;
+  --color-sand:         #C9B99A !important;
+  --color-gold:         #D9A05B !important;
+  --color-gold-soft:    #E4B67C !important;
+  --color-gold-dim:     rgba(217, 160, 91, 0.5) !important;
+  --color-gold-rgb:     217, 160, 91 !important;
+  --color-overlay:      rgba(0, 0, 0, 0.7) !important;
+  --white:              #F7F2E8 !important;
+  --muted:              rgba(247, 242, 232, 0.72) !important;
+}

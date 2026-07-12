@@ -40,6 +40,14 @@ export const ENDPOINTS = {
   waiterTableStatus: (tableId: string) => `${API_PREFIX}/api/waiter/table/${tableId}/status`,
   waiterAddItems: `${API_PREFIX}/api/waiter/add-items`,
   waiterArchiveTable: `${API_PREFIX}/api/waiter/archive-table`,
+  // Priority 8 (demo polish) — these 3 were hand-typed as literal "/Trump/..."
+  // strings in api.ts instead of going through API_PREFIX like everything
+  // else here, so any non-Trump tenant calling them (Carmella's Admin "Chat
+  // Logs"/"Chef Recs" pages, in particular) hit Trump's own endpoints, not
+  // its own tenant's.
+  deleteOrder: (type: 'orders' | 'history', filename: string) => `${API_PREFIX}/delete/${type}/${filename}`,
+  recommendationsAdmin: `${API_PREFIX}/api/recommendations`,
+  chatHistory: `${API_PREFIX}/api/chat-history`,
   menuAdminItems: `${API_PREFIX}/api/menu/items`,
   menuCategories: `${API_PREFIX}/api/menu/categories`,
   menuItemAvailability: (id: number) => `${API_PREFIX}/api/menu/items/${id}/availability`,

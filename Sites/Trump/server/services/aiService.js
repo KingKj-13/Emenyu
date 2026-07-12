@@ -21,6 +21,7 @@ const { createItemGraph } = require('./itemGraph');
 const candidateFilterPipeline = require('./candidateFilterPipeline');
 const gaspardVoice = require('./nlg/gaspardVoice');
 const { resolveDayPart } = require('../utils/dayPartResolver');
+const { resolveScriptedPick } = require('./scriptedDemoChains');
 const fs = require('fs');
 const path = require('path');
 
@@ -286,6 +287,20 @@ function fuzzyFindItem(menuContext, rawName) {
 
   const fuzzyKey = menuContext.allKeys.find(candidate => candidate.includes(key) || key.includes(candidate));
   return fuzzyKey ? menuContext.byName.get(fuzzyKey) : null;
+}
+
+// menuContext.byName collapses same-named items to whichever was added last
+// while building the menu (e.g. two wines are both named "KLEINE ZALZE
+// VINEYARD SELECTION" — a R255 Chenin Blanc and a R295 Shiraz). The scripted
+// demo chains pin an exact price alongside the name for exactly this reason;
+// this resolves the correct one instead of trusting fuzzyFindItem's Map lookup.
+function findScriptedMenuItem(menuContext, step) {
+  const key = normalizeName(step.name);
+  const matches = menuContext.items.filter(item => normalizeName(item.name) === key);
+  if (matches.length <= 1) {
+    return matches[0] || fuzzyFindItem(menuContext, step.name);
+  }
+  return matches.find(item => Number(item.price) === step.price) || matches[0];
 }
 
 function findMentionedItem(menuContext, message) {
@@ -734,13 +749,56 @@ class AiService {
       }
     }
 
+    // Scripted demo override: applies the SAME resolveScriptedPick() chain
+    // recommend() already uses (see there), so a scripted cart's chat reply,
+    // waiter card and cart-level Chef's Pick all ever name one matching next
+    // item — never a different, live-engine pick for the same cart depending
+    // on which surface asked. Deliberately placed after exclusion-filtering/
+    // the occasion prompt and before the persona voice swap below, so Gaspard
+    // always narrates whatever is about to actually be shown.
+    const scriptedDemo = this.config?.scriptedDemo;
+    if (scriptedDemo?.enabled) {
+      const demoTableId = scriptedDemo.tableId ? normalizeId(scriptedDemo.tableId) : null;
+      if (!demoTableId || requestBody.tableId === demoTableId) {
+        const cartNames = cart.map(item => normalizeName(item.name));
+        const pick = resolveScriptedPick(cartNames, { restaurantId: this.config?.restaurantId });
+        if (pick === 'done') {
+          responseData = { ...responseData, suggestions: [] };
+        } else if (pick) {
+          const item = findScriptedMenuItem(menuContext, pick);
+          if (item) {
+            const pub = publicItem(item, "Chef's pairing");
+            pub.chef = true;
+            // publicItem() deliberately omits beverageKind (see its
+            // definition) -- the normal candidate path re-attaches it after
+            // the fact (search `pub.beverageKind =` above); this scripted
+            // short-circuit needs the same so gaspardVoice's alcoholPosture()
+            // can actually see a WINE/COCKTAIL/BEER item and append the
+            // "skip the alcohol" line the demo script quotes verbatim.
+            pub.beverageKind = item.beverageKind || 'NONE';
+            pub.scripted = true;
+            pub.confidence = 0.92;
+            pub.netRevenueIncrease = Number(pub.price) || 0;
+            pub.expectedValue = Math.round(pub.confidence * pub.netRevenueIncrease * 100) / 100;
+            if (pick.reason) pub.reason = pick.reason;
+            responseData = { ...responseData, suggestions: [pub] };
+          }
+        }
+      }
+    }
+
     // Persona voice swap (AD-005): reuses the exact suggestions the scoring
     // engine above already decided on — only the WORDING changes. Runs last,
-    // after exclusion-filtering and the occasion prompt, so Gaspard always
-    // talks about the final, real suggestion set, never a pre-filtered one.
+    // after exclusion-filtering, the occasion prompt and the scripted-demo
+    // override, so Gaspard always talks about the final, real suggestion set.
     if (this.config?.assistantPersona === 'gaspard') {
       const dayParts = await this.fileService.loadDayParts();
-      const dayPart = dayParts.length > 0 ? resolveDayPart(dayParts) : null;
+      // A client-supplied day-part (the Day/Night toggle's active mode) wins
+      // over the server clock — without this, Gaspard's greeting follows
+      // wall-clock time even when the guest is looking at the other menu
+      // (e.g. "Good morning" while browsing the Night menu at 6pm).
+      const requestedDayPart = payload.dayPart ? dayParts.find(dp => dp.slug === payload.dayPart) : null;
+      const dayPart = requestedDayPart || (dayParts.length > 0 ? resolveDayPart(dayParts) : null);
       const isFirstTurn = !(Array.isArray(payload.history) && payload.history.length > 0);
       responseData = {
         ...responseData,
@@ -873,9 +931,17 @@ class AiService {
 
     // Phase 3C: the waiter upsell reads the SAME composed reason as the cards and
     // chat (authored hero → chef → tag-true Tier-2 → never blank). One copy source.
-    let merged = [...csvRecs, ...recs]
-      .filter(r => !cartNames.has(normalizeName(r.name)))
-      .filter((r, index, list) => list.findIndex(x => normalizeName(x.name) === normalizeName(r.name)) === index);
+    //
+    // Scripted-demo carts (recs[0].scripted, set by recommend()'s scripted-
+    // chain short-circuit) skip the csvRecs blend entirely — the waiter card
+    // must show the exact same single next item as the customer chat/
+    // recommend surfaces, never SmartPairingEngine's independent (and here,
+    // non-deterministic) picks alongside it.
+    let merged = recs.some(r => r.scripted)
+      ? recs
+      : [...csvRecs, ...recs]
+        .filter(r => !cartNames.has(normalizeName(r.name)))
+        .filter((r, index, list) => list.findIndex(x => normalizeName(x.name) === normalizeName(r.name)) === index);
 
     // csvRecs (SmartPairingEngine) has no beverage-primacy logic of its own,
     // unlike `recs` (which already passed recommendationRules.applyCategorySafety's
@@ -1392,6 +1458,50 @@ class AiService {
     ]);
 
     const cartNames = cart.map(item => normalizeName(item.name));
+
+    // Live-demo hard-coded CHEF'S PICK chains (Trump's Prime Grillhouse demo
+    // scripts — see demo trump rule.md). When active for this table, this
+    // completely bypasses the algorithmic engine below so the demo can never
+    // surface a surprise pick — either the next scripted item, or nothing
+    // once a chain has run its course. Gated by config so every other table
+    // (i.e. real diners) keeps the normal recommendation engine untouched.
+    const scriptedDemo = this.config?.scriptedDemo;
+    if (scriptedDemo?.enabled) {
+      const requestTableId = payload.tableId ? normalizeId(payload.tableId) : null;
+      const demoTableId = scriptedDemo.tableId ? normalizeId(scriptedDemo.tableId) : null;
+      if (!demoTableId || requestTableId === demoTableId) {
+        const pick = resolveScriptedPick(cartNames, { restaurantId: this.config?.restaurantId });
+        if (pick === 'done') {
+          return [];
+        }
+        if (pick) {
+          const item = findScriptedMenuItem(menuContext, pick);
+          if (item) {
+            const pub = publicItem(item, "Chef's pairing");
+            pub.chef = true;
+            // Distinct from `chef` (which genuine chef-first candidates also
+            // carry) — lets cartRecommendations() detect that THIS result
+            // came from the scripted chain, not the live engine, so it can
+            // skip blending in SmartPairingEngine's independent csvRecs and
+            // keep the waiter card showing exactly this one item, matching
+            // the customer chat/recommend surfaces exactly (see there).
+            pub.scripted = true;
+            // Demo validation report Part 5/9: every scripted pick reports a
+            // fixed 0.92 confidence (the same band a genuine chef:true
+            // candidate gets — see the `candidate.brain` path below, which
+            // this early-return bypasses entirely) and expected value =
+            // confidence × price. Always a pure add here, never a
+            // replacement, so netRevenueIncrease is the full price.
+            pub.confidence = 0.92;
+            pub.netRevenueIncrease = Number(pub.price) || 0;
+            pub.expectedValue = Math.round(pub.confidence * pub.netRevenueIncrease * 100) / 100;
+            if (pick.reason) pub.reason = pick.reason;
+            return [pub];
+          }
+        }
+      }
+    }
+
     const seen = new Set(cartNames);
     // Phase 1 (Recommendation Brain): "wait before suggesting something else" —
     // chatSession derives which names the guest just ignored (suggested last turn,

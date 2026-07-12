@@ -103,6 +103,10 @@
   --z-drawer: 260;
   --z-receipt: 300;
   --z-modal: 500;
+  /* Above Admin's own ad-hoc form-modal overlay (AdminPage.module.css
+     .modalOverlay, z-index 1000) -- a notification can arrive while an
+     admin form is open, and it must never get silently hidden behind it. */
+  --z-notification: 1200;
 
   --content-max: 1200px;
   --bp-sm: 480px;

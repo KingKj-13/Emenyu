@@ -119,7 +119,7 @@ export const api = {
   },
 
   deleteOrder(type: 'orders' | 'history', filename: string) {
-    return fetchJson<unknown>(`/Trump/delete/${type}/${filename}`, { method: 'DELETE' });
+    return fetchJson<unknown>(ENDPOINTS.deleteOrder(type, filename), { method: 'DELETE' });
   },
 
   waiterTableStatus(tableId: string) {
@@ -139,15 +139,15 @@ export const api = {
   },
 
   getRecommendationsAdmin() {
-    return fetchJson<unknown[]>(`/Trump/api/recommendations`);
+    return fetchJson<unknown[]>(ENDPOINTS.recommendationsAdmin);
   },
 
   saveRecommendations(data: unknown) {
-    return postJson<unknown>(`/Trump/api/recommendations`, data);
+    return postJson<unknown>(ENDPOINTS.recommendationsAdmin, data);
   },
 
   getChatHistory() {
-    return fetchJson<unknown[]>(`/Trump/api/chat-history`);
+    return fetchJson<unknown[]>(ENDPOINTS.chatHistory);
   },
 
   uploadFile(formData: FormData) {

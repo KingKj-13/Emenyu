@@ -283,6 +283,19 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
       autoLoginRole: env.TRUMP_DEMO_AUTO_LOGIN_ROLE || null,
       autoLoginUsername: env.TRUMP_DEMO_AUTO_LOGIN_USERNAME || 'demo-guest'
     },
+    // Live pitch-demo mode (demo trump rule.md; Carmella's 2026-07-12 demo
+    // validation report Part 9): hard-coded CHEF'S PICK chains for
+    // aiService.recommend()/chat(), off by default so real diners always get
+    // the real engine. TRUMP_SCRIPTED_DEMO_TABLE scopes it to one table —
+    // leave unset (as here) to disable the table scope entirely, so any
+    // table can trigger a chain by cart contents alone (Carmella runs this
+    // way, since its six demo stories are deliberately spread across
+    // different tables). Which chain set applies is decided by
+    // config.restaurantId inside scriptedDemoChains.js, not by this flag.
+    scriptedDemo: {
+      enabled: parseBoolean(env.TRUMP_SCRIPTED_DEMO_ENABLED, false),
+      tableId: env.TRUMP_SCRIPTED_DEMO_TABLE || null
+    },
     admin: {
       username: ADMIN_USERNAME,
       password: sharedPassword
@@ -626,7 +639,20 @@ function createRoleAuth(config, accountService, logger = null) {
     }
 
     if (!user) {
-      res.set('WWW-Authenticate', 'Basic');
+      // Deliberately NOT setting WWW-Authenticate: Basic here (removed
+      // 2026-07-12). This app has no interactive Basic-Auth login flow --
+      // every real user authenticates via the cookie-session login page
+      // (the `options.page` branch above) or a Bearer token. But Express/
+      // fetch don't care that a request was a silent background poll (e.g.
+      // /api/notifications/unread-count, hit every ~60s) vs. a user action:
+      // the moment ANY XHR/fetch response carries this header with a 401,
+      // the BROWSER itself intercepts it and pops its own native
+      // username/password dialog over the page -- with no way for the app
+      // to suppress it. A session simply expiring mid-shift was enough to
+      // trigger this on the waiter dashboard. readBasicUser() above still
+      // accepts a proactively-sent `Authorization: Basic ...` header from
+      // any real API client that wants to use it -- this only stops the
+      // browser from being told to prompt for one.
       return res.status(401).json({ error: 'Authentication required' });
     }
 

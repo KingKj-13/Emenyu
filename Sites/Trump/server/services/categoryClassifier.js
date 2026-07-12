@@ -39,17 +39,30 @@ function categoryType(input) {
   if (/\b(starter|meze|tapas|soup|antipasti)/.test(text)) return 'STARTER';
   if (/\b(dessert|sweet|cake|ice ?cream|baklava|pudding|brownie|gelato)/.test(text)) return 'DESSERT';
 
+  // Wine is checked before the food guard below so a wine SECTION (its
+  // category/subcategory contains an unambiguous varietal/style word like
+  // "champagne" or "wine") always wins over an incidental food-keyword
+  // collision in the item's own name — e.g. "Billecart-Salmon Brut Rosé" (a
+  // champagne) would otherwise be misread as a MAIN via "salmon". A generic
+  // "cellar" is deliberately NOT a wine signal here (removed 2026-07-12): a
+  // chapter merely named "The ... Cellar" also holds beer/spirits, and
+  // "cellar" alone doesn't distinguish wine from anything else stored there
+  // — see beverageKind()'s matching change below for the bug this caused
+  // (every beer/spirit in such a chapter reading as WINE).
+  if (/\b(wine|sparkling|champagne|sauvignon|chardonnay|merlot|shiraz|pinotage|cabernet|chenin|blend|rosé|rose wine|bubbly)/.test(text)) {
+    return 'WINE';
+  }
+
   // "side" (as in a side dish) must not match "Side Car" — a named cocktail,
   // not food. Same false-positive family as the "steak"/"tea" guard above.
   if (/\b(steak|burger|beef|lamb|pork|chicken|rib|grill|wagyu|fillet|sirloin|rump|tomahawk|schnitzel|seafood|prawn|calamari|squid|mussel|kingklip|hake|salmon|sole|fish|sushi|sashimi|pasta|wrap|platter|side(?!\s*car)|wings|biltong|chop|veg|salad|curry|main)/.test(text)) {
     return 'MAIN';
   }
 
-  if (/\b(wine|cellar|sparkling|champagne|sauvignon|chardonnay|merlot|shiraz|pinotage|cabernet|chenin|blend|rosé|rose wine|bubbly)/.test(text)) {
-    return 'WINE';
-  }
-
-  if (/\b(drink|beverage|beer|lager|cider|coffee|cappuccino|latte|espresso|tea|cocktail|mocktail|spirit|liqueur|whisky|whiskey|\bgin\b|vodka|\brum\b|tequila|sake|brandy|cognac|soda|juice|water|smoothie|shake)/.test(text)) {
+  // "liquor" alongside "liqueur" — a section literally titled "Liquor" (as
+  // opposed to "Liqueurs") previously matched neither spelling and fell all
+  // the way through to the MAIN default below.
+  if (/\b(drink|beverage|beer|lager|cider|coffee|cappuccino|latte|espresso|tea|cocktail|mocktail|spirit|liqueur|liquor|whisky|whiskey|\bgin\b|vodka|\brum\b|tequila|sake|brandy|cognac|soda|juice|water|smoothie|shake)/.test(text)) {
     return 'DRINK';
   }
 
@@ -76,7 +89,10 @@ function beverageKind(input) {
   if (/\b(cocktail|mocktail|margarita|martini|negroni|mojito|cosmopolitan|old fashioned|whiskey sour|whisky sour|aperol|spritz|long island|daiquiri|pina colada|caipirinha|mai tai|sour)s?\b/.test(text)) {
     return 'COCKTAIL';
   }
-  if (/\b(wine|cellar|champagne|sparkling|mcc|cap classique|sauvignon|chardonnay|merlot|shiraz|syrah|pinotage|pinot|cabernet|chenin|blend|ros[eé]|bubbly|port|sherry|sangria)s?\b/.test(text)) {
+  // "cellar" removed (2026-07-12) — a chapter merely named "The ... Cellar"
+  // also holds beer/spirits, and the word alone doesn't distinguish wine
+  // from anything else stored there. See categoryType()'s matching note.
+  if (/\b(wine|champagne|sparkling|mcc|cap classique|sauvignon|chardonnay|merlot|shiraz|syrah|pinotage|pinot|cabernet|chenin|blend|ros[eé]|bubbly|port|sherry|sangria)s?\b/.test(text)) {
     return 'WINE';
   }
   if (/\b(beer|lager|cider|draught|draft|ale|stout|pilsner|ipa)s?\b/.test(text)) return 'BEER';
@@ -87,8 +103,9 @@ function beverageKind(input) {
     return 'SOFT';
   }
 
-  // Generic spirits / liqueurs without a clearer kind read as a cocktail-tier drink.
-  if (/\b(whisky|whiskey|vodka|\bgin\b|\brum\b|brandy|cognac|tequila|liqueur|spirit)s?\b/.test(text)) return 'COCKTAIL';
+  // Generic spirits / liqueurs without a clearer kind read as a cocktail-tier
+  // drink. "liquor" alongside "liqueur" — see categoryType()'s DRINK check.
+  if (/\b(whisky|whiskey|vodka|\bgin\b|\brum\b|brandy|cognac|tequila|liqueur|liquor|spirit)s?\b/.test(text)) return 'COCKTAIL';
 
   return 'NONE';
 }

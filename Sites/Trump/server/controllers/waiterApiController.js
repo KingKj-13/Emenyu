@@ -397,7 +397,15 @@ function createWaiterApiController(deps) {
         for (const order of activeOrders) {
           await fileService.moveOrder('orders', 'history', order.filename, actor).catch(() => {});
         }
-        await fileService.saveTableCart(tableId, []).catch(() => {});
+        // Bug fix (Priority 6 — Complete Order): this used to call
+        // fileService.saveTableCart directly, which persists the cleared cart
+        // but never tells anyone. The guest's own still-open tab kept showing
+        // their old cart until they manually refreshed, and any admin
+        // overrides for the table (e.g. a manager discount) survived into the
+        // next guest's sitting. resetTableState clears both AND broadcasts
+        // 'syncCart'/'adminOverride' to the table's room, so the guest's live
+        // session updates itself with no refresh needed.
+        await socketService.resetTableState(tableId, { preserveAdminOverrides: false }).catch(() => {});
 
         socketService.emitOrderUpdated();
         await socketService.emitTableHistory(tableId).catch(() => {});

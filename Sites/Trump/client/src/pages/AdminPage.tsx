@@ -547,7 +547,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
 
   return (
     <AppShell requireRole={['owner', 'manager']} hideHeader>
-      <div className={styles.console}>
+      <div className={styles.console} data-admin-console>
         <div className={styles.topChrome}>
           <div className={styles.lights}><span /><span /><span /></div>
           <div className={styles.urlPill}><span className={styles.urlDot} /><span className={styles.urlText}>emenyu.com/admin · {BRAND_NAME} {BRAND_TAGLINE}</span></div>

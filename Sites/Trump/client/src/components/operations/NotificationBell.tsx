@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Bell } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Bell, X } from 'lucide-react';
 import { opsApi } from '../../services/opsApi';
 import { getSocket } from '../../services/socket';
 import type { NotificationRow } from '../../types/operations';
+import styles from './NotificationBell.module.css';
 
 const PRIORITY_LABEL: Record<number, string> = { 1: 'Urgent', 2: 'High', 3: 'Normal', 4: 'Low', 5: 'Info' };
 
@@ -56,19 +59,35 @@ function timeAgo(iso: string): string {
 // so the bell refreshes instantly in the normal case.
 export function NotificationBell({ scope }: { scope?: 'all' }) {
   const [open, setOpen] = useState(false);
-  const [unread, setUnread] = useState(0);
+  // Lightweight count, used only until the list has been fetched at least
+  // once (i.e. before the guest/staff member has ever opened the drawer).
+  const [initialUnread, setInitialUnread] = useState(0);
   const [items, setItems] = useState<NotificationRow[]>([]);
+  const [hasLoadedList, setHasLoadedList] = useState(false);
   const [loading, setLoading] = useState(false);
   const timer = useRef<number | undefined>(undefined);
 
+  // Bug fix (Priority 3 — badge/list drift): the badge and the row list used
+  // to come from two independent, independently-racing API calls (a count-
+  // only endpoint and a list endpoint), so a socket event that updated one
+  // before the other could show a badge count with no matching visible rows,
+  // or vice versa. Once the list has been fetched even once, it's the only
+  // source of truth for the count too — the separate count endpoint is used
+  // exclusively as a cheap pre-first-open estimate.
+  const listUnread = items.filter(n => !n.readAt).length;
+  const unread = hasLoadedList ? listUnread : initialUnread;
+
   const refreshCount = useCallback(async () => {
-    try { const r = await opsApi.unreadCount(scope); setUnread(r.unread); } catch { /* ignore */ }
-  }, [scope]);
+    if (hasLoadedList) return; // list is authoritative once loaded; nothing to refresh separately
+    try { const r = await opsApi.unreadCount(scope); setInitialUnread(r.unread); } catch { /* ignore */ }
+  }, [scope, hasLoadedList]);
 
   const loadList = useCallback(async () => {
     setLoading(true);
-    try { setItems(await opsApi.listNotifications({ scope, limit: 50 })); }
-    catch { /* ignore */ } finally { setLoading(false); }
+    try {
+      setItems(await opsApi.listNotifications({ scope, limit: 50 }));
+      setHasLoadedList(true);
+    } catch { /* ignore */ } finally { setLoading(false); }
   }, [scope]);
 
   useEffect(() => {
@@ -76,73 +95,120 @@ export function NotificationBell({ scope }: { scope?: 'all' }) {
     timer.current = window.setInterval(refreshCount, 20000);
     return () => window.clearInterval(timer.current);
   }, [refreshCount]);
-  useEffect(() => { if (open) loadList(); }, [open, loadList]);
+  // Refresh the list on a timer too (not just on open) so the badge — now
+  // always derived from the list once loaded — keeps updating even while
+  // the drawer is closed, instead of freezing at whatever it was when last
+  // opened.
+  useEffect(() => {
+    if (open) { loadList(); return; }
+    if (!hasLoadedList) return;
+    const t = window.setInterval(loadList, 20000);
+    return () => window.clearInterval(t);
+  }, [open, hasLoadedList, loadList]);
 
   useEffect(() => {
     const socket = getSocket();
-    const onNotification = () => {
-      refreshCount();
-      if (open) loadList();
-    };
+    const onNotification = () => { loadList(); };
     socket.on('notification', onNotification);
     return () => { socket.off('notification', onNotification); };
-  }, [open, refreshCount, loadList]);
+  }, [loadList]);
+
+  // Escape-to-close + body scroll lock while open (matches Modal.tsx's convention).
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open]);
 
   async function ack(id: number) {
-    try { await opsApi.ackNotification(id); await Promise.all([loadList(), refreshCount()]); } catch { /* ignore */ }
+    // Optimistic — the demo must feel instantaneous, not wait on a round-trip
+    // before a tapped notification stops looking unread.
+    setItems(prev => prev.map(n => n.id === id ? { ...n, readAt: new Date().toISOString() } : n));
+    try { await opsApi.ackNotification(id); } catch { loadList(); /* reconcile on failure */ }
   }
   async function ackAll() {
-    try { await opsApi.ackAllNotifications(scope); await Promise.all([loadList(), refreshCount()]); } catch { /* ignore */ }
+    const now = new Date().toISOString();
+    setItems(prev => prev.map(n => n.readAt ? n : { ...n, readAt: now }));
+    try { await opsApi.ackAllNotifications(scope); } catch { loadList(); }
   }
 
+  const grouped = groupEntries(items);
+  const hasUnread = items.some(n => !n.readAt);
+
   return (
-    <div style={{ position: 'relative' }}>
-      {/* Same 44x44 boxed-icon treatment as every other icon-only chrome button
-          (waiter topbar sign-out, admin refresh) — was a bare unsized icon
-          floating next to a boxed sign-out button in the same row. Uses the
-          shared --color-* tokens (not --w-*) since this component renders both
-          inside and outside the .waiter-app scope. */}
-      <button onClick={() => setOpen(o => !o)} aria-label="Notifications"
-        style={{ position: 'relative', display: 'grid', placeItems: 'center', width: 44, height: 44, background: 'var(--color-panel, rgba(255,255,255,0.04))', border: '1px solid var(--color-line, rgba(255,255,255,0.1))', borderRadius: 12, cursor: 'pointer', color: 'inherit', lineHeight: 1 }}>
+    <>
+      <button
+        type="button"
+        className={styles.bellBtn}
+        onClick={() => setOpen(o => !o)}
+        aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ''}`}
+        aria-expanded={open}
+      >
         <Bell size={19} aria-hidden />
-        {unread > 0 && (
-          <span style={{ position: 'absolute', top: -4, right: -4, background: 'var(--color-burgundy, #a52b2d)', color: '#fff', borderRadius: 9, fontSize: 10, minWidth: 18, height: 18, lineHeight: '18px', textAlign: 'center', padding: '0 4px', fontWeight: 700 }}>
-            {unread > 99 ? '99+' : unread}
-          </span>
-        )}
+        {unread > 0 && <span className={styles.badge}>{unread > 99 ? '99+' : unread}</span>}
       </button>
-      {open && (
-        <div role="dialog" aria-label="Notifications"
-          style={{ position: 'absolute', right: 0, top: 48, width: 'min(340px, calc(100vw - 24px))', maxHeight: 440, overflowY: 'auto', background: 'var(--color-panel, #14110d)', color: 'var(--color-cream, #eee)', border: '1px solid var(--color-line, #b8893d55)', borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,.5)', zIndex: 1000 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderBottom: '1px solid #ffffff14', position: 'sticky', top: 0, background: 'var(--color-panel, #14110d)' }}>
-            <strong style={{ letterSpacing: '.04em' }}>Notifications</strong>
-            <button onClick={ackAll} style={{ background: 'transparent', border: 'none', color: 'var(--color-gold, #cda85f)', cursor: 'pointer', fontSize: 12 }}>Mark all read</button>
-          </div>
-          {loading && <div style={{ padding: 16, opacity: .6 }}>Loading…</div>}
-          {!loading && items.length === 0 && <div style={{ padding: 16, opacity: .6 }}>You're all caught up.</div>}
-          {!loading && groupEntries(items).map(([group, groupItems]) => (
-            <div key={group}>
-              <div style={{ padding: '8px 14px 4px', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', opacity: .5 }}>{group}</div>
-              {groupItems.map(n => (
-                <div key={n.id} style={{ padding: '10px 14px', borderBottom: '1px solid #ffffff0d', background: n.readAt ? 'transparent' : 'rgba(200,165,85,0.06)', display: 'flex', gap: 8 }}>
-                  <span style={{ width: 8, height: 8, marginTop: 6, borderRadius: 8, background: n.priority <= 2 ? 'var(--color-burgundy, #a52b2d)' : 'var(--color-gold, #cda85f)', flex: '0 0 auto', opacity: n.readAt ? .3 : 1 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ fontWeight: 600, fontSize: 13 }}>{n.title}</span>
-                      <span style={{ fontSize: 10, opacity: .5, whiteSpace: 'nowrap' }}>{timeAgo(n.createdAt)}</span>
-                    </div>
-                    {n.body && <div style={{ fontSize: 12, opacity: .75, marginTop: 2 }}>{n.body}</div>}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, alignItems: 'center' }}>
-                      <span style={{ fontSize: 10, opacity: .5, textTransform: 'uppercase', letterSpacing: '.06em' }}>{PRIORITY_LABEL[n.priority] || n.priority}</span>
-                      {!n.readAt && <button onClick={() => ack(n.id)} style={{ background: 'transparent', border: 'none', color: 'var(--color-gold, #cda85f)', cursor: 'pointer', fontSize: 11 }}>Mark read</button>}
-                    </div>
+      {createPortal(
+        <AnimatePresence>
+          {open && (
+            <>
+              <motion.div
+                className={styles.backdrop}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setOpen(false)}
+              />
+              <motion.div
+                role="dialog"
+                aria-label="Notifications"
+                className={styles.panel}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 16 }}
+                transition={{ duration: 0.26, ease: [0.2, 0.8, 0.2, 1] }}
+              >
+                <div className={styles.header}>
+                  <strong className={styles.title}>Notifications</strong>
+                  <div className={styles.headerActions}>
+                    {hasUnread && <button type="button" className={styles.markAllBtn} onClick={ackAll}>Mark all read</button>}
+                    <button type="button" className={styles.closeBtn} onClick={() => setOpen(false)} aria-label="Close notifications">
+                      <X size={16} />
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          ))}
-        </div>
+                <div className={styles.body}>
+                  {loading && items.length === 0 && <div className={styles.empty}>Loading…</div>}
+                  {!loading && items.length === 0 && <div className={styles.empty}>You're all caught up.</div>}
+                  {grouped.map(([group, groupItems]) => (
+                    <div key={group}>
+                      <div className={styles.groupLabel}>{group}</div>
+                      {groupItems.map(n => (
+                        <div key={n.id} className={`${styles.row} ${!n.readAt ? styles.unread : ''}`}>
+                          <span className={`${styles.dot} ${!n.readAt ? styles.unread : ''} ${n.priority <= 2 ? styles.urgent : ''}`} />
+                          <div className={styles.rowBody}>
+                            <div className={styles.rowTop}>
+                              <span className={styles.rowTitle}>{n.title}</span>
+                              <span className={styles.rowTime}>{timeAgo(n.createdAt)}</span>
+                            </div>
+                            {n.body && <div className={styles.rowText}>{n.body}</div>}
+                            <div className={styles.rowFoot}>
+                              <span className={styles.priorityLabel}>{PRIORITY_LABEL[n.priority] || n.priority}</span>
+                              {!n.readAt && <button type="button" className={styles.markBtn} onClick={() => ack(n.id)}>Mark read</button>}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body
       )}
-    </div>
+    </>
   );
 }

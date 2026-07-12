@@ -1,5 +1,11 @@
-const CACHE = 'emenyu-trump-v4';
-const API_PATTERNS = ['/api/', '/Trump/api/', '/socket.io/'];
+// Priority 8 (demo polish) — derive this tenant's base path from where this
+// exact script is served from (each tenant's client/dist ships its own copy
+// at <basePath>/sw.js, e.g. /Trump/sw.js, /Carmella/sw.js) instead of
+// hardcoding Trump's own path/branding into every tenant's install. One
+// shared source file now self-configures for whichever tenant runs it.
+const BASE_PATH = self.location.pathname.replace(/\/sw\.js$/i, '') || '/Trump';
+const CACHE = `emenyu${BASE_PATH.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-v1`;
+const API_PATTERNS = ['/api/', `${BASE_PATH}/api/`, '/socket.io/'];
 
 function isApiRequest(url) {
   return API_PATTERNS.some(p => url.includes(p));
@@ -76,27 +82,27 @@ self.addEventListener('fetch', e => {
 });
 
 self.addEventListener('push', e => {
-  let data = { title: 'Emenyu', body: 'New notification', url: '/Trump/Waiter' };
+  let data = { title: 'Emenyu', body: 'New notification', url: `${BASE_PATH}/Waiter` };
   if (e.data) {
     try { data = { ...data, ...JSON.parse(e.data.text()) }; } catch {}
   }
   e.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: '/Trump/favicon.svg',
-      badge: '/Trump/favicon.svg',
+      icon: `${BASE_PATH}/favicon.svg`,
+      badge: `${BASE_PATH}/favicon.svg`,
       tag: data.tag || 'emenyu',
-      data: { url: data.url || '/Trump/Waiter' }
+      data: { url: data.url || `${BASE_PATH}/Waiter` }
     })
   );
 });
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = e.notification.data?.url || '/Trump/Waiter';
+  const url = e.notification.data?.url || `${BASE_PATH}/Waiter`;
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      const match = list.find(c => c.url.includes('/Trump'));
+      const match = list.find(c => c.url.includes(BASE_PATH));
       if (match) return match.focus();
       return clients.openWindow(url);
     })

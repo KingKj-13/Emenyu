@@ -70,7 +70,7 @@ function highlightKeywords(content: string, names: string[]) {
 }
 
 export function ChatPanel({ onItemClick }: ChatPanelProps) {
-  const { chatOpen, setChatOpen, tableId } = useApp();
+  const { chatOpen, setChatOpen, tableId, effectiveDayPartSlug } = useApp();
   const { items: cartItems, addItem, removeAt, justAdded } = useCart();
   const { activeItemNames } = useMenuData();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -239,11 +239,11 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
     // the guest with an error.
     async function attemptChat(): Promise<ChatResponse> {
       try {
-        return await api.chat({ message: content, history, tableId, cart: cartItems }) as ChatResponse;
+        return await api.chat({ message: content, history, tableId, cart: cartItems, dayPart: effectiveDayPartSlug }) as ChatResponse;
       } catch (firstError) {
         await new Promise(resolve => setTimeout(resolve, 600));
         try {
-          return await api.chat({ message: content, history, tableId, cart: cartItems }) as ChatResponse;
+          return await api.chat({ message: content, history, tableId, cart: cartItems, dayPart: effectiveDayPartSlug }) as ChatResponse;
         } catch {
           throw firstError;
         }

@@ -19,6 +19,25 @@ interface Shift {
   target: { revenue: number; avgCheck: number; upsell: number };
 }
 
+// Bug fix (Priority 7 — session persistence): startShift only ever set React
+// state + emitted a socket join, with no server round-trip and nothing
+// persisted, so ANY refresh (accidental, or the guest's own browser doing it)
+// dropped the waiter straight back to "Who's on the floor?", losing their
+// name/role/section even though they were mid-shift. sessionStorage matches
+// the same "remember for this session" pattern already used for the Day/
+// Night toggle and the chat launcher hint.
+const WAITER_SHIFT_KEY = 'emenyu_waiter_shift';
+
+function loadStoredShift(): Pick<Shift, 'name' | 'role' | 'section'> | null {
+  try {
+    const raw = sessionStorage.getItem(WAITER_SHIFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.name) return null;
+    return parsed;
+  } catch { return null; }
+}
+
 interface WaiterContextValue {
   shift: Shift;
   startShift: (name: string, role: WaiterRole, section: number[]) => void;
@@ -76,12 +95,15 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef(getSocket());
   const selectedTableRef = useRef<string | null>(null);
 
-  const [shift, setShift] = useState<Shift>({
-    started: false,
-    name: '',
-    role: 'Head Waiter',
-    section: DEFAULT_SECTION,
-    target: { revenue: 50000, avgCheck: 1200, upsell: 0.6 }
+  const [shift, setShift] = useState<Shift>(() => {
+    const stored = loadStoredShift();
+    return {
+      started: Boolean(stored),
+      name: stored?.name || '',
+      role: stored?.role || 'Head Waiter',
+      section: stored?.section || DEFAULT_SECTION,
+      target: { revenue: 50000, avgCheck: 1200, upsell: 0.6 }
+    };
   });
   const [tab, setTab] = useState<WaiterTab>('home');
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
@@ -110,6 +132,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
 
   const startShift = useCallback((name: string, role: WaiterRole, section: number[]) => {
     setShift(s => ({ ...s, started: true, name, role, section }));
+    try { sessionStorage.setItem(WAITER_SHIFT_KEY, JSON.stringify({ name, role, section })); } catch { /* ignore */ }
     const socket = socketRef.current;
     socket.emit('joinAsWaiter', { restaurantId: RESTAURANT_ID, name });
     socket.emit('joinAdmin', { restaurantId: RESTAURANT_ID });
@@ -124,8 +147,25 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // A shift restored from sessionStorage (the lazy useState initializer
+  // above) skipped startShift entirely, so this fresh page load's socket
+  // was never registered as this waiter -- redo just that half of
+  // startShift once, on mount, for the restored-shift case.
+  useEffect(() => {
+    if (!DEMO_MODE && shift.started && shift.name) {
+      const socket = socketRef.current;
+      socket.emit('joinAsWaiter', { restaurantId: RESTAURANT_ID, name: shift.name });
+      socket.emit('joinAdmin', { restaurantId: RESTAURANT_ID });
+    }
+    // Mount-only: re-registers the socket for a shift restored from
+    // sessionStorage. A shift started via the button in this same session
+    // already registered its socket in startShift() above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const endShift = useCallback(() => {
     setShift(s => ({ ...s, started: false }));
+    try { sessionStorage.removeItem(WAITER_SHIFT_KEY); } catch { /* ignore */ }
     setSelectedTableId(null);
     setOrder([]);
     setTab('home');

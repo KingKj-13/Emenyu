@@ -1,6 +1,14 @@
 .card {
   position: relative;
-  background: linear-gradient(160deg, rgba(11, 23, 30, 0.96), rgba(6, 13, 18, 0.98));
+  /* Was a hardcoded dark-navy gradient (a hand-typed approximation of
+     --color-panel/--color-panel-soft, ~rgb(8,24,40) vs the literal's
+     rgb(11,23,30) -- close enough that it was clearly meant to be the
+     token). Fine on Trump, where --color-cream (the .name text below) is
+     also light -- but on Carmella's day modes --color-cream is repurposed
+     to dark green text against a LIGHT panel, and this hardcoded dark
+     background never followed along, leaving near-illegible dark-on-dark
+     item names (Priority 4 -- breakfast card readability). */
+  background: linear-gradient(160deg, var(--color-panel-soft), var(--color-panel));
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-card);
   overflow: hidden;

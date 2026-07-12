@@ -38,6 +38,16 @@ interface AppContextValue {
   // to -- for filtering bundles, which are tagged with one of these three,
   // not a chapter slug. null alongside menuMode.
   activeDayPartSlugs: Set<string> | null;
+  // Single resolved day-part slug for the AI endpoints (chat/recommend/
+  // cartRecommendations) to send as an explicit override -- without this the
+  // server falls back to wall-clock time, which disagrees with the guest's
+  // manually-toggled menu the moment they browse Night outside real evening
+  // hours (see demo validation report Bug H-1). Night is unambiguous
+  // ('golden'); Day covers two day-parts, so it prefers whichever of
+  // morning/midday the server clock actually resolved to (still a "Day"
+  // greeting either way) and falls back to 'midday' otherwise. null for
+  // tenants with no day-part engine.
+  effectiveDayPartSlug: string | null;
 }
 
 const AppContext = createContext<AppContextValue>(null!);
@@ -130,6 +140,12 @@ export function AppProvider({ children, tableIdFromUrl }: { children: ReactNode;
     return new Set(menuMode === 'night' ? NIGHT_DAYPART_SLUGS : DAY_DAYPART_SLUGS);
   }, [menuMode]);
 
+  const effectiveDayPartSlug = useMemo(() => {
+    if (!menuMode) return null;
+    if (menuMode === 'night') return 'golden';
+    return dayPart && DAY_DAYPART_SLUGS.includes(dayPart.slug) ? dayPart.slug : 'midday';
+  }, [menuMode, dayPart]);
+
   return (
     <AppContext.Provider value={{
       tableId,
@@ -152,6 +168,7 @@ export function AppProvider({ children, tableIdFromUrl }: { children: ReactNode;
       menuMode,
       toggleMenuMode,
       activeDayPartSlugs,
+      effectiveDayPartSlug,
     }}>
       {children}
     </AppContext.Provider>

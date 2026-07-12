@@ -177,6 +177,25 @@
   align-items: flex-end;
 }
 
+/* Bug: on a real phone's actual available height (shorter than any viewport
+   this was designed/tested against), .tile's fixed 1fr grid row can end up
+   shorter than [icon + gap + label + gap + sub] needs. Since .tile bottom-
+   aligns that whole stack and clips overflow, a label long enough to wrap to
+   3 lines ("The Gaspard Cellar", "The Global Table") pushed its own top edge
+   above the tile's clipped boundary -- the label vanished entirely while the
+   subtitle (last, bottom-anchored) stayed visible. Capping every label to a
+   hard 2-line clamp (matching the 2-line height already reserved above)
+   means no label can ever need more room than the tile already accounts
+   for, regardless of how short the tile ends up. On the two titles this
+   actually affects, the second line ellipsizes ("The Gaspard Cellar" keeps
+   both words at every width tested) rather than vanishing outright. */
+.tileLabelText {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
 .tileSub {
   font-family: var(--font-body);
   font-size: 12px;
