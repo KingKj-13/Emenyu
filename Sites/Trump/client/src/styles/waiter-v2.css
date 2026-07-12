@@ -258,6 +258,19 @@
 .wv-quick-actions button:active { transform: scale(0.97); background: var(--w-surface2); }
 
 /* ── Add items ───────────────────────────────────────────────────────────── */
+/* Renders as an overlay ON TOP of TableDetails now (which stays mounted
+   underneath so its AI-recommendation fetch keeps running while items are
+   being added — see TablesScreen in WaiterPage.tsx), not as a full screen
+   swap. Reproduces .wv-screen's own padding/scroll behavior since this used
+   to BE a .wv-screen before that fix. z-index sits above the bottom nav
+   (30) so it fully covers the screen, below the toast (60) so an "AI
+   suggests..." toast still reads on top of it. */
+.wv-add-overlay {
+  position: fixed; inset: 0; z-index: 40;
+  background: var(--w-bg);
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: var(--wv-pad) var(--wv-pad) calc(var(--w-nav-h) + var(--w-safe-bottom) + 24px);
+}
 .wv-add { display: flex; flex-direction: column; gap: 12px; }
 .wv-add-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .wv-add-head h1 { font-family: var(--w-font-display); font-size: 26px; margin: 0; }

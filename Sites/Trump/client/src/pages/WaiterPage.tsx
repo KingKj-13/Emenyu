@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   Bell,
@@ -504,6 +504,16 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
   const [completing, setCompleting] = useState(false);
   const event = selectedTableId ? events[selectedTableId] : undefined;
   const cartSig = useMemo(() => order.map(line => `${line.name}:${line.quantity}`).join('|'), [order]);
+  // Bug fix: TableDetails now stays mounted (see TablesScreen) while the
+  // waiter is on the AddItems overlay, so this effect already fires the
+  // instant an item is added -- but the panel it feeds is visually behind
+  // that overlay until the waiter taps "Done". A toast (rendered at the
+  // WaiterShell level, above every screen and overlay) gives them the same
+  // "recommendation is ready" feedback in real time, without needing to
+  // back out first. Tracked per table so switching tables doesn't replay a
+  // stale toast, and only fires once per distinct recommendation name so it
+  // doesn't repeat on every unrelated cart change.
+  const lastToastedRecRef = useRef<{ tableId: string; name: string } | null>(null);
 
   useEffect(() => {
     if (!selectedTableId) return;
@@ -527,11 +537,18 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
         if (cancelled) return;
         setRecData(data);
         const top = data?.recommendations?.[0];
-        if (top) setStatusByName(prev => (prev[top.name] ? prev : { ...prev, [top.name]: 'suggested' }));
+        if (top) {
+          setStatusByName(prev => (prev[top.name] ? prev : { ...prev, [top.name]: 'suggested' }));
+          const already = lastToastedRecRef.current;
+          if (!already || already.tableId !== table.tableId || already.name !== top.name) {
+            lastToastedRecRef.current = { tableId: table.tableId, name: top.name };
+            showToast(`AI suggests: ${top.name}`);
+          }
+        }
       })
       .catch(() => { if (!cancelled) setRecData(null); });
     return () => { cancelled = true; };
-  }, [cartSig, event?.type, order, table.tableId, table.isLuxury]);
+  }, [cartSig, event?.type, order, table.tableId, table.isLuxury, showToast]);
 
   // Phase 2 (Waiter Experience): a suggested recommendation that sits untouched
   // for a while is "ignored" — reuses the same status chip, no separate system.
@@ -800,8 +817,21 @@ function TablesScreen() {
     if (!selectedTableId && selected) selectTable(selected.tableId);
   }, [selectTable, selected, selectedTableId]);
 
-  if (subView === 'add') return <main className="wv-screen"><AddItems onDone={() => setSubView('details')} /></main>;
-
+  // Bug fix: this used to `return` AddItems in place of everything below,
+  // fully UNMOUNTING TableDetails (and with it, the cartRecommendations
+  // fetch effect + AiRecommendationPanel it owns) for as long as the waiter
+  // was adding items. `order` lives in WaiterContext, not in TableDetails
+  // itself, so the cart update from AddItems' addToOrder() was always real
+  // and immediate -- but with nothing mounted to react to it, the AI
+  // recommendation only ever appeared once TableDetails remounted (tapping
+  // "Done"), which happens to be the same screen as "Send To Kitchen". That
+  // made it look like recommendations only started once an order was about
+  // to be submitted, when the actual fetch had simply never been given the
+  // chance to run any sooner. Now TableDetails stays mounted underneath and
+  // AddItems renders as an overlay on top of it instead of replacing it, so
+  // the recommendation fetch fires the instant an item is tapped in --
+  // AddItems itself is unchanged, only how it's composited with the screen
+  // beneath it.
   return (
     <main className="wv-screen">
       <label className="wv-search compact">
@@ -827,6 +857,11 @@ function TablesScreen() {
         <div className="wv-empty" style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}><Spinner size={28} /></div>
       ) : (
         <p className="wv-empty">No tables loaded.</p>
+      )}
+      {subView === 'add' && (
+        <div className="wv-add-overlay">
+          <AddItems onDone={() => setSubView('details')} />
+        </div>
       )}
     </main>
   );
