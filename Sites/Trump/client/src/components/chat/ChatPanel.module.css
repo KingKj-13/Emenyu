@@ -147,11 +147,15 @@
   bottom: calc(154px + env(safe-area-inset-bottom));
   right: 20px;
   z-index: var(--z-chat);
-  width: min(360px, calc(100vw - 32px));
-  max-height: 480px;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(620px, calc(100vh - 200px));
   display: flex;
   flex-direction: column;
-  background: linear-gradient(160deg, #001828, #020f1c);
+  /* Was a hardcoded dark-navy gradient -- fine on Trump (always dark) but on
+     Carmella's light day-parts (morning/midday) the text inside (--color-cream,
+     repurposed there to a dark ink for light surfaces) rendered dark-on-dark,
+     nearly invisible. Routed through the real panel tokens so it adapts. */
+  background: linear-gradient(160deg, var(--color-panel-soft), var(--color-panel));
   border: 1px solid rgba(var(--color-gold-rgb),0.25);
   border-radius: 10px;
   box-shadow: 0 24px 64px rgba(0,0,0,0.6);
@@ -188,10 +192,14 @@
   max-width: 88%;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
+  /* Was a flat white tint tuned for a dark panel -- on Carmella's light
+     day-parts this washed out to nearly nothing against the (now correctly
+     light) panel. var(--color-glass) is themed per day-part specifically for
+     this "subtle overlay on the current panel" role. */
+  background: var(--color-glass);
+  border: 1px solid var(--color-line);
   color: var(--color-cream);
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.55;
 }
 
@@ -233,7 +241,7 @@
   max-width: 88%;
   padding: 8px 12px;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.55;
 }
 
@@ -254,8 +262,8 @@
 
 .assistantMsg {
   align-self: flex-start;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--color-glass);
+  border: 1px solid var(--color-line);
   color: var(--color-cream);
 }
 
@@ -272,14 +280,14 @@
     left: 10px;
     bottom: calc(138px + env(safe-area-inset-bottom));
     width: auto;
-    max-height: min(520px, calc(100vh - 188px));
-    max-height: min(520px, calc(100dvh - 188px));
+    max-height: min(620px, calc(100vh - 170px));
+    max-height: min(620px, calc(100dvh - 170px));
     border-radius: var(--radius-lg);
   }
 
   .message {
     max-width: 92%;
-    font-size: 14px;
+    font-size: 16px;
   }
 }
 
@@ -309,14 +317,14 @@
 .input {
   flex: 1;
   padding: 8px 12px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--color-glass);
+  border: 1px solid var(--color-line);
   border-radius: 20px;
   color: var(--color-cream);
   /* ≥16px so iOS Safari doesn't zoom when the chat field is focused. */
   font-size: 16px;
 }
-.input::placeholder { color: rgba(201,187,165,0.35); }
+.input::placeholder { color: var(--muted); }
 .input:focus:not(:focus-visible) { border-color: rgba(var(--color-gold-rgb),0.35); }
 
 .sendBtn {

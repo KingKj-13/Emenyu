@@ -29,7 +29,11 @@
   max-width: 100dvw;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(160deg, #001828, #020f1c);
+  /* Was a hardcoded dark-navy gradient -- fine on Trump (always dark) but on
+     Carmella's light day-parts (morning/midday) the text inside (--color-cream,
+     repurposed there to a dark ink for light surfaces) rendered dark-on-dark,
+     nearly invisible. Routed through the real panel tokens so it adapts. */
+  background: linear-gradient(160deg, var(--color-panel-soft), var(--color-panel));
   border-left: 1px solid rgba(var(--color-gold-rgb),0.2);
   box-shadow: -24px 0 64px rgba(0,0,0,0.5);
 }

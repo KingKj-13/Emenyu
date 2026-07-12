@@ -41,12 +41,25 @@ const TRUMP_CATEGORIES: Category[] = [
 // Day/Night filtering already governs what's visible once there. Section
 // values are the real top-level chapter titles from the live menu so
 // MenuPage's focusSection scroll (exact-then-fuzzy title match) finds them.
+// Priority 1 (demo blocker pass 2) — labels here are the compact TILE display
+// form only; the deep link's section title (the `to` field) still targets the
+// real, full chapter name so MenuPage's title-match scrolling is unaffected.
+// The 3-word forms ("The Global Table", "The Gaspard Cellar", "The Memory
+// Course", "The Morning Pages") reliably wrapped to 3 physical lines at this
+// tile width/font-size, and -webkit-line-clamp:2 then truncated that third
+// line with "..." -- worse, on most real phone viewport heights (see
+// LandingPage.module.css's .tile comment) the tile itself is shorter than
+// even that clamped 2-line box needs, so the clamped fragment's own top line
+// clips off too, leaving only a trailing word + ellipsis visible (e.g.
+// "Morning..."). Dropping the leading "The" (matching the precedent already
+// set by "Family's Toast" below) reliably keeps every label to 2 words / 2
+// lines, matching what the tile actually has room for.
 const CARMELLA_CATEGORIES: Category[] = [
-  { key: 'global-table', label: 'The Global Table', sub: 'Starters, pasta, fish & mains', glow: 'rgba(150, 72, 38, 0.19)', icon: UtensilsCrossed, to: t => sec(t, 'The Global Table') },
-  { key: 'cellar', label: 'The Gaspard Cellar', sub: 'Champagne, wine & spirits', glow: 'rgba(122, 64, 130, 0.32)', icon: Wine, to: t => sec(t, 'The Gaspard Cellar') },
+  { key: 'global-table', label: 'Global Table', sub: 'Starters, pasta, fish & mains', glow: 'rgba(150, 72, 38, 0.19)', icon: UtensilsCrossed, to: t => sec(t, 'The Global Table') },
+  { key: 'cellar', label: 'Gaspard Cellar', sub: 'Champagne, wine & spirits', glow: 'rgba(122, 64, 130, 0.32)', icon: Wine, to: t => sec(t, 'The Gaspard Cellar') },
   { key: 'familys-toast', label: "Family's Toast", sub: 'Cocktails & celebration', glow: 'rgba(162, 102, 42, 0.19)', icon: Martini, to: t => sec(t, "The Family's Toast") },
-  { key: 'memory-course', label: 'The Memory Course', sub: 'Desserts', glow: 'rgba(128, 118, 52, 0.26)', icon: Sparkles, to: t => sec(t, 'The Memory Course') },
-  { key: 'morning-pages', label: 'The Morning Pages', sub: 'Breakfast & brunch', glow: 'rgba(74, 122, 78, 0.45)', icon: Coffee, to: t => sec(t, 'The Morning Pages') },
+  { key: 'memory-course', label: 'Memory Course', sub: 'Desserts', glow: 'rgba(128, 118, 52, 0.26)', icon: Sparkles, to: t => sec(t, 'The Memory Course') },
+  { key: 'morning-pages', label: 'Morning Pages', sub: 'Breakfast & brunch', glow: 'rgba(74, 122, 78, 0.45)', icon: Coffee, to: t => sec(t, 'The Morning Pages') },
   { key: 'slow-drinks', label: 'Slow Drinks', sub: 'Coffee, juices & shakes', glow: 'rgba(58, 112, 152, 0.25)', icon: GlassWater, to: t => sec(t, 'Slow Drinks') },
 ];
 

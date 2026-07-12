@@ -157,7 +157,11 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
         setAccounts(data || []);
       } else if (t === 'chat') {
         const data = await api.getChatHistory();
-        setChatLogs(data || []);
+        // Priority 2 (demo blocker pass 2) — stored/returned oldest-first
+        // (append order); newest-first here so the message a presenter just
+        // sent from the customer app is at the top of the list, not buried
+        // at the bottom of a growing session's worth of chat.
+        setChatLogs(data ? [...(data as unknown[])].reverse() : []);
       } else if (t === 'menu') {
         const data = await api.getAdminMenuItems();
         setMenuItems((data as AdminMenuItem[]) || []);
@@ -947,11 +951,16 @@ function ChatLogList({ logs }: { logs: unknown[] }) {
   if (logs.length === 0) return <div className={styles.emptyState}><p>No chat logs</p></div>;
   return (
     <div className={styles.chatLogList}>
-      {(logs as Array<{ timestamp?: string; tableId?: string; message?: string; reply?: string }>).map((log, i) => (
+      {(logs as Array<{ date?: string; timestamp?: string; tableId?: string; message?: string; reply?: string }>).map((log, i) => (
         <div key={i} className={styles.chatLog}>
           <div className={styles.chatLogMeta}>
             <span>{formatTableLabel(log.tableId || 'unknown')}</span>
-            {log.timestamp && <span>{new Date(log.timestamp).toLocaleString()}</span>}
+            {/* aiService.appendChatLog stores `timestamp` as a bare "HH:MM"
+                clock string (not an ISO datetime) alongside a separate `date`
+                field -- new Date(log.timestamp) alone parsed to "Invalid
+                Date". Render both stored fields as text instead of
+                re-parsing them through Date. */}
+            {log.timestamp && <span>{log.date ? `${log.date} ${log.timestamp}` : log.timestamp}</span>}
           </div>
           {log.message && <p className={styles.chatLogMsg}><strong>Q:</strong> {log.message}</p>}
           {log.reply && <p className={styles.chatLogReply}><strong>A:</strong> {log.reply}</p>}

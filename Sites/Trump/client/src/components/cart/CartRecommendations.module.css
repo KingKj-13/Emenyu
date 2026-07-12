@@ -4,8 +4,15 @@
   padding-top: 14px;
 }
 
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
 .label {
-  margin: 0 0 10px;
+  margin: 0;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -14,15 +21,44 @@
   opacity: 0.8;
 }
 
+/* Priority (demo blocker pass 2) -- the strip used to hold every candidate
+   side by side with a hidden scrollbar, so a 2nd/3rd suggestion existed but
+   gave no visual hint it was there. One card at a time plus explicit
+   prev/next arrows makes "there's another option" discoverable instead of
+   relying on an undiscoverable sideways swipe. */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.navBtn {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.3);
+  background: var(--color-glass);
+  color: var(--color-gold);
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.navBtn:hover { border-color: rgba(var(--color-gold-rgb), 0.55); background: rgba(var(--color-gold-rgb), 0.14); }
+.navBtn:active { transform: scale(0.94); }
+
+.navCount {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  min-width: 24px;
+  text-align: center;
+}
+
 .strip {
   display: flex;
   gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: none;
 }
-
-.strip::-webkit-scrollbar { display: none; }
 
 /* Each suggestion is a shared <RecommendationCard variant="compact"> (Phase 3,
    Task 7) — the card owns its own styling; this module only lays out the strip. */

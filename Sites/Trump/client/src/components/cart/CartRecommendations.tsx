@@ -1,21 +1,16 @@
-import { useState, useEffect } from 'react';
-import { api } from '../../services/api';
+import { useEffect, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 import { useApp } from '../../context/AppContext';
-import { useDebounce } from '../../hooks/useDebounce';
 import { resolveImage } from '../../lib/imageResolver';
-import { RecommendationCard, type RecommendationItem } from '../reco/RecommendationCard';
+import { RecommendationCard } from '../reco/RecommendationCard';
 import { trackImpressions, trackClick, trackAccepted, type RecoContext } from '../../lib/recoAnalytics';
+import type { CartRecommendation } from '../../context/CartContext';
 import type { CartItem } from '../../types/cart';
 import type { MenuItem } from '../../types/menu';
 import styles from './CartRecommendations.module.css';
 
-interface Rec extends RecommendationItem {
-  name: string;
-  price: number;
-}
-
-function recommendationImage(rec: Rec): string {
+function recommendationImage(rec: CartRecommendation): string {
   return resolveImage({
     name: rec.name,
     price: rec.price,
@@ -25,55 +20,62 @@ function recommendationImage(rec: Rec): string {
   } as MenuItem);
 }
 
+function recoCtx(cartItems: CartItem[]): RecoContext {
+  return { mode: 'customer', source: 'cart', originatingName: cartItems[cartItems.length - 1]?.name };
+}
+
 export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
-  const { addItem, setIsOpen } = useCart();
-  const { setPendingItemName, tableId } = useApp();
-  const [recs, setRecs] = useState<Rec[]>([]);
+  // Fetching itself now happens in CartProvider (starts the moment an item is
+  // added to the cart, not just once this component -- a child of the
+  // drawer's open state -- happens to mount). This just reads the result and
+  // renders one at a time.
+  const { addItem, setIsOpen, recommendations: recs } = useCart();
+  const { setPendingItemName } = useApp();
+  const [index, setIndex] = useState(0);
 
-  const debouncedKey = useDebounce(JSON.stringify(cartItems.map(i => i.name)), 600);
-
-  useEffect(() => {
-    if (cartItems.length === 0) { setRecs([]); return; }
-    let cancelled = false;
-
-    // tableId activates the server's session-scoped "recently ignored"
-    // suppression (recommendationMemory.js) — without it, a card the guest
-    // just scrolled past could resurface on the very next cart change.
-    api.getRecommendations({ items: cartItems.map(i => ({ name: i.name, price: i.price })), tableId })
-      .then((data: unknown) => {
-        if (cancelled) return;
-        const next = Array.isArray(data) ? (data as Rec[]) : [];
-        setRecs(next);
-        if (next.length) trackImpressions(next, recoCtx(cartItems));
-      })
-      .catch(() => {});
-
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedKey]);
-
-  if (recs.length === 0) return null;
+  // A fresh recommendation set (new cart signature) always starts back at
+  // the top pick rather than whatever index the guest had scrolled to before.
+  useEffect(() => { setIndex(0); }, [recs]);
 
   const ctx = recoCtx(cartItems);
+  const current = recs[index];
+
+  useEffect(() => {
+    if (current) trackImpressions([current], ctx);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current]);
+
+  if (!current) return null;
+
+  function go(delta: number) {
+    setIndex(i => (i + delta + recs.length) % recs.length);
+  }
 
   return (
     <div className={styles.wrap}>
-      <p className={styles.label}>You might also like</p>
+      <div className={styles.labelRow}>
+        <p className={styles.label}>You might also like</p>
+        {recs.length > 1 && (
+          <div className={styles.nav}>
+            <button type="button" className={styles.navBtn} onClick={() => go(-1)} aria-label="Previous recommendation">
+              <ChevronLeft size={16} />
+            </button>
+            <span className={styles.navCount}>{index + 1}/{recs.length}</span>
+            <button type="button" className={styles.navBtn} onClick={() => go(1)} aria-label="Next recommendation">
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+      </div>
       <div className={styles.strip}>
-        {recs.map((rec, i) => (
-          <RecommendationCard
-            key={`${rec.name}-${i}`}
-            variant="compact"
-            item={rec}
-            onOpen={() => { trackClick(rec, ctx); setPendingItemName(rec.name); setIsOpen(false); }}
-            onAdd={() => { trackAccepted(rec, ctx); addItem({ name: rec.name, price: rec.price, img: recommendationImage(rec), description: rec.description || '', categoryType: rec.categoryType, beverageKind: rec.beverageKind }); }}
-          />
-        ))}
+        <RecommendationCard
+          key={`${current.name}-${index}`}
+          variant="compact"
+          item={current}
+          onOpen={() => { trackClick(current, ctx); setPendingItemName(current.name); setIsOpen(false); }}
+          onAdd={() => { trackAccepted(current, ctx); addItem({ name: current.name, price: current.price, img: recommendationImage(current), description: current.description || '', categoryType: current.categoryType, beverageKind: current.beverageKind }); }}
+        />
       </div>
     </div>
   );
-}
-
-function recoCtx(cartItems: CartItem[]): RecoContext {
-  return { mode: 'customer', source: 'cart', originatingName: cartItems[cartItems.length - 1]?.name };
 }

@@ -115,6 +115,20 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           ws: true,
         },
+        // Dev-only convenience so `vite --mode carmella` can be run standalone
+        // against the already-running Carmella API server for fast HMR
+        // iteration (demo-polish sprint 2) -- has no effect on any built
+        // bundle; production requests never go through this dev proxy.
+        '/Carmella/api': { target: 'http://localhost:3015', changeOrigin: true },
+        '/Carmella/submit_order': { target: 'http://localhost:3015', changeOrigin: true },
+        '/Carmella/orders': { target: 'http://localhost:3015', changeOrigin: true },
+        '/Carmella/history': { target: 'http://localhost:3015', changeOrigin: true },
+        '/Carmella/complete': { target: 'http://localhost:3015', changeOrigin: true },
+        '/Carmella/incomplete': { target: 'http://localhost:3015', changeOrigin: true },
+        '/Carmella/Images': { target: 'http://localhost:3015', changeOrigin: true },
+        '/Carmella/Video': { target: 'http://localhost:3015', changeOrigin: true },
+        '/Carmella/uploads': { target: 'http://localhost:3015', changeOrigin: true },
+        '/Carmella/socket.io': { target: 'http://localhost:3015', changeOrigin: true, ws: true },
       },
     },
   };

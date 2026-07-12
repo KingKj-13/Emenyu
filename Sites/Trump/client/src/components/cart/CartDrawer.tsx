@@ -104,6 +104,10 @@ export function CartDrawer() {
           description: i.description,
         })),
         table_number: tableId,
+        // Was omitted entirely -- server reads totals.tip as the customer's
+        // chosen tip (clamped server-side) and silently zeroes it when this
+        // is absent, so every order was losing its selected tip.
+        totals,
       });
       // Phase 4: attribute "ordered" events to any recommendations accepted this session.
       trackOrdered(orderedItems.map(i => i.name));
@@ -224,7 +228,14 @@ export function CartDrawer() {
                         <div className={styles.items}>
                           {items.map((item, i) => (
                             <CartItemRow
-                              key={`${item.name}-${i}`}
+                              // Name+price alone is already a stable, unique key: addItem
+                              // merges any add matching an existing name+price into that
+                              // line (qty++) rather than creating a second line, so within
+                              // one cart no two lines can share it. Index alone (the old
+                              // key) shifts for every row after a removed one, forcing
+                              // React to remount those rows instead of updating in place --
+                              // that remount was the visible "glitch" on remove/reorder.
+                              key={`${item.name}-${item.price}`}
                               item={item}
                               index={i}
                               onUpdateQty={updateQty}

@@ -30,7 +30,9 @@
   max-height: 260px;
   overflow-y: auto;
   padding: 6px;
-  background: linear-gradient(160deg, #001828, #020f1c);
+  /* Was hardcoded dark-navy -- invisible-text bug on Carmella's light day-parts,
+     same as CartDrawer/ChatPanel (see those files for the full explanation). */
+  background: linear-gradient(160deg, var(--color-panel-soft), var(--color-panel));
   border: 1px solid rgba(var(--color-gold-rgb),0.3);
   border-radius: 10px;
   box-shadow: 0 16px 40px rgba(0,0,0,0.5);

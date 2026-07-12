@@ -1,7 +1,9 @@
 .inner {
   display: flex;
   flex-direction: column;
-  background: linear-gradient(160deg, #001828, #020f1c);
+  /* Was hardcoded dark-navy -- invisible-text bug on Carmella's light day-parts,
+     same as CartDrawer/ChatPanel (see those files for the full explanation). */
+  background: linear-gradient(160deg, var(--color-panel-soft), var(--color-panel));
   border-radius: 12px;
   overflow: hidden;
   max-height: 80vh;

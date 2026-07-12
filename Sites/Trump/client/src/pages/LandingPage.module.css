@@ -122,7 +122,7 @@
   flex-direction: column;
   justify-content: flex-end;
   min-height: 0;
-  padding: 16px;
+  padding: 13px 14px;
   text-align: left;
   border: 1px solid rgba(231, 221, 201, 0.08);
   border-radius: 18px;
@@ -147,10 +147,18 @@
 }
 
 .icon {
-  position: relative;
-  width: 24px;
-  height: 24px;
-  margin-bottom: auto;
+  /* Priority 1 (demo blocker pass 2) — taken out of flow deliberately: as an
+     in-flow child (with margin-bottom:auto pushing the label/sub group down)
+     it claimed a fixed slice of the tile's already-tight vertical budget even
+     though it's purely decorative and always sits in the same top-left spot.
+     Absolute positioning anchors it to .tile's padding box (top:0/left:0
+     lands exactly where the padding used to inset it in flow), freeing that
+     height for the bottom-anchored label/subtitle stack, which needs it more. */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 19px;
+  height: 19px;
   color: var(--color-gold);
 }
 .icon svg { width: 100%; height: 100%; display: block; }
@@ -159,20 +167,30 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .tileLabel {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: clamp(20px, 6vw, 25px);
-  line-height: 1.04;
+  /* Priority 1 (demo blocker pass 2) — was clamp(20px,6vw,25px)/line-height
+     1.04. At that size, [icon + 2-line label + gap + subtitle + tile padding]
+     is taller than what a .tile's 1fr grid row actually resolves to on most
+     real phone viewport heights (confirmed via Playwright across 8 realistic
+     Android/iOS heights — the label's own top edge sat above the tile's
+     clipped boundary in nearly every case, not just the shortest ones this
+     was originally tuned against). Trimmed here, and the icon/tile
+     padding/tileText gap alongside it, so 2 lines always fit within the
+     tile's actual rendered height instead of relying on the max-height
+     breakpoints below to compact things after the fact. */
+  font-size: clamp(16.5px, 5vw, 20px);
+  line-height: 1.0;
   letter-spacing: 0.005em;
   color: var(--color-cream);
   /* Reserve 2 lines' worth of height and bottom-align the text inside it, so a
      one-line title (e.g. "Wine") sits its subtitle at the same Y as a title
      that wraps to two lines (e.g. "Sushi & Sashimi") instead of drifting. */
-  min-height: 2.1em;
+  min-height: 2em;
   display: flex;
   align-items: flex-end;
 }
@@ -282,7 +300,18 @@
 }
 .butchery:hover { opacity: 1; }
 
-@media (max-height: 680px) {
+/* Priority 1 (demo blocker pass 2) — most real Android phones with the
+   Chrome URL bar visible land in this 680-780px dead zone: taller than the
+   old single 680px breakpoint (so it never fired) but still short enough
+   that the tile grid's 1fr rows came out shorter than a 2-line label needs.
+   A lighter first compaction pass here (trim header, no subtitle loss yet)
+   buys back just enough of the grid's share of the fixed viewport. */
+@media (max-height: 780px) {
+  .header { margin-bottom: 10px; }
+  .cta { margin-bottom: 9px; }
+}
+
+@media (max-height: 730px) {
   .brand { font-size: clamp(34px, 11vw, 44px); }
   .monogram { width: 40px; height: 40px; font-size: 19px; margin-bottom: 7px; }
   .tileSub { display: none; }   /* tightest phones: keep labels, drop sublines */

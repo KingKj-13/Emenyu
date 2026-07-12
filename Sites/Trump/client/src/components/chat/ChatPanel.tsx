@@ -5,7 +5,7 @@ import { api } from '../../services/api';
 import { getSocket } from '../../services/socket';
 import { RESTAURANT_ID } from '../../constants/api';
 import { useApp } from '../../context/AppContext';
-import { useCart } from '../../context/CartContext';
+import { useCart } from '../../hooks/useCart';
 import { useMenuData } from '../../context/MenuContext';
 import { normalizeName } from '../../lib/menuUtils';
 import { RecommendationCard, type RecommendationItem } from '../reco/RecommendationCard';

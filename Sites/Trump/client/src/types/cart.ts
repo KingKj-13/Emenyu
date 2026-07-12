@@ -27,4 +27,9 @@ export type TipMode = 0 | 0.05 | 0.1 | 0.15 | 'custom';
 export interface OrderPayload {
   items: Array<{ name: string; price: number; qty: number; note?: string; img?: string; description?: string }>;
   table_number: string;
+  // Server never trusts client pricing/subtotal/vat/service (recomputed from
+  // its own menu data) but DOES read totals.tip as the customer's chosen tip
+  // (orderValidationService.js clamps it server-side) -- omitting this field
+  // entirely silently drops every order's tip to R0.
+  totals?: CartTotals;
 }
