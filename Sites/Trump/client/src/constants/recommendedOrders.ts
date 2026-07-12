@@ -15,6 +15,10 @@ export interface PersonaOrder {
   blurb: string;
   accent: string;
   courses: OrderCourse[];
+  // Which day-part this bundle belongs to (e.g. "morning"/"midday"/"golden")
+  // — drives the Day/Night menu toggle's bundle filtering. Absent/empty for
+  // tenants without the day-part engine, where it's simply never filtered on.
+  daypart?: string;
 }
 
 export const RECOMMENDED_ORDERS: PersonaOrder[] = [

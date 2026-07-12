@@ -458,6 +458,7 @@ class PrismaMenuService {
           const categoryValue = {
             ...(metadata.extra && typeof metadata.extra === 'object' ? metadata.extra : {}),
             visible: root.visible,
+            slug: root.slug,
             ...(root.intro ? { intro: root.intro } : {}),
             ...(directItems.length > 0 ? { items: directItems } : {})
           };

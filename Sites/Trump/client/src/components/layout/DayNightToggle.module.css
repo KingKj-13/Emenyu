@@ -1,0 +1,65 @@
+/* Same footprint/base language as Header.module.css's sibling nav buttons
+   (.viewToggle etc) so it sits flush in that row, but always gold-accented
+   -- unlike a plain view toggle, this button IS the status indicator for
+   which menu is showing, not just a control, so it's never in a "neutral"
+   state. */
+.toggle {
+  position: relative;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid var(--color-gold);
+  border-radius: var(--radius-card);
+  background: rgba(var(--color-gold-rgb), 0.12);
+  color: var(--color-gold);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: box-shadow 180ms ease, transform 180ms ease, background 180ms ease;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.toggle:hover {
+  transform: translateY(-1px);
+  background: rgba(var(--color-gold-rgb), 0.2);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.toggle:active { transform: translateY(0); }
+
+.iconWrap {
+  display: grid;
+  place-items: center;
+  will-change: transform, opacity;
+}
+
+.tooltip {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(var(--color-ink-rgb), 0.96);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.3);
+  color: var(--color-cream);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+  z-index: 30;
+}
+
+.toggle:hover .tooltip,
+.toggle:focus-visible .tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iconWrap { transition: none; }
+}

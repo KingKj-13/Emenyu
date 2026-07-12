@@ -6,6 +6,8 @@ import { getSocket } from '../../services/socket';
 import { RESTAURANT_ID } from '../../constants/api';
 import { useApp } from '../../context/AppContext';
 import { useCart } from '../../context/CartContext';
+import { useMenuData } from '../../context/MenuContext';
+import { normalizeName } from '../../lib/menuUtils';
 import { RecommendationCard, type RecommendationItem } from '../reco/RecommendationCard';
 import { trackImpressions, trackClick, trackAccepted } from '../../lib/recoAnalytics';
 import { useConciergeTiming, type TriggerReason } from '../../hooks/useConciergeTiming';
@@ -70,6 +72,7 @@ function highlightKeywords(content: string, names: string[]) {
 export function ChatPanel({ onItemClick }: ChatPanelProps) {
   const { chatOpen, setChatOpen, tableId } = useApp();
   const { items: cartItems, addItem, removeAt, justAdded } = useCart();
+  const { activeItemNames } = useMenuData();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -120,7 +123,13 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
         tableId,
         ...(reason === 'dessert' ? { reason: 'dessert' } : {}),
       }) as ChatSuggestionItem[];
-      const top = (recs || []).find(r => r?.name && !shownItemNamesRef.current.has(r.name)) || null;
+      // Day/Night toggle: the recommendation engine scores over the full
+      // catalog, unaware of the client-side toggle -- never proactively push
+      // an item that isn't part of the menu currently being shown.
+      const eligible = activeItemNames
+        ? (recs || []).filter(r => r?.name && activeItemNames.has(normalizeName(r.name)))
+        : (recs || []);
+      const top = eligible.find(r => r?.name && !shownItemNamesRef.current.has(r.name)) || null;
       if (!top?.name) return;
       shownItemNamesRef.current.add(top.name);
 
@@ -243,7 +252,12 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
 
     try {
       const res = await attemptChat();
-      const shown = (res.suggestions || []).slice(0, 1);
+      // Same Day/Night filtering as the proactive path above -- the reply
+      // text itself is unaffected, only which dish gets attached as a card.
+      const eligibleReplies = activeItemNames
+        ? (res.suggestions || []).filter(s => s?.name && activeItemNames.has(normalizeName(s.name)))
+        : (res.suggestions || []);
+      const shown = eligibleReplies.slice(0, 1);
       shown.forEach(s => { if (s?.name) shownItemNamesRef.current.add(s.name); });
       setMessages(prev => [...prev, {
         role: 'assistant',

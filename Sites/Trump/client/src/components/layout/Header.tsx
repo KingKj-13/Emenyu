@@ -3,11 +3,16 @@ import { Menu, BookOpen, Grid, ShoppingCart, User, ChefHat } from 'lucide-react'
 import { useApp } from '../../context/AppContext';
 import { useCart } from '../../hooks/useCart';
 import { LANDING_BRAND_NAME, BRAND_TAGLINE, DEMO_MODE } from '../../constants/api';
+import { DayNightToggle } from './DayNightToggle';
 import styles from './Header.module.css';
 
 export function Header() {
-  const { tableId, tableLabel, user, setDrawerOpen } = useApp();
+  const { tableId, tableLabel, user, setDrawerOpen, dayParts } = useApp();
   const { count, setIsOpen } = useCart();
+  // Carmella-only: tenants with no day-part engine get [] from the server
+  // (see AppContext.tsx), so this is false for Trump/Demo and their existing
+  // Book view / Waiter dashboard icon is untouched.
+  const hasDayNightToggle = dayParts.length > 0;
   // The "Book view" toggle used to flip a bookMode boolean in AppContext that
   // only drove its own highlight styling -- it never navigated anywhere or
   // set MenuPage's sectionFilter, so clicking it visibly highlighted but did
@@ -47,7 +52,9 @@ export function Header() {
         >
           <Grid size={18} />
         </Link>
-        {DEMO_MODE ? (
+        {hasDayNightToggle ? (
+          <DayNightToggle />
+        ) : DEMO_MODE ? (
           <Link
             to="/Waiter"
             className={styles.viewToggle}

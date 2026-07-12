@@ -6,6 +6,8 @@ import { Spinner } from '../ui/Spinner';
 import { resolveImage, resolveVideo, resolveYouTubeEmbed, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import { api } from '../../services/api';
+import { useMenuData } from '../../context/MenuContext';
+import { normalizeName } from '../../lib/menuUtils';
 import type { MenuItem } from '../../types/menu';
 import type { RecommendationItem } from '../reco/RecommendationCard';
 import { RecommendationJourney } from '../reco/RecommendationJourney';
@@ -52,6 +54,7 @@ function spiceLevelLabel(spice: string): string {
 }
 
 function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?: (name: string) => void }) {
+  const { activeItemNames } = useMenuData();
   const [pool, setPool] = useState<RecommendationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const pairCtx: RecoContext = { mode: 'customer', source: 'pairing', originatingName: item.name };
@@ -74,7 +77,11 @@ function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?:
           if (!key || seen.has(key)) return false;
           seen.add(key);
           return true;
-        });
+        // The pairing endpoint has no idea about the Day/Night toggle (it's a
+        // server-side lookup over the full catalog) -- drop anything outside
+        // the currently active menu so a Night-mode guest never gets steered
+        // toward a breakfast pairing that isn't even orderable right now.
+        }).filter(p => !activeItemNames || activeItemNames.has(normalizeName(p.name)));
         setPool(deduped);
         if (deduped.length) {
           trackImpressions(deduped, pairCtx);

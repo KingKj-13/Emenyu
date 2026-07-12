@@ -196,6 +196,10 @@ export interface MenuCategory {
   // Chapter narrative opener (Carmella's "chapters"); absent for tenants
   // whose categories don't carry one.
   intro?: string;
+  // Stable chapter slug (e.g. "morning-pages") — absent for tenants without
+  // the chapter/day-part engine. Lets the Day/Night filter match a category
+  // against a DayPart's leadChapters without depending on its display title.
+  slug?: string;
   [subKey: string]: MenuSubSection | MenuItem[] | boolean | string | undefined;
 }
 
@@ -237,6 +241,11 @@ export interface AppConfig {
   waiterApkUrl?: string;
   waiterLatestVersion?: string;
   currentDayPart?: DayPart;
+  // All configured day-parts (not just the currently-active one) — needed to
+  // compute the Day/Night menu toggle's chapter sets across day-parts other
+  // than whichever one the server clock currently resolves to. Absent for
+  // tenants with no day-part engine (Trump, Demo), same as currentDayPart.
+  dayParts?: DayPart[];
 }
 
 export interface ChatSuggestionItem {

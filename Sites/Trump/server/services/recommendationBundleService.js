@@ -36,7 +36,8 @@ function toPersonaOrder(bundle = {}) {
     icon: bundle.icon || '',
     blurb: bundle.description || '',
     accent: bundle.accent || '',
-    courses: items.map(it => ({ course: it.course || '', name: it.itemName, price: Number(it.price) || 0 }))
+    courses: items.map(it => ({ course: it.course || '', name: it.itemName, price: Number(it.price) || 0 })),
+    daypart: bundle.daypart || ''
   };
 }
 

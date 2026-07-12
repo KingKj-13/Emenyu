@@ -1,9 +1,10 @@
-import { useState, useEffect, type ComponentType } from 'react';
+import { useState, useEffect, useMemo, type ComponentType } from 'react';
 import { ShoppingCart, Check, Fish, Beef, Leaf, Soup, ChefHat } from 'lucide-react';
 import { RECOMMENDED_ORDERS, type PersonaOrder } from '../../constants/recommendedOrders';
 import { formatPrice } from '../../lib/menuUtils';
 import { RecommendationCard } from '../reco/RecommendationCard';
 import { api } from '../../services/api';
+import { useApp } from '../../context/AppContext';
 import { trackImpressions, trackClick, trackAccepted, type RecoContext, type RecoItemLike } from '../../lib/recoAnalytics';
 import type { MenuItem } from '../../types/menu';
 import styles from './RecommendedOrders.module.css';
@@ -92,17 +93,29 @@ function OrderCard({ order, resolveItem, onOpenItem, onAddOrder }: Props & { ord
 }
 
 export function RecommendedOrders(props: Props) {
+  const { activeDayPartSlugs } = useApp();
   // DB-backed bundles (Phase 5). Start from the bundled constant so the strip paints
   // immediately and still works offline; override with live bundles when the API responds.
-  const [orders, setOrders] = useState<PersonaOrder[]>(RECOMMENDED_ORDERS);
+  const [rawOrders, setRawOrders] = useState<PersonaOrder[]>(RECOMMENDED_ORDERS);
 
   useEffect(() => {
     let cancelled = false;
     api.getBundles()
-      .then(data => { if (!cancelled && Array.isArray(data) && data.length > 0) setOrders(data); })
+      .then(data => { if (!cancelled && Array.isArray(data) && data.length > 0) setRawOrders(data); })
       .catch(() => { /* keep the fallback */ });
     return () => { cancelled = true; };
   }, []);
+
+  // Day/Night toggle: only surface bundles tagged for the active day-part.
+  // Filtered client-side (not re-fetched) so flipping the toggle is instant.
+  // Falls back to the unfiltered list if the filter would empty the strip
+  // entirely -- a demo with a blank "not sure what to order?" strip reads as
+  // broken, and every bundle we have is still a reasonable suggestion.
+  const orders = useMemo(() => {
+    if (!activeDayPartSlugs) return rawOrders;
+    const filtered = rawOrders.filter(o => !o.daypart || activeDayPartSlugs.has(o.daypart));
+    return filtered.length > 0 ? filtered : rawOrders;
+  }, [rawOrders, activeDayPartSlugs]);
 
   if (orders.length === 0) return null;
 

@@ -16,7 +16,11 @@ function createAiController({ aiService, config = {}, waiterWorkflowService = nu
         brandName: config.brandName || 'Trump',
         waiterApkUrl: config.waiterApkUrl || '',
         waiterLatestVersion: config.waiterLatestVersion || '',
-        ...(currentDayPart ? { currentDayPart } : {})
+        ...(currentDayPart ? { currentDayPart } : {}),
+        // Full list (not just the currently-resolved one) — the Day/Night menu
+        // toggle needs every day-part's leadChapters to compute its two
+        // chapter sets, not only whichever one the server clock resolves to.
+        ...(dayParts.length > 0 ? { dayParts } : {})
       });
     },
 
