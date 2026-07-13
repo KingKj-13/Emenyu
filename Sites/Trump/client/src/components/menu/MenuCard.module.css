@@ -47,7 +47,17 @@
 .imageTint {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 30%, rgba(var(--color-ink-rgb), 0.65) 85%, rgba(var(--color-ink-rgb), 0.9) 100%);
+  /* Was rgba(var(--color-ink-rgb), ...) -- --color-ink is the app's base
+     SURFACE color, correctly theme-reactive for panels/chrome, but this is a
+     vignette darkening a food PHOTOGRAPH so the chip badges below stay
+     legible over it -- that job doesn't change with time of day. On
+     Carmella's light day-parts --color-ink flips to a light cream, so this
+     "darkening" gradient was instead lightening the photo's bottom edge,
+     leaving the chef/AI badges (also tinted from the same token, see below)
+     low-contrast. Plain black is what a photo scrim should always be,
+     regardless of theme -- on Trump this is visually identical (--color-ink
+     there is already near-black). */
+  background: linear-gradient(180deg, transparent 30%, rgba(0, 0, 0, 0.65) 85%, rgba(0, 0, 0, 0.9) 100%);
   pointer-events: none;
 }
 
@@ -72,9 +82,12 @@
   text-overflow: ellipsis;
 }
 
+/* Both badges sit on the food photo above, not on the app's own surface --
+   same reasoning as .imageTint just above: needs to stay a dark chip so the
+   gold text/icon reads clearly over any photo, regardless of day-part. */
 .chipChef {
   left: 8px;
-  background: rgba(var(--color-ink-rgb), 0.85);
+  background: rgba(0, 0, 0, 0.75);
   border: 1px solid rgba(var(--color-gold-rgb), 0.65);
   color: var(--color-gold);
 }
@@ -82,7 +95,7 @@
 .chipAi {
   left: 8px;
   top: 34px;
-  background: rgba(var(--color-ink-rgb), 0.85);
+  background: rgba(0, 0, 0, 0.75);
   border: 1px solid rgba(var(--color-gold-rgb), 0.65);
   color: var(--color-gold);
 }

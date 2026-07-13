@@ -50,6 +50,7 @@ import type {
   FloorState,
   FloorTable,
   GuestEvent,
+  Opportunity,
   Performance,
   RecommendationStatus,
   TableIntel,
@@ -324,7 +325,43 @@ function HomeScreen() {
   );
 }
 
-function InsightTags({ intel, event }: { intel: TableIntel | null; event?: { label: string; type: string } }) {
+// Demo blocker pass 3 -- guestIntel (below) only exists once a recognized
+// Guest record has been manually linked to the table via the seat-guest flow;
+// it says nothing about what's actually in the cart, and most tables during a
+// demo won't have one. These tags read the cart itself instead, so a table
+// shows *something* useful (breakfast/healthy/premium/pairing-gap signals)
+// from the moment items are in it, with no guest-seating step required.
+// categoryType is only reliably present on freshly-added (order) lines, not
+// already-sent (placedItems) ones (the server's syncHistory payload doesn't
+// carry it) -- name-keyword matching covers both, categoryType sharpens it
+// where available.
+function deriveCartInsights(cart: { name: string; price: number; quantity: number; categoryType?: string }[]): string[] {
+  if (!cart.length) return [];
+  const tags: string[] = [];
+  const total = cart.reduce((sum, l) => sum + l.price * l.quantity, 0);
+  const nameText = cart.map(l => l.name.toLowerCase()).join(' | ');
+  const hasCategory = (type: string) => cart.some(l => l.categoryType === type);
+  const nameMatches = (re: RegExp) => re.test(nameText);
+
+  if (nameMatches(/coffee|espresso|americano|cappuccino|breakfast|morning|oats|pages|croissant|omelette|toast/)) {
+    tags.push('Breakfast guest');
+  }
+  if (nameMatches(/salad|juice|smoothie|oats|fruit|vegan|vegetarian|healthy/)) {
+    tags.push('Healthy preference');
+  }
+  if (total >= 500) tags.push('Premium guest');
+
+  const hasMain = hasCategory('MAIN') || nameMatches(/fillet|steak|flame|ribeye|chicken|fish|pasta|burger|prawns/);
+  const hasWine = hasCategory('WINE') || nameMatches(/wine|sauvignon|merlot|ros[eé]|champagne|cabernet|brut/);
+  if (hasMain && !hasWine) tags.push('Wine pairing opportunity');
+
+  const hasDessert = hasCategory('DESSERT') || nameMatches(/cake|dessert|ice cream|pudding|br[uû]l[eé]e|chocolate|sweet tooth/);
+  if (hasMain && !hasDessert) tags.push('Dessert opportunity');
+
+  return tags;
+}
+
+function InsightTags({ intel, event, cart }: { intel: TableIntel | null; event?: { label: string; type: string }; cart: { name: string; price: number; quantity: number; categoryType?: string }[] }) {
   const guest = intel?.guestIntel;
   const tags = [
     event?.label,
@@ -334,6 +371,7 @@ function InsightTags({ intel, event }: { intel: TableIntel | null; event?: { lab
     guest?.allergies ? `Allergy: ${guest.allergies}` : '',
     guest?.notes?.toLowerCase().includes('birthday') ? 'Birthday' : '',
     guest?.notes?.toLowerCase().includes('anniversary') ? 'Anniversary' : '',
+    ...deriveCartInsights(cart),
   ].filter(Boolean);
   return (
     <div className="wv-chipgrid">
@@ -371,14 +409,21 @@ const STATUS_LABEL: Record<RecommendationStatus, string> = {
 // expectedValue/replacement (Phase 1) plus professional/friendly/luxury
 // scripts (server-composed via the existing nlgService, see aiService.js
 // cartRecommendations()) — this panel only presents what's already computed.
-function AiRecommendationPanel({ recs, onAdd, onDecline, statusByName, isLuxury }: {
-  recs: CartRec[]; onAdd: (rec: CartRec) => void; onDecline: (rec: CartRec) => void; statusByName: Record<string, RecommendationStatus>; isLuxury?: boolean;
+function AiRecommendationPanel({ recs, hasCartItems, onAdd, onDecline, statusByName, isLuxury }: {
+  recs: CartRec[]; hasCartItems: boolean; onAdd: (rec: CartRec) => void; onDecline: (rec: CartRec) => void; statusByName: Record<string, RecommendationStatus>; isLuxury?: boolean;
 }) {
   // Luxury tables default to the luxury delivery style; the waiter can still
   // switch tabs manually for a given table.
   const [tone, setTone] = useState<keyof NonNullable<CartRec['scripts']>>(isLuxury ? 'luxury' : 'friendly');
   const rec = recs[0];
-  if (!rec) return <p className="wv-empty">Add an item to the cart for live AI recommendations.</p>;
+  if (!rec) {
+    // A guided demo chain that's run its full course deliberately stops
+    // suggesting a "next" item (see scriptedDemoChains.js) -- that's correct,
+    // not a bug, but the cart is NOT empty at that point, so telling the
+    // waiter to "add an item" is actively wrong. Only show that copy when
+    // there's genuinely nothing in the cart yet.
+    return <p className="wv-empty">{hasCartItems ? 'No further suggestions right now.' : 'Add an item to the cart for live AI recommendations.'}</p>;
+  }
   const status = statusByName[rec.name] || 'suggested';
   const script = rec.scripts?.[tone] || rec.script || `Many guests enjoy this with ${rec.name}.`;
   const isSettled = status === 'accepted' || status === 'declined';
@@ -465,8 +510,18 @@ function SeatBreakdown({ table, lines }: { table: FloorTable; lines: { name: str
   );
 }
 
-function RevenuePanel({ currentSpend, recs }: { currentSpend: number; recs: CartRec[] }) {
+function RevenuePanel({ currentSpend, recs, opportunity }: { currentSpend: number; recs: CartRec[]; opportunity?: Opportunity | null }) {
   const uplift = recs.reduce((sum, rec) => sum + (rec.upsell || rec.price || 0), 0);
+  // A scripted demo chain that's run its full course deliberately stops
+  // suggesting a NEXT item (cartRecommendations/aiService.js), which zeroed
+  // this out even with the merged-cart fix above -- but intel.opportunity is
+  // computed by a separate, non-scripted-aware path (opportunityService.js)
+  // that still has a real answer in that state (confirmed live: the same
+  // table's Home-screen summary showed "+R1,042 potential" while this panel
+  // showed R0 for the identical cart). Falling back to it here instead of
+  // silently showing zero keeps the two views consistent.
+  const fallbackItem = uplift === 0 && opportunity?.hasOpportunity ? opportunity.suggestedItem : null;
+  const displayUplift = uplift > 0 ? uplift : (opportunity?.increase || 0);
   return (
     <section className="wv-panel">
       <div className="wv-panel-title"><Receipt size={17} /> Revenue Opportunity</div>
@@ -474,7 +529,10 @@ function RevenuePanel({ currentSpend, recs }: { currentSpend: number; recs: Cart
       {recs.slice(0, 3).map(rec => (
         <div className="wv-revenue-row" key={rec.name}><span>{rec.name}</span><b>+{money(rec.upsell || rec.price)}</b></div>
       ))}
-      <div className="wv-revenue-total"><span>Potential Additional Revenue</span><b>{moneyExact(uplift)}</b></div>
+      {fallbackItem && (
+        <div className="wv-revenue-row" key={fallbackItem.name}><span>{fallbackItem.name}</span><b>+{money(opportunity?.increase || fallbackItem.price)}</b></div>
+      )}
+      <div className="wv-revenue-total"><span>Potential Additional Revenue</span><b>{moneyExact(displayUplift)}</b></div>
     </section>
   );
 }
@@ -503,7 +561,19 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
   const [statusByName, setStatusByName] = useState<Record<string, RecommendationStatus>>({});
   const [completing, setCompleting] = useState(false);
   const event = selectedTableId ? events[selectedTableId] : undefined;
-  const cartSig = useMemo(() => order.map(line => `${line.name}:${line.quantity}`).join('|'), [order]);
+  // Root cause (demo blocker pass 3): this used to be order-only (the
+  // not-yet-submitted staging list). The instant a table's items are sent to
+  // kitchen, `order` collapses to [] (by the same syncCart broadcast that
+  // populates `placedItems`), so the AI/Revenue panels below went blank right
+  // when a real cart existed -- not because recommendations are gated on
+  // kitchen submission, but because they were reading the one piece of state
+  // guaranteed to empty out at that exact moment. The server's own
+  // buildTableCart() (waiterApiController.js) already merges sent + staged
+  // items for the same reason; mirroring that here so recommendations/
+  // insights/revenue reflect the table's ACTUAL cart throughout its lifecycle,
+  // not just the pre-submission staging step.
+  const fullCart = useMemo(() => [...placedItems, ...order], [placedItems, order]);
+  const cartSig = useMemo(() => fullCart.map(line => `${line.name}:${line.quantity}`).join('|'), [fullCart]);
   // Bug fix: TableDetails now stays mounted (see TablesScreen) while the
   // waiter is on the AddItems overlay, so this effect already fires the
   // instant an item is added -- but the panel it feeds is visually behind
@@ -517,8 +587,13 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
 
   useEffect(() => {
     if (!selectedTableId) return;
+    // Was keyed on [selectedTableId] only, so intel.opportunity/guestIntel/
+    // tableInfo.status were fetched once per table-select and never refreshed
+    // — the same "goes stale on cart change" bug as recData below, just with
+    // no cart-driven liveness at all (recData's had *some*, incidentally, via
+    // order changing). Now re-fetches on the same cart signature.
     api.getTableIntel(selectedTableId).then(setIntel).catch(() => setIntel(null));
-  }, [selectedTableId]);
+  }, [selectedTableId, cartSig]);
 
   useEffect(() => {
     // Guards against an out-of-order network resolution: if the waiter adds an
@@ -528,7 +603,7 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
     // just-added item look like it's still being recommended.
     let cancelled = false;
     api.cartRecommendations({
-      cart: order.map(line => ({ name: line.name, price: line.price, qty: line.quantity })),
+      cart: fullCart.map(line => ({ name: line.name, price: line.price, qty: line.quantity })),
       event: event?.type || null,
       mode: table.isLuxury ? 'luxury' : 'standard',
       tableId: table.tableId,
@@ -548,7 +623,7 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
       })
       .catch(() => { if (!cancelled) setRecData(null); });
     return () => { cancelled = true; };
-  }, [cartSig, event?.type, order, table.tableId, table.isLuxury, showToast]);
+  }, [cartSig, event?.type, fullCart, table.tableId, table.isLuxury, showToast]);
 
   // Phase 2 (Waiter Experience): a suggested recommendation that sits untouched
   // for a while is "ignored" — reuses the same status chip, no separate system.
@@ -660,7 +735,7 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
 
       <section className="wv-panel">
         <div className="wv-panel-title"><User size={17} /> Guest Insights</div>
-        <InsightTags intel={intel} event={event} />
+        <InsightTags intel={intel} event={event} cart={fullCart} />
         {recData?.occasionPrompt && <p className="wv-occasion-prompt">🥂 {recData.occasionPrompt}</p>}
         {event?.type === 'birthday' && (
           <button className="wv-secondary full" onClick={requestBirthday} disabled={requestingBirthday}>
@@ -674,12 +749,13 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
       <AiRecommendationPanel
         key={table.tableId}
         recs={recData?.recommendations || []}
+        hasCartItems={fullCart.length > 0}
         onAdd={addRec}
         onDecline={declineRec}
         statusByName={statusByName}
         isLuxury={table.isLuxury}
       />
-      <RevenuePanel currentSpend={table.spend + orderTotal} recs={recData?.recommendations || []} />
+      <RevenuePanel currentSpend={table.spend + orderTotal} recs={recData?.recommendations || []} opportunity={intel?.opportunity} />
 
       <div className="wv-quick-actions">
         <button onClick={onAddMode}><Plus size={17} /> Add Item</button>
