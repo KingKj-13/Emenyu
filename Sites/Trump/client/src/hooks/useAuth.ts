@@ -1,21 +1,23 @@
-import { useApp } from '../context/AppContext';
+import { useNavigate } from 'react-router-dom';
+import { DIRECT_ACCESS_USER, useApp } from '../context/AppContext';
 import { api } from '../services/api';
-import type { LoginPayload } from '../types/auth';
 
 export function useAuth() {
-  const { user, setUser, authLoading } = useApp();
+  const navigate = useNavigate();
+  const { user, setUser, authLoading, tableId } = useApp();
 
-  async function login(payload: LoginPayload) {
-    const result = await api.login(payload);
-    if (result.ok && result.user) {
-      setUser(result.user);
-    }
-    return result;
+  async function login() {
+    setUser(DIRECT_ACCESS_USER);
+    return { ok: true, user: DIRECT_ACCESS_USER, defaultPath: '/Admin' };
   }
 
   async function logout() {
     await api.logout().catch(() => {});
-    setUser(null);
+    try {
+      sessionStorage.removeItem('emenyu_waiter_shift');
+    } catch {}
+    setUser(DIRECT_ACCESS_USER);
+    navigate(`/${tableId || 'table1'}`, { replace: true });
   }
 
   const isOwnerOrManager = user?.role === 'owner' || user?.role === 'manager';

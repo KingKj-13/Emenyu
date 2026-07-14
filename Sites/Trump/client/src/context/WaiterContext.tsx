@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef, ty
 import { getSocket } from '../services/socket';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../services/api';
-import { RESTAURANT_ID, DEMO_MODE } from '../constants/api';
+import { RESTAURANT_ID } from '../constants/api';
 import { clockTime } from '../lib/waiterFormat';
 import type { MenuItem } from '../types/menu';
 import type { WaiterTab, WaiterRole, OrderLine, ServiceNotes, WaiterAlert, GuestEvent } from '../types/waiter';
@@ -138,11 +138,10 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     socket.emit('joinAdmin', { restaurantId: RESTAURANT_ID });
   }, []);
 
-  // Public demo build only: skip the manual "clock in" screen entirely so
-  // /waiter opens straight into a populated dashboard, no login/setup step.
+  // Direct staff access: /Waiter opens straight into a populated dashboard.
   useEffect(() => {
-    if (DEMO_MODE) {
-      startShift('Demo Waiter', 'Head Waiter', DEFAULT_SECTION);
+    if (!shift.started) {
+      startShift(user?.label || 'Carmella Waiter', 'Head Waiter', DEFAULT_SECTION);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -152,7 +151,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
   // was never registered as this waiter -- redo just that half of
   // startShift once, on mount, for the restored-shift case.
   useEffect(() => {
-    if (!DEMO_MODE && shift.started && shift.name) {
+    if (shift.started && shift.name) {
       const socket = socketRef.current;
       socket.emit('joinAsWaiter', { restaurantId: RESTAURANT_ID, name: shift.name });
       socket.emit('joinAdmin', { restaurantId: RESTAURANT_ID });

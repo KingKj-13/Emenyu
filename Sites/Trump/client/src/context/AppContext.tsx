@@ -61,12 +61,17 @@ const MENU_MODE_KEY = 'emenyu_menu_mode';
 // notes for why golden hour is the only day-part with a dark palette.
 const DAY_DAYPART_SLUGS = ['morning', 'midday'];
 const NIGHT_DAYPART_SLUGS = ['golden'];
+export const DIRECT_ACCESS_USER: AuthUser = {
+  username: 'carmella-direct',
+  role: 'owner',
+  label: 'Carmella',
+};
 
 export function AppProvider({ children, tableIdFromUrl }: { children: ReactNode; tableIdFromUrl?: string }) {
   const [tableId, setTableIdState] = useState<string>(() => tableIdFromUrl || getStoredTable());
   const [device] = useState<DeviceIdentity>(getDeviceIdentity);
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(DIRECT_ACCESS_USER);
+  const [authLoading] = useState(false);
   const [bookType, setBookType] = useState<'food' | 'drinks'>('food');
   const [chatOpen, setChatOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -81,13 +86,6 @@ export function AppProvider({ children, tableIdFromUrl }: { children: ReactNode;
       setStoredTable(tableIdFromUrl);
     }
   }, [tableIdFromUrl]);
-
-  useEffect(() => {
-    api.authMe().then(u => {
-      setUser(u);
-      setAuthLoading(false);
-    });
-  }, []);
 
   // Fetched once per session load. A guest sitting through a day-part
   // boundary won't see a live flip without a refresh — acceptable for the
