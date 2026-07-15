@@ -1,0 +1,84 @@
+.bar {
+  position: fixed;
+  top: var(--header-h);
+  left: 0;
+  right: 0;
+  z-index: var(--z-tabs);
+  background: rgba(var(--color-ink-rgb), 0.92);
+  border-bottom: 1px solid rgba(var(--color-gold-rgb), 0.14);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.strip {
+  display: flex;
+  gap: 4px;
+  padding: 6px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.strip::-webkit-scrollbar { display: none; }
+
+.pill {
+  flex-shrink: 0;
+  padding: 5px 14px;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  background: transparent;
+  /* Unselected tabs must still read as tappable, not disabled. */
+  color: var(--color-sand);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.pill:hover {
+  color: var(--color-cream);
+  border-color: rgba(var(--color-gold-rgb), 0.25);
+}
+
+.pillActive {
+  color: var(--color-gold);
+  border-color: rgba(var(--color-gold-rgb), 0.5);
+  background: rgba(var(--color-gold-rgb), 0.1);
+}
+
+/* Top-level 4-group row */
+.groupStrip {
+  display: flex;
+  gap: 6px;
+  padding: 7px 12px 0;
+}
+
+.groupPill {
+  flex: 1 1 0;
+  padding: 8px 6px;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  /* Unselected tabs must still read as tappable, not disabled. */
+  color: var(--color-sand);
+  font-family: var(--font-heading, inherit);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.groupPill:hover { color: var(--color-cream); border-color: rgba(var(--color-gold-rgb), 0.4); }
+
+.groupActive {
+  color: #1a1206;
+  border-color: transparent;
+  background: linear-gradient(160deg, var(--color-gold-soft, #e3c980), var(--color-gold));
+  box-shadow: 0 4px 14px rgba(var(--color-gold-rgb), 0.3);
+}
+
+/* the sub-row sits a touch tighter under the group row */
+.groupStrip + .strip { padding-top: 6px; }

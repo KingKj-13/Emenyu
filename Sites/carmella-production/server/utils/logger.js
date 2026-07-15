@@ -65,9 +65,9 @@ function redact(value) {
 function createLogger(config = {}) {
   const minLevel = normalizeLevel(config.logging?.level || process.env.LOG_LEVEL || 'info');
   const base = {
-    app: config.appName || 'emenuy-trump',
+    app: config.appName || 'carmella-production',
     env: config.env || process.env.NODE_ENV || 'development',
-    restaurantId: config.restaurantId || 'trump'
+    restaurantId: config.restaurantId || 'carmella-production'
   };
 
   function write(level, event, fields = {}) {

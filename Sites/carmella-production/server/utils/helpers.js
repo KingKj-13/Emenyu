@@ -2,8 +2,8 @@ const path = require('path');
 
 const categoryClassifier = require('../services/categoryClassifier');
 
-const RESTAURANT_ID = process.env.TRUMP_RESTAURANT_ID || 'trump';
-const PUBLIC_BASE_PATH = process.env.TRUMP_PUBLIC_BASE_PATH || '/Trump';
+const RESTAURANT_ID = process.env.TRUMP_RESTAURANT_ID || 'carmella-production';
+const PUBLIC_BASE_PATH = process.env.TRUMP_PUBLIC_BASE_PATH || '/carmella-production';
 
 function parseInteger(value, fallback) {
   const parsed = Number.parseInt(value, 10);
@@ -176,14 +176,14 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
   };
 
   const config = {
-    appName: env.TRUMP_APP_NAME || 'emenuy-trump',
+    appName: env.TRUMP_APP_NAME || 'carmella-production',
     env: nodeEnv,
     isProduction,
     restaurantId: RESTAURANT_ID,
     publicBasePath,
     publicOrigin,
     tableCount: parseInteger(env.TRUMP_TABLE_COUNT, 30),
-    brandName: env.TRUMP_BRAND_NAME || 'Trump',
+    brandName: env.TRUMP_BRAND_NAME || 'Carmella',
     host: env.TRUMP_HOST || env.HOST || '0.0.0.0',
     port,
     http: {

@@ -1,0 +1,141 @@
+/* Carmella by Sir Gaspard — tenant-scoped design tokens (ARCHITECTURE_DECISIONS.md
+   AD-004). Every selector here is scoped under [data-tenant="carmella-production"], set once
+   at boot in main.tsx from the VITE_RESTAURANT_ID build constant — so this file
+   has zero effect on Trump's (or any other tenant's) build. Trump's own :root
+   block in index.css is never touched.
+
+   Component CSS across the app already consumes the semantic --color-* names
+   (not literal hex), so re-pointing those names to Carmella's palette re-skins
+   every shared component automatically — no per-component edits needed for the
+   base theme. Day-part mode is driven by [data-theme="morning"|"midday"|"golden"],
+   set on <html> once AppContext's config fetch resolves (see AppContext.tsx).
+
+   Morning/midday are light surfaces; component CSS was written assuming a dark
+   surface + light text (Trump), so the token MEANINGS are re-purposed here
+   (--color-cream becomes the dark text color, --color-ink becomes the light
+   background) rather than the token NAMES changing — every consumer still
+   just reads "the primary text token" / "the base surface token" and gets
+   correct contrast for whichever mode is active. */
+
+/* `html[data-tenant=...]` (element + attribute), not bare `[data-tenant=...]`:
+   :root and a bare attribute selector have IDENTICAL specificity (0,0,1,0), so
+   whichever rule comes later in the cascade wins regardless of "intent" — and
+   since this file is @imported at the TOP of index.css (before :root), a bare
+   attribute selector here was silently LOSING to :root's values every time
+   (verified live: data-tenant="carmella-production" was correctly set on <html>, but
+   getComputedStyle still returned Trump's #040e1a). Adding the `html` type
+   selector raises specificity to (0,0,1,1), which reliably beats :root's
+   (0,0,1,0) regardless of source order. */
+html[data-tenant='carmella-production'] {
+  /* body's own background (index.css) is a literal gradient, not a --color-*
+     token — override the whole property here for the light modes rather
+     than leaving Trump's navy/blue/red gradient showing through. */
+  --body-background: radial-gradient(ellipse at 30% 0%, rgba(201, 169, 106, 0.10), transparent 55%), #F7F2E8;
+
+  /* ── Base palette (midday — the default before the config fetch resolves) ── */
+  --color-ink:          #F7F2E8; /* cream-paper: base surface */
+  --color-ink-rgb:      247, 242, 232;
+  --color-coal:         #FBF7EF; /* paper-light: raised surface */
+  --color-panel:        #FFFDF8;
+  --color-panel-soft:   #FFFFFF;
+  --color-glass:        rgba(23, 36, 23, 0.06);
+  --color-glass-strong: rgba(23, 36, 23, 0.12);
+  --color-cream:        #172417; /* gaspard-green: primary text */
+  --color-sand:         #3F4F3F; /* deep-moss-adjacent: secondary text */
+  --color-gold:         #C9A96A; /* brief's --gold */
+  --color-gold-soft:    #B08D57; /* brief's --brass */
+  --color-gold-dim:     rgba(176, 141, 87, 0.5);
+  --color-gold-rgb:     176, 141, 87;
+  --color-burgundy:     #8C3B2E; /* error/danger — deliberately NOT terracotta (reserved, see below) */
+  --color-line:         rgba(176, 141, 87, 0.22);
+  --color-overlay:      rgba(23, 36, 23, 0.55);
+
+  /* Reserved exclusively for "Gaspard is speaking" AI-suggestion UI — never a
+     generic accent (see emenyu-carmella/CLAUDE.md hard rule 4). Defined here,
+     ready for the AI-surface components to opt into via
+     var(--color-gaspard-accent, var(--color-gold)) — see FUTURE_ROADMAP.md
+     for the remaining component-by-component wiring. */
+  --color-gaspard-accent: #B65C33;
+
+  --font-heading: 'Fraunces', 'Cormorant Garamond', Georgia, serif;
+  --font-body:    'Inter', Manrope, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-label:   'Inter', Manrope, sans-serif;
+
+  /* Legacy pre-semantic tokens (17 usages app-wide, mostly "light icon/text on
+     a dark chip") — predate the --color-* naming but still consumed directly
+     by a handful of components (Header's icon buttons, Button, BookViewer,
+     LandingPage). Without an override here they'd stay Trump's near-white
+     values, which is invisible on Carmella's light-mode chips. */
+  --white: #172417;
+  --muted: rgba(23, 36, 23, 0.72);
+  /* Media-placeholder background (ItemModal) — kept deliberately dark
+     regardless of day-part mode, matching the "photo loads over a dark
+     backdrop" pattern every tenant uses. */
+  --blue-black: #1B2A1C;
+}
+
+/* Morning (06:30–11:30): paper-light surface, otherwise identical to midday. */
+html[data-tenant='carmella-production'][data-theme='morning'] {
+  --body-background: radial-gradient(ellipse at 30% 0%, rgba(201, 169, 106, 0.08), transparent 55%), #FBF7EF;
+  --color-ink:     #FBF7EF;
+  --color-ink-rgb: 251, 247, 239;
+  --color-coal:    #FFFDF8;
+}
+
+/* Golden hour (15:00–19:00): the one dark mode — matches the shared component
+   CSS's original dark-surface assumption most closely, so needs the least
+   re-purposing of any mode. */
+html[data-tenant='carmella-production'][data-theme='golden'] {
+  --body-background:
+    radial-gradient(ellipse at 30% 0%,   rgba(217, 160, 91, 0.16), transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(182, 92, 51, 0.08), transparent 40%),
+    #141F17;
+  --color-ink:          #141F17; /* golden-bg */
+  --color-ink-rgb:      20, 31, 23;
+  --color-coal:         #172417;
+  --color-panel:        #1B2A1C;
+  --color-panel-soft:   #1F301F;
+  --color-glass:        rgba(217, 160, 91, 0.06);
+  --color-glass-strong: rgba(0, 0, 0, 0.4);
+  --color-cream:        #F7F2E8;
+  --color-sand:         #C9B99A;
+  --color-gold:         #D9A05B; /* golden-amber */
+  --color-gold-soft:    #E4B67C;
+  --color-gold-dim:     rgba(217, 160, 91, 0.5);
+  --color-gold-rgb:     217, 160, 91;
+  --color-overlay:      rgba(0, 0, 0, 0.7);
+  /* Dark mode again — restore the "light icon on dark chip" assumption. */
+  --white: #F7F2E8;
+  --muted: rgba(247, 242, 232, 0.72);
+}
+
+/* Priority 9 (demo polish) — the Day/Night toggle sets [data-theme] on <html>
+   globally, so without this the Admin console (a separate staff tool, not
+   part of the guest-facing day-part experience) silently re-themed itself
+   light/dark depending on whichever mode a *different browser tab* (or the
+   real server clock, before any manual toggle) last resolved to. Manager
+   feedback was explicit: Admin must always look the same "premium green"
+   regardless of time of day. Re-declaring every token the console reads,
+   scoped to the stable data-admin-console marker (see AdminPage.tsx),
+   pins it to golden mode's values regardless of [data-theme]. !important
+   is deliberate here: this needs to beat data-theme="morning"/"midday" at
+   equal specificity regardless of source order, and nothing else should
+   ever need to override an admin-only marker this narrow. */
+html[data-tenant='carmella-production'] [data-admin-console] {
+  --color-ink:          #141F17 !important;
+  --color-ink-rgb:      20, 31, 23 !important;
+  --color-coal:         #172417 !important;
+  --color-panel:        #1B2A1C !important;
+  --color-panel-soft:   #1F301F !important;
+  --color-glass:        rgba(217, 160, 91, 0.06) !important;
+  --color-glass-strong: rgba(0, 0, 0, 0.4) !important;
+  --color-cream:        #F7F2E8 !important;
+  --color-sand:         #C9B99A !important;
+  --color-gold:         #D9A05B !important;
+  --color-gold-soft:    #E4B67C !important;
+  --color-gold-dim:     rgba(217, 160, 91, 0.5) !important;
+  --color-gold-rgb:     217, 160, 91 !important;
+  --color-overlay:      rgba(0, 0, 0, 0.7) !important;
+  --white:              #F7F2E8 !important;
+  --muted:              rgba(247, 242, 232, 0.72) !important;
+}

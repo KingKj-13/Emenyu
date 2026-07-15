@@ -1,0 +1,100 @@
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.row:last-child { border-bottom: none; }
+
+.thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-card);
+  object-fit: contain;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+
+.info { flex: 1; min-width: 0; }
+
+.name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-cream);
+  margin-bottom: 2px;
+}
+
+.price {
+  display: block;
+  font-size: 12px;
+  color: var(--color-gold);
+  margin-bottom: 6px;
+}
+
+.noteInput {
+  width: 100%;
+  padding: 6px 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-card);
+  color: var(--color-cream);
+  /* >=16px so iOS Safari doesn't zoom the viewport when the field is focused
+     — same fix already applied to ItemModal's equivalent note field. */
+  font-size: 16px;
+}
+.noteInput::placeholder { color: rgba(201,187,165,0.35); }
+.noteInput:focus:not(:focus-visible) { border-color: rgba(var(--color-gold-rgb),0.3); }
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.qty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(var(--color-gold-rgb),0.3);
+  border-radius: 20px;
+  padding: 2px 6px;
+}
+
+.qty button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--color-gold);
+}
+
+.qty span {
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 16px;
+  text-align: center;
+  color: var(--color-cream);
+}
+
+.subtotal {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-cream);
+  font-family: var(--font-heading);
+}
+
+.removeBtn {
+  border: none;
+  background: transparent;
+  color: rgba(201,187,165,0.4);
+  transition: color 160ms ease;
+}
+.removeBtn:hover { color: #e06060; }

@@ -1,0 +1,19 @@
+{
+  "name": "Carmella",
+  "short_name": "Carmella",
+  "description": "Carmella — digital menu",
+  "theme_color": "#172417",
+  "background_color": "#172417",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/carmella-production/table1",
+  "scope": "/carmella-production/",
+  "icons": [
+    {
+      "src": "/carmella-production/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
