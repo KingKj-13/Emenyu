@@ -385,7 +385,7 @@ class PrismaMenuService {
         const menu = {};
         (byParent.get(0) || []).sort((left, right) => left.sortOrder - right.sortOrder).forEach(root => {
           const metadata = root.metadata && typeof root.metadata === 'object' ? root.metadata : {};
-          const directItems = root.items.map(item => dbItemToJson(item, { categoryTitle: root.title }));
+          const directItems = root.items.map(item => dbItemToJson(item, { includeId: true, categoryTitle: root.title }));
           if (metadata.storage === 'array') {
             menu[root.title] = directItems;
             return;
@@ -404,7 +404,7 @@ class PrismaMenuService {
             categoryValue[sub.title] = {
               ...(subMetadata.extra && typeof subMetadata.extra === 'object' ? subMetadata.extra : {}),
               visible: sub.visible,
-              items: sub.items.map(item => dbItemToJson(item, { categoryTitle: root.title, subcategoryTitle: sub.title }))
+              items: sub.items.map(item => dbItemToJson(item, { includeId: true, categoryTitle: root.title, subcategoryTitle: sub.title }))
             };
           });
 
