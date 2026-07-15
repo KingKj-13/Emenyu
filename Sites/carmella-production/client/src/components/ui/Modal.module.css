@@ -13,7 +13,13 @@
 
 .panel {
   position: relative;
-  background: var(--color-glass-strong);
+  /* Solid, theme-matched surface (white/cream for Day, deep green for
+     Night) -- was --color-glass-strong, a translucent dark tint meant for
+     Trump's near-opaque default value. Carmella's own override of that same
+     token is only 6-12% opaque, so the panel rendered as a thin dark wash
+     over the (also dark) backdrop in EVERY theme, making Day-theme's dark
+     text unreadable against it. */
+  background: linear-gradient(160deg, var(--color-panel-soft), var(--color-panel));
   border: 1px solid rgba(var(--color-gold-rgb), 0.18);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-modal), inset 0 1px 0 rgba(var(--color-gold-rgb), 0.08);

@@ -165,7 +165,9 @@
 .actions {
   flex-shrink: 0;
   padding: 16px 24px calc(16px + env(safe-area-inset-bottom));
-  background: var(--color-glass-strong);
+  /* Match .modal's own panel surface (see Modal.module.css) instead of the
+     translucent --color-glass-strong tint, which read as dark-on-dark. */
+  background: var(--color-panel);
   border-top: 1px solid var(--color-line);
   display: flex;
   flex-direction: column;
