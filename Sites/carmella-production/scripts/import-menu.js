@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 'use strict';
-// Idempotent import: emenyu-carmella/data/carmella-menu-data.json -> this
-// tenant's OWN Postgres database (emenyu_carmella_production, never the live
-// Carmella or Trump databases). Safe to re-run — wipes and rebuilds this
-// tenant's rows in one transaction. Menu content is never hand-typed.
+// Idempotent import: data/carmella-menu-data.json (bundled in this app, not
+// read from the emenyu-carmella/ design-handoff folder — this deployable must
+// be self-contained, since that folder isn't part of the production deploy)
+// -> this tenant's OWN Postgres database (emenyu_carmella_production, never
+// the live Carmella or Trump databases). Safe to re-run — wipes and rebuilds
+// this tenant's rows in one transaction. Menu content is never hand-typed.
 //
 //   node scripts/import-menu.js
 //
@@ -19,7 +21,7 @@ const { getPrisma } = require('../server/services/prismaClient');
 const { getCategoryType } = require('../server/utils/helpers');
 
 const RESTAURANT_ID = 'carmella-production';
-const JSON_PATH = path.resolve(__dirname, '..', '..', '..', 'emenyu-carmella', 'data', 'carmella-menu-data.json');
+const JSON_PATH = path.resolve(__dirname, '..', 'data', 'carmella-menu-data.json');
 const IMAGES_DIR = path.resolve(__dirname, '..', 'Images');
 
 function slugify(value, fallback) {

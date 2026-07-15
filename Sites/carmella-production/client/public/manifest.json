@@ -6,11 +6,11 @@
   "background_color": "#172417",
   "display": "standalone",
   "orientation": "portrait",
-  "start_url": "/carmella-production/table1",
-  "scope": "/carmella-production/",
+  "start_url": "/Carmella/table1",
+  "scope": "/Carmella/",
   "icons": [
     {
-      "src": "/carmella-production/favicon.svg",
+      "src": "/Carmella/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
