@@ -9,7 +9,8 @@ import { Spinner } from '../components/ui/Spinner';
 import { api, type Promotion, type HappyHour, type Special, type LiveCart, type AnalyticsDashboard } from '../services/api';
 import { formatPrice } from '../lib/menuUtils';
 import { resolveThumbnail } from '../lib/imageResolver';
-import { useSocketEvent } from '../hooks/useSocket';
+import { useSocket, useSocketEvent } from '../hooks/useSocket';
+import { RESTAURANT_ID } from '../constants/api';
 import type { MenuItem } from '../types/menu';
 import { BADGES } from '../constants/promotions';
 import styles from './AdminPage.module.css';
@@ -27,6 +28,17 @@ const TABS: { key: AdminTab; label: string; icon: typeof UtensilsCrossed }[] = [
 
 export function AdminPage() {
   const [tab, setTab] = useState<AdminTab>('menu');
+  const socket = useSocket();
+
+  // The server only broadcasts liveCartsChanged/promotionsUpdated etc. to
+  // sockets that explicitly joined the admin room — without this, the Live
+  // Carts tab shows only its initial fetch and never updates in real time.
+  useEffect(() => {
+    socket.emit('joinAdmin', { restaurantId: RESTAURANT_ID });
+    const onConnect = () => socket.emit('joinAdmin', { restaurantId: RESTAURANT_ID });
+    socket.on('connect', onConnect);
+    return () => { socket.off('connect', onConnect); };
+  }, [socket]);
 
   return (
     <AppShell hideHeader>
