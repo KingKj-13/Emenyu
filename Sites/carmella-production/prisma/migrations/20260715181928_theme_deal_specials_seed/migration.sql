@@ -1,8 +1,10 @@
 /*
   Warnings:
 
-  - You are about to drop the column `discountPct` on the `Special` table. All the data in the column will be lost.
-  - You are about to drop the column `itemIds` on the `Special` table. All the data in the column will be lost.
+  - The `discountPct`/`itemIds` columns on the `Special` table are replaced by
+    a single `items` JSON column (per-item price/discount instead of one
+    blanket discount across a flat id list). Existing rows are converted
+    in place below before the old columns are dropped, so no data is lost.
 
 */
 -- AlterTable
@@ -12,9 +14,21 @@ ALTER TABLE "AnalyticsEvent" ADD COLUMN     "isSeed" BOOLEAN NOT NULL DEFAULT fa
 ALTER TABLE "Promotion" ADD COLUMN     "itemIds" JSONB NOT NULL DEFAULT '[]';
 
 -- AlterTable
+ALTER TABLE "Special" ADD COLUMN     "items" JSONB NOT NULL DEFAULT '[]';
+
+-- DataMigration: fold each existing row's flat itemIds + blanket discountPct
+-- into the new per-item items[] shape ({itemId, discountPct, specialPrice}),
+-- before the source columns are dropped below.
+UPDATE "Special"
+SET "items" = COALESCE((
+  SELECT jsonb_agg(jsonb_build_object('itemId', elem, 'discountPct', "discountPct", 'specialPrice', NULL))
+  FROM jsonb_array_elements("itemIds") AS elem
+), '[]'::jsonb)
+WHERE jsonb_typeof("itemIds") = 'array' AND jsonb_array_length("itemIds") > 0;
+
+-- AlterTable
 ALTER TABLE "Special" DROP COLUMN "discountPct",
-DROP COLUMN "itemIds",
-ADD COLUMN     "items" JSONB NOT NULL DEFAULT '[]';
+DROP COLUMN "itemIds";
 
 -- CreateTable
 CREATE TABLE "ThemeSettings" (
