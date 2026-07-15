@@ -8,9 +8,10 @@
 // loader. Using one singleton also avoids each service opening its own pool.
 const path = require('path');
 
-// server/services → up four levels = the deploy/repo root that holds the
-// generated client in node_modules (same anchor prismaOrderService uses).
-const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
+// server/services → up two levels = carmella-production's own root, which
+// holds its own generated client in its own node_modules (this tenant is a
+// fully independent deployable, not sharing Trump's node_modules).
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 
 function loadPrismaClient() {
   const candidates = [

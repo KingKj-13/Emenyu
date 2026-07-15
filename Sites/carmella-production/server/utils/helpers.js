@@ -164,9 +164,6 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     base: baseDir,
     server: path.join(baseDir, 'server'),
     food: path.join(baseDir, 'food'),
-    orders: path.join(baseDir, 'orders'),
-    history: path.join(baseDir, 'history'),
-    tables: path.join(baseDir, 'tables'),
     data: path.join(baseDir, 'data'),
     uploads: path.join(baseDir, 'uploads'),
     // Overridable so a second tenant process can serve Trump's real client
@@ -176,12 +173,6 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
       ? path.resolve(baseDir, env.TRUMP_CLIENT_DIST_DIR)
       : path.join(baseDir, 'client', 'dist'),
     media: env.TRUMP_MEDIA_DIR ? path.resolve(baseDir, env.TRUMP_MEDIA_DIR) : baseDir
-  };
-
-  const files = {
-    deals: path.join(directories.food, 'DealOfDay.json'),
-    chatLogs: path.join(directories.data, 'chat_logs.json'),
-    accounts: path.join(directories.data, 'accounts.json')
   };
 
   const config = {
@@ -254,14 +245,14 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     },
     uploads: {
       maxFileSizeBytes: parseInteger(env.TRUMP_UPLOAD_MAX_MB, 25) * 1024 * 1024,
-      allowedMimeTypes: parseList(env.TRUMP_UPLOAD_MIME_TYPES || 'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm')
+      // No video uploads by product decision (see root task spec) — images only.
+      allowedMimeTypes: parseList(env.TRUMP_UPLOAD_MIME_TYPES || 'image/jpeg,image/png,image/webp,image/gif')
         .map(value => value.toLowerCase()),
-      allowedExtensions: parseList(env.TRUMP_UPLOAD_EXTENSIONS || '.jpg,.jpeg,.png,.webp,.gif,.mp4,.webm')
+      allowedExtensions: parseList(env.TRUMP_UPLOAD_EXTENSIONS || '.jpg,.jpeg,.png,.webp,.gif')
         .map(normalizeExtension)
         .filter(Boolean)
     },
-    directories,
-    files
+    directories
   };
 
   validateProductionConfig(config, env);

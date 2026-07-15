@@ -1,59 +1,14 @@
 const zlib = require('zlib');
 const crypto = require('crypto');
 
-const REC_TYPES = new Set(['DISH', 'SIDE', 'DESSERT', 'BEVERAGE']);
-const BEVERAGE_KINDS = new Set(['WINE', 'COCKTAIL', 'BEER', 'SOFT', 'HOT', 'NONE']);
-
-// Validate + coerce a chef-recommendation payload. `partial` allows PATCH updates.
-function sanitizeChefRec(body = {}, { partial = false } = {}) {
-  const out = {};
-  if (!partial || body.sourceItemId !== undefined) {
-    const s = Number(body.sourceItemId);
-    if (!Number.isInteger(s)) return { error: 'sourceItemId must be an integer item id' };
-    out.sourceItemId = s;
-  }
-  if (!partial || body.targetItemId !== undefined) {
-    const t = Number(body.targetItemId);
-    if (!Number.isInteger(t)) return { error: 'targetItemId must be an integer item id' };
-    out.targetItemId = t;
-  }
-  if (!partial || body.recType !== undefined) {
-    const rt = String(body.recType || '').toUpperCase();
-    if (!REC_TYPES.has(rt)) return { error: 'recType must be DISH | SIDE | DESSERT | BEVERAGE' };
-    out.recType = rt;
-  }
-  if (body.beverageKind !== undefined) {
-    const bk = String(body.beverageKind || 'NONE').toUpperCase();
-    if (!BEVERAGE_KINDS.has(bk)) return { error: 'invalid beverageKind' };
-    out.beverageKind = bk;
-  }
-  if (body.priority !== undefined) {
-    const p = Number(body.priority);
-    if (!Number.isFinite(p)) return { error: 'priority must be a number' };
-    out.priority = Math.trunc(p);
-  }
-  if (body.active !== undefined) out.active = Boolean(body.active);
-  if (body.season !== undefined) out.season = String(body.season || 'ALL_YEAR');
-  if (body.rotationGroup !== undefined) out.rotationGroup = String(body.rotationGroup || '');
-  if (body.reason !== undefined) out.reason = String(body.reason || '');
-  if (body.createdBy !== undefined) out.createdBy = String(body.createdBy || 'system');
-  if (body.startsAt !== undefined) out.startsAt = body.startsAt ? new Date(body.startsAt) : null;
-  if (body.endsAt !== undefined) out.endsAt = body.endsAt ? new Date(body.endsAt) : null;
-  return { value: out };
-}
-
-function createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService, config }) {
-  // Phase 05 — menu response cache. MEASURED: an uncached GET /api/menu re-runs
-  // loadMenu (Prisma load + deserialization of ~440 items, ~150ms warm) on EVERY
-  // request, capping throughput at ~12 req/s and ballooning latency to ~800ms p50
-  // at 10 concurrent (it is CPU/event-loop bound, not DB bound). The menu changes
-  // only on owner edits, which already emit emitMenuUpdated → _notifyDataChange('menu').
-  // We cache the serialized JSON + a precomputed gzip buffer + ETag, invalidated on
-  // any menu mutation, with a 60s TTL backstop for out-of-band changes.
+function createMenuController({ fileService, socketService, prismaMenuService }) {
+  // Menu response cache: GET /api/menu is hit on every page load/refresh, but
+  // the menu only changes on an admin edit (which emits emitMenuUpdated).
+  // Cache the serialized JSON + gzip + ETag, invalidated on any mutation,
+  // with a 60s TTL backstop for out-of-band changes.
   const MENU_CACHE_TTL_MS = 60 * 1000;
   let menuCache = null;   // { json, gzip, etag, builtAt }
-  let menuRebuild = null; // single-flight guard — prevents a cold-cache stampede where
-                          // N concurrent requests each trigger the expensive loadMenu.
+  let menuRebuild = null; // single-flight guard against a cold-cache stampede
 
   function buildMenuCache(menu) {
     const json = JSON.stringify(menu);
@@ -68,8 +23,6 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
     return menuCache && Date.now() - menuCache.builtAt <= MENU_CACHE_TTL_MS ? menuCache : null;
   }
 
-  // Return a fresh cache, building it AT MOST ONCE across concurrent callers. The
-  // 199 other requests during a cold rebuild await the same promise (no stampede).
   async function ensureMenuCache() {
     const fresh = freshCache();
     if (fresh) return fresh;
@@ -87,15 +40,17 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
     return menuRebuild;
   }
 
-  // Invalidate immediately on any menu data-change (covers all 7 mutation paths).
   if (socketService && typeof socketService.onDataChange === 'function') {
     socketService.onDataChange(scope => { if (scope === 'menu') invalidateMenuCache(); });
+  }
+
+  function menuService() {
+    return prismaMenuService || fileService?.prismaMenu;
   }
 
   return {
     async getMenu(req, res) {
       const cache = await ensureMenuCache();
-      // Don't cache empty/misses — let an empty menu be re-attempted next request.
       if (!cache) return res.json(null);
       const { json, gzip, etag } = cache;
       res.set('ETag', etag);
@@ -112,18 +67,10 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
 
     async deleteItem(req, res) {
       const { id } = req.params;
-      const service = prismaMenuService || fileService?.prismaMenu;
+      const service = menuService();
       if (!service) return res.status(503).json({ error: 'Not available' });
-      // Scope the delete to this tenant so an admin can never remove another
-      // restaurant's item by id (defence-in-depth — reads are already scoped).
-      const count = await service.withPrisma('menu_delete_item_failed', async prisma => {
-        const result = await prisma.menuItem.deleteMany({
-          where: { id: Number(id), restaurantId: service.restaurantId }
-        });
-        return result.count;
-      }, null);
-      if (count === null) return res.status(500).json({ error: 'Delete failed' });
-      if (count === 0) return res.status(404).json({ error: 'Item not found' });
+      const ok = await service.deleteItem(id);
+      if (!ok) return res.status(404).json({ error: 'Item not found' });
       socketService.emitMenuUpdated();
       res.json({ ok: true });
     },
@@ -133,11 +80,9 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
       if (!['hide', 'show', 'delete'].includes(action) || !Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ error: 'Invalid action or ids' });
       }
-      const service = prismaMenuService || fileService?.prismaMenu;
+      const service = menuService();
       if (!service) return res.status(503).json({ error: 'Not available' });
       const numIds = ids.map(Number);
-      // Scope to this tenant so a bulk action can never touch another restaurant's
-      // items, even if a foreign id is passed in. Report the real affected count.
       const count = await service.withPrisma('menu_bulk_action_failed', async prisma => {
         const where = { id: { in: numIds }, restaurantId: service.restaurantId };
         const result = action === 'delete'
@@ -151,7 +96,7 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
     },
 
     async getAdminItems(req, res) {
-      const service = prismaMenuService || fileService?.prismaMenu;
+      const service = menuService();
       if (!service) return res.status(503).json({ error: 'Not available' });
       const items = await service.loadAdminItems();
       if (!items) return res.status(503).json({ error: 'Database unavailable' });
@@ -159,14 +104,34 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
     },
 
     async getCategories(req, res) {
-      const service = prismaMenuService || fileService?.prismaMenu;
+      const service = menuService();
       if (!service?.listCategories) return res.status(503).json({ error: 'Not available' });
       const categories = await service.listCategories();
       res.json(categories || []);
     },
 
+    // STEP 6 — admin creates a new (initially empty) category.
+    async createCategory(req, res) {
+      const service = menuService();
+      if (!service?.createCategory) return res.status(503).json({ error: 'Not available' });
+      const category = await service.createCategory(req.body?.title);
+      if (!category) return res.status(400).json({ error: 'title is required' });
+      socketService.emitMenuUpdated();
+      res.status(201).json({ ok: true, category });
+    },
+
+    // STEP 6 — admin reorders categories: body is { orderedIds: [id, id, ...] }.
+    async reorderCategories(req, res) {
+      const service = menuService();
+      if (!service?.reorderCategories) return res.status(503).json({ error: 'Not available' });
+      const ok = await service.reorderCategories(req.body?.orderedIds);
+      if (!ok) return res.status(400).json({ error: 'orderedIds must be a non-empty array of category ids' });
+      socketService.emitMenuUpdated();
+      res.json({ ok: true });
+    },
+
     async createItem(req, res) {
-      const service = prismaMenuService || fileService?.prismaMenu;
+      const service = menuService();
       if (!service?.createItem) return res.status(503).json({ error: 'Not available' });
 
       const { name, category } = req.body || {};
@@ -182,7 +147,7 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
     },
 
     async updateItem(req, res) {
-      const service = prismaMenuService || fileService?.prismaMenu;
+      const service = menuService();
       if (!service?.updateItem) return res.status(503).json({ error: 'Not available' });
 
       const body = req.body || {};
@@ -200,7 +165,7 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
     async toggleAvailability(req, res) {
       const { id } = req.params;
       const available = req.body?.available !== false;
-      const service = prismaMenuService || fileService?.prismaMenu;
+      const service = menuService();
       if (!service) return res.status(503).json({ error: 'Not available' });
       const ok = await service.toggleItemAvailability(Number(id), available);
       if (!ok) return res.status(500).json({ error: 'Failed to update availability' });
@@ -210,7 +175,7 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
 
     async updateItemMedia(req, res) {
       const { id } = req.params;
-      const service = prismaMenuService || fileService?.prismaMenu;
+      const service = menuService();
       if (!service?.updateItemMedia) return res.status(503).json({ error: 'Not available' });
 
       const updated = await service.updateItemMedia(Number(id), req.body || {});
@@ -228,91 +193,7 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
       } catch {
         res.status(500).json({ error: 'Menu save failed' });
       }
-    },
-
-    async getRecommendations(req, res) {
-      const recommendations = await fileService.loadRecommendations();
-      res.json(recommendations);
-    },
-
-    async saveRecommendations(req, res) {
-      try {
-        await fileService.saveRecommendations(req.body);
-        socketService.emitRecommendationUpdated();
-        res.json({ ok: true });
-      } catch {
-        res.status(500).json({ error: 'Recommendation save failed' });
-      }
-    },
-
-    async getMediaStatus(req, res) {
-      try {
-        const status = await mediaEnrichmentService.getStatus(config.restaurantId);
-        res.json(status);
-      } catch (e) {
-        res.status(500).json({ error: e.message });
-      }
-    },
-
-    async triggerMediaEnrich(req, res) {
-      try {
-        const { limit = 20 } = req.body || {};
-        const result = await mediaEnrichmentService.enrichBatch({ limit, restaurantId: config.restaurantId, retry: false });
-        res.json(result);
-      } catch (e) {
-        res.status(500).json({ error: e.message });
-      }
-    },
-
-    async retryMediaEnrich(req, res) {
-      try {
-        const { limit = 20 } = req.body || {};
-        const result = await mediaEnrichmentService.enrichBatch({ limit, restaurantId: config.restaurantId, retry: true });
-        res.json(result);
-      } catch (e) {
-        res.status(500).json({ error: e.message });
-      }
-    },
-
-    // ── Owner controls: chef recommendation management (Phase 3, Task 8) ──────────
-    async getChefRecommendations(req, res) {
-      const service = prismaMenuService || fileService?.prismaMenu;
-      if (!service?.listChefRecommendationsAdmin) return res.status(503).json({ error: 'Not available' });
-      const rows = await service.listChefRecommendationsAdmin();
-      res.json(rows || []);
-    },
-
-    async createChefRecommendation(req, res) {
-      const service = prismaMenuService || fileService?.prismaMenu;
-      if (!service?.createChefRecommendation) return res.status(503).json({ error: 'Not available' });
-      const parsed = sanitizeChefRec(req.body || {}, { partial: false });
-      if (parsed.error) return res.status(400).json({ error: parsed.error });
-      if (!parsed.value.createdBy && req.user?.username) parsed.value.createdBy = req.user.username;
-      const created = await service.createChefRecommendation(parsed.value);
-      if (!created) return res.status(500).json({ error: 'Create failed (duplicate or database unavailable)' });
-      socketService.emitRecommendationUpdated();
-      res.status(201).json({ ok: true, recommendation: created });
-    },
-
-    async updateChefRecommendation(req, res) {
-      const service = prismaMenuService || fileService?.prismaMenu;
-      if (!service?.updateChefRecommendation) return res.status(503).json({ error: 'Not available' });
-      const parsed = sanitizeChefRec(req.body || {}, { partial: true });
-      if (parsed.error) return res.status(400).json({ error: parsed.error });
-      const updated = await service.updateChefRecommendation(req.params.id, parsed.value);
-      if (!updated) return res.status(500).json({ error: 'Update failed' });
-      socketService.emitRecommendationUpdated();
-      res.json({ ok: true, recommendation: updated });
-    },
-
-    async deleteChefRecommendation(req, res) {
-      const service = prismaMenuService || fileService?.prismaMenu;
-      if (!service?.deleteChefRecommendation) return res.status(503).json({ error: 'Not available' });
-      const ok = await service.deleteChefRecommendation(req.params.id);
-      if (!ok) return res.status(500).json({ error: 'Delete failed' });
-      socketService.emitRecommendationUpdated();
-      res.json({ ok: true });
-    },
+    }
   };
 }
 

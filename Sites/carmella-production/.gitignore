@@ -1,0 +1,23 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies and build output
+node_modules/
+client/node_modules/
+client/dist/
+
+# Runtime data and local-only state
+logs/
+uploads/*
+!uploads/menu-media/.gitkeep
+!uploads/thumbnails/.gitkeep
+
+# Raw dish photography stays local-only; only optimized renditions are committed.
+Images/*.jpg
+Images/*.jpeg
+Images/*.png
+
+*.log
+*.tmp

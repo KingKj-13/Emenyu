@@ -1,0 +1,35 @@
+{
+  "name": "carmella-production",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Carmella — simplified production digital menu (browse, cart estimate, promotions, admin). No AI, no ordering, no auth.",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "prisma:generate": "prisma generate --schema prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate deploy --schema prisma/schema.prisma",
+    "menu:import": "node scripts/import-menu.js",
+    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:restart": "pm2 reload ecosystem.config.js --only carmella-production-api --update-env",
+    "pm2:stop": "pm2 stop carmella-production-api",
+    "pm2:logs": "pm2 logs carmella-production-api"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.1.0",
+    "multer": "^2.0.2",
+    "sharp": "^0.33.5",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.3"
+  }
+}

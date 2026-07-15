@@ -6,9 +6,7 @@ const MIME_EXTENSION_MAP = new Map([
   ['image/jpeg', new Set(['.jpg', '.jpeg'])],
   ['image/png', new Set(['.png'])],
   ['image/webp', new Set(['.webp'])],
-  ['image/gif', new Set(['.gif'])],
-  ['video/mp4', new Set(['.mp4'])],
-  ['video/webm', new Set(['.webm'])]
+  ['image/gif', new Set(['.gif'])]
 ]);
 
 // Optimized-output settings — mirrors mediaEnrichmentService (sharp + webp ~q80)
@@ -153,6 +151,20 @@ function createUploadController(config, { logger = null } = {}) {
         filePath: `${config.publicBasePath}/uploads/${filename}`,
         type: mimeType
       });
+    },
+
+    // STEP 6 — admin can delete an uploaded photo (and its thumbnail, if any).
+    async deleteMedia(req, res) {
+      const filename = path.basename(String(req.params.filename || ''));
+      if (!filename) {
+        return res.status(400).json({ error: 'filename is required' });
+      }
+      const targets = [
+        path.join(config.directories.uploads, filename),
+        path.join(thumbnailsDir, filename)
+      ];
+      await Promise.all(targets.map(target => fs.promises.rm(target, { force: true }).catch(() => {})));
+      res.json({ ok: true });
     }
   };
 }
