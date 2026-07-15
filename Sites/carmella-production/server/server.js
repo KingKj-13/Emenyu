@@ -21,12 +21,14 @@ const { createPromotionController } = require('./controllers/promotionController
 const { createHappyHourController } = require('./controllers/happyHourController');
 const { createSpecialController } = require('./controllers/specialController');
 const { createAnalyticsController } = require('./controllers/analyticsController');
+const { createThemeController } = require('./controllers/themeController');
 const { registerMenuRoutes } = require('./routes/menuRoutes');
 const { registerUploadRoutes } = require('./routes/uploadRoutes');
 const { registerPromotionRoutes } = require('./routes/promotionRoutes');
 const { registerHappyHourRoutes } = require('./routes/happyHourRoutes');
 const { registerSpecialRoutes } = require('./routes/specialRoutes');
 const { registerAnalyticsRoutes } = require('./routes/analyticsRoutes');
+const { registerThemeRoutes } = require('./routes/themeRoutes');
 const { configureSecurity } = require('./middleware/security');
 const { createErrorHandler, createRequestLogger } = require('./middleware/requestLogger');
 const { FileService } = require('./services/fileService');
@@ -156,7 +158,8 @@ async function startServer(baseDirOverride) {
     promotion: createPromotionController({ getPrisma, socketService }),
     happyHour: createHappyHourController({ getPrisma, socketService }),
     special: createSpecialController({ getPrisma, socketService }),
-    analytics: createAnalyticsController({ getPrisma, fileService })
+    analytics: createAnalyticsController({ getPrisma, fileService }),
+    theme: createThemeController({ getPrisma, socketService })
   };
   const uploadController = createUploadController(config, { logger });
 
@@ -203,6 +206,7 @@ async function startServer(baseDirOverride) {
   registerHappyHourRoutes(app, config, controllers, adminAuth);
   registerSpecialRoutes(app, config, controllers, adminAuth);
   registerAnalyticsRoutes(app, config, controllers, adminAuth);
+  registerThemeRoutes(app, config, controllers, adminAuth);
 
   // STEP 5 — Admin "Live Carts": every currently-open cart, for the admin UI's
   // initial load (subsequent changes arrive over the liveCartsChanged socket

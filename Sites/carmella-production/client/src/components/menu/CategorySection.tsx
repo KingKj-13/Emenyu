@@ -9,10 +9,11 @@ interface CategorySectionProps {
   onAddToCart: (item: MenuItem) => void;
   onItemClick: (item: MenuItem) => void;
   happyHourDiscounts?: Map<string, number>;
+  specialPrices?: Map<string, number>;
 }
 
 export const CategorySection = memo(function CategorySection({
-  section, onAddToCart, onItemClick, happyHourDiscounts
+  section, onAddToCart, onItemClick, happyHourDiscounts, specialPrices
 }: CategorySectionProps) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -45,6 +46,7 @@ export const CategorySection = memo(function CategorySection({
                   onAddToCart={onAddToCart}
                   onClick={onItemClick}
                   happyHourDiscountPct={happyHourDiscounts?.get(item.name)}
+                  specialPrice={specialPrices?.get(item.name)}
                 />
               ))}
             </div>
@@ -58,6 +60,7 @@ export const CategorySection = memo(function CategorySection({
               onAddToCart={onAddToCart}
               onItemClick={onItemClick}
               happyHourDiscounts={happyHourDiscounts}
+              specialPrices={specialPrices}
             />
           ))}
         </div>
@@ -66,12 +69,13 @@ export const CategorySection = memo(function CategorySection({
   );
 });
 
-function SubSection({ title, items, onAddToCart, onItemClick, happyHourDiscounts }: {
+function SubSection({ title, items, onAddToCart, onItemClick, happyHourDiscounts, specialPrices }: {
   title: string;
   items: MenuItem[];
   onAddToCart: (item: MenuItem) => void;
   onItemClick: (item: MenuItem) => void;
   happyHourDiscounts?: Map<string, number>;
+  specialPrices?: Map<string, number>;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -91,6 +95,7 @@ function SubSection({ title, items, onAddToCart, onItemClick, happyHourDiscounts
                 onAddToCart={onAddToCart}
                 onClick={onItemClick}
                 happyHourDiscountPct={happyHourDiscounts?.get(item.name)}
+                specialPrice={specialPrices?.get(item.name)}
               />
             ))}
           </div>

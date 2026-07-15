@@ -129,6 +129,12 @@ class SocketService {
     if (this.io) this.io.emit('promotionsUpdated');
   }
 
+  // STEP 2 — broadcast to every connected socket (not just the admin room):
+  // the theme must flip instantly on the customer menu too, not just Admin.
+  emitThemeUpdated() {
+    if (this.io) this.io.emit('themeUpdated');
+  }
+
   // ─── Connection handler ───────────────────────────────────────────────────────
 
   handleConnection(socket) {

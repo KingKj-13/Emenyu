@@ -1,21 +1,22 @@
 import { useState, useEffect, useCallback, useMemo, type FormEvent } from 'react';
 import {
-  UtensilsCrossed, Tag, Clock, Sparkles, BarChart3, ShoppingCart,
+  UtensilsCrossed, Tag, Clock, Sparkles, BarChart3, ShoppingCart, SunMoon,
   Plus, Trash2, Pencil, Image as ImageIcon, Eye, EyeOff, ArrowUp, ArrowDown, X,
 } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { Modal } from '../components/ui/Modal';
 import { Spinner } from '../components/ui/Spinner';
-import { api, type Promotion, type HappyHour, type Special, type LiveCart, type AnalyticsDashboard } from '../services/api';
+import { api, type Promotion, type HappyHour, type Special, type LiveCart, type AnalyticsDashboard, type DealItem, type SpecialItemInput } from '../services/api';
 import { formatPrice } from '../lib/menuUtils';
 import { resolveThumbnail } from '../lib/imageResolver';
 import { useSocket, useSocketEvent } from '../hooks/useSocket';
+import { useTheme } from '../context/ThemeContext';
 import { RESTAURANT_ID } from '../constants/api';
 import type { MenuItem } from '../types/menu';
 import { BADGES } from '../constants/promotions';
 import styles from './AdminPage.module.css';
 
-type AdminTab = 'menu' | 'promotions' | 'happyHour' | 'specials' | 'analytics' | 'liveCarts';
+type AdminTab = 'menu' | 'promotions' | 'happyHour' | 'specials' | 'analytics' | 'liveCarts' | 'theme';
 
 const TABS: { key: AdminTab; label: string; icon: typeof UtensilsCrossed }[] = [
   { key: 'menu', label: 'Menu Management', icon: UtensilsCrossed },
@@ -24,6 +25,7 @@ const TABS: { key: AdminTab; label: string; icon: typeof UtensilsCrossed }[] = [
   { key: 'specials', label: 'Specials', icon: Sparkles },
   { key: 'analytics', label: 'Analytics', icon: BarChart3 },
   { key: 'liveCarts', label: 'Live Carts', icon: ShoppingCart },
+  { key: 'theme', label: 'Theme', icon: SunMoon },
 ];
 
 export function AdminPage() {
@@ -67,6 +69,7 @@ export function AdminPage() {
           {tab === 'specials' && <SpecialsTab />}
           {tab === 'analytics' && <AnalyticsTab />}
           {tab === 'liveCarts' && <LiveCartsTab />}
+          {tab === 'theme' && <ThemeTab />}
         </main>
       </div>
     </AppShell>
@@ -81,7 +84,7 @@ interface AdminItem extends MenuItem {
 
 function MenuManagementTab() {
   const [items, setItems] = useState<AdminItem[]>([]);
-  const [categories, setCategories] = useState<{ id: number; title: string; sortOrder: number }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; title: string; sortOrder: number; itemCount: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [editItem, setEditItem] = useState<AdminItem | null>(null);
@@ -159,7 +162,7 @@ function MenuManagementTab() {
         <ul className={styles.categoryList}>
           {[...categories].sort((a, b) => a.sortOrder - b.sortOrder).map((c, i, arr) => (
             <li key={c.id} className={styles.categoryRow}>
-              <span>{c.title}</span>
+              <span>{c.title} <span className={styles.itemMeta}>({c.itemCount} item{c.itemCount !== 1 ? 's' : ''})</span></span>
               <div className={styles.rowActions}>
                 <button disabled={i === 0} onClick={() => moveCategory(c.id, -1)} aria-label="Move up"><ArrowUp size={14} /></button>
                 <button disabled={i === arr.length - 1} onClick={() => moveCategory(c.id, 1)} aria-label="Move down"><ArrowDown size={14} /></button>
@@ -321,14 +324,59 @@ function ItemEditModal({ item, categories, onClose, onSaved }: {
 
 // ─────────────────────────────── Promotions (Deal of the Day) ──────────────
 
+// Shared by the Deal of the Day and Specials item pickers: an "add an item"
+// dropdown (only items not already selected) plus a thumbnail/name/price row
+// per selected item with a remove button.
+function AddItemRow({ items, excludeIds, onAdd }: { items: AdminItem[]; excludeIds: number[]; onAdd: (id: number) => void }) {
+  const [choice, setChoice] = useState('');
+  const available = items.filter(i => !excludeIds.includes(i.dbId));
+  return (
+    <div className={styles.inlineForm}>
+      <select className={styles.select} value={choice} onChange={e => setChoice(e.target.value)}>
+        <option value="">Add an item…</option>
+        {available.map(i => <option key={i.dbId} value={i.dbId}>{i.name} — {formatPrice(i.price)}</option>)}
+      </select>
+      <button
+        type="button"
+        className={styles.primaryBtn}
+        disabled={!choice}
+        onClick={() => { if (choice) { onAdd(Number(choice)); setChoice(''); } }}
+      >
+        <Plus size={15} /> Add
+      </button>
+    </div>
+  );
+}
+
+function SelectedItemRow({ item, onRemove }: { item: AdminItem; onRemove: () => void }) {
+  return (
+    <div className={styles.itemRow}>
+      <img
+        src={resolveThumbnail(item)}
+        alt={item.name}
+        className={styles.itemThumb}
+        onError={e => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }}
+      />
+      <div className={styles.itemInfo}>
+        <strong>{item.name}</strong>
+        <span className={styles.itemMeta}>{formatPrice(item.price)}</span>
+      </div>
+      <button type="button" className={styles.dangerBtn} onClick={onRemove}><Trash2 size={13} /> Remove</button>
+    </div>
+  );
+}
+
 function PromotionsTab() {
   const [rows, setRows] = useState<Promotion[]>([]);
+  const [items, setItems] = useState<AdminItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Promotion | 'new' | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
-    api.getPromotionsAdmin().then(setRows).finally(() => setLoading(false));
+    Promise.all([api.getPromotionsAdmin(), api.getAdminMenuItems()])
+      .then(([p, i]) => { setRows(p); setItems((i as AdminItem[]) || []); })
+      .finally(() => setLoading(false));
   }, []);
   useEffect(load, [load]);
 
@@ -362,7 +410,7 @@ function PromotionsTab() {
                 {row.isLiveNow && <span className={styles.liveChip}>LIVE NOW</span>}
               </div>
               <span className={styles.entityMeta}>
-                {row.description || 'No description'} · {row.startTime || '00:00'}–{row.endTime || '23:59'}
+                {row.description || 'No description'} · {row.items.length} item{row.items.length !== 1 ? 's' : ''} · {row.startTime || '00:00'}–{row.endTime || '23:59'}
                 {row.startDate && ` · from ${new Date(row.startDate).toLocaleDateString()}`}
                 {row.endDate && ` to ${new Date(row.endDate).toLocaleDateString()}`}
               </span>
@@ -378,23 +426,26 @@ function PromotionsTab() {
         ))}
       </div>
       {editing && (
-        <PromotionEditModal promotion={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
+        <PromotionEditModal promotion={editing === 'new' ? null : editing} items={items} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
       )}
     </div>
   );
 }
 
-function PromotionEditModal({ promotion, onClose, onSaved }: { promotion: Promotion | null; onClose: () => void; onSaved: () => void }) {
+function PromotionEditModal({ promotion, items, onClose, onSaved }: { promotion: Promotion | null; items: AdminItem[]; onClose: () => void; onSaved: () => void }) {
   const [title, setTitle] = useState(promotion?.title || '');
   const [description, setDescription] = useState(promotion?.description || '');
   const [badge, setBadge] = useState(promotion?.badge || '');
   const [bannerImage, setBannerImage] = useState(promotion?.bannerImage || '');
+  const [itemIds, setItemIds] = useState<number[]>(promotion?.items.map(i => i.id) || []);
   const [startDate, setStartDate] = useState(promotion?.startDate?.slice(0, 10) || '');
   const [endDate, setEndDate] = useState(promotion?.endDate?.slice(0, 10) || '');
   const [startTime, setStartTime] = useState(promotion?.startTime || '00:00');
   const [endTime, setEndTime] = useState(promotion?.endTime || '23:59');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const selectedItems = itemIds.map(id => items.find(i => i.dbId === id)).filter((i): i is AdminItem => Boolean(i));
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -413,7 +464,7 @@ function PromotionEditModal({ promotion, onClose, onSaved }: { promotion: Promot
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const payload = { title, description, badge, bannerImage, startDate: startDate || null, endDate: endDate || null, startTime, endTime };
+    const payload = { title, description, badge, bannerImage, itemIds, startDate: startDate || null, endDate: endDate || null, startTime, endTime };
     try {
       if (promotion) await api.updatePromotion(promotion.id, payload);
       else await api.createPromotion(payload);
@@ -446,6 +497,15 @@ function PromotionEditModal({ promotion, onClose, onSaved }: { promotion: Promot
             <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} />
           </div>
         </label>
+        <div className={styles.field}>
+          Featured items ({selectedItems.length} selected)
+          <AddItemRow items={items} excludeIds={itemIds} onAdd={id => setItemIds(prev => [...prev, id])} />
+          <div className={styles.itemGrid}>
+            {selectedItems.map(item => (
+              <SelectedItemRow key={item.dbId} item={item} onRemove={() => setItemIds(prev => prev.filter(id => id !== item.dbId))} />
+            ))}
+          </div>
+        </div>
         <div className={styles.fieldGrid}>
           <label className={styles.field}>Start date<input className={styles.input} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></label>
           <label className={styles.field}>End date<input className={styles.input} type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></label>
@@ -642,11 +702,10 @@ function SpecialsTab() {
             <div className={styles.entityInfo}>
               <div className={styles.entityTitleRow}>
                 <strong>{row.title}</strong>
-                {row.discountPct != null && <span className={styles.badgeChip}>-{row.discountPct}%</span>}
                 {row.isLiveNow && <span className={styles.liveChip}>LIVE NOW</span>}
               </div>
               <span className={styles.entityMeta}>
-                {row.itemIds.length} item{row.itemIds.length !== 1 ? 's' : ''} · {row.startTime || '00:00'}–{row.endTime || '23:59'}
+                {row.items.length} item{row.items.length !== 1 ? 's' : ''} · {row.startTime || '00:00'}–{row.endTime || '23:59'}
               </span>
             </div>
             <div className={styles.rowActions}>
@@ -666,11 +725,76 @@ function SpecialsTab() {
   );
 }
 
+// STEP 5 — each selected item gets its own price editor: an original price
+// (read live off the menu item, never editable here) plus EITHER a special
+// price OR a discount percentage for that one item.
+interface SpecialItemDraft extends SpecialItemInput {
+  mode: 'price' | 'percent';
+}
+
+function SpecialItemEditor({ item, draft, onChange, onRemove }: {
+  item: AdminItem;
+  draft: SpecialItemDraft;
+  onChange: (next: SpecialItemDraft) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className={styles.itemRow}>
+      <img
+        src={resolveThumbnail(item)}
+        alt={item.name}
+        className={styles.itemThumb}
+        onError={e => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }}
+      />
+      <div className={styles.itemInfo}>
+        <strong>{item.name}</strong>
+        <span className={styles.itemMeta}>Original: {formatPrice(item.price)}</span>
+      </div>
+      <select
+        className={styles.select}
+        value={draft.mode}
+        onChange={e => {
+          const mode = e.target.value as 'price' | 'percent';
+          onChange({ ...draft, mode, specialPrice: mode === 'price' ? draft.specialPrice : null, discountPct: mode === 'percent' ? draft.discountPct : null });
+        }}
+      >
+        <option value="percent">% off</option>
+        <option value="price">Set price</option>
+      </select>
+      {draft.mode === 'percent' ? (
+        <input
+          className={styles.input}
+          style={{ maxWidth: 80 }}
+          type="number"
+          min={1}
+          max={100}
+          placeholder="%"
+          value={draft.discountPct ?? ''}
+          onChange={e => onChange({ ...draft, discountPct: e.target.value === '' ? null : Number(e.target.value) })}
+        />
+      ) : (
+        <input
+          className={styles.input}
+          style={{ maxWidth: 100 }}
+          type="number"
+          step="0.01"
+          min={0}
+          placeholder="Price"
+          value={draft.specialPrice ?? ''}
+          onChange={e => onChange({ ...draft, specialPrice: e.target.value === '' ? null : Number(e.target.value) })}
+        />
+      )}
+      <button type="button" className={styles.dangerBtn} onClick={onRemove}><Trash2 size={13} /> Remove</button>
+    </div>
+  );
+}
+
 function SpecialEditModal({ special, items, onClose, onSaved }: { special: Special | null; items: AdminItem[]; onClose: () => void; onSaved: () => void }) {
   const [title, setTitle] = useState(special?.title || '');
   const [bannerImage, setBannerImage] = useState(special?.bannerImage || '');
-  const [discountPct, setDiscountPct] = useState(special?.discountPct != null ? String(special.discountPct) : '');
-  const [itemIds, setItemIds] = useState<number[]>(special?.itemIds || []);
+  const [drafts, setDrafts] = useState<SpecialItemDraft[]>(
+    special?.items.map(i => ({ itemId: i.itemId, specialPrice: i.discountPct == null ? i.specialPrice : null, discountPct: i.discountPct, mode: i.discountPct != null ? 'percent' : 'price' })) || []
+  );
   const [startDate, setStartDate] = useState(special?.startDate?.slice(0, 10) || '');
   const [endDate, setEndDate] = useState(special?.endDate?.slice(0, 10) || '');
   const [startTime, setStartTime] = useState(special?.startTime || '00:00');
@@ -678,8 +802,16 @@ function SpecialEditModal({ special, items, onClose, onSaved }: { special: Speci
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  function toggleItem(id: number) {
-    setItemIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const itemById = new Map(items.map(i => [i.dbId, i]));
+
+  function addItem(id: number) {
+    setDrafts(prev => [...prev, { itemId: id, specialPrice: null, discountPct: 10, mode: 'percent' }]);
+  }
+  function updateDraft(itemId: number, next: SpecialItemDraft) {
+    setDrafts(prev => prev.map(d => d.itemId === itemId ? next : d));
+  }
+  function removeDraft(itemId: number) {
+    setDrafts(prev => prev.filter(d => d.itemId !== itemId));
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -698,10 +830,11 @@ function SpecialEditModal({ special, items, onClose, onSaved }: { special: Speci
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (drafts.length === 0) return;
     setSaving(true);
     const payload = {
-      title, bannerImage, itemIds,
-      discountPct: discountPct === '' ? null : Number(discountPct),
+      title, bannerImage,
+      items: drafts.map(({ itemId, specialPrice, discountPct }) => ({ itemId, specialPrice, discountPct })),
       startDate: startDate || null, endDate: endDate || null, startTime, endTime,
     };
     try {
@@ -728,7 +861,6 @@ function SpecialEditModal({ special, items, onClose, onSaved }: { special: Speci
             <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} />
           </div>
         </label>
-        <label className={styles.field}>Discount % (optional)<input className={styles.input} type="number" min={1} max={100} value={discountPct} onChange={e => setDiscountPct(e.target.value)} /></label>
         <div className={styles.fieldGrid}>
           <label className={styles.field}>Start date<input className={styles.input} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></label>
           <label className={styles.field}>End date<input className={styles.input} type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></label>
@@ -736,18 +868,27 @@ function SpecialEditModal({ special, items, onClose, onSaved }: { special: Speci
           <label className={styles.field}>End time<input className={styles.input} type="time" value={endTime} onChange={e => setEndTime(e.target.value)} /></label>
         </div>
         <div className={styles.field}>
-          Featured items ({itemIds.length} selected)
-          <div className={styles.itemPicker}>
-            {items.map(item => (
-              <label key={item.dbId} className={styles.pickerRow}>
-                <input type="checkbox" checked={itemIds.includes(item.dbId)} onChange={() => toggleItem(item.dbId)} />
-                {item.name} <span className={styles.itemMeta}>{formatPrice(item.price)}</span>
-              </label>
-            ))}
+          Items on special ({drafts.length} selected — each has its own price)
+          <AddItemRow items={items} excludeIds={drafts.map(d => d.itemId)} onAdd={addItem} />
+          <div className={styles.itemGrid}>
+            {drafts.map(draft => {
+              const item = itemById.get(draft.itemId);
+              if (!item) return null;
+              return (
+                <SpecialItemEditor
+                  key={draft.itemId}
+                  item={item}
+                  draft={draft}
+                  onChange={next => updateDraft(draft.itemId, next)}
+                  onRemove={() => removeDraft(draft.itemId)}
+                />
+              );
+            })}
           </div>
+          {drafts.length === 0 && <p className={styles.emptyHint}>Add at least one item.</p>}
         </div>
         <div className={styles.modalFooter}>
-          <button type="submit" className={styles.primaryBtn} disabled={saving}>{saving ? <Spinner size={16} /> : 'Save'}</button>
+          <button type="submit" className={styles.primaryBtn} disabled={saving || drafts.length === 0}>{saving ? <Spinner size={16} /> : 'Save'}</button>
         </div>
       </form>
     </Modal>
@@ -771,6 +912,11 @@ function AnalyticsTab() {
 
   return (
     <div>
+      {data.isSeeded && (
+        <p className={styles.emptyHint} style={{ padding: 0, marginBottom: 12 }}>
+          Showing sample data to preview this dashboard — it will be replaced automatically once real guest activity comes in.
+        </p>
+      )}
       <div className={styles.statGrid}>
         <StatCard label="Active Live Carts" value={data.activeLiveCarts} />
         <StatCard label="Active Guests" value={data.activeGuests} />
@@ -895,6 +1041,97 @@ function LiveCartsTab() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────── Theme ───────────────────────────────────────
+
+function ThemeTab() {
+  const { theme, reload } = useTheme();
+  const [saving, setSaving] = useState(false);
+
+  if (!theme) return <div className={styles.loading}><Spinner size={32} /></div>;
+
+  async function save(patch: Parameters<typeof api.updateTheme>[0]) {
+    setSaving(true);
+    try {
+      await api.updateTheme(patch);
+      reload();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className={styles.panel}>
+      <div className={styles.panelHeader}>
+        <h2>Theme</h2>
+        <span className={styles.badgeChip}>Currently: {theme.activeTheme === 'night' ? 'Night' : 'Day'}</span>
+      </div>
+      <p className={styles.emptyHint} style={{ padding: 0, marginBottom: 16 }}>
+        Controls appearance only — colours and fonts, never which items or categories show.
+        Changes apply instantly to both the customer menu and this Admin panel.
+      </p>
+
+      <div className={styles.field}>
+        <label className={styles.checkboxField}>
+          <input
+            type="checkbox"
+            checked={theme.autoEnabled}
+            disabled={saving}
+            onChange={e => save({ autoEnabled: e.target.checked })}
+          />
+          Automatic switching (based on time of day)
+        </label>
+      </div>
+
+      {!theme.autoEnabled ? (
+        <div className={styles.field}>
+          Manual theme
+          <div className={styles.dayChips}>
+            <button
+              type="button"
+              className={`${styles.dayChip} ${theme.manualTheme === 'day' ? styles.dayChipActive : ''}`}
+              disabled={saving}
+              onClick={() => save({ manualTheme: 'day' })}
+            >
+              ☀ Day
+            </button>
+            <button
+              type="button"
+              className={`${styles.dayChip} ${theme.manualTheme === 'night' ? styles.dayChipActive : ''}`}
+              disabled={saving}
+              onClick={() => save({ manualTheme: 'night' })}
+            >
+              ☾ Night
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className={styles.fieldGrid}>
+          <label className={styles.field}>
+            Day starts at
+            <input
+              className={styles.input}
+              type="time"
+              defaultValue={theme.dayStartTime}
+              disabled={saving}
+              onBlur={e => e.target.value && save({ dayStartTime: e.target.value })}
+            />
+          </label>
+          <label className={styles.field}>
+            Night starts at
+            <input
+              className={styles.input}
+              type="time"
+              defaultValue={theme.nightStartTime}
+              disabled={saving}
+              onBlur={e => e.target.value && save({ nightStartTime: e.target.value })}
+            />
+          </label>
+        </div>
+      )}
     </div>
   );
 }

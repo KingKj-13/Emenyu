@@ -25,12 +25,20 @@ function patchJson<T>(url: string, payload: unknown): Promise<T> {
   });
 }
 
+export interface DealItem {
+  id: number;
+  name: string;
+  price: number;
+  img: string;
+}
+
 export interface Promotion {
   id: number;
   title: string;
   description: string;
   bannerImage: string;
   badge: string;
+  items: DealItem[];
   startDate: string | null;
   endDate: string | null;
   startTime: string;
@@ -51,12 +59,20 @@ export interface HappyHour {
   isLiveNow?: boolean;
 }
 
+export interface SpecialItem {
+  itemId: number;
+  name: string;
+  img: string;
+  originalPrice: number;
+  specialPrice: number;
+  discountPct: number | null;
+}
+
 export interface Special {
   id: number;
   title: string;
   bannerImage: string;
-  itemIds: number[];
-  discountPct: number | null;
+  items: SpecialItem[];
   startDate: string | null;
   endDate: string | null;
   startTime: string;
@@ -72,6 +88,7 @@ export interface LiveCart {
 }
 
 export interface AnalyticsDashboard {
+  isSeeded: boolean;
   activeLiveCarts: number;
   activeGuests: number;
   mostViewedItems: { itemId: number; name: string; count: number }[];
@@ -86,6 +103,44 @@ export interface AnalyticsDashboard {
   specialsPerformance: { id: number; title: string; active: boolean; addToCartCount: number }[];
   availableItems: number;
   unavailableItems: number;
+}
+
+export interface ThemeSettings {
+  autoEnabled: boolean;
+  manualTheme: 'day' | 'night';
+  dayStartTime: string;
+  nightStartTime: string;
+  activeTheme: 'day' | 'night';
+}
+
+export interface PromotionInput {
+  title?: string;
+  description?: string;
+  bannerImage?: string;
+  badge?: string;
+  itemIds?: number[];
+  startDate?: string | null;
+  endDate?: string | null;
+  startTime?: string;
+  endTime?: string;
+  active?: boolean;
+}
+
+export interface SpecialItemInput {
+  itemId: number;
+  specialPrice?: number | null;
+  discountPct?: number | null;
+}
+
+export interface SpecialInput {
+  title?: string;
+  bannerImage?: string;
+  items?: SpecialItemInput[];
+  startDate?: string | null;
+  endDate?: string | null;
+  startTime?: string;
+  endTime?: string;
+  active?: boolean;
 }
 
 export const api = {
@@ -114,7 +169,7 @@ export const api = {
   },
 
   getMenuCategories() {
-    return fetchJson<Array<{ id: number; title: string; sortOrder: number; visible: boolean }>>(ENDPOINTS.menuCategories);
+    return fetchJson<Array<{ id: number; title: string; sortOrder: number; visible: boolean; itemCount: number }>>(ENDPOINTS.menuCategories);
   },
 
   createCategory(title: string) {
@@ -159,10 +214,10 @@ export const api = {
   getPromotionsAdmin() {
     return fetchJson<Promotion[]>(ENDPOINTS.promotionsAdmin);
   },
-  createPromotion(payload: Partial<Promotion>) {
+  createPromotion(payload: PromotionInput) {
     return postJson<{ ok: boolean; promotion: Promotion }>(ENDPOINTS.promotionsAdmin, payload);
   },
-  updatePromotion(id: number, patch: Partial<Promotion>) {
+  updatePromotion(id: number, patch: PromotionInput) {
     return patchJson<{ ok: boolean; promotion: Promotion }>(ENDPOINTS.promotionAdmin(id), patch);
   },
   deletePromotion(id: number) {
@@ -193,10 +248,10 @@ export const api = {
   getSpecialsAdmin() {
     return fetchJson<Special[]>(ENDPOINTS.specialsAdmin);
   },
-  createSpecial(payload: Partial<Special>) {
+  createSpecial(payload: SpecialInput) {
     return postJson<{ ok: boolean; special: Special }>(ENDPOINTS.specialsAdmin, payload);
   },
-  updateSpecial(id: number, patch: Partial<Special>) {
+  updateSpecial(id: number, patch: SpecialInput) {
     return patchJson<{ ok: boolean; special: Special }>(ENDPOINTS.specialAdmin(id), patch);
   },
   deleteSpecial(id: number) {
@@ -214,5 +269,13 @@ export const api = {
   // ── Live carts ──
   getLiveCarts() {
     return fetchJson<LiveCart[]>(ENDPOINTS.liveCarts);
+  },
+
+  // ── Theme ──
+  getTheme() {
+    return fetchJson<ThemeSettings>(ENDPOINTS.theme);
+  },
+  updateTheme(patch: Partial<Omit<ThemeSettings, 'activeTheme'>>) {
+    return patchJson<ThemeSettings>(ENDPOINTS.themeAdmin, patch);
   },
 };

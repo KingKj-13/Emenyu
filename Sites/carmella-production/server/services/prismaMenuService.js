@@ -483,6 +483,13 @@ class PrismaMenuService {
     );
   }
 
+  // STEP 3 — item counts must include items belonging to this category's
+  // child sections, not just items attached directly to the top-level
+  // category row: this app's chapters (top-level) contain sections
+  // (children) which is where imported items actually attach, so counting
+  // only `categoryId = chapter.id` undercounts to 0 for every chapter that
+  // has sections. This was the root cause of the admin always showing
+  // "0 Items".
   async listCategories() {
     return this.withPrisma(
       'menu_postgres_list_categories_failed',
@@ -490,9 +497,22 @@ class PrismaMenuService {
         const categories = await prisma.menuCategory.findMany({
           where: { restaurantId: this.restaurantId, parentId: null },
           orderBy: { sortOrder: 'asc' },
-          select: { id: true, title: true, sortOrder: true, visible: true }
+          select: {
+            id: true,
+            title: true,
+            sortOrder: true,
+            visible: true,
+            _count: { select: { items: true } },
+            children: { select: { _count: { select: { items: true } } } }
+          }
         });
-        return categories.map(category => ({ id: category.id, title: category.title, sortOrder: category.sortOrder, visible: category.visible }));
+        return categories.map(category => ({
+          id: category.id,
+          title: category.title,
+          sortOrder: category.sortOrder,
+          visible: category.visible,
+          itemCount: category._count.items + category.children.reduce((sum, child) => sum + child._count.items, 0)
+        }));
       },
       []
     );
@@ -697,5 +717,6 @@ class PrismaMenuService {
 
 module.exports = {
   PrismaMenuService,
-  flattenMenu
+  flattenMenu,
+  effectivePrice
 };

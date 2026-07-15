@@ -1,7 +1,11 @@
-import { useEffect, type CSSProperties } from 'react';
+import { useEffect, useState, useCallback, type CSSProperties } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { UtensilsCrossed, Wine, Sparkles, Martini, ArrowRight, Coffee, GlassWater } from 'lucide-react';
+import { UtensilsCrossed, Wine, Sparkles, Martini, ArrowRight, Coffee, GlassWater, Clock } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useSocketEvent } from '../hooks/useSocket';
+import { api, type Promotion, type Special, type HappyHour } from '../services/api';
+import { formatPrice } from '../lib/menuUtils';
+import { resolveThumbnail } from '../lib/imageResolver';
 import { LANDING_BRAND_NAME } from '../constants/api';
 import styles from './LandingPage.module.css';
 
@@ -34,6 +38,22 @@ export function LandingPage() {
   const tableId = paramTableId || 'table1';
   const tableLabel = tableId.replace(/^table/i, 'Table ');
 
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [specials, setSpecials] = useState<Special[]>([]);
+  const [happyHours, setHappyHours] = useState<HappyHour[]>([]);
+
+  // STEP 7 — the homepage's promo sections auto-show/hide based on what's
+  // actually active right now, and re-fetch live the moment an admin changes
+  // a promotion/special/happy hour (or its schedule window opens/closes on
+  // the next poll from ThemeContext-style socket updates).
+  const loadPromos = useCallback(() => {
+    api.getPromotions().then(setPromotions).catch(() => {});
+    api.getSpecials().then(setSpecials).catch(() => {});
+    api.getHappyHours().then(setHappyHours).catch(() => {});
+  }, []);
+  useEffect(loadPromos, [loadPromos]);
+  useSocketEvent('promotionsUpdated', loadPromos);
+
   useEffect(() => {
     if (paramTableId) setTableId(paramTableId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -43,17 +63,41 @@ export function LandingPage() {
     navigate(c.to(tableId));
   }
 
+  const deal = promotions[0] ?? null;
+  const heroImage = deal?.bannerImage || deal?.items[0]?.img;
+
   return (
     <div className={styles.page}>
       <div className={styles.inner}>
-        <header className={styles.header}>
-          <span className={styles.monogram} aria-hidden>{LANDING_BRAND_NAME.charAt(0)}</span>
-          <span className={styles.eyebrow}>Welcome to</span>
-          <h1 className={styles.brand}>{LANDING_BRAND_NAME}</h1>
-          <div className={styles.pill}>
-            <span className={styles.dot} /> {tableLabel} · Browse the menu
-          </div>
-        </header>
+        {deal ? (
+          <button className={styles.dealHero} onClick={() => navigate(`/${tableId}/menu`)}>
+            {heroImage && <img src={resolveThumbnail({ name: deal.title, price: 0, img: heroImage })} alt="" className={styles.dealHeroImage} />}
+            <div className={styles.dealHeroTint} />
+            <div className={styles.dealHeroContent}>
+              {deal.badge && <span className={styles.dealBadge}>{deal.badge}</span>}
+              <span className={styles.dealEyebrow}>Deal of the Day</span>
+              <h1 className={styles.dealTitle}>{deal.title}</h1>
+              {deal.description && <p className={styles.dealDesc}>{deal.description}</p>}
+              {deal.items.length > 0 && (
+                <div className={styles.dealItems}>
+                  {deal.items.slice(0, 4).map(item => (
+                    <span key={item.id} className={styles.dealItemChip}>{item.name}</span>
+                  ))}
+                </div>
+              )}
+              <span className={styles.dealCta}>View Deal <ArrowRight size={16} /></span>
+            </div>
+          </button>
+        ) : (
+          <header className={styles.header}>
+            <span className={styles.monogram} aria-hidden>{LANDING_BRAND_NAME.charAt(0)}</span>
+            <span className={styles.eyebrow}>Welcome to</span>
+            <h1 className={styles.brand}>{LANDING_BRAND_NAME}</h1>
+            <div className={styles.pill}>
+              <span className={styles.dot} /> {tableLabel} · Browse the menu
+            </div>
+          </header>
+        )}
 
         <button className={styles.cta} onClick={() => navigate(`/${tableId}/menu`)}>
           <span className={styles.ctaText}>
@@ -64,6 +108,37 @@ export function LandingPage() {
             <ArrowRight size={22} />
           </span>
         </button>
+
+        {happyHours.length > 0 && (
+          <section className={styles.promoSection}>
+            <div className={styles.promoSectionTitle}><Clock size={14} /> Happy Hour is on now</div>
+            <div className={styles.promoRow}>
+              {happyHours.flatMap(hh => hh.itemIds).length > 0 && (
+                <span className={styles.promoRowText}>
+                  {happyHours.map(hh => `${hh.name} — ${hh.discountPct}% off`).join(' · ')}
+                </span>
+              )}
+              <button className={styles.promoRowBtn} onClick={() => navigate(`/${tableId}/menu`)}>See items</button>
+            </div>
+          </section>
+        )}
+
+        {specials.length > 0 && (
+          <section className={styles.promoSection}>
+            <div className={styles.promoSectionTitle}><Sparkles size={14} /> Today's Specials</div>
+            <div className={styles.specialsGrid}>
+              {specials.flatMap(s => s.items).slice(0, 6).map(item => (
+                <button key={item.itemId} className={styles.specialTile} onClick={() => navigate(`/${tableId}/menu`)}>
+                  {item.img && <img src={resolveThumbnail({ name: item.name, price: 0, img: item.img })} alt="" className={styles.specialTileImage} />}
+                  <span className={styles.specialTileName}>{item.name}</span>
+                  <span className={styles.specialTilePrice}>
+                    <span className={styles.specialTileStrike}>{formatPrice(item.originalPrice)}</span> {formatPrice(item.specialPrice)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className={styles.grid}>
           {CATEGORIES.map((c, i) => {

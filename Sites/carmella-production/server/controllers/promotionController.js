@@ -1,8 +1,10 @@
 const { isWithinSchedule } = require('../utils/schedule');
+const { effectivePrice } = require('../services/prismaMenuService');
 
 const BADGES = new Set(['NEW', 'SPECIAL', '10% OFF', '20% OFF', 'LIMITED', 'CHEF SPECIAL']);
 
-function toPublic(row) {
+function toPublic(row, itemsById) {
+  const itemIds = Array.isArray(row.itemIds) ? row.itemIds : [];
   return {
     id: row.id,
     title: row.title,
@@ -12,7 +14,8 @@ function toPublic(row) {
     startDate: row.startDate,
     endDate: row.endDate,
     startTime: row.startTime,
-    endTime: row.endTime
+    endTime: row.endTime,
+    items: itemsById ? itemIds.map(id => itemsById.get(id)).filter(Boolean) : itemIds
   };
 }
 
@@ -32,6 +35,9 @@ function sanitize(body = {}, { partial = false } = {}) {
     }
     out.badge = badge;
   }
+  if (body.itemIds !== undefined) {
+    out.itemIds = Array.isArray(body.itemIds) ? body.itemIds.map(Number).filter(Number.isInteger) : [];
+  }
   if (body.startDate !== undefined) out.startDate = body.startDate ? new Date(body.startDate) : null;
   if (body.endDate !== undefined) out.endDate = body.endDate ? new Date(body.endDate) : null;
   if (body.startTime !== undefined) out.startTime = String(body.startTime || '');
@@ -41,19 +47,32 @@ function sanitize(body = {}, { partial = false } = {}) {
 }
 
 function createPromotionController({ getPrisma, socketService }) {
+  async function resolveItemsById(prisma, rows) {
+    const ids = [...new Set(rows.flatMap(row => (Array.isArray(row.itemIds) ? row.itemIds : [])))];
+    if (ids.length === 0) return new Map();
+    const items = await prisma.menuItem.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true, price: true, imagePath: true, variants: { select: { price: true, isAddon: true } } }
+    });
+    return new Map(items.map(item => [item.id, { id: item.id, name: item.name, price: effectivePrice(item), img: item.imagePath }]));
+  }
+
   return {
     // Public — Deal of the Day, only what's live right now.
     async listActive(req, res) {
       const prisma = getPrisma();
-      const rows = await prisma.promotion.findMany({ where: { active: true }, orderBy: { createdAt: 'desc' } });
-      res.json(rows.filter(row => isWithinSchedule(row)).map(toPublic));
+      const rows = (await prisma.promotion.findMany({ where: { active: true }, orderBy: { createdAt: 'desc' } }))
+        .filter(row => isWithinSchedule(row));
+      const itemsById = await resolveItemsById(prisma, rows);
+      res.json(rows.map(row => toPublic(row, itemsById)));
     },
 
     // Admin — every promotion regardless of schedule, with its computed live status.
     async listAll(req, res) {
       const prisma = getPrisma();
       const rows = await prisma.promotion.findMany({ orderBy: { createdAt: 'desc' } });
-      res.json(rows.map(row => ({ ...row, isLiveNow: row.active && isWithinSchedule(row) })));
+      const itemsById = await resolveItemsById(prisma, rows);
+      res.json(rows.map(row => ({ ...toPublic(row, itemsById), active: row.active, isLiveNow: row.active && isWithinSchedule(row) })));
     },
 
     async create(req, res) {

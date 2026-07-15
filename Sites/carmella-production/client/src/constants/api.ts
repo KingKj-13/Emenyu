@@ -37,5 +37,8 @@ export const ENDPOINTS = {
   analyticsEvent: `${API_PREFIX}/api/analytics/event`,
   analyticsDashboard: `${API_PREFIX}/api/admin/analytics/dashboard`,
 
-  liveCarts: `${API_PREFIX}/api/admin/live-carts`
+  liveCarts: `${API_PREFIX}/api/admin/live-carts`,
+
+  theme: `${API_PREFIX}/api/theme`,
+  themeAdmin: `${API_PREFIX}/api/admin/theme`
 } as const;

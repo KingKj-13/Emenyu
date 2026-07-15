@@ -21,35 +21,11 @@
   flex-shrink: 0;
 }
 
-.image, .video, .youtube, .videoLayer, .imageOverlay {
+.image {
   width: 100%;
   height: 100%;
   display: block;
-}
-
-.image, .video, .videoLayer, .imageOverlay { object-fit: cover; }
-
-.videoLayer {
-  position: absolute;
-  inset: 0;
-}
-
-.imageOverlay {
-  position: absolute;
-  inset: 0;
-  opacity: 1;
-  transition: opacity 700ms ease;
-  will-change: opacity;
-}
-
-.imageOverlayHidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.youtube {
-  border: 0;
-  background: #000;
+  object-fit: cover;
 }
 
 .mediaTint {
@@ -59,10 +35,10 @@
   pointer-events: none;
 }
 
-.closeBtn,
-.backBtn {
+.closeBtn {
   position: absolute;
   top: 12px;
+  right: 12px;
   width: 36px;
   height: 36px;
   display: grid;
@@ -77,35 +53,6 @@
 }
 
 .closeBtn:hover { border-color: rgba(255,255,255,0.5); }
-
-.closeBtn { right: 12px; }
-
-.backBtn {
-  left: 12px;
-  z-index: 2;
-}
-
-.backBtn:hover { border-color: rgba(255,255,255,0.5); }
-
-.favBtn {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 50%;
-  background: rgba(0,0,0,0.6);
-  color: rgba(255,255,255,0.7);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-  transition: color 160ms ease, border-color 160ms ease;
-}
-
-.favBtn:hover, .favActive { color: #e06060; border-color: rgba(224,96,96,0.5); }
-.favBtnOffset { left: 56px; }
 
 /* Bug #3 fix: .body is now the scrollable region (not the outer modal panel),
    sized by flexbox to take whatever space .media and the now-sibling
@@ -202,14 +149,6 @@
   color: rgba(201, 187, 165, 0.5);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-}
-
-/* The recommendation journey owns its own chrome (RecommendationJourney.module.css);
-   only the brief loading state lives here. */
-.pairLoading {
-  display: flex;
-  justify-content: center;
-  padding: 16px 0;
 }
 
 /* Footer CTA — the primary conversion action must never require scrolling

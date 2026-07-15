@@ -18,9 +18,10 @@ import { useMenu } from '../hooks/useMenu';
 import { useCart } from '../hooks/useCart';
 import { useFilters } from '../hooks/useFilters';
 import { useApp } from '../context/AppContext';
-import { api, type HappyHour, type Promotion } from '../services/api';
+import { api, type HappyHour, type Promotion, type Special } from '../services/api';
 import { buildMenuSections, flattenMenu } from '../lib/menuUtils';
 import { resolveImage, resolveThumbnail } from '../lib/imageResolver';
+import { MenuCard } from '../components/menu/MenuCard';
 import type { MenuItem } from '../types/menu';
 import styles from './MenuPage.module.css';
 
@@ -49,6 +50,7 @@ export function MenuPage() {
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [happyHours, setHappyHours] = useState<HappyHour[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [specials, setSpecials] = useState<Special[]>([]);
   const tableId = paramTableId || 'table1';
   const modalOpen = selectedItem !== null;
 
@@ -70,6 +72,7 @@ export function MenuPage() {
   const loadPromoData = useCallback(() => {
     api.getPromotions().then(setPromotions).catch(() => {});
     api.getHappyHours().then(setHappyHours).catch(() => {});
+    api.getSpecials().then(setSpecials).catch(() => {});
   }, []);
   useEffect(loadPromoData, [loadPromoData]);
   useSocketEvent('promotionsUpdated', loadPromoData);
@@ -90,6 +93,19 @@ export function MenuPage() {
     });
     return map;
   }, [happyHours, allItems]);
+
+  // STEP 5 — Special pricing keyed by item name; original price always comes
+  // from the live MenuItem (never a snapshot), matching the server's own logic.
+  const specialPrices = useMemo(() => {
+    const map = new Map<string, number>();
+    specials.flatMap(s => s.items).forEach(entry => map.set(entry.name, entry.specialPrice));
+    return map;
+  }, [specials]);
+
+  const specialItems = useMemo(
+    () => allItems.filter(item => specialPrices.has(item.name)),
+    [allItems, specialPrices],
+  );
 
   const sections = useMemo(() => buildMenuSections(menuData, activeFilters, searchQuery), [menuData, activeFilters, searchQuery]);
 
@@ -202,15 +218,34 @@ export function MenuPage() {
             <button className={styles.clearBtn} onClick={clearFilters}>Clear filters</button>
           </div>
         ) : (
-          sections.map(section => (
-            <CategorySection
-              key={section.title}
-              section={section}
-              onAddToCart={handleAddToCart}
-              onItemClick={handleItemClick}
-              happyHourDiscounts={happyHourDiscounts}
-            />
-          ))
+          <>
+            {specialItems.length > 0 && (
+              <section className={styles.specialsSection}>
+                <h2 className={styles.specialsTitle}>Today's Specials</h2>
+                <div className={styles.specialsGrid}>
+                  {specialItems.map((item, i) => (
+                    <MenuCard
+                      key={`special-${item.name}-${i}`}
+                      item={item}
+                      onAddToCart={handleAddToCart}
+                      onClick={handleItemClick}
+                      specialPrice={specialPrices.get(item.name)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+            {sections.map(section => (
+              <CategorySection
+                key={section.title}
+                section={section}
+                onAddToCart={handleAddToCart}
+                onItemClick={handleItemClick}
+                happyHourDiscounts={happyHourDiscounts}
+                specialPrices={specialPrices}
+              />
+            ))}
+          </>
         )}
       </div>
 
