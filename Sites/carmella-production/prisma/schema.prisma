@@ -59,6 +59,7 @@ model MenuItem {
   available      Boolean           @default(true)
   availability   String            @default("available") // available | ask | unavailable
   popular        Boolean           @default(false)
+  daypart        String            @default("both") // day | night | both -- which menu(s) this item appears on; visual theme is separate and never filters this
   sortOrder      Int               @default(0)
   metadata       Json?
   variants       MenuItemVariant[]

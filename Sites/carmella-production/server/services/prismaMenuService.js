@@ -11,8 +11,14 @@ const DEFAULT_RESTAURANT_ID = 'carmella-production';
 const ITEM_BASE_KEYS = new Set([
   'name', 'description', 'story', 'subtitle', 'price', 'calories', 'allergens',
   'spice', 'img', 'imageVisible', 'visible', 'available', 'availability',
-  'popular', 'variants'
+  'popular', 'variants', 'daypart'
 ]);
+
+const DAYPARTS = new Set(['day', 'night', 'both']);
+function normalizeDaypart(value) {
+  const v = String(value || 'both').toLowerCase();
+  return DAYPARTS.has(v) ? v : 'both';
+}
 
 function parseBoolean(value, fallback = true) {
   if (value === undefined || value === null || value === '') {
@@ -97,6 +103,7 @@ function itemToCreateData(item = {}, categoryId, restaurantId, sortOrder) {
     available: item.available !== false,
     availability: String(item.availability || 'available'),
     popular: Boolean(item.popular),
+    daypart: normalizeDaypart(item.daypart),
     sortOrder,
     metadata: itemMetadata(item)
   };
@@ -147,6 +154,7 @@ function dbItemToJson(item, { includeId = false, categoryTitle = '', subcategory
     available: item.available !== false,
     availability: item.availability || 'available',
     popular: item.popular,
+    daypart: normalizeDaypart(item.daypart),
     ...(Array.isArray(item.variants) && item.variants.length > 0
       ? { variants: item.variants.map(variantToJson) }
       : {})
@@ -635,6 +643,7 @@ class PrismaMenuService {
     if (Object.prototype.hasOwnProperty.call(patch, 'popular')) data.popular = Boolean(patch.popular);
     if (Object.prototype.hasOwnProperty.call(patch, 'available')) data.available = patch.available !== false;
     if (Object.prototype.hasOwnProperty.call(patch, 'visible')) data.visible = patch.visible !== false;
+    if (Object.prototype.hasOwnProperty.call(patch, 'daypart')) data.daypart = normalizeDaypart(patch.daypart);
 
     return this.withPrisma(
       'menu_postgres_update_item_failed',

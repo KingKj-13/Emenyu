@@ -37,6 +37,10 @@ export interface MenuItem {
   // Falls back to `available` when absent.
   availability?: 'available' | 'ask' | 'unavailable';
   popular?: boolean;
+  // Which menu(s) this item appears on. Separate from the Day/Night visual
+  // theme, which only changes appearance and never filters items — 'both'
+  // means always shown regardless of theme.
+  daypart?: 'day' | 'night' | 'both';
   types?: string;
   category?: string;
   subcategory?: string;

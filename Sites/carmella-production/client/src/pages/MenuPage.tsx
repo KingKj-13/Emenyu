@@ -18,6 +18,7 @@ import { useMenu } from '../hooks/useMenu';
 import { useCart } from '../hooks/useCart';
 import { useFilters } from '../hooks/useFilters';
 import { useApp } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
 import { api, type HappyHour, type Promotion, type Special } from '../services/api';
 import { buildMenuSections, flattenMenu } from '../lib/menuUtils';
 import { resolveImage, resolveThumbnail } from '../lib/imageResolver';
@@ -43,6 +44,7 @@ export function MenuPage() {
   const [searchParams] = useSearchParams();
   const focusSection = searchParams.get('section');
   const { setTableId, tableId: appTableId, sessionId } = useApp();
+  const { theme } = useTheme();
   const { menuData, loading, error } = useMenu();
   const { addItem } = useCart();
   const { activeFilters, searchQuery, setSearchQuery, toggleFilter, clearFilters, filterOptions } = useFilters();
@@ -107,7 +109,10 @@ export function MenuPage() {
     [allItems, specialPrices],
   );
 
-  const sections = useMemo(() => buildMenuSections(menuData, activeFilters, searchQuery), [menuData, activeFilters, searchQuery]);
+  const sections = useMemo(
+    () => buildMenuSections(menuData, activeFilters, searchQuery, theme?.activeTheme),
+    [menuData, activeFilters, searchQuery, theme?.activeTheme]
+  );
 
   useEffect(() => {
     const firstItems = sections[0]?.items?.slice(0, 6) ?? [];

@@ -195,7 +195,10 @@ function MenuManagementTab() {
               />
               <div className={styles.itemInfo}>
                 <strong>{item.name}</strong>
-                <span className={styles.itemMeta}>{item.category} · {formatPrice(item.price)}</span>
+                <span className={styles.itemMeta}>
+                  {item.category} · {formatPrice(item.price)}
+                  {item.daypart && item.daypart !== 'both' && ` · ${item.daypart === 'day' ? 'Day only' : 'Night only'}`}
+                </span>
               </div>
               <div className={styles.rowActions}>
                 <button onClick={() => toggleAvailability(item)} title={item.available === false ? 'Mark available' : 'Mark sold out'}>
@@ -236,6 +239,7 @@ function ItemEditModal({ item, categories, onClose, onSaved }: {
   const [allergens, setAllergens] = useState(item?.allergens || '');
   const [spice, setSpice] = useState(item?.spice || '');
   const [popular, setPopular] = useState(Boolean(item?.popular));
+  const [daypart, setDaypart] = useState(item?.daypart || 'both');
   const [uploading, setUploading] = useState(false);
   const [imgPath, setImgPath] = useState(item?.img || '');
   const [saving, setSaving] = useState(false);
@@ -267,7 +271,7 @@ function ItemEditModal({ item, categories, onClose, onSaved }: {
     e.preventDefault();
     setSaving(true);
     try {
-      const patch = { name, category, price: Number(price) || 0, description, calories, allergens, spice, popular };
+      const patch = { name, category, price: Number(price) || 0, description, calories, allergens, spice, popular, daypart };
       if (item) {
         await api.updateMenuItem(item.dbId, patch);
       } else {
@@ -312,6 +316,15 @@ function ItemEditModal({ item, categories, onClose, onSaved }: {
         <label className={styles.field}>Spice level<input className={styles.input} value={spice} onChange={e => setSpice(e.target.value)} placeholder="🌶️🌶️" /></label>
         <label className={styles.checkboxField}>
           <input type="checkbox" checked={popular} onChange={e => setPopular(e.target.checked)} /> Guest Favourite
+        </label>
+
+        <label className={styles.field}>
+          Menu
+          <select className={styles.select} value={daypart} onChange={e => setDaypart(e.target.value as 'day' | 'night' | 'both')}>
+            <option value="both">Both (Day &amp; Night)</option>
+            <option value="day">Day Menu only</option>
+            <option value="night">Night Menu only</option>
+          </select>
         </label>
 
         <div className={styles.modalFooter}>

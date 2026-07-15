@@ -89,16 +89,30 @@ function shouldHideItem(item: MenuItem, activeFilters: Set<string>): boolean {
   return shouldHideItemForFilters(item, activeFilters);
 }
 
-function visibleItems(items: MenuItem[], activeFilters: Set<string>, query: string): MenuItem[] {
+// Daypart filter is separate from the Day/Night visual theme: an item tagged
+// 'day' or 'night' only appears in the browsable menu during that half of the
+// clock; 'both' (the default) always shows. `activeDaypart` is undefined
+// while the theme hasn't loaded yet, in which case nothing is filtered out.
+function matchesDaypart(item: MenuItem, activeDaypart?: 'day' | 'night'): boolean {
+  if (!activeDaypart) return true;
+  const itemDaypart = item.daypart || 'both';
+  return itemDaypart === 'both' || itemDaypart === activeDaypart;
+}
+
+function visibleItems(items: MenuItem[], activeFilters: Set<string>, query: string, activeDaypart?: 'day' | 'night'): MenuItem[] {
   return items.filter(
-    item => item.visible !== false && !shouldHideItem(item, activeFilters) && matchesSearch(item, query)
+    item => item.visible !== false
+      && matchesDaypart(item, activeDaypart)
+      && !shouldHideItem(item, activeFilters)
+      && matchesSearch(item, query)
   );
 }
 
 export function buildMenuSections(
   menuData: MenuData,
   activeFilters: Set<string>,
-  searchQuery = ''
+  searchQuery = '',
+  activeDaypart?: 'day' | 'night'
 ): MenuSection[] {
   const sections: MenuSection[] = [];
 
@@ -106,7 +120,7 @@ export function buildMenuSections(
     if (!categoryValue || categoryValue.visible === false) return;
 
     if (Array.isArray(categoryValue)) {
-      const items = visibleItems(categoryValue as MenuItem[], activeFilters, searchQuery);
+      const items = visibleItems(categoryValue as MenuItem[], activeFilters, searchQuery, activeDaypart);
       if (items.length > 0) sections.push({ title: categoryTitle, items, subSections: [] });
       return;
     }
@@ -114,7 +128,8 @@ export function buildMenuSections(
     const directItems = visibleItems(
       (categoryValue.items as MenuItem[]) || [],
       activeFilters,
-      searchQuery
+      searchQuery,
+      activeDaypart
     );
     const subSections: { title: string; items: MenuItem[] }[] = [];
 
@@ -123,7 +138,7 @@ export function buildMenuSections(
       if (typeof subValue !== 'object' || Array.isArray(subValue)) return;
       const sv = subValue as { visible?: boolean; items?: MenuItem[] };
       if (sv.visible === false) return;
-      const items = visibleItems(sv.items || [], activeFilters, searchQuery);
+      const items = visibleItems(sv.items || [], activeFilters, searchQuery, activeDaypart);
       if (items.length > 0) subSections.push({ title: subTitle, items });
     });
 
