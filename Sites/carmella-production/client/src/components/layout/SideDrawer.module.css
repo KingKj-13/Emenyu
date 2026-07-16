@@ -85,20 +85,41 @@
   font-weight: 600;
 }
 
+.searchRow { position: relative; }
+
 .searchInput {
   width: 100%;
-  padding: 9px 14px;
+  padding: 9px 36px 9px 14px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 4px;
   color: var(--color-cream);
-  font-size: 14px;
+  /* >=16px so iOS Safari doesn't zoom the viewport when the field is focused. */
+  font-size: 16px;
   transition: border-color 160ms ease;
   box-sizing: border-box;
 }
 
 .searchInput::placeholder { color: rgba(201, 187, 165, 0.35); }
 .searchInput:focus { outline: none; border-color: rgba(var(--color-gold-rgb), 0.4); }
+
+.searchClearBtn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-sand);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+.searchClearBtn:hover { background: rgba(var(--color-gold-rgb), 0.15); color: var(--color-gold); }
 
 .chips {
   display: flex;

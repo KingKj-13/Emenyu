@@ -8,7 +8,7 @@ export function normalizeName(raw: string): string {
 function matchesSearch(item: MenuItem, query: string): boolean {
   if (!query) return true;
   const q = query.toLowerCase();
-  return [item.name, item.description, item.allergens, item.types]
+  return [item.name, item.description, item.allergens, item.types, item.category, item.subcategory]
     .filter(Boolean)
     .join(' ')
     .toLowerCase()

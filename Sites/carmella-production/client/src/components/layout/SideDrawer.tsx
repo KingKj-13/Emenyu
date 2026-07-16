@@ -61,14 +61,26 @@ export function SideDrawer({
 
         <div className={styles.section}>
           <p className={styles.sectionLabel}>Search</p>
-          <input
-            type="search"
-            className={styles.searchInput}
-            placeholder="Search menu…"
-            value={searchQuery}
-            onChange={e => onSearchChange(e.target.value)}
-            aria-label="Search menu items"
-          />
+          <div className={styles.searchRow}>
+            <input
+              type="search"
+              className={styles.searchInput}
+              placeholder="Search by name, description, category…"
+              value={searchQuery}
+              onChange={e => onSearchChange(e.target.value)}
+              aria-label="Search menu items"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className={styles.searchClearBtn}
+                onClick={() => onSearchChange('')}
+                aria-label="Clear search"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className={styles.section}>
