@@ -204,12 +204,18 @@ model AnalyticsEvent {
   tableId      String?
   sessionId    String?
   isSeed       Boolean  @default(false)
+  // Separate from isSeed (the dashboard's own automatic below-threshold
+  // filler, see analyticsController.js) -- this tags rows from the
+  // explicitly-invoked demo data generator (scripts/seed-demo-data.js), so
+  // the two can never be confused or interfere with each other's lifecycle.
+  isDemo       Boolean  @default(false)
   createdAt    DateTime @default(now())
 
   @@index([restaurantId, type, createdAt])
   @@index([restaurantId, itemId])
   @@index([restaurantId, sessionId])
   @@index([restaurantId, isSeed])
+  @@index([restaurantId, isDemo])
 }
 
 // STEP 2 — Day/Night visual theme. One row per tenant (singleton via the
