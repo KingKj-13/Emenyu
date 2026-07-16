@@ -31,23 +31,30 @@ function tagList(item: MenuItem): string[] {
   return [];
 }
 
-// Protein-family "No X" filters map onto the protein-ish tag values, which
+// "Pork Free" maps onto the protein-ish tag values, which
 // scripts/enrich-menu-tags.js populates on every Trump item (100% coverage,
 // with a name-keyword fallback) and Carmella's data carries directly in its
 // flat tag array -- unlike the legacy `allergens` string column, which is
-// only set on ~38% of items and never uses "Shellfish" as a token (it uses
-// "Seafood"), so a squid/prawn dish could slip through a "No Seafood" toggle
-// or a "calamari" search with the old text-only check.
-const PROTEIN_FILTER_KEYS = new Set(['beef', 'chicken', 'pork', 'lamb', 'seafood']);
+// only set on ~38% of items.
+const PROTEIN_FILTER_KEYS = new Set(['pork']);
 
-// Allergen-style "No X" filters -- Trump's data normalizes these into
+// Allergen-style "X Free" filters -- Trump's data normalizes these into
 // "contains-x" tag values (DIETARY_TOKENS in enrich-menu-tags.js); check both
 // that form and the bare word, since Carmella's flat tags may use either.
 const DIETARY_EXCLUDE_TAGS: Record<string, string[]> = {
   egg: ['contains-egg', 'egg'],
   gluten: ['contains-gluten', 'gluten'],
   nuts: ['contains-nuts', 'nuts', 'nut'],
+  dairy: ['contains-dairy', 'dairy'],
 };
+
+// "Include only" filters beyond vegan/vegetarian (which get their own
+// bespoke matching below) -- an item must be explicitly tagged/labeled
+// halal to pass; there is no negative-inference rule for it the way pork
+// mentions imply "not halal" (a menu simply not saying "halal" doesn't mean
+// it isn't -- absence of a tag isn't a certification claim either way), so
+// this only ever surfaces items positively marked as such.
+const INCLUDE_ONLY_TAGS = new Set(['halal']);
 
 // Exported so useFilters.ts (the identical guest-facing menu drawer) shares
 // this exact logic instead of maintaining its own copy that can drift.
@@ -69,6 +76,10 @@ export function shouldHideItemForFilters(item: MenuItem, activeFilters: Set<stri
       // ever tagged it "vegan" and not "vegetarian".
       const isVegetarian = tags.includes('vegetarian') || tags.includes('vegan') || fullText.includes('vegetarian');
       if (!isVegetarian) return true;
+      continue;
+    }
+    if (INCLUDE_ONLY_TAGS.has(lower)) {
+      if (!tags.includes(lower) && !fullText.includes(lower)) return true;
       continue;
     }
     if (PROTEIN_FILTER_KEYS.has(lower)) {
