@@ -130,6 +130,29 @@ function createMenuController({ fileService, socketService, prismaMenuService })
       res.json({ ok: true });
     },
 
+    async renameCategory(req, res) {
+      const service = menuService();
+      if (!service?.renameCategory) return res.status(503).json({ error: 'Not available' });
+      const category = await service.renameCategory(req.params.id, req.body?.title);
+      if (!category) return res.status(400).json({ error: 'title is required and category must exist' });
+      socketService.emitMenuUpdated();
+      res.json({ ok: true, category });
+    },
+
+    // Refuses when the category (or its subcategories) still holds items,
+    // unless the caller passes moveItemsTo naming another top-level category
+    // to relocate them into first.
+    async deleteCategory(req, res) {
+      const service = menuService();
+      if (!service?.deleteCategory) return res.status(503).json({ error: 'Not available' });
+      const result = await service.deleteCategory(req.params.id, { moveItemsTo: req.body?.moveItemsTo });
+      if (result.error) {
+        return res.status(result.itemCount ? 409 : 400).json({ error: result.error, itemCount: result.itemCount });
+      }
+      socketService.emitMenuUpdated();
+      res.json({ ok: true, movedItems: result.movedItems });
+    },
+
     async createItem(req, res) {
       const service = menuService();
       if (!service?.createItem) return res.status(503).json({ error: 'Not available' });

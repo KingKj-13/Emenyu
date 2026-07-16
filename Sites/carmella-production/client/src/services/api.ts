@@ -169,7 +169,10 @@ export const api = {
   },
 
   getMenuCategories() {
-    return fetchJson<Array<{ id: number; title: string; sortOrder: number; visible: boolean; itemCount: number }>>(ENDPOINTS.menuCategories);
+    return fetchJson<Array<{
+      id: number; title: string; sortOrder: number; visible: boolean; itemCount: number;
+      subcategories: Array<{ id: number; title: string; sortOrder: number; visible: boolean; itemCount: number }>;
+    }>>(ENDPOINTS.menuCategories);
   },
 
   createCategory(title: string) {
@@ -180,7 +183,24 @@ export const api = {
     return patchJson<{ ok: boolean }>(ENDPOINTS.menuCategoriesReorder, { orderedIds });
   },
 
-  createMenuItem(payload: { name: string; category: string; price: number; description?: string; available?: boolean }) {
+  renameCategory(id: number, title: string) {
+    return patchJson<{ ok: boolean; category: { id: number; title: string } }>(ENDPOINTS.menuCategoryItem(id), { title });
+  },
+
+  // Bespoke (not deleteJson/fetchJson): the server's 400/409 error bodies
+  // carry the actual reason ("category has items", with itemCount) that the
+  // admin UI needs to show -- fetchJson throws before the caller can read
+  // that body, so this reads the JSON regardless of status instead.
+  async deleteCategory(id: number, moveItemsTo?: number): Promise<{ ok: boolean; movedItems?: number; error?: string; itemCount?: number }> {
+    const res = await fetch(ENDPOINTS.menuCategoryItem(id), {
+      method: 'DELETE',
+      ...(moveItemsTo !== undefined ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ moveItemsTo }) } : {}),
+    });
+    const body = await res.json().catch(() => ({}));
+    return res.ok ? { ok: true, movedItems: body.movedItems } : { ok: false, error: body.error || `HTTP ${res.status}`, itemCount: body.itemCount };
+  },
+
+  createMenuItem(payload: { name: string; category: string; subcategory?: string; price: number; description?: string; available?: boolean }) {
     return postJson<{ ok: boolean; item: unknown }>(ENDPOINTS.menuCreateItem, payload);
   },
 
@@ -193,7 +213,7 @@ export const api = {
   },
 
   updateMenuItem(id: number, patch: {
-    name?: string; category?: string; price?: number; description?: string;
+    name?: string; category?: string; subcategory?: string; price?: number; description?: string;
     calories?: string; allergens?: string; spice?: string; available?: boolean; visible?: boolean; popular?: boolean;
   }) {
     return patchJson<{ ok: boolean; item: unknown }>(ENDPOINTS.menuItemUpdate(id), patch);

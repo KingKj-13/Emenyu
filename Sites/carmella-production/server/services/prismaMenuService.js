@@ -8,10 +8,15 @@ const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const PRISMA_RETRY_MS = 30000;
 const DEFAULT_RESTAURANT_ID = 'carmella-production';
 
+// category/subcategory are derived from the item's category relation (see
+// dbItemToJson), never stored as free-form data -- excluded here so they
+// never leak into the metadata JSON blob when a caller passes them through
+// (they're informational pass-throughs some call sites include alongside
+// the item, not actual columns this function writes anywhere).
 const ITEM_BASE_KEYS = new Set([
   'name', 'description', 'story', 'subtitle', 'price', 'calories', 'allergens',
   'spice', 'img', 'imageVisible', 'visible', 'available', 'availability',
-  'popular', 'variants', 'daypart'
+  'popular', 'variants', 'daypart', 'category', 'subcategory'
 ]);
 
 const DAYPARTS = new Set(['day', 'night', 'both']);
@@ -138,8 +143,12 @@ function dbItemToJson(item, { includeId = false, categoryTitle = '', subcategory
   const json = {
     ...(includeId ? { dbId: item.id } : {}),
     ...(item.metadata && typeof item.metadata === 'object' ? item.metadata : {}),
-    ...(categoryTitle ? { category: categoryTitle } : {}),
-    ...(subcategoryTitle ? { subcategory: subcategoryTitle } : {}),
+    // Always explicit (never conditional on truthiness) so these two, which
+    // are derived fresh from the item's actual category relation every call,
+    // can never be shadowed by a stale category/subcategory value some
+    // historical import left sitting in the metadata JSON blob above.
+    category: categoryTitle,
+    subcategory: subcategoryTitle,
     name: item.name,
     description: item.description || '',
     story: item.story || '',
@@ -431,10 +440,20 @@ class PrismaMenuService {
       async prisma => {
         const items = await prisma.menuItem.findMany({
           where: { restaurantId: this.restaurantId },
-          include: { category: { select: { title: true, parentId: true } }, variants: { orderBy: { sortOrder: 'asc' } } },
+          include: { category: { include: { parent: true } }, variants: { orderBy: { sortOrder: 'asc' } } },
           orderBy: { sortOrder: 'asc' }
         });
-        return items.map(item => ({ ...dbItemToJson(item, { includeId: true, categoryTitle: item.category?.title || '' }) }));
+        // item.category is the row categoryId actually points at, which in
+        // this catalog is always a section (child) -- the chapter (top-level)
+        // title is one level up, at item.category.parent. Falls back to
+        // item.category itself for the (currently nonexistent, but
+        // structurally possible) case of an item attached directly to a
+        // childless top-level category.
+        return items.map(item => {
+          const categoryTitle = item.category?.parent ? item.category.parent.title : (item.category?.title || '');
+          const subcategoryTitle = item.category?.parent ? item.category.title : '';
+          return { ...dbItemToJson(item, { includeId: true, categoryTitle, subcategoryTitle }) };
+        });
       },
       null
     );
@@ -511,7 +530,10 @@ class PrismaMenuService {
             sortOrder: true,
             visible: true,
             _count: { select: { items: true } },
-            children: { select: { _count: { select: { items: true } } } }
+            children: {
+              orderBy: { sortOrder: 'asc' },
+              select: { id: true, title: true, sortOrder: true, visible: true, _count: { select: { items: true } } }
+            }
           }
         });
         return categories.map(category => ({
@@ -519,7 +541,14 @@ class PrismaMenuService {
           title: category.title,
           sortOrder: category.sortOrder,
           visible: category.visible,
-          itemCount: category._count.items + category.children.reduce((sum, child) => sum + child._count.items, 0)
+          itemCount: category._count.items + category.children.reduce((sum, child) => sum + child._count.items, 0),
+          subcategories: category.children.map(child => ({
+            id: child.id,
+            title: child.title,
+            sortOrder: child.sortOrder,
+            visible: child.visible,
+            itemCount: child._count.items
+          }))
         }));
       },
       []
@@ -575,6 +604,129 @@ class PrismaMenuService {
     );
   }
 
+  async renameCategory(id, title) {
+    const categoryId = Number(id);
+    const trimmed = String(title || '').trim();
+    if (!Number.isInteger(categoryId) || !trimmed) {
+      return null;
+    }
+    return this.withPrisma(
+      'menu_postgres_rename_category_failed',
+      async prisma => {
+        const result = await prisma.menuCategory.updateMany({
+          where: { id: categoryId, restaurantId: this.restaurantId },
+          data: { title: trimmed }
+        });
+        if (result.count === 0) {
+          return null;
+        }
+        const updated = await prisma.menuCategory.findUnique({ where: { id: categoryId } });
+        return { id: updated.id, title: updated.title, sortOrder: updated.sortOrder, visible: updated.visible };
+      },
+      null
+    );
+  }
+
+  // Deletes a category (and, via Prisma's onDelete: Cascade on the
+  // self-relation, any child subcategories) only once it holds zero items —
+  // across itself AND its children, since items live one level down. Pass
+  // moveItemsTo to relocate every item (direct + via children) into another
+  // top-level category first, then delete.
+  async deleteCategory(id, { moveItemsTo } = {}) {
+    const categoryId = Number(id);
+    if (!Number.isInteger(categoryId)) {
+      return { error: 'invalid category id' };
+    }
+    return this.withPrisma(
+      'menu_postgres_delete_category_failed',
+      async prisma => {
+        const category = await prisma.menuCategory.findFirst({
+          where: { id: categoryId, restaurantId: this.restaurantId },
+          include: { children: true }
+        });
+        if (!category) {
+          return { error: 'category not found' };
+        }
+        const categoryIds = [categoryId, ...category.children.map(c => c.id)];
+        const itemCount = await prisma.menuItem.count({ where: { categoryId: { in: categoryIds } } });
+
+        if (itemCount > 0) {
+          const targetId = Number(moveItemsTo);
+          if (!Number.isInteger(targetId)) {
+            return { error: 'category has items', itemCount };
+          }
+          const target = await prisma.menuCategory.findFirst({ where: { id: targetId, restaurantId: this.restaurantId, parentId: null } });
+          if (!target || targetId === categoryId) {
+            return { error: 'invalid destination category' };
+          }
+          await prisma.menuItem.updateMany({ where: { categoryId: { in: categoryIds } }, data: { categoryId: targetId } });
+        }
+
+        await prisma.menuCategory.delete({ where: { id: categoryId } });
+        return { ok: true, movedItems: itemCount };
+      },
+      { error: 'database unavailable' }
+    );
+  }
+
+  // Resolves (creating rows as needed) the top-level category matching
+  // categoryTitle and, if subcategoryTitle is non-empty, the child category
+  // under it matching subcategoryTitle. Returns the id items should actually
+  // attach to (the subcategory's, when one is given -- items in this catalog
+  // always live one level down, under a section, never directly on a chapter
+  // that has sections) plus the resolved titles for the caller's own JSON
+  // response. Shared by createItem/updateItem so both go through the exact
+  // same rule.
+  async resolveCategoryChain(prisma, categoryTitle, subcategoryTitle) {
+    const topTitle = String(categoryTitle || '').trim();
+    if (!topTitle) {
+      return null;
+    }
+
+    let category = await prisma.menuCategory.findFirst({ where: { restaurantId: this.restaurantId, parentId: null, title: topTitle } });
+    if (!category) {
+      const count = await prisma.menuCategory.count({ where: { restaurantId: this.restaurantId } });
+      const slug = slugify(topTitle, `category-${count + 1}`);
+      category = await prisma.menuCategory.create({
+        data: {
+          restaurantId: this.restaurantId,
+          title: topTitle,
+          slug,
+          path: `${this.restaurantId}/${slug}-${Date.now()}`,
+          sortOrder: count,
+          visible: true,
+          courseType: getCategoryType(topTitle),
+          metadata: { storage: 'object' }
+        }
+      });
+    }
+
+    const subTitle = String(subcategoryTitle || '').trim();
+    if (!subTitle) {
+      return { categoryId: category.id, categoryTitle: category.title, subcategoryTitle: '' };
+    }
+
+    let sub = await prisma.menuCategory.findFirst({ where: { restaurantId: this.restaurantId, parentId: category.id, title: subTitle } });
+    if (!sub) {
+      const siblingCount = await prisma.menuCategory.count({ where: { restaurantId: this.restaurantId, parentId: category.id } });
+      const slug = slugify(subTitle, `${category.slug}-sub-${siblingCount + 1}`);
+      sub = await prisma.menuCategory.create({
+        data: {
+          restaurantId: this.restaurantId,
+          title: subTitle,
+          slug,
+          path: `${this.restaurantId}/${slug}-${Date.now()}`,
+          parentId: category.id,
+          sortOrder: siblingCount,
+          visible: true,
+          courseType: category.courseType,
+          metadata: { storage: 'object' }
+        }
+      });
+    }
+    return { categoryId: sub.id, categoryTitle: category.title, subcategoryTitle: sub.title };
+  }
+
   async createItem(item = {}) {
     const name = String(item.name || '').trim();
     const categoryTitle = String(item.category || '').trim();
@@ -585,29 +737,16 @@ class PrismaMenuService {
     return this.withPrisma(
       'menu_postgres_create_item_failed',
       async prisma => {
-        let category = await prisma.menuCategory.findFirst({ where: { restaurantId: this.restaurantId, parentId: null, title: categoryTitle } });
-        if (!category) {
-          const count = await prisma.menuCategory.count({ where: { restaurantId: this.restaurantId } });
-          const slug = slugify(categoryTitle, `category-${count + 1}`);
-          category = await prisma.menuCategory.create({
-            data: {
-              restaurantId: this.restaurantId,
-              title: categoryTitle,
-              slug,
-              path: `${this.restaurantId}/${slug}-${Date.now()}`,
-              sortOrder: count,
-              visible: true,
-              courseType: getCategoryType(categoryTitle),
-              metadata: { storage: 'object' }
-            }
-          });
+        const resolved = await this.resolveCategoryChain(prisma, categoryTitle, item.subcategory);
+        if (!resolved) {
+          return null;
         }
 
-        const last = await prisma.menuItem.findFirst({ where: { categoryId: category.id }, orderBy: { sortOrder: 'desc' }, select: { sortOrder: true } });
+        const last = await prisma.menuItem.findFirst({ where: { categoryId: resolved.categoryId }, orderBy: { sortOrder: 'desc' }, select: { sortOrder: true } });
         const created = await prisma.menuItem.create({
-          data: itemToCreateData({ ...item, category: category.title }, category.id, this.restaurantId, (last?.sortOrder ?? 0) + 1)
+          data: itemToCreateData({ ...item, category: resolved.categoryTitle, subcategory: resolved.subcategoryTitle }, resolved.categoryId, this.restaurantId, (last?.sortOrder ?? 0) + 1)
         });
-        return dbItemToJson(created, { includeId: true, categoryTitle: category.title });
+        return dbItemToJson(created, { includeId: true, categoryTitle: resolved.categoryTitle, subcategoryTitle: resolved.subcategoryTitle });
       },
       null
     );
@@ -649,27 +788,33 @@ class PrismaMenuService {
       'menu_postgres_update_item_failed',
       async prisma => {
         let categoryTitle = '';
-        if (patch.category !== undefined && String(patch.category || '').trim()) {
-          const title = String(patch.category).trim();
-          let category = await prisma.menuCategory.findFirst({ where: { restaurantId: this.restaurantId, parentId: null, title } });
-          if (!category) {
-            const count = await prisma.menuCategory.count({ where: { restaurantId: this.restaurantId } });
-            const slug = slugify(title, `category-${count + 1}`);
-            category = await prisma.menuCategory.create({
-              data: {
-                restaurantId: this.restaurantId,
-                title,
-                slug,
-                path: `${this.restaurantId}/${slug}-${Date.now()}`,
-                sortOrder: count,
-                visible: true,
-                courseType: getCategoryType(title),
-                metadata: { storage: 'object' }
-              }
-            });
+        let subcategoryTitle = '';
+
+        // Only touch categoryId at all if the caller actually sent category
+        // and/or subcategory. Whichever of the two wasn't sent is looked up
+        // from the item's CURRENT chain and re-applied, not dropped -- this
+        // is what makes "editing an item never changes its category or
+        // subcategory unless explicitly changed" hold even for callers that
+        // only ever intend to touch one of the two fields.
+        if (patch.category !== undefined || patch.subcategory !== undefined) {
+          const current = await prisma.menuItem.findUnique({
+            where: { id: itemId },
+            select: { category: { select: { title: true, parent: { select: { title: true } } } } }
+          });
+          const currentTopTitle = current?.category?.parent ? current.category.parent.title : (current?.category?.title || '');
+          const currentSubTitle = current?.category?.parent ? current.category.title : '';
+
+          const effectiveCategoryTitle = patch.category !== undefined ? String(patch.category || '').trim() : currentTopTitle;
+          const effectiveSubcategoryTitle = patch.subcategory !== undefined ? String(patch.subcategory || '').trim() : currentSubTitle;
+
+          if (effectiveCategoryTitle) {
+            const resolved = await this.resolveCategoryChain(prisma, effectiveCategoryTitle, effectiveSubcategoryTitle);
+            if (resolved) {
+              data.categoryId = resolved.categoryId;
+              categoryTitle = resolved.categoryTitle;
+              subcategoryTitle = resolved.subcategoryTitle;
+            }
           }
-          data.categoryId = category.id;
-          categoryTitle = category.title;
         }
 
         if (Object.keys(data).length === 0) {
@@ -681,8 +826,10 @@ class PrismaMenuService {
           return null;
         }
 
-        const updated = await prisma.menuItem.findUnique({ where: { id: itemId }, include: { category: true, variants: { orderBy: { sortOrder: 'asc' } } } });
-        return dbItemToJson(updated, { includeId: true, categoryTitle: categoryTitle || updated?.category?.title || '' });
+        const updated = await prisma.menuItem.findUnique({ where: { id: itemId }, include: { category: { include: { parent: true } }, variants: { orderBy: { sortOrder: 'asc' } } } });
+        const finalCategoryTitle = categoryTitle || (updated?.category?.parent ? updated.category.parent.title : updated?.category?.title || '');
+        const finalSubcategoryTitle = subcategoryTitle || (updated?.category?.parent ? updated.category.title : '');
+        return dbItemToJson(updated, { includeId: true, categoryTitle: finalCategoryTitle, subcategoryTitle: finalSubcategoryTitle });
       },
       null
     );

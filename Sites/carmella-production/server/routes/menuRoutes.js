@@ -5,6 +5,7 @@ function registerMenuRoutes(app, config, controllers, adminAuth) {
   const itemsPaths = tenantPaths(config, '/api/menu/items');
   const categoriesPaths = tenantPaths(config, '/api/menu/categories');
   const categoriesReorderPaths = tenantPaths(config, '/api/menu/categories/reorder');
+  const categoryItemPaths = tenantPaths(config, '/api/menu/categories/:id');
   const itemAvailPaths = tenantPaths(config, '/api/menu/items/:id/availability');
   const itemMediaPaths = tenantPaths(config, '/api/menu/items/:id/media');
   const itemDeletePaths = tenantPaths(config, '/api/menu/items/:id');
@@ -26,6 +27,9 @@ function registerMenuRoutes(app, config, controllers, adminAuth) {
   app.get(categoriesPaths, adminAuth, controllers.menu.getCategories);
   app.post(categoriesPaths, adminAuth, controllers.menu.createCategory);
   app.patch(categoriesReorderPaths, adminAuth, controllers.menu.reorderCategories);
+  // Registered after /categories/reorder so that literal path always wins.
+  app.patch(categoryItemPaths, adminAuth, controllers.menu.renameCategory);
+  app.delete(categoryItemPaths, adminAuth, controllers.menu.deleteCategory);
 }
 
 module.exports = {

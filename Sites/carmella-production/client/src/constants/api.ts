@@ -16,6 +16,7 @@ export const ENDPOINTS = {
   menuCreateItem: `${API_PREFIX}/api/menu/items`,
   menuCategories: `${API_PREFIX}/api/menu/categories`,
   menuCategoriesReorder: `${API_PREFIX}/api/menu/categories/reorder`,
+  menuCategoryItem: (id: number) => `${API_PREFIX}/api/menu/categories/${id}`,
   menuItemAvailability: (id: number) => `${API_PREFIX}/api/menu/items/${id}/availability`,
   menuItemMedia: (id: number) => `${API_PREFIX}/api/menu/items/${id}/media`,
   menuItemUpdate: (id: number) => `${API_PREFIX}/api/menu/items/${id}`,

@@ -82,14 +82,23 @@ interface AdminItem extends MenuItem {
   dbId: number;
 }
 
+interface AdminCategory {
+  id: number; title: string; sortOrder: number; visible: boolean; itemCount: number;
+  subcategories: { id: number; title: string; sortOrder: number; visible: boolean; itemCount: number }[];
+}
+
 function MenuManagementTab() {
   const [items, setItems] = useState<AdminItem[]>([]);
-  const [categories, setCategories] = useState<{ id: number; title: string; sortOrder: number; itemCount: number }[]>([]);
+  const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [editItem, setEditItem] = useState<AdminItem | null>(null);
   const [creatingItem, setCreatingItem] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [moveTargetId, setMoveTargetId] = useState<string>('');
 
   const load = useCallback(() => {
     setLoading(true);
@@ -142,6 +151,44 @@ function MenuManagementTab() {
     load();
   }
 
+  function startRename(category: AdminCategory) {
+    setRenamingId(category.id);
+    setRenameValue(category.title);
+    setDeletingId(null);
+  }
+
+  async function submitRename(id: number) {
+    const trimmed = renameValue.trim();
+    setRenamingId(null);
+    if (!trimmed) return;
+    await api.renameCategory(id, trimmed);
+    load();
+  }
+
+  function startDelete(category: AdminCategory) {
+    const totalItems = category.itemCount;
+    if (totalItems === 0) {
+      if (window.confirm(`Delete "${category.title}"? This cannot be undone.`)) {
+        api.deleteCategory(category.id).then(load);
+      }
+      return;
+    }
+    setDeletingId(category.id);
+    setMoveTargetId('');
+    setRenamingId(null);
+  }
+
+  async function confirmMoveAndDelete(category: AdminCategory) {
+    if (!moveTargetId) return;
+    const result = await api.deleteCategory(category.id, Number(moveTargetId));
+    if (!result.ok) {
+      window.alert(result.error || 'Failed to delete category');
+      return;
+    }
+    setDeletingId(null);
+    load();
+  }
+
   if (loading) return <div className={styles.loading}><Spinner size={32} /></div>;
 
   return (
@@ -162,11 +209,46 @@ function MenuManagementTab() {
         <ul className={styles.categoryList}>
           {[...categories].sort((a, b) => a.sortOrder - b.sortOrder).map((c, i, arr) => (
             <li key={c.id} className={styles.categoryRow}>
-              <span>{c.title} <span className={styles.itemMeta}>({c.itemCount} item{c.itemCount !== 1 ? 's' : ''})</span></span>
+              {renamingId === c.id ? (
+                <form
+                  className={styles.inlineForm}
+                  onSubmit={e => { e.preventDefault(); submitRename(c.id); }}
+                >
+                  <input
+                    className={styles.input}
+                    value={renameValue}
+                    onChange={e => setRenameValue(e.target.value)}
+                    onBlur={() => submitRename(c.id)}
+                    autoFocus
+                  />
+                  <button className={styles.primaryBtn} type="submit">Save</button>
+                </form>
+              ) : (
+                <span>{c.title} <span className={styles.itemMeta}>({c.itemCount} item{c.itemCount !== 1 ? 's' : ''})</span></span>
+              )}
               <div className={styles.rowActions}>
                 <button disabled={i === 0} onClick={() => moveCategory(c.id, -1)} aria-label="Move up"><ArrowUp size={14} /></button>
                 <button disabled={i === arr.length - 1} onClick={() => moveCategory(c.id, 1)} aria-label="Move down"><ArrowDown size={14} /></button>
+                <button onClick={() => startRename(c)} title="Rename"><Pencil size={14} /></button>
+                <button onClick={() => startDelete(c)} title="Delete"><Trash2 size={14} /></button>
               </div>
+              {deletingId === c.id && (
+                <div className={styles.inlineForm}>
+                  <span className={styles.itemMeta}>
+                    "{c.title}" has {c.itemCount} item{c.itemCount !== 1 ? 's' : ''}. Move them to:
+                  </span>
+                  <select className={styles.select} value={moveTargetId} onChange={e => setMoveTargetId(e.target.value)}>
+                    <option value="">Choose a category…</option>
+                    {categories.filter(other => other.id !== c.id).map(other => (
+                      <option key={other.id} value={other.id}>{other.title}</option>
+                    ))}
+                  </select>
+                  <button className={styles.primaryBtn} disabled={!moveTargetId} onClick={() => confirmMoveAndDelete(c)}>
+                    Move &amp; Delete
+                  </button>
+                  <button className={styles.dangerBtn} onClick={() => setDeletingId(null)}>Cancel</button>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -227,12 +309,13 @@ function MenuManagementTab() {
 
 function ItemEditModal({ item, categories, onClose, onSaved }: {
   item: AdminItem | null;
-  categories: { id: number; title: string }[];
+  categories: AdminCategory[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [name, setName] = useState(item?.name || '');
   const [category, setCategory] = useState(item?.category || categories[0]?.title || '');
+  const [subcategory, setSubcategory] = useState(item?.subcategory || categories[0]?.subcategories[0]?.title || '');
   const [price, setPrice] = useState(String(item?.price ?? ''));
   const [description, setDescription] = useState(item?.description || '');
   const [calories, setCalories] = useState(item?.calories || '');
@@ -243,6 +326,17 @@ function ItemEditModal({ item, categories, onClose, onSaved }: {
   const [uploading, setUploading] = useState(false);
   const [imgPath, setImgPath] = useState(item?.img || '');
   const [saving, setSaving] = useState(false);
+
+  // Subcategories available for whichever top-level category is currently
+  // selected. When the admin switches category, the old subcategory almost
+  // never applies to the new one -- default to that category's first
+  // subcategory instead of silently keeping a stale, unrelated value.
+  const availableSubcategories = categories.find(c => c.title === category)?.subcategories || [];
+  function handleCategoryChange(nextCategory: string) {
+    setCategory(nextCategory);
+    const firstSub = categories.find(c => c.title === nextCategory)?.subcategories[0]?.title || '';
+    setSubcategory(firstSub);
+  }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -271,7 +365,7 @@ function ItemEditModal({ item, categories, onClose, onSaved }: {
     e.preventDefault();
     setSaving(true);
     try {
-      const patch = { name, category, price: Number(price) || 0, description, calories, allergens, spice, popular, daypart };
+      const patch = { name, category, subcategory, price: Number(price) || 0, description, calories, allergens, spice, popular, daypart };
       if (item) {
         await api.updateMenuItem(item.dbId, patch);
       } else {
@@ -304,10 +398,19 @@ function ItemEditModal({ item, categories, onClose, onSaved }: {
 
         <label className={styles.field}>
           Category
-          <select className={styles.select} value={category} onChange={e => setCategory(e.target.value)} required>
+          <select className={styles.select} value={category} onChange={e => handleCategoryChange(e.target.value)} required>
             {categories.map(c => <option key={c.id} value={c.title}>{c.title}</option>)}
           </select>
         </label>
+
+        {availableSubcategories.length > 0 && (
+          <label className={styles.field}>
+            Subcategory
+            <select className={styles.select} value={subcategory} onChange={e => setSubcategory(e.target.value)} required>
+              {availableSubcategories.map(sub => <option key={sub.id} value={sub.title}>{sub.title}</option>)}
+            </select>
+          </label>
+        )}
 
         <label className={styles.field}>Price<input className={styles.input} type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} required /></label>
         <label className={styles.field}>Description<textarea className={styles.textarea} value={description} onChange={e => setDescription(e.target.value)} rows={2} /></label>
