@@ -1,96 +1,179 @@
 .page {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  background:
-    radial-gradient(120% 60% at 50% -10%, rgba(40, 30, 20, 0.30), transparent 60%),
-    var(--color-ink);
-  display: flex;
-  justify-content: center;
-}
-
-.inner {
-  width: 100%;
-  max-width: 460px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  /* Scrolls rather than clips -- the two story cards' prose height varies
-     with font-scaling/viewport width in a way a fixed no-scroll layout can't
-     safely predict. */
-  overflow-y: auto;
-  padding: calc(16px + env(safe-area-inset-top)) 18px calc(12px + env(safe-area-inset-bottom));
+  min-height: 100dvh;
+  background: var(--color-ink);
+  overflow-x: hidden;
 }
 
 @keyframes landingRise {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ───────── Header ───────── */
-.header {
+/* ───────── Top bar ───────── */
+.topBar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--color-ink);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.topBarIcon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.3);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-gold);
+  cursor: pointer;
+  justify-self: start;
+}
+.topBar > .topBarIcon:last-child { justify-self: end; }
+
+.topBarBrand {
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
-  margin-bottom: 14px;
-  animation: landingRise 0.5s var(--ease-premium) both;
+  line-height: 1.1;
 }
 
-.monogram {
+.topBarWordmark {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-gold-soft);
+}
+
+.topBarSubtitle {
+  margin-top: 2px;
+  font-family: var(--font-label);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  opacity: 0.75;
+}
+
+/* ───────── Hero ───────── */
+.hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 78dvh;
+  overflow: hidden;
+  padding: 48px 24px 56px;
+  text-align: center;
+}
+
+.heroImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heroTint {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 12, 8, 0.55) 0%, rgba(10, 12, 8, 0.72) 55%, rgba(10, 12, 8, 0.88) 100%);
+}
+
+.heroContent {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 480px;
+}
+
+.monogramRing {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 18px;
   border-radius: 50%;
-  border: 1px solid var(--color-gold-dim);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.55);
+  box-shadow: 0 0 0 1px rgba(var(--color-gold-rgb), 0.15), 0 12px 32px rgba(0, 0, 0, 0.35);
   color: var(--color-gold);
   font-family: var(--font-heading);
-  font-size: 22px;
+  font-size: 28px;
   line-height: 1;
-  padding-bottom: 2px;
-  margin-bottom: 10px;
+  padding-bottom: 3px;
+  background: rgba(10, 12, 8, 0.3);
+  animation: landingRise 0.7s var(--ease-premium) both;
 }
 
 .eyebrow {
   font-family: var(--font-label);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
-  letter-spacing: 0.34em;
+  letter-spacing: 0.4em;
   text-transform: uppercase;
   color: var(--color-gold);
-  opacity: 0.85;
+  opacity: 0.9;
+  animation: landingRise 0.7s var(--ease-premium) both;
+  animation-delay: 80ms;
 }
 
-.brand {
-  margin: 6px 0 0;
+.wordmark {
+  margin: 8px 0 0;
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: clamp(40px, 13vw, 56px);
-  line-height: 0.98;
-  letter-spacing: 0.01em;
-  color: var(--color-gold-soft);
-  text-shadow: 0 2px 30px rgba(var(--color-gold-rgb), 0.18);
+  font-size: clamp(48px, 14vw, 88px);
+  line-height: 0.96;
+  color: #F7F2E8;
+  text-shadow: 0 4px 40px rgba(0, 0, 0, 0.4);
+  animation: landingRise 0.8s var(--ease-premium) both;
+  animation-delay: 140ms;
 }
 
-.pill {
+.tagline {
+  margin: 6px 0 0;
+  font-family: var(--font-script);
+  font-size: clamp(24px, 6vw, 34px);
+  font-weight: 400;
+  color: var(--color-gold);
+  animation: landingRise 0.8s var(--ease-premium) both;
+  animation-delay: 260ms;
+}
+
+.tablePill {
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  margin-top: 12px;
-  padding: 8px 18px;
-  border: 1px solid rgba(var(--color-gold-rgb), 0.32);
+  margin-top: 26px;
+  padding: 10px 20px;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.4);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(10, 12, 8, 0.35);
   font-family: var(--font-label);
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-sand);
+  color: #F7F2E8;
+  cursor: pointer;
+  transition: border-color 200ms ease, background 200ms ease;
+  animation: landingRise 0.8s var(--ease-premium) both;
+  animation-delay: 360ms;
 }
+.tablePill:hover { border-color: var(--color-gold); background: rgba(10, 12, 8, 0.5); }
 
-.dot {
+.tableDot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -99,107 +182,222 @@
 }
 
 /* ───────── Story cards (About Carmella / About Sir Gaspard) ───────── */
-.storyCard {
-  flex: none;
-  padding: 16px 18px;
-  margin-bottom: 12px;
-  border: 1px solid rgba(231, 221, 201, 0.08);
-  border-radius: 18px;
-  background: linear-gradient(180deg, var(--color-panel-soft) 0%, var(--color-panel) 100%);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
-  animation: landingRise 0.5s var(--ease-premium) both;
-  animation-delay: 120ms;
+.story {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 18px;
 }
-.storyCard:nth-of-type(2) { animation-delay: 180ms; }
+
+.storyCard {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.22);
+  border-radius: 20px;
+  background: linear-gradient(180deg, var(--color-panel-soft) 0%, var(--color-panel) 100%);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s var(--ease-premium), transform 0.8s var(--ease-premium);
+}
+
+.storyRevealed { opacity: 1; transform: translateY(0); }
+
+.storyCardReverse { flex-direction: row-reverse; }
+
+.storyImage {
+  flex: 0 0 34%;
+  width: 34%;
+  object-fit: cover;
+}
+
+.storyText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 20px 20px 20px 4px;
+}
+.storyCard:not(.storyCardReverse) .storyText { padding: 20px 20px 20px 4px; }
+.storyCardReverse .storyText { padding: 20px 4px 20px 20px; }
+
+.storyIcon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.4);
+  border-radius: 50%;
+  color: var(--color-gold);
+}
 
 .storyEyebrow {
-  display: block;
-  margin-bottom: 8px;
   font-family: var(--font-label);
   font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.24em;
+  font-weight: 700;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--color-gold);
-  opacity: 0.9;
 }
 
 .storyBody {
+  margin: 0;
   font-family: var(--font-body);
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.6;
   color: var(--color-sand);
 }
 
+.storyMonogram {
+  flex: 0 0 34%;
+  width: 34%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-heading);
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--color-gold);
+  background:
+    radial-gradient(80% 80% at 50% 50%, rgba(var(--color-gold-rgb), 0.12), transparent 70%),
+    var(--color-panel);
+  border-left: 1px solid var(--color-line);
+}
+
+@media (max-width: 560px) {
+  .storyCard, .storyCardReverse { flex-direction: column; }
+  .storyImage, .storyMonogram { width: 100%; flex: none; height: 120px; }
+  .storyCard:not(.storyCardReverse) .storyText,
+  .storyCardReverse .storyText { padding: 18px; }
+  .storyMonogram { border-left: none; border-top: 1px solid var(--color-line); }
+}
+
 /* ───────── Full-menu CTA ───────── */
+.ctaSection {
+  display: flex;
+  justify-content: center;
+  padding: 8px 18px 32px;
+}
+
 .cta {
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
   width: 100%;
-  margin: 0 0 12px;
-  padding: 14px 20px;
+  max-width: 720px;
+  padding: 24px;
   text-align: left;
-  flex: none;
-  border: 1px solid rgba(var(--color-gold-rgb), 0.40);
-  border-radius: 18px;
-  background:
-    radial-gradient(120% 180% at 100% 50%, rgba(var(--color-gold-rgb), 0.14), transparent 60%),
-    linear-gradient(180deg, var(--color-panel-soft) 0%, var(--color-panel) 100%);
-  transition: transform var(--transition-med), border-color var(--transition-med);
-  animation: landingRise 0.5s var(--ease-premium) both;
-  animation-delay: 40ms;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.35);
+  border-radius: 20px;
+  background: linear-gradient(180deg, var(--color-panel-soft) 0%, var(--color-panel) 100%);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
+  transition: transform var(--transition-med), border-color var(--transition-med), box-shadow var(--transition-med);
 }
-.cta:hover { transform: translateY(-2px); border-color: rgba(var(--color-gold-rgb), 0.62); }
-.cta:active { transform: translateY(0); }
+.cta:hover { transform: translateY(-3px); border-color: rgba(var(--color-gold-rgb), 0.6); box-shadow: 0 24px 56px rgba(0, 0, 0, 0.28); }
+.cta:active { transform: translateY(-1px); }
 
-.ctaText { display: flex; flex-direction: column; gap: 4px; }
+.ctaText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+
+.ctaEyebrow {
+  font-family: var(--font-label);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
 
 .ctaTitle {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: clamp(20px, 6vw, 25px);
+  font-size: clamp(20px, 5vw, 26px);
   color: var(--color-cream);
 }
 
 .ctaSub {
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 12.5px;
+  line-height: 1.5;
   color: var(--muted);
 }
 
+.ctaImage {
+  flex: 0 0 110px;
+  width: 110px;
+  height: 100px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+
 .ctaArrow {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
   flex: none;
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background: linear-gradient(160deg, var(--color-gold-soft), var(--color-gold));
   color: #1a1206;
-  box-shadow: 0 6px 18px rgba(var(--color-gold-rgb), 0.35);
-}
-.ctaArrow svg { width: 22px; height: 22px; }
-
-/* Compact progressively on short viewports -- the page scrolls (see .inner)
-   so nothing ever clips, but a shorter header/cards keep the CTA visible
-   without scrolling on most real phone heights. */
-@media (max-height: 780px) {
-  .header { margin-bottom: 10px; }
-  .storyCard { padding: 13px 16px; margin-bottom: 9px; }
+  box-shadow: 0 6px 18px rgba(var(--color-gold-rgb), 0.4);
 }
 
-@media (max-height: 730px) {
-  .brand { font-size: clamp(34px, 11vw, 44px); }
-  .monogram { width: 40px; height: 40px; font-size: 19px; margin-bottom: 7px; }
+@media (max-width: 480px) {
+  .ctaImage { display: none; }
+  .cta { padding: 20px; }
 }
 
-@media (max-height: 560px) {
-  .cta { padding: 10px 16px; margin-bottom: 8px; }
-  .ctaArrow { width: 40px; height: 40px; }
-  .storyBody { font-size: 12.5px; }
+/* ───────── Value-prop footer strip ───────── */
+.valueFooter {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 18px calc(28px + env(safe-area-inset-bottom));
 }
 
+.valueItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  color: var(--color-gold);
+  opacity: 0.85;
+}
+
+.valueItem span:not(.valueDivider) {
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-sand);
+}
+
+.valueDivider {
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 18px;
+  background: var(--color-line);
+}
+
+@media (max-width: 480px) {
+  .valueDivider { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .storyCard { transition: none; }
+}

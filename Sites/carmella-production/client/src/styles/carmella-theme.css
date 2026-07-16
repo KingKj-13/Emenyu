@@ -56,6 +56,9 @@ html[data-tenant='carmella-production'] {
   --font-heading: 'Fraunces', 'Cormorant Garamond', Georgia, serif;
   --font-body:    'Inter', Manrope, ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-label:   'Inter', Manrope, sans-serif;
+  /* Reserved for the Home page's hero tagline only -- a decorative flourish,
+     never body copy (script faces hurt readability at paragraph length). */
+  --font-script:  'Alex Brush', cursive;
 
   /* Legacy pre-semantic tokens (mostly "light icon/text on a dark chip") —
      predate the --color-* naming but still consumed directly by a handful of

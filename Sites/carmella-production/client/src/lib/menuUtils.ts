@@ -110,10 +110,33 @@ function matchesDaypart(item: MenuItem, activeDaypart?: 'day' | 'night'): boolea
   return itemDaypart === 'both' || itemDaypart === activeDaypart;
 }
 
-function visibleItems(items: MenuItem[], activeFilters: Set<string>, query: string, activeDaypart?: 'day' | 'night'): MenuItem[] {
+export type MealPeriod = 'breakfast' | 'lunch' | 'dinner';
+
+// Breakfast 07:00-11:00, Lunch 11:00-17:00, Dinner 17:00 onward (including
+// the overnight stretch back round to 07:00 -- late-night service is still
+// "dinner", not a fourth period). Based on the guest's own local clock, same
+// as the Day/Night theme's own time source.
+export function getCurrentMealPeriod(now: Date = new Date()): MealPeriod {
+  const mins = now.getHours() * 60 + now.getMinutes();
+  if (mins >= 7 * 60 && mins < 11 * 60) return 'breakfast';
+  if (mins >= 11 * 60 && mins < 17 * 60) return 'lunch';
+  return 'dinner';
+}
+
+// Independent of matchesDaypart (that's the visual theme; this actually
+// hides the item outside its own meal service window). 'all_day' or an
+// absent value always shows.
+function matchesMealPeriod(item: MenuItem, currentMealPeriod?: MealPeriod): boolean {
+  if (!currentMealPeriod) return true;
+  const itemPeriod = item.mealPeriod || 'all_day';
+  return itemPeriod === 'all_day' || itemPeriod === currentMealPeriod;
+}
+
+function visibleItems(items: MenuItem[], activeFilters: Set<string>, query: string, activeDaypart?: 'day' | 'night', currentMealPeriod?: MealPeriod): MenuItem[] {
   return items.filter(
     item => item.visible !== false
       && matchesDaypart(item, activeDaypart)
+      && matchesMealPeriod(item, currentMealPeriod)
       && !shouldHideItem(item, activeFilters)
       && matchesSearch(item, query)
   );
@@ -123,7 +146,8 @@ export function buildMenuSections(
   menuData: MenuData,
   activeFilters: Set<string>,
   searchQuery = '',
-  activeDaypart?: 'day' | 'night'
+  activeDaypart?: 'day' | 'night',
+  currentMealPeriod?: MealPeriod
 ): MenuSection[] {
   const sections: MenuSection[] = [];
 
@@ -131,7 +155,7 @@ export function buildMenuSections(
     if (!categoryValue || categoryValue.visible === false) return;
 
     if (Array.isArray(categoryValue)) {
-      const items = visibleItems(categoryValue as MenuItem[], activeFilters, searchQuery, activeDaypart);
+      const items = visibleItems(categoryValue as MenuItem[], activeFilters, searchQuery, activeDaypart, currentMealPeriod);
       if (items.length > 0) sections.push({ title: categoryTitle, items, subSections: [] });
       return;
     }
@@ -140,7 +164,8 @@ export function buildMenuSections(
       (categoryValue.items as MenuItem[]) || [],
       activeFilters,
       searchQuery,
-      activeDaypart
+      activeDaypart,
+      currentMealPeriod
     );
     const subSections: { title: string; items: MenuItem[] }[] = [];
 
@@ -149,7 +174,7 @@ export function buildMenuSections(
       if (typeof subValue !== 'object' || Array.isArray(subValue)) return;
       const sv = subValue as { visible?: boolean; items?: MenuItem[] };
       if (sv.visible === false) return;
-      const items = visibleItems(sv.items || [], activeFilters, searchQuery, activeDaypart);
+      const items = visibleItems(sv.items || [], activeFilters, searchQuery, activeDaypart, currentMealPeriod);
       if (items.length > 0) subSections.push({ title: subTitle, items });
     });
 

@@ -84,6 +84,8 @@ interface AdminItem extends MenuItem {
   dbId: number;
 }
 
+const MEAL_PERIOD_LABELS: Record<string, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', all_day: 'All Day' };
+
 interface AdminCategory {
   id: number; title: string; sortOrder: number; visible: boolean; itemCount: number;
   subcategories: { id: number; title: string; sortOrder: number; visible: boolean; itemCount: number }[];
@@ -294,6 +296,7 @@ function MenuManagementTab() {
                 <span className={styles.itemMeta}>
                   {item.category} · {formatPrice(item.price)}
                   {item.daypart && item.daypart !== 'both' && ` · ${item.daypart === 'day' ? 'Day only' : 'Night only'}`}
+                  {item.mealPeriod && item.mealPeriod !== 'all_day' && ` · ${MEAL_PERIOD_LABELS[item.mealPeriod]} only`}
                 </span>
               </div>
               <div className={styles.rowActions}>
@@ -337,6 +340,7 @@ function ItemEditModal({ item, categories, onClose, onSaved }: {
   const [spice, setSpice] = useState(item?.spice || '');
   const [popular, setPopular] = useState(Boolean(item?.popular));
   const [daypart, setDaypart] = useState(item?.daypart || 'both');
+  const [mealPeriod, setMealPeriod] = useState(item?.mealPeriod || 'all_day');
   const [uploading, setUploading] = useState(false);
   const [imgPath, setImgPath] = useState(item?.img || '');
   const [saving, setSaving] = useState(false);
@@ -379,7 +383,7 @@ function ItemEditModal({ item, categories, onClose, onSaved }: {
     e.preventDefault();
     setSaving(true);
     try {
-      const patch = { name, category, subcategory, price: Number(price) || 0, description, calories, allergens, spice, popular, daypart };
+      const patch = { name, category, subcategory, price: Number(price) || 0, description, calories, allergens, spice, popular, daypart, mealPeriod };
       if (item) {
         await api.updateMenuItem(item.dbId, patch);
       } else {
@@ -441,6 +445,16 @@ function ItemEditModal({ item, categories, onClose, onSaved }: {
             <option value="both">Both (Day &amp; Night)</option>
             <option value="day">Day Menu only</option>
             <option value="night">Night Menu only</option>
+          </select>
+        </label>
+
+        <label className={styles.field}>
+          Meal Period
+          <select className={styles.select} value={mealPeriod} onChange={e => setMealPeriod(e.target.value as 'breakfast' | 'lunch' | 'dinner' | 'all_day')}>
+            <option value="all_day">All Day</option>
+            <option value="breakfast">Breakfast only (07:00–11:00)</option>
+            <option value="lunch">Lunch only (11:00–17:00)</option>
+            <option value="dinner">Dinner only (17:00 onwards)</option>
           </select>
         </label>
 
@@ -548,6 +562,11 @@ function PromotionsTab() {
                 {row.badge && <span className={styles.badgeChip}>{row.badge}</span>}
                 {row.isDealOfDay && <span className={styles.liveChip}>FEATURED DEAL OF THE DAY</span>}
                 {row.isLiveNow && <span className={styles.liveChip}>LIVE NOW</span>}
+                {row.isDealOfDay && !row.isLiveNow && (
+                  <span className={styles.warnChip} title="Featured but not visible to guests right now — check Active and the schedule window below">
+                    NOT VISIBLE TO GUESTS
+                  </span>
+                )}
               </div>
               <span className={styles.entityMeta}>
                 {row.description || 'No description'} · {row.items.length} item{row.items.length !== 1 ? 's' : ''}

@@ -264,6 +264,7 @@ export const api = {
   updateMenuItem(id: number, patch: {
     name?: string; category?: string; subcategory?: string; price?: number; description?: string;
     calories?: string; allergens?: string; spice?: string; available?: boolean; visible?: boolean; popular?: boolean;
+    daypart?: 'day' | 'night' | 'both'; mealPeriod?: 'breakfast' | 'lunch' | 'dinner' | 'all_day';
   }) {
     return patchJson<{ ok: boolean; item: unknown }>(ENDPOINTS.menuItemUpdate(id), patch);
   },

@@ -41,6 +41,10 @@ export interface MenuItem {
   // theme, which only changes appearance and never filters items — 'both'
   // means always shown regardless of theme.
   daypart?: 'day' | 'night' | 'both';
+  // Which meal SERVICE this item is available during -- independent of
+  // daypart (that's the visual theme; this actually hides the item outside
+  // its window). 'all_day' means always shown. See getCurrentMealPeriod.
+  mealPeriod?: 'breakfast' | 'lunch' | 'dinner' | 'all_day';
   types?: string;
   category?: string;
   subcategory?: string;

@@ -129,9 +129,16 @@ function createPromotionController({ getPrisma, socketService }) {
       const target = await prisma.promotion.findUnique({ where: { id } });
       if (!target) return res.status(404).json({ error: 'Promotion not found' });
 
+      // "Set as Deal of the Day" means "make this visible right now" -- a
+      // promotion could previously be flagged isDealOfDay=true while still
+      // `active:false` (e.g. deactivated after being featured, or never
+      // activated in the first place), silently vanishing from the Menu page
+      // with no visible error. Forcing active:true here closes that trap;
+      // un-setting isDealOfDay never touches `active`, since that's a
+      // legitimate independent kill-switch the admin may still want on.
       await prisma.$transaction([
         prisma.promotion.updateMany({ where: { isDealOfDay: true }, data: { isDealOfDay: false } }),
-        ...(makeItTheDeal ? [prisma.promotion.update({ where: { id }, data: { isDealOfDay: true } })] : [])
+        ...(makeItTheDeal ? [prisma.promotion.update({ where: { id }, data: { isDealOfDay: true, active: true } })] : [])
       ]);
       socketService?.emitPromotionsUpdated();
       res.json({ ok: true });

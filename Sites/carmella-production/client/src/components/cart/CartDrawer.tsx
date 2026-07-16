@@ -129,8 +129,12 @@ export function CartDrawer() {
                   <button className={styles.splitBtn} onClick={() => setSplitBillOpen(true)}>
                     <Split size={14} /> Split Bill
                   </button>
-                  <button className={styles.futureBtn} disabled title="Coming soon">Pay My Items</button>
-                  <button className={styles.futureBtn} disabled title="Coming soon">Merge Bills</button>
+                  <button className={styles.futureBtn} disabled aria-label="Pay My Items — coming soon">
+                    Pay My Items<span className={styles.soonBadge}>Soon</span>
+                  </button>
+                  <button className={styles.futureBtn} disabled aria-label="Merge Bills — coming soon">
+                    Merge Bills<span className={styles.soonBadge}>Soon</span>
+                  </button>
                 </div>
                 {mine.items.length > 0 && (
                   <button className={styles.clearBtn} onClick={clearMine} aria-label="Clear my items">

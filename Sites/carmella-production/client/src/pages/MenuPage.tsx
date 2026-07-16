@@ -22,11 +22,13 @@ import { useFilters } from '../hooks/useFilters';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { api, type HappyHour, type Promotion, type Special, type ComboSpecial } from '../services/api';
-import { buildMenuSections, flattenMenu, formatPrice } from '../lib/menuUtils';
+import { buildMenuSections, flattenMenu, formatPrice, getCurrentMealPeriod, type MealPeriod } from '../lib/menuUtils';
 import { resolveImage, resolveThumbnail } from '../lib/imageResolver';
-import { MenuCard } from '../components/menu/MenuCard';
 import type { MenuItem } from '../types/menu';
 import styles from './MenuPage.module.css';
+
+const MEAL_PERIOD_LABEL: Record<MealPeriod, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner' };
+const MEAL_PERIOD_HOURS: Record<MealPeriod, string> = { breakfast: '07:00–11:00', lunch: '11:00–17:00', dinner: '17:00 onwards' };
 
 const SECTION_ICON_COMPONENTS: Record<string, ComponentType<{ size?: number }>> = {
   'To Start': Salad, 'Bespoke Salads': Salad,
@@ -102,40 +104,38 @@ export function MenuPage() {
     return map;
   }, [happyHours, allItems]);
 
-  // STEP 5 — Special pricing keyed by item name; original price always comes
-  // from the live MenuItem (never a snapshot), matching the server's own logic.
-  // The map includes SILENT items too -- their discount must still apply
-  // wherever the item is normally sold, only the promotional CARD is hidden
-  // for them (see specialItems below).
+  // Special pricing keyed by item name; original price always comes from the
+  // live MenuItem (never a snapshot), matching the server's own logic. There
+  // is no dedicated "Today's Specials" showcase any more -- every Special's
+  // discount just applies quietly wherever that item is normally sold.
   const specialPrices = useMemo(() => {
     const map = new Map<string, number>();
     specials.flatMap(s => s.items).forEach(entry => map.set(entry.name, entry.specialPrice));
     return map;
   }, [specials]);
 
-  const silentSpecialNames = useMemo(() => {
-    const set = new Set<string>();
-    specials.flatMap(s => s.items).forEach(entry => { if (entry.silent) set.add(entry.name); });
-    return set;
-  }, [specials]);
-
-  const specialItems = useMemo(
-    () => allItems.filter(item => specialPrices.has(item.name) && !silentSpecialNames.has(item.name)),
-    [allItems, specialPrices, silentSpecialNames],
-  );
-
-  // Promotional hub (Deal of the Day / Specials / Happy Hour / Promotions)
-  // now lives at the top of the Menu page, not the Home page. Exactly one
+  // Promotional hub (Deal of the Day, then Combo Offers, then Happy Hour and
+  // any other Promotions) lives at the top of the Menu page. Exactly one
   // promotion can be admin-flagged isDealOfDay -- that's the featured hero;
   // every other active promotion (never array position) shows as a smaller
-  // Promotions/Combo card further down the hub.
+  // Promotions card further down the hub.
   const deal = promotions.find(p => p.isDealOfDay) ?? null;
   const dealHeroImage = deal?.bannerImage || deal?.items[0]?.img;
   const otherPromotions = promotions.filter(p => !p.isDealOfDay);
 
+  // Which meal service is running right now (breakfast/lunch/dinner),
+  // independent of the Day/Night visual theme -- refreshed every minute so a
+  // guest sitting through a service boundary sees the menu update without
+  // needing to reload, the same way the theme's own auto mode does.
+  const [mealPeriod, setMealPeriod] = useState<MealPeriod>(() => getCurrentMealPeriod());
+  useEffect(() => {
+    const id = window.setInterval(() => setMealPeriod(getCurrentMealPeriod()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
   const sections = useMemo(
-    () => buildMenuSections(menuData, activeFilters, searchQuery, theme?.activeTheme),
-    [menuData, activeFilters, searchQuery, theme?.activeTheme]
+    () => buildMenuSections(menuData, activeFilters, searchQuery, theme?.activeTheme, mealPeriod),
+    [menuData, activeFilters, searchQuery, theme?.activeTheme, mealPeriod]
   );
 
   useEffect(() => {
@@ -280,6 +280,12 @@ export function MenuPage() {
                 Promotions/Combos, in that order, all above the category
                 navigation. This is the primary customer experience now;
                 the Home page just welcomes and links in. */}
+            <div className={styles.nowServing}>
+              <Clock size={13} />
+              Now serving {MEAL_PERIOD_LABEL[mealPeriod]}
+              <span className={styles.nowServingHours}>{MEAL_PERIOD_HOURS[mealPeriod]}</span>
+            </div>
+
             {deal && (
               <button type="button" className={styles.dealHero} onClick={() => setDealModalOpen(true)} aria-label={`View Deal of the Day: ${deal.title}`}>
                 {dealHeroImage && (
@@ -307,19 +313,25 @@ export function MenuPage() {
               </button>
             )}
 
-            {specialItems.length > 0 && (
-              <section className={styles.specialsSection}>
-                <h2 className={styles.specialsTitle}>Today's Specials</h2>
-                <div className={styles.specialsScroll}>
-                  {specialItems.map((item, i) => (
-                    <div className={styles.specialCardWrap} key={`special-${item.name}-${i}`}>
-                      <MenuCard
-                        item={item}
-                        onAddToCart={handleAddToCart}
-                        onClick={handleItemClick}
-                        specialPrice={specialPrices.get(item.name)}
-                      />
-                    </div>
+            {combos.length > 0 && (
+              <section className={styles.comboSection}>
+                <h2 className={styles.comboSectionTitle}>Combo Offers</h2>
+                <div className={styles.comboGrid}>
+                  {combos.map(combo => (
+                    <button key={combo.id} type="button" className={styles.comboCard} onClick={() => setSelectedCombo(combo)}>
+                      {combo.bannerImage && (
+                        <img src={resolveThumbnail({ name: combo.title, price: 0, img: combo.bannerImage })} alt="" className={styles.comboCardImage} />
+                      )}
+                      <div className={styles.comboCardBody}>
+                        <h3 className={styles.comboCardTitle}>{combo.title}</h3>
+                        {combo.description && <p className={styles.comboCardDesc}>{combo.description}</p>}
+                        <div className={styles.comboCardPricing}>
+                          <span className={styles.comboCardOriginal}>{formatPrice(combo.originalPrice)}</span>
+                          <span className={styles.comboCardPrice}>{formatPrice(combo.comboPrice)}</span>
+                        </div>
+                        {combo.savings > 0 && <span className={styles.comboCardSavings}>Save {formatPrice(combo.savings)}</span>}
+                      </div>
+                    </button>
                   ))}
                 </div>
               </section>
@@ -344,7 +356,7 @@ export function MenuPage() {
               </section>
             )}
 
-            {(otherPromotions.length > 0 || combos.length > 0) && (
+            {otherPromotions.length > 0 && (
               <div className={styles.promoBanner}>
                 {otherPromotions.map(promo => (
                   <div key={`promo-${promo.id}`} className={styles.promoCard}>
@@ -352,19 +364,6 @@ export function MenuPage() {
                     <strong>{promo.title}</strong>
                     {promo.description && <span className={styles.promoDesc}> — {promo.description}</span>}
                   </div>
-                ))}
-                {combos.map(combo => (
-                  <button
-                    key={`combo-${combo.id}`}
-                    type="button"
-                    className={styles.promoCard}
-                    onClick={() => setSelectedCombo(combo)}
-                    style={{ cursor: 'pointer', border: 'none', textAlign: 'left', width: '100%' }}
-                  >
-                    <span className={styles.promoBadge}>COMBO</span>
-                    <strong>{combo.title}</strong>
-                    <span className={styles.promoDesc}> — {formatPrice(combo.comboPrice)} (save {formatPrice(combo.savings)})</span>
-                  </button>
                 ))}
               </div>
             )}

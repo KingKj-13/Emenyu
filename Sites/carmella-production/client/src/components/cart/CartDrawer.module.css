@@ -192,14 +192,29 @@
 .splitBtn:hover { border-color: var(--color-gold); background: rgba(var(--color-gold-rgb), 0.08); }
 
 .futureBtn {
-  padding: 10px 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
   border-radius: var(--radius-card);
   background: transparent;
   color: var(--color-sand);
   font-size: 11px; font-weight: 600;
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
+}
+
+.soonBadge {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-sand);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .clearBtn {

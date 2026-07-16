@@ -59,7 +59,8 @@ model MenuItem {
   available      Boolean           @default(true)
   availability   String            @default("available") // available | ask | unavailable
   popular        Boolean           @default(false)
-  daypart        String            @default("both") // day | night | both -- which menu(s) this item appears on; visual theme is separate and never filters this
+  daypart        String            @default("both") // day | night | both -- which VISUAL theme(s) this item appears on; separate from mealPeriod below
+  mealPeriod     String            @default("all_day") // breakfast | lunch | dinner | all_day -- which meal SERVICE this item is available during, filtered automatically by the current time (see getCurrentMealPeriod in menuUtils.ts). Independent of daypart: daypart never hides items, mealPeriod does.
   sortOrder      Int               @default(0)
   metadata       Json?
   variants       MenuItemVariant[]
