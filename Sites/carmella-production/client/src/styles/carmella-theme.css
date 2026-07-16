@@ -60,6 +60,27 @@ html[data-tenant='carmella-production'] {
      never body copy (script faces hurt readability at paragraph length). */
   --font-script:  'Alex Brush', cursive;
 
+  /* ── Shape & elevation — luxury boutique-café polish. Deliberately NOT a
+     colour change: same neutral black shadow hue as the shared Trump scale
+     in index.css, just softer opacity and a rounder radius scale. Trump's
+     own --shadow-* values (up to 0.76 opacity) are tuned for its permanently
+     dark navy surface, where a strong black shadow reads as normal depth;
+     against Carmella's light Day cream that same strength read as harsh
+     smudges, not elegance. --radius-card was 4px (Trump's sharp/formal
+     corner) — MenuPage's own .slideCard already carried a `16px` fallback
+     for this exact token in anticipation of this change, so 16px here isn't
+     a new number, it's the one already implied elsewhere in the codebase. */
+  --radius-card: 16px;
+  --radius-xs:   6px;
+  --radius-sm:   10px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
+  --shadow-xs:    0 4px 14px rgba(0, 0, 0, 0.10);
+  --shadow-sm:    0 12px 32px rgba(0, 0, 0, 0.12);
+  --shadow-soft:  0 20px 48px rgba(0, 0, 0, 0.14);
+  --shadow-lift:  0 28px 64px rgba(0, 0, 0, 0.16);
+  --shadow-modal: 0 36px 90px rgba(0, 0, 0, 0.22);
+
   /* Legacy pre-semantic tokens (mostly "light icon/text on a dark chip") —
      predate the --color-* naming but still consumed directly by a handful of
      components (Header's icon buttons, Button, LandingPage). */

@@ -8,12 +8,16 @@ function CardSkeleton() {
     <div className={styles.card}>
       <Skeleton height="100%" className={styles.image} />
       <div className={styles.body}>
-        <Skeleton height={14} width="72%" radius={3} />
-        <Skeleton height={12} width="94%" radius={3} style={{ marginTop: 10 }} />
-        <Skeleton height={12} width="60%" radius={3} style={{ marginTop: 6 }} />
+        <Skeleton height={16} width="70%" radius="var(--radius-xs)" />
+        <Skeleton height={12} width="94%" radius="var(--radius-xs)" style={{ marginTop: 10 }} />
+        <Skeleton height={12} width="55%" radius="var(--radius-xs)" style={{ marginTop: 6 }} />
         <div className={styles.footer}>
-          <Skeleton height={18} width={54} radius={3} />
-          <Skeleton height={38} width="100%" radius={4} style={{ marginTop: 10 }} />
+          <div className={styles.priceSkeleton}>
+            <Skeleton height={20} radius="var(--radius-xs)" />
+          </div>
+          <div className={styles.btnSkeleton}>
+            <Skeleton height={38} radius="var(--radius-pill)" />
+          </div>
         </div>
       </div>
     </div>

@@ -13,6 +13,16 @@
   height: 100%;
 }
 
+/* Wraps .body + .actions as a single flex column so the pair can be
+   promoted to a grid column (beside a full-height hero image) at tablet/
+   desktop widths without disturbing the mobile stacking order. */
+.content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .media {
   position: relative;
   aspect-ratio: 16/9;
@@ -26,12 +36,13 @@
   height: 100%;
   display: block;
   object-fit: cover;
+  transition: transform 420ms var(--ease-premium, ease);
 }
 
 .mediaTint {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.22) 0%, transparent 50%, rgba(0,23,36,0.6) 100%);
+  background: linear-gradient(180deg, rgba(0,0,0,0.16) 0%, transparent 50%, rgba(0,23,36,0.52) 100%);
   pointer-events: none;
 }
 
@@ -43,16 +54,22 @@
   height: 36px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.22);
   border-radius: 50%;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.4);
   color: #fff;
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-  transition: border-color 160ms ease;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--transition-fast, 160ms ease), background-color var(--transition-fast, 160ms ease), transform var(--transition-fast, 160ms ease);
 }
 
-.closeBtn:hover { border-color: rgba(255,255,255,0.5); }
+.closeBtn:hover {
+  border-color: rgba(255,255,255,0.5);
+  background: rgba(0,0,0,0.52);
+  transform: translateY(-1px);
+}
+.closeBtn:active { transform: translateY(0) scale(0.94); }
 
 /* Bug #3 fix: .body is now the scrollable region (not the outer modal panel),
    sized by flexbox to take whatever space .media and the now-sibling
@@ -67,23 +84,40 @@
   overflow-y: auto;
 }
 
-.chips { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.chips { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
 
 .name {
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   font-family: var(--font-heading);
-  font-size: clamp(20px, 4vw, 26px);
+  font-size: clamp(21px, 4vw, 28px);
   font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--color-cream);
-  line-height: 1.2;
+  line-height: 1.16;
+}
+
+/* Short tagline directly under the name -- distinct from the longer-form
+   .description below it: small, upper, gold-tinted label rather than body
+   copy, so name → subtitle → price → story → description reads as a clear
+   hierarchy instead of four same-weight paragraphs. */
+.subtitle {
+  margin: 0 0 12px;
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--color-gold-soft, var(--color-gold));
+  opacity: 0.85;
+  line-height: 1.4;
 }
 
 .price {
   margin: 0 0 14px;
-  font-size: 22px;
+  font-size: clamp(20px, 3vw, 25px);
   font-weight: 700;
   color: var(--color-gold);
   font-family: var(--font-heading);
+  letter-spacing: 0.01em;
 }
 
 .priceStrike {
@@ -98,18 +132,20 @@
   margin: 0 0 12px;
   font-size: 14px;
   color: var(--color-sand);
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 /* Narrative "story" line (Carmella and any future tenant with authored
    copy) — serif italic, sits above the description per the design brief. */
 .story {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
+  padding-left: 12px;
+  border-left: 2px solid rgba(var(--color-gold-rgb), 0.35);
   font-family: var(--font-heading);
   font-style: italic;
   font-size: 15px;
   color: var(--color-gold-soft, var(--color-gold));
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .allergens {
@@ -121,20 +157,40 @@
 .variantGroup {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin: 0 0 14px;
-  padding: 10px 12px;
+  padding: 12px 14px;
+  background: rgba(var(--color-gold-rgb), 0.05);
   border: 1px solid rgba(var(--color-gold-rgb), 0.2);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
+}
+
+.groupLabel {
+  font-family: var(--font-label);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-sand);
+  opacity: 0.75;
+  margin-bottom: 2px;
 }
 
 .variantOption {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 6px 6px;
+  margin: 0 -6px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
   color: var(--color-sand);
   cursor: pointer;
+  transition: background-color var(--transition-fast, 160ms ease);
+}
+
+.variantOption:hover {
+  background: rgba(var(--color-gold-rgb), 0.08);
 }
 
 .variantOption input {
@@ -177,30 +233,45 @@
      translucent --color-glass-strong tint, which read as dark-on-dark. */
   background: var(--color-panel);
   border-top: 1px solid var(--color-line);
+  box-shadow: 0 -10px 20px -16px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.qtyRow { display: flex; align-items: center; gap: 16px; }
+/* Segmented "pill" stepper: the two buttons and the value now read as one
+   grouped control instead of three loose circles, which is what makes it
+   feel like a considered stepper rather than a pair of icon buttons. */
+.qtyRow {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  gap: 2px;
+  padding: 4px;
+  background: rgba(var(--color-gold-rgb), 0.07);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.22);
+  border-radius: 999px;
+}
 
 .qtyBtn {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(var(--color-gold-rgb), 0.4);
+  border: none;
   border-radius: 50%;
-  background: rgba(var(--color-gold-rgb), 0.08);
+  background: transparent;
   color: var(--color-gold);
-  transition: background 160ms ease;
+  transition: background-color var(--transition-fast, 160ms ease), transform var(--transition-fast, 160ms ease);
 }
-.qtyBtn:hover { background: rgba(var(--color-gold-rgb), 0.18); }
+.qtyBtn:hover { background: rgba(var(--color-gold-rgb), 0.16); }
+.qtyBtn:active { transform: scale(0.92); }
 
 .qtyValue {
-  font-size: 20px;
+  font-family: var(--font-heading);
+  font-size: 19px;
   font-weight: 700;
-  min-width: 32px;
+  min-width: 38px;
   text-align: center;
   color: var(--color-cream);
 }
@@ -215,10 +286,14 @@
   /* ≥16px so iOS Safari doesn't zoom the viewport when the field is focused. */
   font-size: 16px;
   resize: none;
-  transition: border-color 160ms ease;
+  transition: border-color var(--transition-fast, 160ms ease), box-shadow var(--transition-fast, 160ms ease);
 }
 .noteInput::placeholder { color: rgba(201,187,165,0.4); }
-.noteInput:focus:not(:focus-visible) { border-color: rgba(var(--color-gold-rgb),0.4); }
+.noteInput:focus {
+  outline: none;
+  border-color: rgba(var(--color-gold-rgb), 0.45);
+  box-shadow: 0 0 0 3px rgba(var(--color-gold-rgb), 0.12);
+}
 
 .unavailableBanner {
   margin-bottom: 12px;
@@ -248,11 +323,15 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   box-shadow: 0 4px 16px rgba(var(--color-gold-rgb),0.28);
-  transition: box-shadow 180ms ease, transform 180ms ease;
+  transition: box-shadow var(--transition-med, 200ms ease), transform var(--transition-med, 200ms ease);
 }
 .addBtn:hover {
-  box-shadow: 0 8px 28px rgba(var(--color-gold-rgb),0.42);
-  transform: translateY(-1px);
+  box-shadow: 0 10px 28px rgba(var(--color-gold-rgb),0.42);
+  transform: translateY(-2px);
+}
+.addBtn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 4px 14px rgba(var(--color-gold-rgb),0.3);
 }
 .addBtn:disabled {
   background: rgba(255,255,255,0.1);
@@ -294,14 +373,38 @@
   border: 3px solid rgba(239, 68, 68, 0.65);
 }
 
+/* Tablet/desktop: the vertical media-then-content stack becomes a
+   full-height hero image beside a scrollable content column, instead of a
+   short letterboxed banner on top of a wide dialog -- the "food is hero"
+   treatment the brief asks for, and a layout that actually reads as a
+   centered dialog rather than a stretched mobile sheet. */
 @media (min-width: 760px) {
   .modal {
-    max-height: min(660px, calc(100vh - 48px));
+    display: grid;
+    grid-template-columns: minmax(240px, 38%) 1fr;
+    max-height: min(680px, calc(100vh - 48px));
   }
 
   .media {
-    aspect-ratio: 16 / 7.5;
+    aspect-ratio: auto;
+    height: 100%;
   }
+
+  .content {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .body { padding: 24px 28px 18px; }
+  .actions { padding: 18px 28px calc(18px + env(safe-area-inset-bottom)); }
+}
+
+/* True desktop: lean on the extra width rather than just centering the
+   tablet layout -- a larger image column and roomier margins. */
+@media (min-width: 1024px) {
+  .modal { grid-template-columns: minmax(300px, 42%) 1fr; }
+  .body { padding: 32px 36px 20px; }
+  .actions { padding: 22px 36px calc(22px + env(safe-area-inset-bottom)); }
 }
 
 @media (max-width: 560px) {

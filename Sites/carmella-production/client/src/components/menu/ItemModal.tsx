@@ -174,100 +174,104 @@ export function ItemModal({ item, open, onClose, onAddToCart, specialPrice, happ
           </button>
         </div>
 
-        <div className={styles.body}>
-          {(item.available === false || item.availability === 'unavailable') && (
-            <div className={styles.unavailableBanner}>Sold Out</div>
-          )}
-          {item.availability === 'ask' && item.available !== false && (
-            <div className={styles.unavailableBanner}>Please ask your host — subject to availability today</div>
-          )}
+        <div className={styles.content}>
+          <div className={styles.body}>
+            {(item.available === false || item.availability === 'unavailable') && (
+              <div className={styles.unavailableBanner}>Sold Out</div>
+            )}
+            {item.availability === 'ask' && item.available !== false && (
+              <div className={styles.unavailableBanner}>Please ask your host — subject to availability today</div>
+            )}
 
-          <div className={styles.chips}>
-            {item.popular && <Badge variant="gold">Guest Favourite</Badge>}
-            {item.spice && <Badge variant="muted"><Flame size={11} /> {spiceLevelLabel(item.spice)}</Badge>}
-            {tags.map(tag => <Badge key={tag} variant="muted">{tag.replace(/-/g, ' ')}</Badge>)}
+            <div className={styles.chips}>
+              {item.popular && <Badge variant="gold">Guest Favourite</Badge>}
+              {item.spice && <Badge variant="muted"><Flame size={11} /> {spiceLevelLabel(item.spice)}</Badge>}
+              {tags.map(tag => <Badge key={tag} variant="muted">{tag.replace(/-/g, ' ')}</Badge>)}
+            </div>
+
+            <h2 className={styles.name}>{item.name}</h2>
+            {item.subtitle ? <p className={styles.subtitle}>{item.subtitle}</p> : null}
+            <p className={styles.price}>
+              {isDiscounted && <span className={styles.priceStrike}>{formatPrice(item.price + selectedAddons.reduce((sum, a) => sum + a.price, 0))}</span>}
+              {formatPrice(effectivePrice)}
+            </p>
+
+            {item.story ? <p className={styles.story}>{item.story}</p> : null}
+            {item.description ? <p className={styles.description}>{item.description}</p> : null}
+
+            {baseVariants.length > 0 && (
+              <div className={styles.variantGroup} role="radiogroup" aria-label="Choose an option">
+                <span className={styles.groupLabel}>Choose an option</span>
+                {baseVariants.map(variant => (
+                  <label key={variant.name} className={styles.variantOption}>
+                    <input
+                      type="radio"
+                      name="variant"
+                      checked={selectedVariantName === variant.name}
+                      onChange={() => setSelectedVariantName(variant.name)}
+                    />
+                    <span>{variant.name}</span>
+                    <span className={styles.variantPrice}>{formatPrice(variant.price)}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {addonVariants.length > 0 && (
+              <div className={styles.variantGroup} aria-label="Add extras">
+                <span className={styles.groupLabel}>Add extras</span>
+                {addonVariants.map(addon => (
+                  <label key={addon.name} className={styles.variantOption}>
+                    <input
+                      type="checkbox"
+                      checked={selectedAddonNames.includes(addon.name)}
+                      onChange={() => toggleAddon(addon.name)}
+                    />
+                    <span>+ {addon.name}</span>
+                    <span className={styles.variantPrice}>+{formatPrice(addon.price)}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {item.allergens && (
+              <p className={styles.allergens}><strong>Contains:</strong> {item.allergens}</p>
+            )}
+
+            {item.calories && <p className={styles.calories}>{item.calories}</p>}
           </div>
 
-          <h2 className={styles.name}>{item.name}</h2>
-          {item.subtitle ? <p className={styles.description}>{item.subtitle}</p> : null}
-          <p className={styles.price}>
-            {isDiscounted && <span className={styles.priceStrike}>{formatPrice(item.price + selectedAddons.reduce((sum, a) => sum + a.price, 0))}</span>}
-            {formatPrice(effectivePrice)}
-          </p>
-
-          {item.story ? <p className={styles.story}>{item.story}</p> : null}
-          {item.description ? <p className={styles.description}>{item.description}</p> : null}
-
-          {baseVariants.length > 0 && (
-            <div className={styles.variantGroup} role="radiogroup" aria-label="Choose an option">
-              {baseVariants.map(variant => (
-                <label key={variant.name} className={styles.variantOption}>
-                  <input
-                    type="radio"
-                    name="variant"
-                    checked={selectedVariantName === variant.name}
-                    onChange={() => setSelectedVariantName(variant.name)}
-                  />
-                  <span>{variant.name}</span>
-                  <span className={styles.variantPrice}>{formatPrice(variant.price)}</span>
-                </label>
-              ))}
+          <div className={styles.actions}>
+            <div className={styles.qtyRow}>
+              <button className={styles.qtyBtn} onClick={() => setQty(q => Math.max(1, q - 1))} aria-label="Decrease quantity">
+                <Minus size={16} />
+              </button>
+              <span className={styles.qtyValue} aria-live="polite">{qty}</span>
+              <button className={styles.qtyBtn} onClick={() => setQty(q => q + 1)} aria-label="Increase quantity">
+                <Plus size={16} />
+              </button>
             </div>
-          )}
 
-          {addonVariants.length > 0 && (
-            <div className={styles.variantGroup} aria-label="Add extras">
-              {addonVariants.map(addon => (
-                <label key={addon.name} className={styles.variantOption}>
-                  <input
-                    type="checkbox"
-                    checked={selectedAddonNames.includes(addon.name)}
-                    onChange={() => toggleAddon(addon.name)}
-                  />
-                  <span>+ {addon.name}</span>
-                  <span className={styles.variantPrice}>+{formatPrice(addon.price)}</span>
-                </label>
-              ))}
-            </div>
-          )}
+            <textarea
+              className={styles.noteInput}
+              data-noswipe
+              placeholder="Special requests or dietary notes…"
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              rows={2}
+              aria-label="Special notes for this item"
+            />
 
-          {item.allergens && (
-            <p className={styles.allergens}><strong>Contains:</strong> {item.allergens}</p>
-          )}
-
-          {item.calories && <p className={styles.calories}>{item.calories}</p>}
-        </div>
-
-        <div className={styles.actions}>
-          <div className={styles.qtyRow}>
-            <button className={styles.qtyBtn} onClick={() => setQty(q => Math.max(1, q - 1))} aria-label="Decrease quantity">
-              <Minus size={16} />
-            </button>
-            <span className={styles.qtyValue} aria-live="polite">{qty}</span>
-            <button className={styles.qtyBtn} onClick={() => setQty(q => q + 1)} aria-label="Increase quantity">
-              <Plus size={16} />
+            <button
+              className={styles.addBtn}
+              onClick={handleAdd}
+              disabled={item.available === false}
+              aria-label={item.available === false ? `${item.name} is sold out` : `Add ${qty} ${item.name} to cart`}
+            >
+              <ShoppingCart size={18} />
+              {item.available === false ? 'Sold Out' : `Add ${qty > 1 ? `${qty} × ` : ''}${formatPrice(effectivePrice * qty)}`}
             </button>
           </div>
-
-          <textarea
-            className={styles.noteInput}
-            data-noswipe
-            placeholder="Special requests or dietary notes…"
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            rows={2}
-            aria-label="Special notes for this item"
-          />
-
-          <button
-            className={styles.addBtn}
-            onClick={handleAdd}
-            disabled={item.available === false}
-            aria-label={item.available === false ? `${item.name} is sold out` : `Add ${qty} ${item.name} to cart`}
-          >
-            <ShoppingCart size={18} />
-            {item.available === false ? 'Sold Out' : `Add ${qty > 1 ? `${qty} × ` : ''}${formatPrice(effectivePrice * qty)}`}
-          </button>
         </div>
 
         {isRightSwipe && (

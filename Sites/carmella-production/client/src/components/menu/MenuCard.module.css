@@ -1,17 +1,20 @@
 .card {
   position: relative;
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(160deg, var(--color-panel-soft), var(--color-panel));
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-card);
+  box-shadow: var(--shadow-xs);
   overflow: hidden;
   cursor: pointer;
-  transition: transform 220ms var(--ease-premium), box-shadow 220ms ease, border-color 220ms ease;
+  transition: transform var(--transition-med), box-shadow var(--transition-med), border-color var(--transition-med);
   outline: none;
 }
 
 .card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow-lift);
   border-color: rgba(var(--color-gold-rgb), 0.32);
 }
 
@@ -22,6 +25,7 @@
 
 .imageWrap {
   position: relative;
+  flex-shrink: 0;
   aspect-ratio: 3/2;
   overflow: hidden;
   background: var(--blue-black);
@@ -31,15 +35,18 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 320ms ease;
+  transition: transform 300ms var(--ease-premium);
 }
 
 .card:hover .image { transform: scale(1.04); }
 
+/* Neutral black vignette, not a brand colour -- softened from the old
+   0.65/0.9 stops so more of the food photography reads through. Its only
+   job is a gentle seam between image and card body. */
 .imageTint {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 30%, rgba(0, 0, 0, 0.65) 85%, rgba(0, 0, 0, 0.9) 100%);
+  background: linear-gradient(180deg, transparent 45%, rgba(0, 0, 0, 0.3) 82%, rgba(0, 0, 0, 0.48) 100%);
   pointer-events: none;
 }
 
@@ -52,7 +59,7 @@
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -63,7 +70,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  background: rgba(0, 0, 0, 0.75);
+  /* Neutral dark backing (overlay-on-photo affordance, not a palette
+     colour) -- softened opacity + a touch of glass blur reads as an
+     elegant chip rather than a flat black stamp. */
+  background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   border: 1px solid rgba(var(--color-gold-rgb), 0.65);
   color: var(--color-gold);
 }
@@ -74,47 +86,61 @@
   color: #e88a8a;
 }
 
-.body { padding: 13px 14px 14px; }
-
-.name {
-  margin: 0 0 6px;
-  font-size: 15px;
-  font-weight: 800;
-  font-family: var(--font-label);
-  color: var(--color-cream);
-  line-height: 1.25;
+.body {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.035em;
-  min-height: 2.5em;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 16px 16px 18px;
+}
+
+/* Serif heading treatment (same token/weight family ItemModal already uses
+   for the item name) -- reads as a menu entry, not an uppercase label. */
+.name {
+  margin: 0 0 5px;
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-cream);
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.6em;
 }
 
 .desc {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
+  font-family: var(--font-body);
   font-size: 13px;
   color: var(--color-sand);
-  line-height: 1.5;
+  line-height: 1.55;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
+/* Pinned to the bottom of .body (flex column) so price/Add stay aligned
+   across a row of cards regardless of name/description length -- the grid
+   already stretches every card to the row's tallest neighbour. */
 .footer {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
 }
 
 .price {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--color-gold);
   font-family: var(--font-heading);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  line-height: 1;
 }
 
 .priceStrike {
@@ -126,26 +152,33 @@
 }
 
 .addBtn {
-  width: 100%;
-  min-height: 42px;
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 0 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 7px;
   border: 1px solid rgba(var(--color-gold-rgb), 0.5);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: linear-gradient(145deg, rgba(var(--color-gold-rgb), 0.98), rgba(151, 115, 39, 0.98));
   color: #080705;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.03em;
-  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .addBtn:hover {
   background: linear-gradient(145deg, #d7b866, #a77e2c);
   border-color: var(--color-gold);
   transform: translateY(-1px);
+  box-shadow: var(--shadow-xs);
+}
+
+.addBtn:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
+  box-shadow: none;
 }
 
 .allergens {
@@ -162,7 +195,7 @@
 
 .cardSoldOut:hover {
   transform: none;
-  box-shadow: none;
+  box-shadow: var(--shadow-xs);
   border-color: rgba(var(--color-gold-rgb), 0.14);
 }
 
@@ -174,7 +207,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.4);
   z-index: 1;
   pointer-events: none;
 }
@@ -201,14 +234,26 @@
 }
 
 @media (max-width: 480px) {
-  .name {
-    font-size: 13px;
-    min-height: 2.6em;
-  }
+  .name { font-size: 15px; }
 
   .price { font-size: 18px; }
   .desc { font-size: 12px; }
-  .addBtn { min-height: 40px; }
+
+  .body { padding: 13px 13px 14px; }
+
+  /* Narrow 2-up columns: keep the Add button as a full-width, generously
+     tappable bar instead of a compact pill crowding the price. */
+  .footer {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .addBtn {
+    width: 100%;
+    min-height: 42px;
+  }
 
   .chipAi,
   .chipHappyHour {

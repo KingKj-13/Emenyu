@@ -279,6 +279,7 @@ export function MenuPage() {
                 Promotions/Combos, in that order, all above the category
                 navigation. This is the primary customer experience now;
                 the Home page just welcomes and links in. */}
+            <div className={styles.promoHub}>
             <div className={styles.nowServing}>
               <Clock size={13} />
               Now serving {MEAL_PERIOD_LABEL[mealPeriod]}
@@ -392,6 +393,7 @@ export function MenuPage() {
                 ))}
               </div>
             )}
+            </div>
 
             <CategoryTabBar sections={sections} />
 

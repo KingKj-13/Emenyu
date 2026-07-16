@@ -81,32 +81,34 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className={styles.about}>
-        <div className={styles.aboutCol}>
-          <span className={styles.aboutIcon} aria-hidden><Home size={15} /></span>
-          <span className={styles.aboutEyebrow}>About Carmella</span>
-          <p className={styles.aboutBody}>A European café where a good table holds a whole evening.</p>
-        </div>
-        <div className={styles.aboutDivider} aria-hidden />
-        <div className={styles.aboutCol}>
-          <span className={styles.aboutIcon} aria-hidden><UserRound size={15} /></span>
-          <span className={styles.aboutEyebrow}>About Sir Gaspard</span>
-          <p className={styles.aboutBody}>Founded 1948 on gentleness, grace, and good conversation.</p>
-        </div>
-      </section>
-
-      <section className={styles.ctaSection}>
-        <button className={styles.cta} onClick={goToMenu}>
-          <img src={bg(MENU_CTA_IMAGE)} alt="" className={styles.ctaImage} />
-          <div className={styles.ctaText}>
-            <span className={styles.ctaTitle}>Browse the Full Menu</span>
-            <span className={styles.ctaSub}>Every dish, pour and pairing</span>
+      <div className={styles.midRow}>
+        <section className={styles.about}>
+          <div className={styles.aboutCol}>
+            <span className={styles.aboutIcon} aria-hidden><Home size={15} /></span>
+            <span className={styles.aboutEyebrow}>About Carmella</span>
+            <p className={styles.aboutBody}>A European café where a good table holds a whole evening.</p>
           </div>
-          <span className={styles.ctaArrow} aria-hidden>
-            <ArrowRight size={18} />
-          </span>
-        </button>
-      </section>
+          <div className={styles.aboutDivider} aria-hidden />
+          <div className={styles.aboutCol}>
+            <span className={styles.aboutIcon} aria-hidden><UserRound size={15} /></span>
+            <span className={styles.aboutEyebrow}>About Sir Gaspard</span>
+            <p className={styles.aboutBody}>Founded 1948 on gentleness, grace, and good conversation.</p>
+          </div>
+        </section>
+
+        <section className={styles.ctaSection}>
+          <button className={styles.cta} onClick={goToMenu}>
+            <img src={bg(MENU_CTA_IMAGE)} alt="" className={styles.ctaImage} />
+            <div className={styles.ctaText}>
+              <span className={styles.ctaTitle}>Browse the Full Menu</span>
+              <span className={styles.ctaSub}>Every dish, pour and pairing</span>
+            </div>
+            <span className={styles.ctaArrow} aria-hidden>
+              <ArrowRight size={18} />
+            </span>
+          </button>
+        </section>
+      </div>
 
       <footer className={styles.valueFooter}>
         {VALUE_PROPS.map(({ icon: Icon, label }, i) => (

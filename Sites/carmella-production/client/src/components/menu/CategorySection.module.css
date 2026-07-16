@@ -1,4 +1,16 @@
-.section { margin-bottom: 48px; scroll-margin-top: calc(var(--header-h) + 24px); }
+/* Chapter rhythm: generous breathing room below each chapter's own content,
+   plus (via .section + .section) a hairline + extra lead-in space above every
+   chapter after the first -- so consecutive chapters read as clearly distinct
+   without the page ever feeling like it's just idling in empty space. */
+.section {
+  margin-bottom: clamp(40px, 6vw, 64px);
+  scroll-margin-top: calc(var(--header-h) + 24px);
+}
+
+.section + .section {
+  padding-top: clamp(28px, 4vw, 48px);
+  border-top: 1px solid var(--color-line);
+}
 
 .titleRow {
   display: flex;
@@ -14,20 +26,22 @@
   margin-bottom: 8px;
 }
 
-.titleRow:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; border-radius: 4px; }
+.titleRow:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; border-radius: var(--radius-xs); }
+
+.titleRow:hover .chevron { opacity: 1; }
 
 .chevron {
   color: var(--color-gold);
   opacity: 0.7;
   flex-shrink: 0;
-  transition: transform 240ms ease;
+  transition: transform var(--transition-med), opacity var(--transition-fast);
 }
 
 .chevronCollapsed { transform: rotate(-90deg); }
 
 .collapseOuter {
   display: grid;
-  transition: grid-template-rows 260ms ease;
+  transition: grid-template-rows 280ms var(--ease-premium);
   overflow: hidden;
 }
 
@@ -47,31 +61,36 @@
   margin-bottom: 6px;
 }
 
-.subTitleRow:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; border-radius: 4px; }
+.subTitleRow:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; border-radius: var(--radius-xs); }
+
+.subTitleRow:hover .chevron { opacity: 1; }
 
 .title {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: clamp(22px, 4vw, 30px);
+  font-size: clamp(23px, 3.2vw, 34px);
   font-weight: 700;
-  letter-spacing: 0.04em;
+  line-height: 1.15;
+  letter-spacing: 0.03em;
   color: var(--color-cream);
 }
 
 /* Chapter narrative opener (Carmella's "chapters"; empty/absent elsewhere). */
 .intro {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   font-family: var(--font-heading);
   font-style: italic;
-  font-size: 15px;
+  font-size: clamp(14px, 1.3vw, 16px);
+  line-height: 1.5;
   color: var(--color-sand);
-  max-width: 60ch;
+  max-width: 62ch;
 }
 
 .divider {
-  width: 60px;
-  height: 2px;
-  margin-bottom: 24px;
+  width: 72px;
+  height: 3px;
+  margin: 16px 0 26px;
+  border-radius: var(--radius-pill);
   background: linear-gradient(90deg, var(--color-gold), transparent);
 }
 
@@ -81,10 +100,10 @@
   gap: 16px;
 }
 
-.subSection { margin-top: 28px; }
+.subSection { margin-top: 32px; }
 
 .subTitle {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -94,4 +113,14 @@
 
 @media (max-width: 480px) {
   .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+}
+
+/* Desktop: let the grid breathe rather than just stretching the mobile
+   column count -- bigger minimum card width and roomier gutters. */
+@media (min-width: 900px) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 22px; }
+}
+
+@media (min-width: 1200px) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 26px; }
 }

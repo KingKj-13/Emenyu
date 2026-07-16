@@ -12,8 +12,8 @@
 }
 
 @keyframes landingRise {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* ───────── Top bar ───────── */
@@ -23,24 +23,36 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 10px;
-  padding: calc(8px + env(safe-area-inset-top)) 16px 8px;
+  padding: calc(10px + env(safe-area-inset-top)) 18px 10px;
   background: var(--color-ink);
   border-bottom: 1px solid var(--color-line);
+  animation: landingRise 0.5s var(--ease-premium) both;
 }
 
 .topBarIcon {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border: 1px solid rgba(var(--color-gold-rgb), 0.3);
   border-radius: 50%;
   background: transparent;
   color: var(--color-gold);
   cursor: pointer;
   justify-self: start;
+  transition: border-color var(--transition-fast), background var(--transition-fast),
+    transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 .topBar > .topBarIcon:last-child { justify-self: end; }
+
+button.topBarIcon:hover,
+button.topBarIcon:focus-visible {
+  border-color: var(--color-gold);
+  background: rgba(var(--color-gold-rgb), 0.12);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-xs);
+}
+button.topBarIcon:active { transform: translateY(0); }
 
 .topBarBrand {
   display: flex;
@@ -51,19 +63,19 @@
 
 .topBarWordmark {
   font-family: var(--font-heading);
-  font-size: 15px;
+  font-size: 15.5px;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-gold-soft);
 }
 
 .topBarSubtitle {
-  margin-top: 1px;
+  margin-top: 2px;
   font-family: var(--font-label);
   font-size: 7.5px;
   font-weight: 600;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--color-gold);
   opacity: 0.75;
@@ -79,7 +91,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  padding: 10px 20px;
+  padding: clamp(10px, 2.4vh, 22px) 20px;
   text-align: center;
 }
 
@@ -102,27 +114,31 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 420px;
+  max-width: 440px;
 }
 
 .monogramRing {
   display: grid;
   place-items: center;
-  width: clamp(34px, 9vh, 48px);
-  height: clamp(34px, 9vh, 48px);
-  margin-bottom: clamp(6px, 1.6vh, 12px);
+  width: clamp(36px, 9vh, 52px);
+  height: clamp(36px, 9vh, 52px);
+  margin-bottom: clamp(8px, 1.8vh, 14px);
   border-radius: 50%;
   border: 1px solid rgba(var(--color-gold-rgb), 0.55);
   color: var(--color-gold);
   font-family: var(--font-heading);
-  font-size: clamp(15px, 3.6vh, 20px);
+  font-size: clamp(15px, 3.6vh, 21px);
   line-height: 1;
   padding-bottom: 2px;
   background: rgba(10, 12, 8, 0.3);
+  box-shadow: var(--shadow-xs);
   animation: landingRise 0.6s var(--ease-premium) both;
 }
 
 .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-family: var(--font-label);
   font-size: 9.5px;
   font-weight: 600;
@@ -134,12 +150,22 @@
   animation-delay: 60ms;
 }
 
+.eyebrow::before,
+.eyebrow::after {
+  content: '';
+  width: clamp(12px, 2.6vh, 22px);
+  height: 1px;
+  background: var(--color-gold);
+  opacity: 0.5;
+}
+
 .wordmark {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: clamp(32px, 9vh, 56px);
-  line-height: 0.98;
+  font-size: clamp(32px, 9vh, 60px);
+  line-height: 0.96;
+  letter-spacing: -0.01em;
   color: #F7F2E8;
   text-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
   animation: landingRise 0.7s var(--ease-premium) both;
@@ -147,9 +173,9 @@
 }
 
 .tagline {
-  margin: 2px 0 0;
+  margin: 4px 0 0;
   font-family: var(--font-script);
-  font-size: clamp(16px, 3.6vh, 26px);
+  font-size: clamp(16px, 3.6vh, 27px);
   font-weight: 400;
   color: var(--color-gold);
   animation: landingRise 0.7s var(--ease-premium) both;
@@ -160,8 +186,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: clamp(8px, 2vh, 16px);
-  padding: 7px 16px;
+  margin-top: clamp(10px, 2.4vh, 20px);
+  padding: 9px 18px;
   border: 1px solid rgba(var(--color-gold-rgb), 0.4);
   border-radius: 999px;
   background: rgba(10, 12, 8, 0.35);
@@ -174,8 +200,16 @@
   cursor: pointer;
   animation: landingRise 0.7s var(--ease-premium) both;
   animation-delay: 280ms;
+  transition: border-color var(--transition-med), background var(--transition-med),
+    transform var(--transition-med), box-shadow var(--transition-med);
 }
-.tablePill:hover { border-color: var(--color-gold); background: rgba(10, 12, 8, 0.5); }
+.tablePill:hover {
+  border-color: var(--color-gold);
+  background: rgba(10, 12, 8, 0.5);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+.tablePill:active { transform: translateY(0); box-shadow: var(--shadow-xs); }
 
 .tableDot {
   width: 5px;
@@ -190,10 +224,12 @@
   flex: none;
   display: flex;
   align-items: stretch;
-  gap: 4px;
-  padding: 10px 16px;
+  gap: 10px;
+  padding: 14px 18px;
   background: var(--color-panel);
   border-bottom: 1px solid var(--color-line);
+  animation: landingRise 0.6s var(--ease-premium) both;
+  animation-delay: 340ms;
 }
 
 .aboutCol {
@@ -202,18 +238,19 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   text-align: center;
-  padding: 2px 6px;
+  padding: 4px 8px;
 }
 
 .aboutIcon {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 34px;
+  height: 34px;
   border: 1px solid rgba(var(--color-gold-rgb), 0.4);
   border-radius: 50%;
+  background: rgba(var(--color-gold-rgb), 0.08);
   color: var(--color-gold);
 }
 
@@ -221,7 +258,7 @@
   font-family: var(--font-label);
   font-size: 8.5px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--color-gold);
 }
@@ -230,52 +267,67 @@
   margin: 0;
   font-family: var(--font-body);
   font-size: 10.5px;
-  line-height: 1.35;
+  line-height: 1.4;
   color: var(--color-sand);
 }
 
 .aboutDivider {
   flex: none;
   width: 1px;
-  background: var(--color-line);
-  margin: 4px 0;
+  background: linear-gradient(to bottom, transparent, var(--color-line) 25%, var(--color-line) 75%, transparent);
+  margin: 2px 0;
 }
 
 /* ───────── Full-menu CTA ───────── */
 .ctaSection {
   flex: none;
-  padding: 10px 16px;
+  padding: 12px 18px;
   background: var(--color-panel);
   border-bottom: 1px solid var(--color-line);
+  animation: landingRise 0.6s var(--ease-premium) both;
+  animation-delay: 420ms;
 }
 
 .cta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
-  padding: 8px;
+  padding: 10px;
   border: 1px solid rgba(var(--color-gold-rgb), 0.35);
-  border-radius: 14px;
+  border-radius: var(--radius-card);
   background: var(--color-panel-soft);
+  box-shadow: var(--shadow-xs);
   text-align: left;
   cursor: pointer;
+  transition: box-shadow var(--transition-med), transform var(--transition-med),
+    border-color var(--transition-med);
+}
+.cta:hover {
+  border-color: rgba(var(--color-gold-rgb), 0.55);
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-3px);
+}
+.cta:active {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .ctaImage {
   flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+  width: clamp(50px, 8vh, 64px);
+  height: clamp(50px, 8vh, 64px);
+  border-radius: var(--radius-md);
   object-fit: cover;
+  box-shadow: var(--shadow-xs);
 }
 
-.ctaText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ctaText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 
 .ctaTitle {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 14.5px;
+  font-size: 15.5px;
   color: var(--color-cream);
   white-space: nowrap;
   overflow: hidden;
@@ -284,7 +336,7 @@
 
 .ctaSub {
   font-family: var(--font-body);
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -295,20 +347,22 @@
   flex: none;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background: linear-gradient(160deg, var(--color-gold-soft), var(--color-gold));
   color: #1a1206;
+  transition: transform var(--transition-med);
 }
+.cta:hover .ctaArrow { transform: translateX(3px); }
 
 /* ───────── Value-prop footer strip ───────── */
 .valueFooter {
   flex: none;
   display: flex;
   justify-content: center;
-  gap: 2px;
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+  gap: 4px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
   background: var(--color-ink);
 }
 
@@ -316,28 +370,34 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
+  gap: 6px;
+  padding: 4px 12px;
   color: var(--color-gold);
+  opacity: 0;
+  animation: landingRise 0.5s var(--ease-premium) forwards;
 }
+.valueItem:nth-child(1) { animation-delay: 480ms; }
+.valueItem:nth-child(2) { animation-delay: 520ms; }
+.valueItem:nth-child(3) { animation-delay: 560ms; }
+.valueItem:nth-child(4) { animation-delay: 600ms; }
 
 .valueItem span:not(.valueDivider) {
   font-family: var(--font-label);
   font-size: 8.5px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--color-sand);
 }
 
 .valueDivider {
   position: absolute;
-  right: -1px;
+  right: -2px;
   top: 50%;
   transform: translateY(-50%);
   width: 1px;
   height: 14px;
-  background: var(--color-line);
+  background: linear-gradient(to bottom, transparent, var(--color-line) 30%, var(--color-line) 70%, transparent);
 }
 
 /* Very short phones (SE-class) -- shed the least essential row first. */
@@ -346,4 +406,64 @@
 }
 @media (max-height: 620px) {
   .about { display: none; }
+}
+
+/* Wrapper introduced purely for the desktop two-column layout below; at
+   mobile/tablet widths it is a plain block so .about/.ctaSection stack
+   exactly as before (same order, same borders, no visual change). */
+.midRow { flex: none; }
+
+/* ───────── Tablet / desktop — use the extra horizontal space instead of
+   centering the same mobile column. Hero content shifts to an asymmetric,
+   left-anchored composition (image still full-bleed behind it) and the
+   About + CTA sections gain a wider, two-column "card" treatment. Purely
+   layout/spacing — no colour, copy or behaviour changes. ───────── */
+@media (min-width: 860px) {
+  .heroContent {
+    align-items: flex-start;
+    max-width: clamp(380px, 46vw, 640px);
+    text-align: left;
+  }
+  .hero {
+    align-items: flex-start;
+    justify-content: center;
+    padding: clamp(10px, 2.4vh, 22px) clamp(40px, 8vw, 110px);
+    text-align: left;
+  }
+  .tablePill { align-self: flex-start; }
+
+  .midRow {
+    display: grid;
+    grid-template-columns: 1fr 1.05fr;
+    align-items: stretch;
+    gap: 20px;
+    padding: 18px clamp(24px, 6vw, 96px);
+    animation: landingRise 0.6s var(--ease-premium) both;
+    animation-delay: 340ms;
+  }
+  .about,
+  .ctaSection {
+    padding: 0;
+    background: transparent;
+    border-bottom: none;
+    animation: none;
+  }
+  .about {
+    display: flex;
+    padding: 20px 22px;
+    background: var(--color-panel);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-xs);
+    gap: 18px;
+  }
+  .ctaSection { display: flex; align-items: stretch; }
+  .cta { flex: 1; padding: 16px; }
+
+  .valueFooter { padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); gap: 8px; }
+  .valueItem { padding: 4px 18px; }
+}
+
+@media (min-width: 1200px) {
+  .hero { padding-left: clamp(60px, 10vw, 160px); padding-right: clamp(60px, 10vw, 160px); }
+  .midRow { padding-left: clamp(48px, 8vw, 140px); padding-right: clamp(48px, 8vw, 140px); }
 }

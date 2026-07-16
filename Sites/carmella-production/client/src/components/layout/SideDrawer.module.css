@@ -21,7 +21,7 @@
   flex-direction: column;
   gap: 0;
   overflow-y: auto;
-  box-shadow: -24px 0 72px rgba(0,0,0,0.58);
+  box-shadow: -28px 0 64px rgba(0, 0, 0, 0.18);
   animation: slideIn 0.24s var(--ease-premium);
 }
 
@@ -59,12 +59,13 @@
   background: transparent;
   color: var(--color-sand);
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
 }
 
 .closeBtn:hover {
   border-color: rgba(var(--color-gold-rgb), 0.6);
   color: var(--color-gold);
+  background: rgba(var(--color-gold-rgb), 0.08);
 }
 
 .section {
@@ -92,11 +93,11 @@
   padding: 9px 36px 9px 14px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   color: var(--color-cream);
   /* >=16px so iOS Safari doesn't zoom the viewport when the field is focused. */
   font-size: 16px;
-  transition: border-color 160ms ease;
+  transition: border-color var(--transition-fast);
   box-sizing: border-box;
 }
 
@@ -117,7 +118,7 @@
   background: rgba(255, 255, 255, 0.08);
   color: var(--color-sand);
   cursor: pointer;
-  transition: background 160ms ease, color 160ms ease;
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 .searchClearBtn:hover { background: rgba(var(--color-gold-rgb), 0.15); color: var(--color-gold); }
 
@@ -130,19 +131,21 @@
 .chip {
   padding: 5px 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.04);
   color: var(--color-sand);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
   cursor: pointer;
-  transition: border-color 160ms, background 160ms, color 160ms;
+  transition: border-color var(--transition-fast), background var(--transition-fast),
+    color var(--transition-fast), transform var(--transition-fast);
 }
 
 .chip:hover {
   border-color: rgba(var(--color-gold-rgb), 0.4);
   color: var(--color-cream);
+  transform: translateY(-1px);
 }
 
 .chipActive {
@@ -162,16 +165,16 @@
   align-self: flex-start;
   padding: 6px 14px;
   border: 1px solid rgba(var(--color-gold-rgb), 0.3);
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   background: rgba(var(--color-gold-rgb), 0.06);
   color: var(--color-gold);
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 160ms;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
-.clearAll:hover { background: rgba(var(--color-gold-rgb), 0.14); }
+.clearAll:hover { background: rgba(var(--color-gold-rgb), 0.14); border-color: rgba(var(--color-gold-rgb), 0.5); }
 
 .navIcon {
   font-size: 14px;
@@ -193,17 +196,28 @@
   width: 100%;
   padding: 8px 10px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-sand);
   font-size: 13px;
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: background 160ms ease, color 160ms ease;
+  transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
 }
 
 .navLink:hover {
   background: rgba(var(--color-gold-rgb), 0.07);
   color: var(--color-gold);
+  transform: translateX(2px);
+}
+
+/* Desktop: the 320px cap is already a sensible reading width for a filter
+   panel, but on wide screens it can afford a touch more room and more
+   generous internal padding rather than the same tight mobile spacing
+   stretched wider. */
+@media (min-width: 1024px) {
+  .panel { width: min(360px, 28vw); }
+  .header { padding: 24px 22px 18px; }
+  .section { padding: 22px; }
 }

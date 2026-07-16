@@ -4,6 +4,16 @@
   max-height: 88vh;
 }
 
+/* Wraps .body + .actions so the pair can be promoted to a grid column
+   beside a full-height hero image at tablet/desktop widths -- same pattern
+   as ItemModal, kept visually consistent across both promo modal types. */
+.content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .media {
   position: relative;
   flex-shrink: 0;
@@ -14,7 +24,7 @@
 .mediaTint {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.1) 40%, rgba(0, 0, 0, 0.55) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08) 40%, rgba(0, 0, 0, 0.48) 100%);
 }
 
 .closeBtn {
@@ -22,12 +32,20 @@
   top: 12px; right: 12px;
   width: 36px; height: 36px;
   display: grid; place-items: center;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.4);
   color: #fff;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
+  box-shadow: var(--shadow-xs);
+  transition: background-color var(--transition-fast, 160ms ease), border-color var(--transition-fast, 160ms ease), transform var(--transition-fast, 160ms ease);
 }
+.closeBtn:hover {
+  background: rgba(0, 0, 0, 0.52);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+.closeBtn:active { transform: translateY(0) scale(0.94); }
 
 .body { flex: 1; overflow-y: auto; padding: 20px; }
 
@@ -45,17 +63,19 @@
 }
 
 .title {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   font-family: var(--font-heading);
-  font-size: clamp(22px, 5vw, 28px);
+  font-size: clamp(22px, 5vw, 30px);
   font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.18;
   color: var(--color-cream);
 }
 
 .description {
   margin: 0 0 14px;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   color: var(--color-sand);
 }
 
@@ -104,22 +124,29 @@
 
 .itemGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
 }
 
 .itemCard {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: transform var(--transition-fast, 160ms ease), background-color var(--transition-fast, 160ms ease), box-shadow var(--transition-fast, 160ms ease);
+}
+.itemCard:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: var(--shadow-xs);
 }
 
 .itemThumb {
-  width: 40px; height: 40px;
-  border-radius: 8px;
+  width: 42px; height: 42px;
+  border-radius: var(--radius-sm);
   object-fit: cover;
   flex-shrink: 0;
 }
@@ -132,6 +159,7 @@
   flex-shrink: 0;
   padding: 16px 20px;
   border-top: 1px solid var(--color-line);
+  box-shadow: 0 -10px 20px -16px rgba(0, 0, 0, 0.2);
 }
 
 .addBtn {
@@ -149,4 +177,47 @@
   font-size: 14px;
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(var(--color-gold-rgb), 0.28);
+  transition: box-shadow var(--transition-med, 200ms ease), transform var(--transition-med, 200ms ease);
+}
+.addBtn:hover {
+  box-shadow: 0 10px 28px rgba(var(--color-gold-rgb), 0.42);
+  transform: translateY(-2px);
+}
+.addBtn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 4px 14px rgba(var(--color-gold-rgb), 0.3);
+}
+
+/* Tablet/desktop: same hero-beside-content promotion as ItemModal, so the
+   two "included items" promo modals share its visual language exactly. */
+@media (min-width: 760px) {
+  .modal {
+    display: grid;
+    grid-template-columns: minmax(240px, 38%) 1fr;
+    max-height: min(640px, calc(100vh - 48px));
+  }
+
+  .media { height: 100%; }
+
+  .content {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .body { padding: 26px 30px 20px; }
+  .actions { padding: 18px 30px calc(18px + env(safe-area-inset-bottom)); }
+  .itemGrid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .modal { grid-template-columns: minmax(300px, 42%) 1fr; }
+  .body { padding: 32px 36px 20px; }
+  .actions { padding: 20px 36px calc(20px + env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 560px) {
+  .media { height: 170px; }
+  .body { padding: 16px; }
+  .actions { padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); }
+  .title { font-size: 22px; }
 }

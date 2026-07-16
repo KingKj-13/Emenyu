@@ -24,10 +24,11 @@
   cursor: pointer;
   box-shadow: var(--shadow-sm);
   pointer-events: auto;
-  transition: filter 160ms ease, transform 160ms ease;
+  transition: filter var(--transition-fast), transform var(--transition-med), box-shadow var(--transition-med);
 }
 
-.trigger:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.trigger:hover { filter: brightness(1.06); transform: translateY(-2px); box-shadow: var(--shadow-soft); }
+.trigger:active { transform: translateY(0); filter: brightness(0.98); box-shadow: var(--shadow-sm); }
 
 .left, .right {
   display: flex;

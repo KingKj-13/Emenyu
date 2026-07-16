@@ -35,7 +35,7 @@
      invisible. Routed through the real panel tokens so it adapts. */
   background: linear-gradient(160deg, var(--color-panel-soft), var(--color-panel));
   border-left: 1px solid rgba(var(--color-gold-rgb),0.2);
-  box-shadow: -24px 0 64px rgba(0,0,0,0.5);
+  box-shadow: -28px 0 64px rgba(0, 0, 0, 0.18);
 }
 
 .drawerHeader {
@@ -69,9 +69,13 @@
   background: rgba(255,255,255,0.04);
   color: var(--color-sand);
   flex-shrink: 0;
-  transition: color 160ms ease;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
 }
-.closeBtn:hover { color: var(--color-cream); }
+.closeBtn:hover {
+  color: var(--color-cream);
+  border-color: rgba(var(--color-gold-rgb), 0.35);
+  background: rgba(var(--color-gold-rgb), 0.08);
+}
 
 .body { flex: 1; overflow-y: auto; padding: 16px 20px; }
 
@@ -143,9 +147,9 @@
   text-transform: uppercase;
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(var(--color-gold-rgb),0.28);
-  transition: box-shadow 180ms ease, transform 180ms ease;
+  transition: box-shadow var(--transition-med), transform var(--transition-med);
 }
-.emptyBrowseBtn:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(var(--color-gold-rgb),0.4); }
+.emptyBrowseBtn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(var(--color-gold-rgb),0.4); }
 
 .totals { margin-top: 16px; border-top: 1px solid var(--color-line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
 
@@ -187,9 +191,9 @@
   color: var(--color-gold);
   font-size: 12px; font-weight: 700;
   cursor: pointer;
-  transition: border-color 160ms ease, background 160ms ease;
+  transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
 }
-.splitBtn:hover { border-color: var(--color-gold); background: rgba(var(--color-gold-rgb), 0.08); }
+.splitBtn:hover { border-color: var(--color-gold); background: rgba(var(--color-gold-rgb), 0.08); transform: translateY(-1px); }
 
 .futureBtn {
   display: flex;
@@ -208,7 +212,7 @@
 
 .soonBadge {
   padding: 1px 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.08);
   color: var(--color-sand);
   font-size: 8.5px;
@@ -226,7 +230,7 @@
   color: var(--color-sand);
   font-size: 13px; font-weight: 600;
   cursor: pointer;
-  transition: border-color 160ms ease, color 160ms ease;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
 }
 .clearBtn:hover { border-color: rgba(224,96,96,0.5); color: #e06060; }
 
@@ -237,5 +241,16 @@
   color: var(--color-sand);
   opacity: 0.75;
   text-align: center;
+}
+
+/* Desktop: the 420px cap already reads as a considered drawer width rather
+   than a stretched mobile column, but on wide screens it can take a touch
+   more room, and the internal padding should scale up with it instead of
+   staying pinned at the same tight mobile values. */
+@media (min-width: 1024px) {
+  .drawer { width: min(460px, 100%); }
+  .drawerHeader { padding: 22px 28px; }
+  .body { padding: 20px 28px; }
+  .footer { padding: 20px 28px; }
 }
 

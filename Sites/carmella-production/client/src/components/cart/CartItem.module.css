@@ -62,7 +62,7 @@
   align-items: center;
   gap: 8px;
   border: 1px solid rgba(var(--color-gold-rgb),0.3);
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   padding: 2px 6px;
 }
 
@@ -72,9 +72,15 @@
   display: grid;
   place-items: center;
   border: none;
+  border-radius: var(--radius-pill);
   background: transparent;
   color: var(--color-gold);
+  cursor: pointer;
+  transition: background var(--transition-fast), transform var(--transition-fast);
 }
+
+.qty button:hover { background: rgba(var(--color-gold-rgb), 0.12); }
+.qty button:active { transform: scale(0.92); }
 
 .qty span {
   font-size: 13px;
@@ -95,6 +101,7 @@
   border: none;
   background: transparent;
   color: rgba(201,187,165,0.4);
-  transition: color 160ms ease;
+  cursor: pointer;
+  transition: color var(--transition-fast);
 }
 .removeBtn:hover { color: #e06060; }
