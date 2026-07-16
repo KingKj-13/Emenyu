@@ -86,6 +86,14 @@
   font-family: var(--font-heading);
 }
 
+.priceStrike {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.55;
+  text-decoration: line-through;
+  margin-right: 6px;
+}
+
 .description {
   margin: 0 0 12px;
   font-size: 14px;

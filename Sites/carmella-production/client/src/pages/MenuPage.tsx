@@ -157,10 +157,22 @@ export function MenuPage() {
     api.recordAnalyticsEvent({ type: 'item_view', itemId: item.dbId, tableId: appTableId, sessionId }).catch(() => {});
   }
 
+  // Cart pricing priority: Special > Happy Hour > Normal -- matches the
+  // badge/strikethrough MenuCard already shows, so what the customer sees
+  // is what actually gets charged. The quick-add button on a card doesn't
+  // go through ItemModal (which resolves this itself), so it needs the same
+  // resolution here.
+  function resolveCartPrice(item: MenuItem): number {
+    const special = specialPrices.get(item.name);
+    if (special != null) return special;
+    const hhPct = happyHourDiscounts.get(item.name);
+    return hhPct ? item.price * (1 - hhPct / 100) : item.price;
+  }
+
   function handleAddToCart(item: MenuItem) {
     addItem({
       name: item.name,
-      price: item.price,
+      price: resolveCartPrice(item),
       img: resolveImage(item),
       description: item.description || '',
       categoryType: item.categoryType,
@@ -256,7 +268,14 @@ export function MenuPage() {
 
       <CategoryTabBar sections={sections} />
 
-      <ItemModal item={selectedItem} open={modalOpen} onClose={() => setSelectedItem(null)} onAddToCart={handleAddToCartWithDetails} />
+      <ItemModal
+        item={selectedItem}
+        open={modalOpen}
+        onClose={() => setSelectedItem(null)}
+        onAddToCart={handleAddToCartWithDetails}
+        specialPrice={selectedItem ? specialPrices.get(selectedItem.name) : undefined}
+        happyHourDiscountPct={selectedItem ? happyHourDiscounts.get(selectedItem.name) : undefined}
+      />
 
       <BottomBar />
       <CartDrawer />

@@ -12,6 +12,13 @@ interface ItemModalProps {
   open: boolean;
   onClose: () => void;
   onAddToCart: (item: MenuItem, qty: number, note: string) => void;
+  // Cart pricing priority is Special > Happy Hour > Normal (same rule
+  // MenuCard applies to the grid) -- only meaningful when the item has no
+  // variants: a Special/Happy Hour price is resolved server-side against a
+  // single price, not per-variant, so an explicit variant choice always
+  // uses that variant's own real price instead.
+  specialPrice?: number;
+  happyHourDiscountPct?: number;
 }
 
 // The stored `spice` field is a raw chili-emoji string (🌶️ / 🌶️🌶️ / 🌶️🌶️🌶️),
@@ -29,7 +36,7 @@ function dietaryTags(item: MenuItem): string[] {
   return [];
 }
 
-export function ItemModal({ item, open, onClose, onAddToCart }: ItemModalProps) {
+export function ItemModal({ item, open, onClose, onAddToCart, specialPrice, happyHourDiscountPct }: ItemModalProps) {
   const [qty, setQty] = useState(1);
   const [note, setNote] = useState('');
   const [selectedVariantName, setSelectedVariantName] = useState<string | null>(null);
@@ -57,8 +64,12 @@ export function ItemModal({ item, open, onClose, onAddToCart }: ItemModalProps) 
   const addonVariants = (item.variants || []).filter(v => v.isAddon);
   const selectedVariant = baseVariants.find(v => v.name === selectedVariantName) ?? null;
   const selectedAddons = addonVariants.filter(a => selectedAddonNames.includes(a.name));
-  const effectivePrice = (selectedVariant ? selectedVariant.price : item.price)
-    + selectedAddons.reduce((sum, a) => sum + a.price, 0);
+  // Special > Happy Hour > Normal, matching MenuCard -- only applied when no
+  // variant is selected (see the specialPrice/happyHourDiscountPct prop doc).
+  const discountedBasePrice = specialPrice ?? (happyHourDiscountPct ? item.price * (1 - happyHourDiscountPct / 100) : null);
+  const basePrice = selectedVariant ? selectedVariant.price : (discountedBasePrice ?? item.price);
+  const effectivePrice = basePrice + selectedAddons.reduce((sum, a) => sum + a.price, 0);
+  const isDiscounted = !selectedVariant && discountedBasePrice != null;
   const effectiveName = selectedVariant
     ? [item.name, selectedVariant.name, ...selectedAddons.map(a => a.name)].join(' — ')
     : item.name;
@@ -71,9 +82,16 @@ export function ItemModal({ item, open, onClose, onAddToCart }: ItemModalProps) 
   }
 
   function handleAdd() {
-    const cartItem: MenuItem = selectedVariant
-      ? { ...item!, name: effectiveName, price: effectivePrice, img: selectedVariant.img || item!.img }
-      : item!;
+    // Always route price through effectivePrice (not just when a variant is
+    // picked) so a Special/Happy Hour discount actually reaches the cart --
+    // previously the no-variant branch passed the raw item straight through,
+    // silently reverting to full price the moment "Add" was clicked.
+    const cartItem: MenuItem = {
+      ...item!,
+      name: effectiveName,
+      price: effectivePrice,
+      img: selectedVariant?.img || item!.img
+    };
     onAddToCart(cartItem, qty, note);
     setQty(1);
     setNote('');
@@ -172,7 +190,10 @@ export function ItemModal({ item, open, onClose, onAddToCart }: ItemModalProps) 
 
           <h2 className={styles.name}>{item.name}</h2>
           {item.subtitle ? <p className={styles.description}>{item.subtitle}</p> : null}
-          <p className={styles.price}>{formatPrice(effectivePrice)}</p>
+          <p className={styles.price}>
+            {isDiscounted && <span className={styles.priceStrike}>{formatPrice(item.price + selectedAddons.reduce((sum, a) => sum + a.price, 0))}</span>}
+            {formatPrice(effectivePrice)}
+          </p>
 
           {item.story ? <p className={styles.story}>{item.story}</p> : null}
           {item.description ? <p className={styles.description}>{item.description}</p> : null}
@@ -245,7 +266,7 @@ export function ItemModal({ item, open, onClose, onAddToCart }: ItemModalProps) 
             aria-label={item.available === false ? `${item.name} is sold out` : `Add ${qty} ${item.name} to cart`}
           >
             <ShoppingCart size={18} />
-            {item.available === false ? 'Sold Out' : `Add ${qty > 1 ? `${qty} × ` : ''}${formatPrice(item.price * qty)}`}
+            {item.available === false ? 'Sold Out' : `Add ${qty > 1 ? `${qty} × ` : ''}${formatPrice(effectivePrice * qty)}`}
           </button>
         </div>
 
