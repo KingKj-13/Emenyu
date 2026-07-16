@@ -2,7 +2,11 @@ const { isWithinSchedule } = require('../utils/schedule');
 const { effectivePrice } = require('../services/prismaMenuService');
 
 // Each entry sets exactly one of specialPrice/discountPct; discountPct wins
-// if a caller somehow sends both (mirrors the schema comment).
+// if a caller somehow sends both (mirrors the schema comment). `silent`
+// (default false) is per-item: a silent item's discount still applies
+// wherever it's normally sold (its own category card/modal), it just never
+// gets a "Today's Specials" promotional card -- the customer only notices
+// the reduced price, nothing calls attention to it.
 function sanitizeItems(raw) {
   if (!Array.isArray(raw) || raw.length === 0) return { error: 'items must be a non-empty array' };
   const items = [];
@@ -16,7 +20,7 @@ function sanitizeItems(raw) {
     if (specialPrice == null && discountPct == null) {
       return { error: `item ${itemId} needs a specialPrice or discountPct` };
     }
-    items.push({ itemId, specialPrice, discountPct });
+    items.push({ itemId, specialPrice, discountPct, silent: Boolean(entry.silent) });
   }
   return { value: items };
 }
@@ -67,7 +71,8 @@ function createSpecialController({ getPrisma, socketService }) {
         img: item.imagePath,
         originalPrice,
         specialPrice,
-        discountPct: entry.discountPct
+        discountPct: entry.discountPct,
+        silent: Boolean(entry.silent)
       };
     }).filter(Boolean);
 

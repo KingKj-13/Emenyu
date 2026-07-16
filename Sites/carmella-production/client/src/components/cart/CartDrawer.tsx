@@ -1,18 +1,56 @@
+import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, ShoppingBag, Trash2 } from 'lucide-react';
+import { X, ShoppingBag, Trash2, Split } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 import { CartItemRow } from './CartItem';
+import { SplitBillModal } from './SplitBillModal';
 import { formatPrice } from '../../lib/menuUtils';
+import type { DeviceCartGroup } from '../../types/cart';
 import styles from './CartDrawer.module.css';
 
 export function CartDrawer() {
-  const { items, count, isOpen, setIsOpen, updateQty, removeAt, setNote, getTotals, clear } = useCart();
+  const { items, count, isOpen, setIsOpen, updateQty, removeAt, setNote, getTotals, clearMine, mine, others } = useCart();
+  const [splitBillOpen, setSplitBillOpen] = useState(false);
 
   function closeDrawer() {
     setIsOpen(false);
   }
 
   const totals = getTotals();
+
+  // Every device's items are drawn from the SAME underlying `items` array, so
+  // `items.indexOf(item)` recovers the correct global index for the
+  // qty/remove/note mutations, which all operate by index into that array.
+  function renderGroup(group: DeviceCartGroup, isMine: boolean) {
+    if (!isMine && group.items.length === 0) return null;
+    return (
+      <div className={styles.deviceGroup} key={group.deviceId ?? (isMine ? 'mine' : 'unassigned')}>
+        <div className={styles.deviceGroupHeader}>
+          <span>{group.label}</span>
+          <span className={styles.deviceGroupSubtotal}>{formatPrice(group.subtotal)}</span>
+        </div>
+        {group.items.length === 0 ? (
+          <p className={styles.deviceGroupEmpty}>No items yet</p>
+        ) : (
+          <div className={styles.items}>
+            {group.items.map(item => {
+              const index = items.indexOf(item);
+              return (
+                <CartItemRow
+                  key={`${item.name}-${item.price}-${index}`}
+                  item={item}
+                  index={index}
+                  onUpdateQty={updateQty}
+                  onRemove={removeAt}
+                  onNoteChange={setNote}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <AnimatePresence>
@@ -29,7 +67,7 @@ export function CartDrawer() {
           <motion.aside
             className={styles.drawer}
             role="dialog"
-            aria-label="Your cart"
+            aria-label="Shared cart"
             aria-modal="true"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
@@ -39,7 +77,7 @@ export function CartDrawer() {
             <div className={styles.drawerHeader}>
               <h2 className={styles.drawerTitle}>
                 <ShoppingBag size={20} />
-                Your Cart ({count})
+                Shared Cart ({count})
               </h2>
               <button className={styles.closeBtn} onClick={closeDrawer} aria-label="Close cart">
                 <X size={20} />
@@ -57,22 +95,12 @@ export function CartDrawer() {
                 </div>
               ) : (
                 <>
-                  <div className={styles.items}>
-                    {items.map((item, i) => (
-                      <CartItemRow
-                        key={`${item.name}-${item.price}`}
-                        item={item}
-                        index={i}
-                        onUpdateQty={updateQty}
-                        onRemove={removeAt}
-                        onNoteChange={setNote}
-                      />
-                    ))}
-                  </div>
+                  {renderGroup(mine, true)}
+                  {others.map(group => renderGroup(group, false))}
 
                   <div className={styles.totals}>
                     <div className={styles.totalRow}>
-                      <span>Subtotal</span>
+                      <span>Table Total</span>
                       <span>{formatPrice(totals.subtotal)}</span>
                     </div>
                     <div className={styles.totalRow}>
@@ -84,7 +112,7 @@ export function CartDrawer() {
                       <span>{formatPrice(totals.service)}</span>
                     </div>
                     <div className={`${styles.totalRow} ${styles.grandTotal}`}>
-                      <span>Estimated total</span>
+                      <span>Grand Total</span>
                       <span>{formatPrice(totals.total)}</span>
                     </div>
                     <p className={styles.estimateNote}>
@@ -97,12 +125,23 @@ export function CartDrawer() {
 
             {items.length > 0 && (
               <div className={styles.footer}>
-                <button className={styles.clearBtn} onClick={clear} aria-label="Clear cart">
-                  <Trash2 size={15} /> Clear cart
-                </button>
+                <div className={styles.billActions}>
+                  <button className={styles.splitBtn} onClick={() => setSplitBillOpen(true)}>
+                    <Split size={14} /> Split Bill
+                  </button>
+                  <button className={styles.futureBtn} disabled title="Coming soon">Pay My Items</button>
+                  <button className={styles.futureBtn} disabled title="Coming soon">Merge Bills</button>
+                </div>
+                {mine.items.length > 0 && (
+                  <button className={styles.clearBtn} onClick={clearMine} aria-label="Clear my items">
+                    <Trash2 size={15} /> Clear My Items
+                  </button>
+                )}
               </div>
             )}
           </motion.aside>
+
+          <SplitBillModal open={splitBillOpen} onClose={() => setSplitBillOpen(false)} />
         </>
       )}
     </AnimatePresence>

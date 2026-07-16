@@ -77,6 +77,42 @@
 
 .items { display: flex; flex-direction: column; }
 
+/* ───────── Per-device Shared Cart sections ───────── */
+.deviceGroup { margin-bottom: 18px; }
+.deviceGroup:last-of-type { margin-bottom: 0; }
+
+.deviceGroupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-line);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+
+.deviceGroupSubtotal {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--color-sand);
+}
+
+.deviceGroupEmpty {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--color-sand);
+  opacity: 0.6;
+}
+
 .empty {
   display: flex;
   flex-direction: column;
@@ -133,6 +169,37 @@
   padding: 16px 20px;
   border-top: 1px solid var(--color-line);
   flex-shrink: 0;
+}
+
+.billActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.splitBtn {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 10px 6px;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.4);
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--color-gold);
+  font-size: 12px; font-weight: 700;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.splitBtn:hover { border-color: var(--color-gold); background: rgba(var(--color-gold-rgb), 0.08); }
+
+.futureBtn {
+  padding: 10px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--color-sand);
+  font-size: 11px; font-weight: 600;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .clearBtn {

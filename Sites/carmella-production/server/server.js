@@ -20,6 +20,7 @@ const { createUploadController } = require('./controllers/uploadController');
 const { createPromotionController } = require('./controllers/promotionController');
 const { createHappyHourController } = require('./controllers/happyHourController');
 const { createSpecialController } = require('./controllers/specialController');
+const { createComboController } = require('./controllers/comboController');
 const { createAnalyticsController } = require('./controllers/analyticsController');
 const { createThemeController } = require('./controllers/themeController');
 const { registerMenuRoutes } = require('./routes/menuRoutes');
@@ -27,6 +28,7 @@ const { registerUploadRoutes } = require('./routes/uploadRoutes');
 const { registerPromotionRoutes } = require('./routes/promotionRoutes');
 const { registerHappyHourRoutes } = require('./routes/happyHourRoutes');
 const { registerSpecialRoutes } = require('./routes/specialRoutes');
+const { registerComboRoutes } = require('./routes/comboRoutes');
 const { registerAnalyticsRoutes } = require('./routes/analyticsRoutes');
 const { registerThemeRoutes } = require('./routes/themeRoutes');
 const { configureSecurity } = require('./middleware/security');
@@ -158,6 +160,7 @@ async function startServer(baseDirOverride) {
     promotion: createPromotionController({ getPrisma, socketService }),
     happyHour: createHappyHourController({ getPrisma, socketService }),
     special: createSpecialController({ getPrisma, socketService }),
+    combo: createComboController({ getPrisma, socketService }),
     analytics: createAnalyticsController({ getPrisma, fileService }),
     theme: createThemeController({ getPrisma, socketService })
   };
@@ -205,14 +208,61 @@ async function startServer(baseDirOverride) {
   registerPromotionRoutes(app, config, controllers, adminAuth);
   registerHappyHourRoutes(app, config, controllers, adminAuth);
   registerSpecialRoutes(app, config, controllers, adminAuth);
+  registerComboRoutes(app, config, controllers, adminAuth);
   registerAnalyticsRoutes(app, config, controllers, adminAuth);
   registerThemeRoutes(app, config, controllers, adminAuth);
 
-  // STEP 5 — Admin "Live Carts": every currently-open cart, for the admin UI's
+  // STEP 5/12 — Admin "Live Carts": every currently-open cart (now broken
+  // down per device -- see cartService.listActiveCarts), for the admin UI's
   // initial load (subsequent changes arrive over the liveCartsChanged socket
   // event, which the client re-fetches this same endpoint on).
   app.get(tenantPaths(config, '/api/admin/live-carts'), adminAuth, async (req, res) => {
     res.json(await fileService.listActiveCarts());
+  });
+
+  // STEP 12 — table-level cart controls. Each one persists the change, then
+  // broadcasts over the same socket paths a guest-initiated cart update would
+  // (syncCart to the table's own room, liveCartsChanged to Admin) so every
+  // open screen -- guest or staff -- reflects it immediately, not just on
+  // next poll.
+  async function broadcastTableCartChange(tableId) {
+    const state = await fileService.loadTableCart(tableId);
+    await socketService.emitTableCart(tableId, state);
+    socketService.emitAdminCartsChanged();
+  }
+
+  // "Table has paid and left" -- clears the cart AND the device roster, so
+  // the next seating starts a fresh D1/D2/D3 count rather than continuing
+  // the last party's numbering.
+  app.post(tenantPaths(config, '/api/admin/live-carts/:tableId/reset'), adminAuth, async (req, res) => {
+    await fileService.resetCart(req.params.tableId);
+    await broadcastTableCartChange(req.params.tableId);
+    res.json({ ok: true });
+  });
+
+  // Empties every device's items but keeps the SAME seating's device numbers
+  // stable, unlike reset.
+  app.post(tenantPaths(config, '/api/admin/live-carts/:tableId/clear'), adminAuth, async (req, res) => {
+    await fileService.clearTable(req.params.tableId);
+    await broadcastTableCartChange(req.params.tableId);
+    res.json({ ok: true });
+  });
+
+  // Removes only one device's items; every other device's cart is untouched.
+  app.post(tenantPaths(config, '/api/admin/live-carts/:tableId/clear-device'), adminAuth, async (req, res) => {
+    const deviceId = String(req.body?.deviceId || '');
+    if (!deviceId) return res.status(400).json({ error: 'deviceId is required' });
+    await fileService.clearDevice(req.params.tableId, deviceId);
+    await broadcastTableCartChange(req.params.tableId);
+    res.json({ ok: true });
+  });
+
+  // Display-only marker (Table.status) -- Reset Cart is what actually clears
+  // a table for its next seating.
+  app.post(tenantPaths(config, '/api/admin/live-carts/:tableId/finish'), adminAuth, async (req, res) => {
+    await fileService.markFinished(req.params.tableId);
+    socketService.emitAdminCartsChanged();
+    res.json({ ok: true });
   });
 
   const spaIndex = path.join(config.directories.clientDist, 'index.html');

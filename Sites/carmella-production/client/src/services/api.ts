@@ -39,12 +39,48 @@ export interface Promotion {
   bannerImage: string;
   badge: string;
   items: DealItem[];
+  dealPrice: number | null;
+  originalPrice: number;
+  savings: number | null;
+  isDealOfDay: boolean;
   startDate: string | null;
   endDate: string | null;
   startTime: string;
   endTime: string;
   active?: boolean;
   isLiveNow?: boolean;
+}
+
+export interface ComboSpecial {
+  id: number;
+  title: string;
+  description: string;
+  bannerImage: string;
+  items: DealItem[];
+  drinks: DealItem[];
+  comboPrice: number;
+  originalPrice: number;
+  savings: number;
+  startDate: string | null;
+  endDate: string | null;
+  startTime: string;
+  endTime: string;
+  active?: boolean;
+  isLiveNow?: boolean;
+}
+
+export interface ComboInput {
+  title?: string;
+  description?: string;
+  bannerImage?: string;
+  itemIds?: number[];
+  drinkItemIds?: number[];
+  comboPrice?: number;
+  startDate?: string | null;
+  endDate?: string | null;
+  startTime?: string;
+  endTime?: string;
+  active?: boolean;
 }
 
 export interface HappyHour {
@@ -66,6 +102,7 @@ export interface SpecialItem {
   originalPrice: number;
   specialPrice: number;
   discountPct: number | null;
+  silent: boolean;
 }
 
 export interface Special {
@@ -81,10 +118,20 @@ export interface Special {
   isLiveNow?: boolean;
 }
 
+export interface LiveCartDevice {
+  deviceId: string | null;
+  deviceNumber: number | null;
+  items: Array<{ name: string; price: number; qty: number; deviceId?: string }>;
+  subtotal: number;
+}
+
 export interface LiveCart {
   tableId: string;
-  cart: Array<{ name: string; price: number; qty: number }>;
+  cart: Array<{ name: string; price: number; qty: number; deviceId?: string }>;
   updatedAt: string;
+  status: string;
+  devices: LiveCartDevice[];
+  tableTotal: number;
 }
 
 export interface AnalyticsDashboard {
@@ -119,6 +166,7 @@ export interface PromotionInput {
   bannerImage?: string;
   badge?: string;
   itemIds?: number[];
+  dealPrice?: number | null;
   startDate?: string | null;
   endDate?: string | null;
   startTime?: string;
@@ -130,6 +178,7 @@ export interface SpecialItemInput {
   itemId: number;
   specialPrice?: number | null;
   discountPct?: number | null;
+  silent?: boolean;
 }
 
 export interface SpecialInput {
@@ -243,6 +292,11 @@ export const api = {
   deletePromotion(id: number) {
     return fetchJson<{ ok: boolean }>(ENDPOINTS.promotionAdmin(id), { method: 'DELETE' });
   },
+  // isDealOfDay:false un-sets it (no Deal of the Day); any other value makes
+  // this the ONE featured deal, clearing the flag off every other promotion.
+  setDealOfDay(id: number, isDealOfDay: boolean) {
+    return postJson<{ ok: boolean }>(ENDPOINTS.promotionDealOfDay(id), { isDealOfDay });
+  },
 
   // ── Happy Hour ──
   getHappyHours() {
@@ -278,6 +332,23 @@ export const api = {
     return fetchJson<{ ok: boolean }>(ENDPOINTS.specialAdmin(id), { method: 'DELETE' });
   },
 
+  // ── Combo Specials ──
+  getCombos() {
+    return fetchJson<ComboSpecial[]>(ENDPOINTS.combos);
+  },
+  getCombosAdmin() {
+    return fetchJson<ComboSpecial[]>(ENDPOINTS.combosAdmin);
+  },
+  createCombo(payload: ComboInput) {
+    return postJson<{ ok: boolean; combo: ComboSpecial }>(ENDPOINTS.combosAdmin, payload);
+  },
+  updateCombo(id: number, patch: ComboInput) {
+    return patchJson<{ ok: boolean; combo: ComboSpecial }>(ENDPOINTS.comboAdmin(id), patch);
+  },
+  deleteCombo(id: number) {
+    return fetchJson<{ ok: boolean }>(ENDPOINTS.comboAdmin(id), { method: 'DELETE' });
+  },
+
   // ── Analytics ──
   recordAnalyticsEvent(payload: { type: 'session_start' | 'item_view' | 'add_to_cart' | 'remove_from_cart'; itemId?: number; categoryId?: number; tableId?: string; sessionId?: string }) {
     return postJson<{ ok: boolean }>(ENDPOINTS.analyticsEvent, payload);
@@ -289,6 +360,21 @@ export const api = {
   // ── Live carts ──
   getLiveCarts() {
     return fetchJson<LiveCart[]>(ENDPOINTS.liveCarts);
+  },
+  // "Table has paid and left" -- clears the cart AND the device roster, so
+  // the next seating gets fresh D1/D2/D3 numbering.
+  resetLiveCart(tableId: string) {
+    return postJson<{ ok: boolean }>(ENDPOINTS.liveCartReset(tableId), {});
+  },
+  // Empties every device's items but the SAME seating's device numbers stay.
+  clearLiveCart(tableId: string) {
+    return postJson<{ ok: boolean }>(ENDPOINTS.liveCartClear(tableId), {});
+  },
+  clearLiveCartDevice(tableId: string, deviceId: string) {
+    return postJson<{ ok: boolean }>(ENDPOINTS.liveCartClearDevice(tableId), { deviceId });
+  },
+  finishLiveCart(tableId: string) {
+    return postJson<{ ok: boolean }>(ENDPOINTS.liveCartFinish(tableId), {});
   },
 
   // ── Theme ──

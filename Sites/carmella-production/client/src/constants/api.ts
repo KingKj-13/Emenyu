@@ -26,6 +26,7 @@ export const ENDPOINTS = {
   promotions: `${API_PREFIX}/api/promotions`,
   promotionsAdmin: `${API_PREFIX}/api/admin/promotions`,
   promotionAdmin: (id: number) => `${API_PREFIX}/api/admin/promotions/${id}`,
+  promotionDealOfDay: (id: number) => `${API_PREFIX}/api/admin/promotions/${id}/deal-of-day`,
 
   happyHour: `${API_PREFIX}/api/happy-hour`,
   happyHourAdmin: `${API_PREFIX}/api/admin/happy-hour`,
@@ -35,10 +36,18 @@ export const ENDPOINTS = {
   specialsAdmin: `${API_PREFIX}/api/admin/specials`,
   specialAdmin: (id: number) => `${API_PREFIX}/api/admin/specials/${id}`,
 
+  combos: `${API_PREFIX}/api/combos`,
+  combosAdmin: `${API_PREFIX}/api/admin/combos`,
+  comboAdmin: (id: number) => `${API_PREFIX}/api/admin/combos/${id}`,
+
   analyticsEvent: `${API_PREFIX}/api/analytics/event`,
   analyticsDashboard: `${API_PREFIX}/api/admin/analytics/dashboard`,
 
   liveCarts: `${API_PREFIX}/api/admin/live-carts`,
+  liveCartReset: (tableId: string) => `${API_PREFIX}/api/admin/live-carts/${tableId}/reset`,
+  liveCartClear: (tableId: string) => `${API_PREFIX}/api/admin/live-carts/${tableId}/clear`,
+  liveCartClearDevice: (tableId: string) => `${API_PREFIX}/api/admin/live-carts/${tableId}/clear-device`,
+  liveCartFinish: (tableId: string) => `${API_PREFIX}/api/admin/live-carts/${tableId}/finish`,
 
   theme: `${API_PREFIX}/api/theme`,
   themeAdmin: `${API_PREFIX}/api/admin/theme`

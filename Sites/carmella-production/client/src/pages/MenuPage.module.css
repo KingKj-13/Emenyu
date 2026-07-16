@@ -147,18 +147,26 @@
   scroll-snap-align: start;
 }
 
-/* ───────── Deal of the Day hero ───────── */
+/* ───────── Deal of the Day hero (a <button> -- clickable, opens the popup) ───────── */
 .dealHero {
   position: relative;
   display: block;
   width: 100%;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
   border-radius: var(--radius-card, 16px);
   overflow: hidden;
   margin-bottom: 28px;
   min-height: 220px;
   text-align: left;
   background: var(--color-panel-soft);
+  transition: transform 200ms ease;
 }
+.dealHero:hover { transform: translateY(-2px); }
+.dealHero:active { transform: translateY(0); }
 
 .dealHeroImage {
   position: absolute;

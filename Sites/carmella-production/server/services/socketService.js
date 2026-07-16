@@ -88,7 +88,7 @@ class SocketService {
     await this.fileService.saveTableCart(cleanId, state.cart);
 
     if (options.emit !== false) {
-      this.emitTableCart(tableId, state.cart);
+      await this.emitTableCart(tableId, state.cart);
       this.emitAdminCartsChanged();
     }
 
@@ -97,20 +97,24 @@ class SocketService {
 
   // ─── Emit helpers ─────────────────────────────────────────────────────────────
 
-  emitTableCart(tableId, cart) {
+  async emitTableCart(tableId, cart) {
     if (!this.io) return;
+    const devices = await this.fileService.listDevices(tableId);
     this.io.to(this.getTableRooms(tableId)).emit('syncCart', {
       restaurantId: this.config.restaurantId,
       tableId: normalizeId(tableId),
-      cart: Array.isArray(cart) ? cart : []
+      cart: Array.isArray(cart) ? cart : [],
+      devices
     });
   }
 
-  emitCartToSocket(socket, tableId, cart) {
+  async emitCartToSocket(socket, tableId, cart) {
+    const devices = await this.fileService.listDevices(tableId);
     socket.emit('syncCart', {
       restaurantId: this.config.restaurantId,
       tableId: normalizeId(tableId),
-      cart: Array.isArray(cart) ? cart : []
+      cart: Array.isArray(cart) ? cart : [],
+      devices
     });
   }
 
@@ -177,8 +181,22 @@ class SocketService {
     socket.data.tables = socket.data.tables || new Set();
     socket.data.tables.add(getCanonicalTableId(cleanId));
 
+    // STEP 12 — assign/confirm this device's stable D1/D2/D3 number for the
+    // Shared Cart split. A device that's new to this table changes the
+    // roster everyone else at the table sees, so that case broadcasts to the
+    // whole room; a returning/reconnecting device only needs its own ack.
+    if (payload.deviceId) {
+      socket.data.deviceId = String(payload.deviceId);
+      const { isNew } = await this.fileService.ensureDevice(cleanId, socket.data.deviceId);
+      if (isNew) {
+        const state = await this.getTableState(cleanId);
+        await this.emitTableCart(cleanId, state.cart);
+        return;
+      }
+    }
+
     const state = await this.getTableState(cleanId);
-    this.emitCartToSocket(socket, cleanId, state.cart);
+    await this.emitCartToSocket(socket, cleanId, state.cart);
   }
 
   // Admin has no login (product decision) — anyone with the URL can open the

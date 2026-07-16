@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
-import type { CartItem, CartTotals } from '../types/cart';
+import { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from 'react';
+import type { CartItem, CartTotals, CartDevice, DeviceCartGroup } from '../types/cart';
 import { VAT_RATE, SERVICE_RATE } from '../constants/config';
 import { useApp } from './AppContext';
 import { useSocket, useSocketEvent } from '../hooks/useSocket';
@@ -29,8 +29,23 @@ interface CartContextValue {
   removeAt: (index: number) => void;
   setNote: (index: number, note: string) => void;
   clear: () => void;
+  // Removes only THIS device's own items -- once other guests' items are
+  // visible in the same drawer, a whole-table clear is a foot-gun any single
+  // guest could pull the trigger on. "Clear cart" now only ever touches
+  // "Your Cart"; clearing another device's items is an Admin-only action
+  // (see Live Carts' Clear Device control).
+  clearMine: () => void;
   replaceCart: (items: CartItem[]) => void;
   getTotals: () => CartTotals;
+  // STEP 12 — Shared Cart, per device. `myDeviceId` is this browser's own
+  // identifier (reuses the tenant's existing per-browser sessionId); `mine`
+  // is always this device's own items ("Your Cart"); `others` is every other
+  // device that's joined this table, each with the SAME D1/D2/D3 label every
+  // other guest at the table sees (assigned server-side on first join, see
+  // TableDevice) -- never relabeled relative to whoever's viewing.
+  myDeviceId: string;
+  mine: DeviceCartGroup;
+  others: DeviceCartGroup[];
 }
 
 const CartContext = createContext<CartContextValue>(null!);
@@ -45,20 +60,30 @@ function normalizeItem(item: Partial<CartItem>): CartItem {
     description: item.description || '',
     categoryType: item.categoryType,
     beverageKind: item.beverageKind,
+    deviceId: item.deviceId,
   };
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [devices, setDevices] = useState<CartDevice[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [justAdded, setJustAdded] = useState<{ name: string; t: number } | null>(null);
 
   const { tableId, sessionId, config } = useApp();
+  // This browser's own device identity, for the Shared Cart split -- reuses
+  // the tenant's existing stable per-browser sessionId (storage.ts) rather
+  // than minting a second, redundant identifier.
+  const myDeviceId = sessionId;
 
   const addItem = useCallback((raw: Partial<CartItem> & { dbId?: number }) => {
-    const next = normalizeItem(raw);
+    const next = normalizeItem({ ...raw, deviceId: myDeviceId });
     setItems(prev => {
-      const existing = prev.find(e => e.name === next.name && e.price === next.price);
+      // Only merge quantities with an existing line from the SAME device --
+      // two different guests adding "the same dish" must stay two separate
+      // lines, each attributed to its own device, or the Shared Cart split
+      // silently loses one guest's item into the other's.
+      const existing = prev.find(e => e.name === next.name && e.price === next.price && e.deviceId === next.deviceId);
       if (existing) {
         return prev.map(e => e === existing ? { ...e, qty: e.qty + next.qty } : e);
       }
@@ -66,7 +91,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
     setJustAdded({ name: next.name, t: Date.now() });
     api.recordAnalyticsEvent({ type: 'add_to_cart', itemId: raw.dbId, tableId, sessionId }).catch(() => {});
-  }, [tableId, sessionId]);
+  }, [tableId, sessionId, myDeviceId]);
 
   const updateQty = useCallback((index: number, delta: number) => {
     setItems(prev => {
@@ -88,6 +113,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clear = useCallback(() => setItems([]), []);
 
+  const clearMine = useCallback(() => {
+    setItems(prev => prev.filter(item => item.deviceId !== myDeviceId));
+  }, [myDeviceId]);
+
   const replaceCart = useCallback((newItems: CartItem[]) => {
     setItems(newItems.map(normalizeItem));
   }, []);
@@ -102,18 +131,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const lastSyncSig = useRef<string>('');
 
   useEffect(() => {
-    socket.emit('joinTable', { restaurantId: RESTAURANT_ID, tableId: normalizedTableId });
-    const onConnect = () => socket.emit('joinTable', { restaurantId: RESTAURANT_ID, tableId: normalizedTableId });
-    socket.on('connect', onConnect);
-    return () => { socket.off('connect', onConnect); };
-  }, [socket, normalizedTableId]);
+    const join = () => socket.emit('joinTable', { restaurantId: RESTAURANT_ID, tableId: normalizedTableId, deviceId: myDeviceId });
+    // A disconnected socket.io client buffers `emit` and replays it once
+    // 'connect' fires -- calling join() here too would then double-send it
+    // (harmless for cart sync, but wasteful, and was masking a real device-
+    // registration race server-side). Only emit immediately when already
+    // connected; otherwise the 'connect' handler alone covers it.
+    if (socket.connected) join();
+    socket.on('connect', join);
+    return () => { socket.off('connect', join); };
+  }, [socket, normalizedTableId, myDeviceId]);
 
   // Server is the source of truth: apply whatever the table currently holds so
-  // every open browser tab for this table converges.
-  useSocketEvent<SyncCartEvent>('syncCart', ({ tableId: tid, cart: syncedItems }) => {
+  // every open browser tab for this table converges. `devices` is the whole
+  // table's roster (every device that's ever joined this seating), which is
+  // what makes D1/D2/D3 labels consistent across every guest's own screen.
+  useSocketEvent<SyncCartEvent>('syncCart', ({ tableId: tid, cart: syncedItems, devices: syncedDevices }) => {
     if (normalizeClientTableId(tid) !== normalizedTableId) return;
     lastSyncSig.current = cartSig(syncedItems || []);
     replaceCart(syncedItems || []);
+    setDevices(syncedDevices || []);
   });
 
   // Push local cart changes to the table room. The signature guard skips the
@@ -146,10 +183,38 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const count = items.reduce((s, i) => s + i.qty, 0);
   const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
 
+  // STEP 12 — group the flat cart array by device for the Shared Cart UI.
+  // "Your Cart" is always this device's own items; "others" is every OTHER
+  // device on the table roster, ordered by its server-assigned deviceNumber
+  // (stable across every guest's screen -- never renumbered relative to who's
+  // viewing). A device with zero items still gets a section (an empty D2 is
+  // meaningful: that guest is at the table and simply hasn't ordered yet).
+  const groupFor = useCallback((deviceId: string | null, label: string): DeviceCartGroup => {
+    const groupItems = items.filter(i => (i.deviceId || null) === deviceId);
+    return { deviceId, label, items: groupItems, subtotal: groupItems.reduce((s, i) => s + i.price * i.qty, 0) };
+  }, [items]);
+
+  const mine = useMemo(() => groupFor(myDeviceId, 'Your Cart'), [groupFor, myDeviceId]);
+
+  const others = useMemo(() => {
+    const otherDevices = devices.filter(d => d.deviceId !== myDeviceId).sort((a, b) => a.deviceNumber - b.deviceNumber);
+    const groups = otherDevices.map(d => groupFor(d.deviceId, `D${d.deviceNumber}`));
+    // Items whose deviceId isn't in the roster at all (carts written before
+    // this feature, or a caller that never joined via a device) get their
+    // own bucket rather than vanishing from the total.
+    const knownIds = new Set([myDeviceId, ...otherDevices.map(d => d.deviceId)]);
+    const unassignedItems = items.filter(i => !knownIds.has(i.deviceId || ''));
+    if (unassignedItems.length > 0) {
+      groups.push({ deviceId: null, label: 'Other items', items: unassignedItems, subtotal: unassignedItems.reduce((s, i) => s + i.price * i.qty, 0) });
+    }
+    return groups;
+  }, [devices, items, myDeviceId, groupFor]);
+
   return (
     <CartContext.Provider value={{
       items, count, subtotal, isOpen, justAdded,
-      setIsOpen, addItem, updateQty, removeAt, setNote, clear, replaceCart, getTotals,
+      setIsOpen, addItem, updateQty, removeAt, setNote, clear, clearMine, replaceCart, getTotals,
+      myDeviceId, mine, others,
     }}>
       {children}
     </CartContext.Provider>

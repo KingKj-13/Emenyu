@@ -11,6 +11,8 @@ import { SideDrawer } from '../components/layout/SideDrawer';
 import { CategorySection } from '../components/menu/CategorySection';
 import { MenuSkeletonGrid } from '../components/menu/MenuSkeletonGrid';
 import { ItemModal } from '../components/menu/ItemModal';
+import { DealOfDayModal } from '../components/menu/DealOfDayModal';
+import { ComboModal } from '../components/menu/ComboModal';
 import { CategoryTabBar } from '../components/menu/CategoryTabBar';
 import { BottomBar } from '../components/cart/BottomBar';
 import { CartDrawer } from '../components/cart/CartDrawer';
@@ -19,8 +21,8 @@ import { useCart } from '../hooks/useCart';
 import { useFilters } from '../hooks/useFilters';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
-import { api, type HappyHour, type Promotion, type Special } from '../services/api';
-import { buildMenuSections, flattenMenu } from '../lib/menuUtils';
+import { api, type HappyHour, type Promotion, type Special, type ComboSpecial } from '../services/api';
+import { buildMenuSections, flattenMenu, formatPrice } from '../lib/menuUtils';
 import { resolveImage, resolveThumbnail } from '../lib/imageResolver';
 import { MenuCard } from '../components/menu/MenuCard';
 import type { MenuItem } from '../types/menu';
@@ -53,6 +55,9 @@ export function MenuPage() {
   const [happyHours, setHappyHours] = useState<HappyHour[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [specials, setSpecials] = useState<Special[]>([]);
+  const [combos, setCombos] = useState<ComboSpecial[]>([]);
+  const [dealModalOpen, setDealModalOpen] = useState(false);
+  const [selectedCombo, setSelectedCombo] = useState<ComboSpecial | null>(null);
   const tableId = paramTableId || 'table1';
   const modalOpen = selectedItem !== null;
 
@@ -75,6 +80,7 @@ export function MenuPage() {
     api.getPromotions().then(setPromotions).catch(() => {});
     api.getHappyHours().then(setHappyHours).catch(() => {});
     api.getSpecials().then(setSpecials).catch(() => {});
+    api.getCombos().then(setCombos).catch(() => {});
   }, []);
   useEffect(loadPromoData, [loadPromoData]);
   useSocketEvent('promotionsUpdated', loadPromoData);
@@ -98,24 +104,34 @@ export function MenuPage() {
 
   // STEP 5 — Special pricing keyed by item name; original price always comes
   // from the live MenuItem (never a snapshot), matching the server's own logic.
+  // The map includes SILENT items too -- their discount must still apply
+  // wherever the item is normally sold, only the promotional CARD is hidden
+  // for them (see specialItems below).
   const specialPrices = useMemo(() => {
     const map = new Map<string, number>();
     specials.flatMap(s => s.items).forEach(entry => map.set(entry.name, entry.specialPrice));
     return map;
   }, [specials]);
 
+  const silentSpecialNames = useMemo(() => {
+    const set = new Set<string>();
+    specials.flatMap(s => s.items).forEach(entry => { if (entry.silent) set.add(entry.name); });
+    return set;
+  }, [specials]);
+
   const specialItems = useMemo(
-    () => allItems.filter(item => specialPrices.has(item.name)),
-    [allItems, specialPrices],
+    () => allItems.filter(item => specialPrices.has(item.name) && !silentSpecialNames.has(item.name)),
+    [allItems, specialPrices, silentSpecialNames],
   );
 
   // Promotional hub (Deal of the Day / Specials / Happy Hour / Promotions)
-  // now lives at the top of the Menu page, not the Home page -- the first
-  // promotion is the featured "Deal of the Day" hero; any additional ones
-  // show as smaller Promotions/Combo cards further down the hub.
-  const deal = promotions[0] ?? null;
+  // now lives at the top of the Menu page, not the Home page. Exactly one
+  // promotion can be admin-flagged isDealOfDay -- that's the featured hero;
+  // every other active promotion (never array position) shows as a smaller
+  // Promotions/Combo card further down the hub.
+  const deal = promotions.find(p => p.isDealOfDay) ?? null;
   const dealHeroImage = deal?.bannerImage || deal?.items[0]?.img;
-  const otherPromotions = promotions.slice(1);
+  const otherPromotions = promotions.filter(p => !p.isDealOfDay);
 
   const sections = useMemo(
     () => buildMenuSections(menuData, activeFilters, searchQuery, theme?.activeTheme),
@@ -205,6 +221,34 @@ export function MenuPage() {
     }
   }
 
+  // Deal-of-Day / Combo "Add complete X" always adds ONE combined cart line
+  // (name = the deal/combo's own title, price = its bundle/combo price when
+  // set, description lists what's included) rather than distributing across
+  // N item lines -- a restaurant POS rings up a combo as a single item, and
+  // this also cleanly avoids double-counting against each item's own
+  // Special/Happy-Hour pricing in its normal category listing.
+  function handleAddDeal(deal: Promotion) {
+    const price = deal.dealPrice ?? deal.items.reduce((s, i) => s + i.price, 0);
+    addItem({
+      name: deal.title,
+      price,
+      img: deal.bannerImage || deal.items[0]?.img || '',
+      description: deal.items.length > 0 ? `Includes: ${deal.items.map(i => i.name).join(', ')}` : deal.description,
+    });
+    setDealModalOpen(false);
+  }
+
+  function handleAddCombo(combo: ComboSpecial) {
+    const included = [...combo.items, ...combo.drinks].map(i => i.name).join(', ');
+    addItem({
+      name: combo.title,
+      price: combo.comboPrice,
+      img: combo.bannerImage || combo.items[0]?.img || '',
+      description: included ? `Includes: ${included}` : combo.description,
+    });
+    setSelectedCombo(null);
+  }
+
   return (
     <AppShell>
       <SideDrawer
@@ -237,7 +281,7 @@ export function MenuPage() {
                 navigation. This is the primary customer experience now;
                 the Home page just welcomes and links in. */}
             {deal && (
-              <section className={styles.dealHero}>
+              <button type="button" className={styles.dealHero} onClick={() => setDealModalOpen(true)} aria-label={`View Deal of the Day: ${deal.title}`}>
                 {dealHeroImage && (
                   <img src={resolveThumbnail({ name: deal.title, price: 0, img: dealHeroImage })} alt="" className={styles.dealHeroImage} />
                 )}
@@ -247,6 +291,11 @@ export function MenuPage() {
                   <span className={styles.dealEyebrow}>Deal of the Day</span>
                   <h2 className={styles.dealTitle}>{deal.title}</h2>
                   {deal.description && <p className={styles.dealDesc}>{deal.description}</p>}
+                  {deal.dealPrice != null && (
+                    <p className={styles.dealDesc}>
+                      <strong>{formatPrice(deal.dealPrice)}</strong>{deal.savings ? ` · save ${formatPrice(deal.savings)}` : ''}
+                    </p>
+                  )}
                   {deal.items.length > 0 && (
                     <div className={styles.dealItems}>
                       {deal.items.slice(0, 4).map(item => (
@@ -255,7 +304,7 @@ export function MenuPage() {
                     </div>
                   )}
                 </div>
-              </section>
+              </button>
             )}
 
             {specialItems.length > 0 && (
@@ -295,14 +344,27 @@ export function MenuPage() {
               </section>
             )}
 
-            {otherPromotions.length > 0 && (
+            {(otherPromotions.length > 0 || combos.length > 0) && (
               <div className={styles.promoBanner}>
                 {otherPromotions.map(promo => (
-                  <div key={promo.id} className={styles.promoCard}>
+                  <div key={`promo-${promo.id}`} className={styles.promoCard}>
                     {promo.badge && <span className={styles.promoBadge}>{promo.badge}</span>}
                     <strong>{promo.title}</strong>
                     {promo.description && <span className={styles.promoDesc}> — {promo.description}</span>}
                   </div>
+                ))}
+                {combos.map(combo => (
+                  <button
+                    key={`combo-${combo.id}`}
+                    type="button"
+                    className={styles.promoCard}
+                    onClick={() => setSelectedCombo(combo)}
+                    style={{ cursor: 'pointer', border: 'none', textAlign: 'left', width: '100%' }}
+                  >
+                    <span className={styles.promoBadge}>COMBO</span>
+                    <strong>{combo.title}</strong>
+                    <span className={styles.promoDesc}> — {formatPrice(combo.comboPrice)} (save {formatPrice(combo.savings)})</span>
+                  </button>
                 ))}
               </div>
             )}
@@ -330,6 +392,20 @@ export function MenuPage() {
         onAddToCart={handleAddToCartWithDetails}
         specialPrice={selectedItem ? specialPrices.get(selectedItem.name) : undefined}
         happyHourDiscountPct={selectedItem ? happyHourDiscounts.get(selectedItem.name) : undefined}
+      />
+
+      <DealOfDayModal
+        deal={deal}
+        open={dealModalOpen}
+        onClose={() => setDealModalOpen(false)}
+        onAddDeal={handleAddDeal}
+      />
+
+      <ComboModal
+        combo={selectedCombo}
+        open={selectedCombo !== null}
+        onClose={() => setSelectedCombo(null)}
+        onAddCombo={handleAddCombo}
       />
 
       <BottomBar />

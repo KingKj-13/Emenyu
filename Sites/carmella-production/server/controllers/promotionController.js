@@ -5,17 +5,28 @@ const BADGES = new Set(['NEW', 'SPECIAL', '10% OFF', '20% OFF', 'LIMITED', 'CHEF
 
 function toPublic(row, itemsById) {
   const itemIds = Array.isArray(row.itemIds) ? row.itemIds : [];
+  const items = itemsById ? itemIds.map(id => itemsById.get(id)).filter(Boolean) : itemIds;
+  // Original/savings are always derived from LIVE item prices (never
+  // snapshotted), matching Special's and ComboSpecial's own convention --
+  // only meaningful when this Promotion has an explicit combo price set
+  // (dealPrice), i.e. it's a priced bundle rather than just a showcase.
+  const originalPrice = Array.isArray(items) ? items.reduce((s, i) => s + (i.price || 0), 0) : 0;
+  const savings = row.dealPrice != null ? Math.max(0, originalPrice - row.dealPrice) : null;
   return {
     id: row.id,
     title: row.title,
     description: row.description,
     bannerImage: row.bannerImage,
     badge: row.badge,
+    dealPrice: row.dealPrice ?? null,
+    originalPrice,
+    savings,
+    isDealOfDay: row.isDealOfDay,
     startDate: row.startDate,
     endDate: row.endDate,
     startTime: row.startTime,
     endTime: row.endTime,
-    items: itemsById ? itemIds.map(id => itemsById.get(id)).filter(Boolean) : itemIds
+    items
   };
 }
 
@@ -37,6 +48,9 @@ function sanitize(body = {}, { partial = false } = {}) {
   }
   if (body.itemIds !== undefined) {
     out.itemIds = Array.isArray(body.itemIds) ? body.itemIds.map(Number).filter(Number.isInteger) : [];
+  }
+  if (body.dealPrice !== undefined) {
+    out.dealPrice = body.dealPrice === null || body.dealPrice === '' ? null : Number(body.dealPrice);
   }
   if (body.startDate !== undefined) out.startDate = body.startDate ? new Date(body.startDate) : null;
   if (body.endDate !== undefined) out.endDate = body.endDate ? new Date(body.endDate) : null;
@@ -99,6 +113,26 @@ function createPromotionController({ getPrisma, socketService }) {
       const prisma = getPrisma();
       const result = await prisma.promotion.deleteMany({ where: { id: Number(req.params.id) } });
       if (result.count === 0) return res.status(404).json({ error: 'Promotion not found' });
+      socketService?.emitPromotionsUpdated();
+      res.json({ ok: true });
+    },
+
+    // Only one Promotion may be the featured Deal-of-the-Day hero at a time --
+    // enforced here, transactionally, rather than through the generic
+    // update() path, so no caller can set isDealOfDay=true without the
+    // guaranteed side effect of clearing it off every other row. Passing
+    // isDealOfDay:false just un-sets this one (leaving no Deal of the Day).
+    async setDealOfDay(req, res) {
+      const id = Number(req.params.id);
+      const makeItTheDeal = req.body?.isDealOfDay !== false;
+      const prisma = getPrisma();
+      const target = await prisma.promotion.findUnique({ where: { id } });
+      if (!target) return res.status(404).json({ error: 'Promotion not found' });
+
+      await prisma.$transaction([
+        prisma.promotion.updateMany({ where: { isDealOfDay: true }, data: { isDealOfDay: false } }),
+        ...(makeItTheDeal ? [prisma.promotion.update({ where: { id }, data: { isDealOfDay: true } })] : [])
+      ]);
       socketService?.emitPromotionsUpdated();
       res.json({ ok: true });
     }

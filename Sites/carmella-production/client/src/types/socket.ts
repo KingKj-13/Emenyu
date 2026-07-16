@@ -1,9 +1,10 @@
-import type { CartItem } from './cart';
+import type { CartItem, CartDevice } from './cart';
 
 export interface SyncCartEvent {
   restaurantId: string;
   tableId: string;
   cart: CartItem[];
+  devices: CartDevice[];
 }
 
 export interface LiveCartsChangedEvent {

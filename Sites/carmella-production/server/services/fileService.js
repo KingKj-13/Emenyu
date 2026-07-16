@@ -114,6 +114,30 @@ class FileService {
   async listActiveCarts() {
     return this.cart.listActiveCarts();
   }
+
+  async ensureDevice(tableId, deviceId) {
+    return this.cart.ensureDevice(tableId, deviceId);
+  }
+
+  async listDevices(tableId) {
+    return this.cart.listDevices(tableId);
+  }
+
+  async resetCart(tableId) {
+    return this.cart.resetCart(tableId);
+  }
+
+  async clearTable(tableId) {
+    return this.cart.clearTable(tableId);
+  }
+
+  async clearDevice(tableId, deviceId) {
+    return this.cart.clearDevice(tableId, deviceId);
+  }
+
+  async markFinished(tableId) {
+    return this.cart.markFinished(tableId);
+  }
 }
 
 module.exports = {

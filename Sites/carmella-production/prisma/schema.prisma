@@ -130,7 +130,38 @@ model ActiveCartState {
   @@index([restaurantId, updatedAt])
 }
 
-// STEP 7 — Deal of the Day.
+// STEP 12 — Shared Cart, per-device split. Each browser/device that joins a
+// table's cart (see storage.ts's per-tenant sessionId, reused here as the
+// device identifier) gets a stable, table-scoped sequence number assigned on
+// first join -- "Device 1" is whichever device joined that table first,
+// "Device 2" the next, and so on, and that numbering stays fixed for the
+// rest of the seating regardless of who's currently looking at the cart.
+// This is what lets the Shared Cart UI show "Your Cart" (this device) plus
+// each OTHER device's section labeled consistently (D1/D2/D3) for every
+// guest at the table, not just relative to whoever is viewing. Cleared
+// alongside the cart on Reset Cart (new seating = new device numbering);
+// survives a Clear Entire Table (same seating, cart emptied).
+model TableDevice {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("carmella-production")
+  tableId      String
+  deviceId     String
+  deviceNumber Int
+  firstSeenAt  DateTime @default(now())
+  lastSeenAt   DateTime @updatedAt
+
+  @@unique([restaurantId, tableId, deviceId])
+  @@index([restaurantId, tableId, deviceNumber])
+}
+
+// STEP 7 — Deal of the Day / Promotions. A Promotion with isDealOfDay=true is
+// the ONE featured hero banner on the Menu page; every other (active)
+// Promotion renders in the smaller "Promotions/Combo Deals" section below it.
+// Only one row may have isDealOfDay=true at a time -- enforced in
+// promotionController.js's setDealOfDay (clears the flag off every other row
+// in the same transaction), not by a DB constraint, since Postgres has no
+// native "at most one true" check short of a partial unique index workaround
+// that would complicate the common "no deal configured yet" empty state.
 model Promotion {
   id           Int       @id @default(autoincrement())
   restaurantId String    @default("carmella-production")
@@ -139,6 +170,11 @@ model Promotion {
   bannerImage  String    @default("")
   badge        String    @default("") // NEW | SPECIAL | 10% OFF | 20% OFF | LIMITED | CHEF SPECIAL
   itemIds      Json      @default("[]") // featured MenuItem.id[], shown on the homepage hero banner
+  dealPrice    Float?    // combined bundle price; when set, the Deal-of-Day
+                         // popup shows original-combined-price vs this price
+                         // as savings, and "Add complete deal" charges this
+                         // one price instead of summing live item prices
+  isDealOfDay  Boolean   @default(false)
   startDate    DateTime?
   endDate      DateTime?
   startTime    String    @default("") // "HH:MM", restaurant-local
@@ -146,6 +182,32 @@ model Promotion {
   active       Boolean   @default(true) // admin kill-switch, independent of the schedule window
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  @@index([restaurantId, active])
+  @@index([restaurantId, isDealOfDay])
+}
+
+// STEP 11 — Combo Specials. Distinct from a Promotion: always has an explicit
+// combo price (never just a showcase), and separates food (items) from
+// optional drinks (drinkItemIds) so the popup can show them in two groups.
+// originalPrice/savings are always computed live from current MenuItem
+// prices (never snapshotted), matching Special's own convention.
+model ComboSpecial {
+  id            Int       @id @default(autoincrement())
+  restaurantId  String    @default("carmella-production")
+  title         String
+  description   String    @default("")
+  bannerImage   String    @default("")
+  itemIds       Json      @default("[]") // dish MenuItem.id[]
+  drinkItemIds  Json      @default("[]") // optional drink MenuItem.id[]
+  comboPrice    Float
+  startDate     DateTime?
+  endDate       DateTime?
+  startTime     String    @default("")
+  endTime       String    @default("")
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([restaurantId, active])
 }

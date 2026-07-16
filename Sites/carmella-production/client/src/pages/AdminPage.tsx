@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, type FormEvent } from 'react';
 import {
-  UtensilsCrossed, Tag, Clock, Sparkles, BarChart3, ShoppingCart, SunMoon,
+  UtensilsCrossed, Tag, Clock, Sparkles, BarChart3, ShoppingCart, SunMoon, Gift,
   Plus, Trash2, Pencil, Image as ImageIcon, Eye, EyeOff, ArrowUp, ArrowDown, X,
 } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { Modal } from '../components/ui/Modal';
 import { Spinner } from '../components/ui/Spinner';
-import { api, type Promotion, type HappyHour, type Special, type LiveCart, type AnalyticsDashboard, type DealItem, type SpecialItemInput } from '../services/api';
+import { api, type Promotion, type HappyHour, type Special, type ComboSpecial, type LiveCart, type AnalyticsDashboard, type DealItem, type SpecialItemInput } from '../services/api';
 import { formatPrice } from '../lib/menuUtils';
 import { resolveThumbnail } from '../lib/imageResolver';
 import { useSocket, useSocketEvent } from '../hooks/useSocket';
@@ -16,13 +16,14 @@ import type { MenuItem } from '../types/menu';
 import { BADGES } from '../constants/promotions';
 import styles from './AdminPage.module.css';
 
-type AdminTab = 'menu' | 'promotions' | 'happyHour' | 'specials' | 'analytics' | 'liveCarts' | 'theme';
+type AdminTab = 'menu' | 'promotions' | 'happyHour' | 'specials' | 'combos' | 'analytics' | 'liveCarts' | 'theme';
 
 const TABS: { key: AdminTab; label: string; icon: typeof UtensilsCrossed }[] = [
   { key: 'menu', label: 'Menu Management', icon: UtensilsCrossed },
   { key: 'promotions', label: 'Deal of the Day', icon: Tag },
   { key: 'happyHour', label: 'Happy Hour', icon: Clock },
   { key: 'specials', label: 'Specials', icon: Sparkles },
+  { key: 'combos', label: 'Combo Specials', icon: Gift },
   { key: 'analytics', label: 'Analytics', icon: BarChart3 },
   { key: 'liveCarts', label: 'Live Carts', icon: ShoppingCart },
   { key: 'theme', label: 'Theme', icon: SunMoon },
@@ -67,6 +68,7 @@ export function AdminPage() {
           {tab === 'promotions' && <PromotionsTab />}
           {tab === 'happyHour' && <HappyHourTab />}
           {tab === 'specials' && <SpecialsTab />}
+          {tab === 'combos' && <ComboSpecialsTab />}
           {tab === 'analytics' && <AnalyticsTab />}
           {tab === 'liveCarts' && <LiveCartsTab />}
           {tab === 'theme' && <ThemeTab />}
@@ -519,6 +521,15 @@ function PromotionsTab() {
     load();
   }
 
+  // Only one promotion may be the featured Deal-of-the-Day hero at a time;
+  // this clears the flag off every other row server-side (see
+  // setDealOfDay), so every OLD deal stays right here, kept and reusable --
+  // "reuse" is just picking a different (or the same) one to feature again.
+  async function toggleDealOfDay(row: Promotion) {
+    await api.setDealOfDay(row.id, !row.isDealOfDay);
+    load();
+  }
+
   if (loading) return <div className={styles.loading}><Spinner size={32} /></div>;
 
   return (
@@ -535,15 +546,21 @@ function PromotionsTab() {
               <div className={styles.entityTitleRow}>
                 <strong>{row.title}</strong>
                 {row.badge && <span className={styles.badgeChip}>{row.badge}</span>}
+                {row.isDealOfDay && <span className={styles.liveChip}>FEATURED DEAL OF THE DAY</span>}
                 {row.isLiveNow && <span className={styles.liveChip}>LIVE NOW</span>}
               </div>
               <span className={styles.entityMeta}>
-                {row.description || 'No description'} · {row.items.length} item{row.items.length !== 1 ? 's' : ''} · {row.startTime || '00:00'}–{row.endTime || '23:59'}
+                {row.description || 'No description'} · {row.items.length} item{row.items.length !== 1 ? 's' : ''}
+                {row.dealPrice != null && ` · bundle ${formatPrice(row.dealPrice)} (save ${formatPrice(row.savings || 0)})`}
+                {' '}· {row.startTime || '00:00'}–{row.endTime || '23:59'}
                 {row.startDate && ` · from ${new Date(row.startDate).toLocaleDateString()}`}
                 {row.endDate && ` to ${new Date(row.endDate).toLocaleDateString()}`}
               </span>
             </div>
             <div className={styles.rowActions}>
+              <button onClick={() => toggleDealOfDay(row)} title={row.isDealOfDay ? 'Unset as Deal of the Day' : 'Set as Deal of the Day'}>
+                <Sparkles size={15} color={row.isDealOfDay ? 'var(--color-gold, #c8a555)' : undefined} />
+              </button>
               <button onClick={() => toggleActive(row)} title={row.active ? 'Deactivate' : 'Activate'}>
                 {row.active ? <Eye size={15} /> : <EyeOff size={15} />}
               </button>
@@ -566,6 +583,7 @@ function PromotionEditModal({ promotion, items, onClose, onSaved }: { promotion:
   const [badge, setBadge] = useState(promotion?.badge || '');
   const [bannerImage, setBannerImage] = useState(promotion?.bannerImage || '');
   const [itemIds, setItemIds] = useState<number[]>(promotion?.items.map(i => i.id) || []);
+  const [dealPrice, setDealPrice] = useState(promotion?.dealPrice != null ? String(promotion.dealPrice) : '');
   const [startDate, setStartDate] = useState(promotion?.startDate?.slice(0, 10) || '');
   const [endDate, setEndDate] = useState(promotion?.endDate?.slice(0, 10) || '');
   const [startTime, setStartTime] = useState(promotion?.startTime || '00:00');
@@ -574,6 +592,9 @@ function PromotionEditModal({ promotion, items, onClose, onSaved }: { promotion:
   const [saving, setSaving] = useState(false);
 
   const selectedItems = itemIds.map(id => items.find(i => i.dbId === id)).filter((i): i is AdminItem => Boolean(i));
+  const originalPrice = selectedItems.reduce((s, i) => s + i.price, 0);
+  const parsedDealPrice = dealPrice === '' ? null : Number(dealPrice);
+  const previewSavings = parsedDealPrice != null ? Math.max(0, originalPrice - parsedDealPrice) : null;
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -592,7 +613,7 @@ function PromotionEditModal({ promotion, items, onClose, onSaved }: { promotion:
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const payload = { title, description, badge, bannerImage, itemIds, startDate: startDate || null, endDate: endDate || null, startTime, endTime };
+    const payload = { title, description, badge, bannerImage, itemIds, dealPrice: parsedDealPrice, startDate: startDate || null, endDate: endDate || null, startTime, endTime };
     try {
       if (promotion) await api.updatePromotion(promotion.id, payload);
       else await api.createPromotion(payload);
@@ -634,6 +655,21 @@ function PromotionEditModal({ promotion, items, onClose, onSaved }: { promotion:
             ))}
           </div>
         </div>
+        <label className={styles.field}>
+          Bundle price (optional — leave blank to just showcase these items at their normal prices)
+          <input
+            className={styles.input}
+            type="number" step="0.01" min={0}
+            placeholder={originalPrice ? `e.g. below ${formatPrice(originalPrice)}` : 'e.g. 199'}
+            value={dealPrice}
+            onChange={e => setDealPrice(e.target.value)}
+          />
+          {parsedDealPrice != null && originalPrice > 0 && (
+            <span className={styles.entityMeta}>
+              Original {formatPrice(originalPrice)} → guest saves {formatPrice(previewSavings || 0)}
+            </span>
+          )}
+        </label>
         <div className={styles.fieldGrid}>
           <label className={styles.field}>Start date<input className={styles.input} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></label>
           <label className={styles.field}>End date<input className={styles.input} type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></label>
@@ -912,6 +948,10 @@ function SpecialItemEditor({ item, draft, onChange, onRemove }: {
           onChange={e => onChange({ ...draft, specialPrice: e.target.value === '' ? null : Number(e.target.value) })}
         />
       )}
+      <label className={styles.silentToggle} title="Silent Special: the discounted price applies and the item stays in its normal category, but no Today's Specials card is shown for it.">
+        <input type="checkbox" checked={draft.silent} onChange={e => onChange({ ...draft, silent: e.target.checked })} />
+        Silent
+      </label>
       <button type="button" className={styles.dangerBtn} onClick={onRemove}><Trash2 size={13} /> Remove</button>
     </div>
   );
@@ -921,7 +961,7 @@ function SpecialEditModal({ special, items, onClose, onSaved }: { special: Speci
   const [title, setTitle] = useState(special?.title || '');
   const [bannerImage, setBannerImage] = useState(special?.bannerImage || '');
   const [drafts, setDrafts] = useState<SpecialItemDraft[]>(
-    special?.items.map(i => ({ itemId: i.itemId, specialPrice: i.discountPct == null ? i.specialPrice : null, discountPct: i.discountPct, mode: i.discountPct != null ? 'percent' : 'price' })) || []
+    special?.items.map(i => ({ itemId: i.itemId, specialPrice: i.discountPct == null ? i.specialPrice : null, discountPct: i.discountPct, silent: i.silent, mode: i.discountPct != null ? 'percent' : 'price' })) || []
   );
   const [startDate, setStartDate] = useState(special?.startDate?.slice(0, 10) || '');
   const [endDate, setEndDate] = useState(special?.endDate?.slice(0, 10) || '');
@@ -933,7 +973,7 @@ function SpecialEditModal({ special, items, onClose, onSaved }: { special: Speci
   const itemById = new Map(items.map(i => [i.dbId, i]));
 
   function addItem(id: number) {
-    setDrafts(prev => [...prev, { itemId: id, specialPrice: null, discountPct: 10, mode: 'percent' }]);
+    setDrafts(prev => [...prev, { itemId: id, specialPrice: null, discountPct: 10, silent: false, mode: 'percent' }]);
   }
   function updateDraft(itemId: number, next: SpecialItemDraft) {
     setDrafts(prev => prev.map(d => d.itemId === itemId ? next : d));
@@ -962,7 +1002,7 @@ function SpecialEditModal({ special, items, onClose, onSaved }: { special: Speci
     setSaving(true);
     const payload = {
       title, bannerImage,
-      items: drafts.map(({ itemId, specialPrice, discountPct }) => ({ itemId, specialPrice, discountPct })),
+      items: drafts.map(({ itemId, specialPrice, discountPct, silent }) => ({ itemId, specialPrice, discountPct, silent })),
       startDate: startDate || null, endDate: endDate || null, startTime, endTime,
     };
     try {
@@ -1017,6 +1057,185 @@ function SpecialEditModal({ special, items, onClose, onSaved }: { special: Speci
         </div>
         <div className={styles.modalFooter}>
           <button type="submit" className={styles.primaryBtn} disabled={saving || drafts.length === 0}>{saving ? <Spinner size={16} /> : 'Save'}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// ─────────────────────────────── Combo Specials ──────────────────────────────
+
+function ComboSpecialsTab() {
+  const [rows, setRows] = useState<ComboSpecial[]>([]);
+  const [items, setItems] = useState<AdminItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<ComboSpecial | 'new' | null>(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    Promise.all([api.getCombosAdmin(), api.getAdminMenuItems()])
+      .then(([c, i]) => { setRows(c); setItems((i as AdminItem[]) || []); })
+      .finally(() => setLoading(false));
+  }, []);
+  useEffect(load, [load]);
+
+  async function remove(id: number) {
+    if (!window.confirm('Delete this combo?')) return;
+    await api.deleteCombo(id);
+    load();
+  }
+
+  async function toggleActive(row: ComboSpecial) {
+    await api.updateCombo(row.id, { active: !row.active });
+    load();
+  }
+
+  if (loading) return <div className={styles.loading}><Spinner size={32} /></div>;
+
+  return (
+    <div className={styles.panel}>
+      <div className={styles.panelHeader}>
+        <h2>Combo Specials ({rows.length})</h2>
+        <button className={styles.primaryBtn} onClick={() => setEditing('new')}><Plus size={15} /> New combo</button>
+      </div>
+      <div className={styles.cardList}>
+        {rows.length === 0 && <p className={styles.emptyHint}>No combo specials yet — e.g. "Date in Paris", "Steak Night", "Breakfast Combo".</p>}
+        {rows.map(row => (
+          <div key={row.id} className={styles.entityCard}>
+            <div className={styles.entityInfo}>
+              <div className={styles.entityTitleRow}>
+                <strong>{row.title}</strong>
+                {row.isLiveNow && <span className={styles.liveChip}>LIVE NOW</span>}
+              </div>
+              <span className={styles.entityMeta}>
+                {row.items.length} dish{row.items.length !== 1 ? 'es' : ''}{row.drinks.length > 0 ? ` + ${row.drinks.length} drink${row.drinks.length !== 1 ? 's' : ''}` : ''}
+                {' '}· combo {formatPrice(row.comboPrice)} (save {formatPrice(row.savings)}) · {row.startTime || '00:00'}–{row.endTime || '23:59'}
+              </span>
+            </div>
+            <div className={styles.rowActions}>
+              <button onClick={() => toggleActive(row)} title={row.active ? 'Deactivate' : 'Activate'}>
+                {row.active ? <Eye size={15} /> : <EyeOff size={15} />}
+              </button>
+              <button onClick={() => setEditing(row)} title="Edit"><Pencil size={15} /></button>
+              <button onClick={() => remove(row.id)} title="Delete"><Trash2 size={15} /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {editing && (
+        <ComboEditModal combo={editing === 'new' ? null : editing} items={items} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
+      )}
+    </div>
+  );
+}
+
+function ComboEditModal({ combo, items, onClose, onSaved }: { combo: ComboSpecial | null; items: AdminItem[]; onClose: () => void; onSaved: () => void }) {
+  const [title, setTitle] = useState(combo?.title || '');
+  const [description, setDescription] = useState(combo?.description || '');
+  const [bannerImage, setBannerImage] = useState(combo?.bannerImage || '');
+  const [itemIds, setItemIds] = useState<number[]>(combo?.items.map(i => i.id) || []);
+  const [drinkItemIds, setDrinkItemIds] = useState<number[]>(combo?.drinks.map(i => i.id) || []);
+  const [comboPrice, setComboPrice] = useState(combo?.comboPrice != null ? String(combo.comboPrice) : '');
+  const [startDate, setStartDate] = useState(combo?.startDate?.slice(0, 10) || '');
+  const [endDate, setEndDate] = useState(combo?.endDate?.slice(0, 10) || '');
+  const [startTime, setStartTime] = useState(combo?.startTime || '00:00');
+  const [endTime, setEndTime] = useState(combo?.endTime || '23:59');
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const selectedItems = itemIds.map(id => items.find(i => i.dbId === id)).filter((i): i is AdminItem => Boolean(i));
+  const selectedDrinks = drinkItemIds.map(id => items.find(i => i.dbId === id)).filter((i): i is AdminItem => Boolean(i));
+  const originalPrice = [...selectedItems, ...selectedDrinks].reduce((s, i) => s + i.price, 0);
+  const parsedComboPrice = comboPrice === '' ? null : Number(comboPrice);
+  const previewSavings = parsedComboPrice != null ? Math.max(0, originalPrice - parsedComboPrice) : null;
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('mediaFile', file);
+      const res = await api.uploadFile(formData);
+      setBannerImage(res.filePath);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (itemIds.length === 0 || parsedComboPrice == null) return;
+    setSaving(true);
+    const payload = { title, description, bannerImage, itemIds, drinkItemIds, comboPrice: parsedComboPrice, startDate: startDate || null, endDate: endDate || null, startTime, endTime };
+    try {
+      if (combo) await api.updateCombo(combo.id, payload);
+      else await api.createCombo(payload);
+      onSaved();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} size="md">
+      <form className={styles.modalForm} onSubmit={handleSubmit}>
+        <div className={styles.modalHeader}>
+          <h3>{combo ? 'Edit Combo' : 'New Combo Special'}</h3>
+          <button type="button" onClick={onClose} aria-label="Close"><X size={18} /></button>
+        </div>
+        <label className={styles.field}>Title<input className={styles.input} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Date in Paris, Steak Night" required /></label>
+        <label className={styles.field}>Description<textarea className={styles.textarea} value={description} onChange={e => setDescription(e.target.value)} rows={2} /></label>
+        <label className={styles.field}>
+          Banner image
+          <div className={styles.photoRow}>
+            {bannerImage && <img src={bannerImage} alt="" className={styles.photoPreview} />}
+            <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} />
+          </div>
+        </label>
+        <div className={styles.field}>
+          Dishes ({selectedItems.length} selected)
+          <AddItemRow items={items} excludeIds={[...itemIds, ...drinkItemIds]} onAdd={id => setItemIds(prev => [...prev, id])} />
+          <div className={styles.itemGrid}>
+            {selectedItems.map(item => (
+              <SelectedItemRow key={item.dbId} item={item} onRemove={() => setItemIds(prev => prev.filter(id => id !== item.dbId))} />
+            ))}
+          </div>
+          {selectedItems.length === 0 && <p className={styles.emptyHint}>Add at least one dish.</p>}
+        </div>
+        <div className={styles.field}>
+          Drinks (optional — {selectedDrinks.length} selected)
+          <AddItemRow items={items} excludeIds={[...itemIds, ...drinkItemIds]} onAdd={id => setDrinkItemIds(prev => [...prev, id])} />
+          <div className={styles.itemGrid}>
+            {selectedDrinks.map(item => (
+              <SelectedItemRow key={item.dbId} item={item} onRemove={() => setDrinkItemIds(prev => prev.filter(id => id !== item.dbId))} />
+            ))}
+          </div>
+        </div>
+        <label className={styles.field}>
+          Combo price
+          <input
+            className={styles.input}
+            type="number" step="0.01" min={0}
+            placeholder={originalPrice ? `e.g. below ${formatPrice(originalPrice)}` : 'e.g. 249'}
+            value={comboPrice}
+            onChange={e => setComboPrice(e.target.value)}
+            required
+          />
+          {parsedComboPrice != null && originalPrice > 0 && (
+            <span className={styles.entityMeta}>
+              Original {formatPrice(originalPrice)} → guest saves {formatPrice(previewSavings || 0)}
+            </span>
+          )}
+        </label>
+        <div className={styles.fieldGrid}>
+          <label className={styles.field}>Start date<input className={styles.input} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></label>
+          <label className={styles.field}>End date<input className={styles.input} type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></label>
+          <label className={styles.field}>Start time<input className={styles.input} type="time" value={startTime} onChange={e => setStartTime(e.target.value)} /></label>
+          <label className={styles.field}>End time<input className={styles.input} type="time" value={endTime} onChange={e => setEndTime(e.target.value)} /></label>
+        </div>
+        <div className={styles.modalFooter}>
+          <button type="submit" className={styles.primaryBtn} disabled={saving || itemIds.length === 0 || parsedComboPrice == null}>{saving ? <Spinner size={16} /> : 'Save'}</button>
         </div>
       </form>
     </Modal>
@@ -1131,9 +1350,21 @@ function RankedList({ rows }: { rows: { label: string; value: number; muted?: bo
 
 // ─────────────────────────────── Live Carts ──────────────────────────────────
 
+type LiveCartActionType = 'reset' | 'clear' | 'clear-device' | 'finish';
+interface LiveCartAction { tableId: string; type: LiveCartActionType; deviceId?: string; label: string; description: string }
+
+const ACTION_COPY: Record<LiveCartActionType, string> = {
+  reset: "Clears the cart AND resets device numbering (D1/D2/D3) for this table — use once the table has paid and left, so the next seating starts fresh.",
+  clear: "Empties every device's items but keeps the same device numbering — use if this same seating needs a clean slate.",
+  'clear-device': "Removes only this device's items. Every other device's cart is untouched.",
+  finish: "Marks this table as finished (a display-only flag). Reset Cart is what actually clears it for the next seating.",
+};
+
 function LiveCartsTab() {
   const [carts, setCarts] = useState<LiveCart[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pendingAction, setPendingAction] = useState<LiveCartAction | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
     api.getLiveCarts().then(setCarts).finally(() => setLoading(false));
@@ -1142,8 +1373,19 @@ function LiveCartsTab() {
   useEffect(load, [load]);
   useSocketEvent('liveCartsChanged', load);
 
-  function estimate(cart: LiveCart['cart']) {
-    return cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+  async function runAction() {
+    if (!pendingAction) return;
+    setBusy(true);
+    try {
+      if (pendingAction.type === 'reset') await api.resetLiveCart(pendingAction.tableId);
+      else if (pendingAction.type === 'clear') await api.clearLiveCart(pendingAction.tableId);
+      else if (pendingAction.type === 'clear-device' && pendingAction.deviceId) await api.clearLiveCartDevice(pendingAction.tableId, pendingAction.deviceId);
+      else if (pendingAction.type === 'finish') await api.finishLiveCart(pendingAction.tableId);
+      setPendingAction(null);
+      load();
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (loading) return <div className={styles.loading}><Spinner size={32} /></div>;
@@ -1156,19 +1398,68 @@ function LiveCartsTab() {
       {carts.length === 0 && <p className={styles.emptyHint}>No active carts right now.</p>}
       <div className={styles.cardList}>
         {carts.map(cart => (
-          <div key={cart.tableId} className={styles.entityCard}>
+          <div key={cart.tableId} className={styles.liveCartCard}>
             <div className={styles.entityInfo}>
               <div className={styles.entityTitleRow}>
-                <strong>{cart.tableId.replace(/^table/i, 'Table ')}</strong>
-                <span className={styles.badgeChip}>{formatPrice(estimate(cart.cart))}</span>
+                <strong>{/^table/i.test(cart.tableId) ? cart.tableId.replace(/^table/i, 'Table ') : cart.tableId}</strong>
+                {cart.status === 'finished' && <span className={styles.badgeChip}>FINISHED</span>}
+                <span className={styles.badgeChip}>{formatPrice(cart.tableTotal)}</span>
               </div>
-              <span className={styles.entityMeta}>
-                {cart.cart.map(i => `${i.qty}× ${i.name}`).join(', ')} · updated {new Date(cart.updatedAt).toLocaleTimeString()}
-              </span>
+              <span className={styles.entityMeta}>updated {new Date(cart.updatedAt).toLocaleTimeString()}</span>
+            </div>
+
+            <div className={styles.deviceBreakdown}>
+              {cart.devices.map(d => (
+                <div key={d.deviceId ?? 'unassigned'} className={styles.deviceRow}>
+                  <div className={styles.deviceRowHeader}>
+                    <span>{d.deviceNumber != null ? `Device ${d.deviceNumber}` : 'Unassigned items'}</span>
+                    <span>{formatPrice(d.subtotal)}</span>
+                    {d.deviceId && (
+                      <button
+                        className={styles.deviceClearBtn}
+                        onClick={() => setPendingAction({ tableId: cart.tableId, type: 'clear-device', deviceId: d.deviceId!, label: `Clear Device ${d.deviceNumber}`, description: ACTION_COPY['clear-device'] })}
+                      >
+                        <Trash2 size={11} /> Clear
+                      </button>
+                    )}
+                  </div>
+                  <span className={styles.entityMeta}>{d.items.map(i => `${i.qty}× ${i.name}`).join(', ') || 'No items yet'}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className={styles.liveCartActions}>
+              <button onClick={() => setPendingAction({ tableId: cart.tableId, type: 'clear', label: 'Clear Entire Table', description: ACTION_COPY.clear })}>
+                Clear Entire Table
+              </button>
+              <button onClick={() => setPendingAction({ tableId: cart.tableId, type: 'finish', label: 'Mark Table Finished', description: ACTION_COPY.finish })}>
+                Mark Table Finished
+              </button>
+              <button className={styles.dangerBtn} onClick={() => setPendingAction({ tableId: cart.tableId, type: 'reset', label: 'Reset Cart', description: ACTION_COPY.reset })}>
+                Reset Cart
+              </button>
             </div>
           </div>
         ))}
       </div>
+
+      {pendingAction && (
+        <Modal open onClose={() => setPendingAction(null)} size="sm">
+          <div className={styles.modalForm}>
+            <div className={styles.modalHeader}>
+              <h3>{pendingAction.label}?</h3>
+              <button type="button" onClick={() => setPendingAction(null)} aria-label="Close"><X size={18} /></button>
+            </div>
+            <p className={styles.emptyHint}>{pendingAction.description}</p>
+            <div className={styles.modalFooter}>
+              <button type="button" onClick={() => setPendingAction(null)}>Cancel</button>
+              <button type="button" className={styles.primaryBtn} disabled={busy} onClick={runAction}>
+                {busy ? <Spinner size={16} /> : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
