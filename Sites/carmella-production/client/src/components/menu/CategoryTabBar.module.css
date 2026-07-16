@@ -1,9 +1,17 @@
+/* Sticky, not fixed: the promotional hub (Deal of the Day/Specials/Happy
+   Hour/Promotions) now renders above this in the Menu page's normal flow,
+   so this bar should appear in its natural place after that content, then
+   pin under the header once scrolled to -- not overlay the promo hub from
+   the very top of the page. */
 .bar {
-  position: fixed;
+  position: sticky;
   top: var(--header-h);
-  left: 0;
-  right: 0;
   z-index: var(--z-tabs);
+  /* Full-bleed edge-to-edge despite living inside MenuPage's padded,
+     max-width-constrained .content -- matches the old fixed bar's own
+     left:0/right:0 span (independent of .content's own width) exactly. */
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
   background: rgba(var(--color-ink-rgb), 0.92);
   border-bottom: 1px solid rgba(var(--color-gold-rgb), 0.14);
   -webkit-backdrop-filter: blur(12px);

@@ -3,7 +3,7 @@ import { preload } from 'react-dom';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Salad, Fish, Beef, Drumstick, UtensilsCrossed, Sandwich, Soup, Leaf, CakeSlice,
-  Wine, Beer, Martini, Coffee, Check,
+  Wine, Beer, Martini, Coffee, Check, Clock,
 } from 'lucide-react';
 import { useSocketEvent } from '../hooks/useSocket';
 import { AppShell } from '../components/layout/AppShell';
@@ -109,6 +109,14 @@ export function MenuPage() {
     [allItems, specialPrices],
   );
 
+  // Promotional hub (Deal of the Day / Specials / Happy Hour / Promotions)
+  // now lives at the top of the Menu page, not the Home page -- the first
+  // promotion is the featured "Deal of the Day" hero; any additional ones
+  // show as smaller Promotions/Combo cards further down the hub.
+  const deal = promotions[0] ?? null;
+  const dealHeroImage = deal?.bannerImage || deal?.items[0]?.img;
+  const otherPromotions = promotions.slice(1);
+
   const sections = useMemo(
     () => buildMenuSections(menuData, activeFilters, searchQuery, theme?.activeTheme),
     [menuData, activeFilters, searchQuery, theme?.activeTheme]
@@ -210,18 +218,6 @@ export function MenuPage() {
       />
 
       <div className={styles.content}>
-        {promotions.length > 0 && (
-          <div className={styles.promoBanner}>
-            {promotions.map(promo => (
-              <div key={promo.id} className={styles.promoCard}>
-                {promo.badge && <span className={styles.promoBadge}>{promo.badge}</span>}
-                <strong>{promo.title}</strong>
-                {promo.description && <span className={styles.promoDesc}> — {promo.description}</span>}
-              </div>
-            ))}
-          </div>
-        )}
-
         {loading ? (
           <MenuSkeletonGrid />
         ) : error ? (
@@ -236,22 +232,74 @@ export function MenuPage() {
           </div>
         ) : (
           <>
+            {/* Promotional hub — Deal of the Day, Specials, Happy Hour,
+                Promotions/Combos, in that order, all above the category
+                navigation. This is the primary customer experience now;
+                the Home page just welcomes and links in. */}
+            {deal && (
+              <section className={styles.dealHero}>
+                {dealHeroImage && (
+                  <img src={resolveThumbnail({ name: deal.title, price: 0, img: dealHeroImage })} alt="" className={styles.dealHeroImage} />
+                )}
+                <div className={styles.dealHeroTint} />
+                <div className={styles.dealHeroContent}>
+                  {deal.badge && <span className={styles.dealBadge}>{deal.badge}</span>}
+                  <span className={styles.dealEyebrow}>Deal of the Day</span>
+                  <h2 className={styles.dealTitle}>{deal.title}</h2>
+                  {deal.description && <p className={styles.dealDesc}>{deal.description}</p>}
+                  {deal.items.length > 0 && (
+                    <div className={styles.dealItems}>
+                      {deal.items.slice(0, 4).map(item => (
+                        <span key={item.id} className={styles.dealItemChip}>{item.name}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
             {specialItems.length > 0 && (
               <section className={styles.specialsSection}>
                 <h2 className={styles.specialsTitle}>Today's Specials</h2>
-                <div className={styles.specialsGrid}>
+                <div className={styles.specialsScroll}>
                   {specialItems.map((item, i) => (
-                    <MenuCard
-                      key={`special-${item.name}-${i}`}
-                      item={item}
-                      onAddToCart={handleAddToCart}
-                      onClick={handleItemClick}
-                      specialPrice={specialPrices.get(item.name)}
-                    />
+                    <div className={styles.specialCardWrap} key={`special-${item.name}-${i}`}>
+                      <MenuCard
+                        item={item}
+                        onAddToCart={handleAddToCart}
+                        onClick={handleItemClick}
+                        specialPrice={specialPrices.get(item.name)}
+                      />
+                    </div>
                   ))}
                 </div>
               </section>
             )}
+
+            {happyHours.length > 0 && (
+              <section className={styles.happyHourBanner}>
+                <span className={styles.happyHourIcon}><Clock size={16} /></span>
+                <div className={styles.happyHourText}>
+                  <strong>Happy Hour is on now</strong>
+                  <p>{happyHours.map(hh => `${hh.name} — ${hh.discountPct}% off`).join(' · ')}</p>
+                </div>
+              </section>
+            )}
+
+            {otherPromotions.length > 0 && (
+              <div className={styles.promoBanner}>
+                {otherPromotions.map(promo => (
+                  <div key={promo.id} className={styles.promoCard}>
+                    {promo.badge && <span className={styles.promoBadge}>{promo.badge}</span>}
+                    <strong>{promo.title}</strong>
+                    {promo.description && <span className={styles.promoDesc}> — {promo.description}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <CategoryTabBar sections={sections} />
+
             {sections.map(section => (
               <CategorySection
                 key={section.title}
@@ -265,8 +313,6 @@ export function MenuPage() {
           </>
         )}
       </div>
-
-      <CategoryTabBar sections={sections} />
 
       <ItemModal
         item={selectedItem}
