@@ -92,6 +92,7 @@ function MenuManagementTab() {
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [editItem, setEditItem] = useState<AdminItem | null>(null);
   const [creatingItem, setCreatingItem] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -112,10 +113,14 @@ function MenuManagementTab() {
 
   useEffect(load, [load]);
 
-  const filteredItems = useMemo(
-    () => categoryFilter === 'all' ? items : items.filter(i => i.category === categoryFilter),
-    [items, categoryFilter]
-  );
+  const filteredItems = useMemo(() => {
+    const byCategory = categoryFilter === 'all' ? items : items.filter(i => i.category === categoryFilter);
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return byCategory;
+    return byCategory.filter(i =>
+      [i.name, i.category, i.subcategory].filter(Boolean).join(' ').toLowerCase().includes(q)
+    );
+  }, [items, categoryFilter, searchQuery]);
 
   async function toggleAvailability(item: AdminItem) {
     await api.toggleMenuItemAvailability(item.dbId, item.available === false);
@@ -258,6 +263,13 @@ function MenuManagementTab() {
         <div className={styles.panelHeader}>
           <h2>Menu Items ({filteredItems.length})</h2>
           <div className={styles.headerActions}>
+            <input
+              className={styles.input}
+              placeholder="Search name, category, subcategory…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              aria-label="Search menu items"
+            />
             <select className={styles.select} value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
               <option value="all">All categories</option>
               {categories.map(c => <option key={c.id} value={c.title}>{c.title}</option>)}
