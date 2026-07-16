@@ -1,11 +1,23 @@
 import { LOCAL_TABLE_KEY, LOCAL_SESSION_KEY, DEFAULT_TABLE } from '../constants/config';
+import { RESTAURANT_ID } from '../constants/api';
+
+// All four tenants (Carmella, Trump, Luxury, Demo) are served from the same
+// emenyu.com origin, just under different path prefixes -- localStorage is
+// scoped per ORIGIN, not per path, so an unprefixed key from any tenant's
+// codebase can collide with another's in the same guest's browser. Every key
+// this module touches is namespaced with the tenant's own RESTAURANT_ID
+// here, in one place, so no caller of getStoredTable/setStoredTable/
+// getSessionId can ever accidentally read or write another tenant's data.
+function namespaced(key: string): string {
+  return `${RESTAURANT_ID}_${key}`;
+}
 
 function safeGet(key: string): string | null {
-  try { return localStorage.getItem(key); } catch { return null; }
+  try { return localStorage.getItem(namespaced(key)); } catch { return null; }
 }
 
 function safeSet(key: string, value: string): void {
-  try { localStorage.setItem(key, value); } catch {}
+  try { localStorage.setItem(namespaced(key), value); } catch {}
 }
 
 export function getStoredTable(): string {
