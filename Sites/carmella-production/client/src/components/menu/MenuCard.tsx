@@ -24,7 +24,11 @@ export const MenuCard = memo(function MenuCard({ item, onAddToCart, onClick, hap
   const thumbSrc = resolveThumbnail(item);
   const fullSrc = resolveImage(item);
   const imgSrc = imgStep === 0 ? thumbSrc : imgStep === 1 && fullSrc !== thumbSrc ? fullSrc : FALLBACK_IMAGE;
-  const soldOut = item.available === false;
+  // Matches ItemModal's own check exactly -- availability is kept in sync
+  // with available server-side (see toggleItemAvailability), but checking
+  // both here too means the card and the modal can never disagree about
+  // whether an item is orderable.
+  const soldOut = item.available === false || item.availability === 'unavailable';
   const discountedPrice = specialPrice ?? (happyHourDiscountPct ? item.price * (1 - happyHourDiscountPct / 100) : null);
 
   useEffect(() => {

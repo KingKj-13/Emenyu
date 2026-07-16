@@ -125,12 +125,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
     socket.emit('updateCart', { restaurantId: RESTAURANT_ID, tableId: normalizedTableId, cart: items });
   }, [items, socket, normalizedTableId]);
 
+  // Round subtotal/vat/service to whole currency units BEFORE summing for
+  // total, not after -- rounding each independently at display time only
+  // (the previous behavior) means the three displayed line items don't
+  // always add up to the displayed total (e.g. R449 + R67 + R22 displayed
+  // while total showed R539, a silent 1-unit gap from summing the
+  // *unrounded* figures then rounding the sum separately). formatCurrency
+  // rounds again on display, but rounding an already-integer value is a
+  // no-op, so what's computed here is exactly what renders.
   const getTotals = useCallback((): CartTotals => {
-    const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
+    const rawSubtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
     const vatRate = config?.vatRate ?? VAT_RATE;
     const serviceRate = config?.serviceRate ?? SERVICE_RATE;
-    const vat = subtotal * vatRate;
-    const service = subtotal * serviceRate;
+    const subtotal = Math.round(rawSubtotal);
+    const vat = Math.round(rawSubtotal * vatRate);
+    const service = Math.round(rawSubtotal * serviceRate);
     return { subtotal, vat, service, total: subtotal + vat + service };
   }, [items, config]);
 

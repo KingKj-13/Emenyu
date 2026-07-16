@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { api, type ThemeSettings } from '../services/api';
-import { useSocketEvent } from '../hooks/useSocket';
+import { useSocket, useSocketEvent } from '../hooks/useSocket';
 
 interface ThemeContextValue {
   theme: ThemeSettings | null;
@@ -15,6 +15,7 @@ const ThemeContext = createContext<ThemeContextValue>(null!);
 // per-page fetch that could ever disagree with another page's.
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<ThemeSettings | null>(null);
+  const socket = useSocket();
 
   const load = useCallback(() => {
     api.getTheme().then(setTheme).catch(() => {});
@@ -22,6 +23,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(load, [load]);
   useSocketEvent('themeUpdated', load);
+
+  // Re-sync on every (re)connect -- this is what made theme switching feel
+  // "intermittent": (1) if the very first load() above failed (a transient
+  // blip, a server restart mid-request), nothing ever retried it, so the
+  // theme silently stuck at null/the CSS default until a manual refresh;
+  // (2) a themeUpdated broadcast while this client was briefly offline
+  // (mobile networks hopping WiFi/cellular is routine) was simply missed --
+  // in manual mode there was no periodic poll to notice and catch up the
+  // way autoEnabled mode already does below. The socket's own 'connect'
+  // event fires on the initial connection AND every reconnection, so this
+  // one listener closes both gaps at once.
+  useEffect(() => {
+    socket.on('connect', load);
+    return () => { socket.off('connect', load); };
+  }, [socket, load]);
 
   useEffect(() => {
     if (!theme) return;

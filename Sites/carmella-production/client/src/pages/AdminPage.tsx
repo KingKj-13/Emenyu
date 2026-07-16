@@ -1198,8 +1198,11 @@ function ThemeTab() {
         <span className={styles.badgeChip}>Currently: {theme.activeTheme === 'night' ? 'Night' : 'Day'}</span>
       </div>
       <p className={styles.emptyHint} style={{ padding: 0, marginBottom: 16 }}>
-        Controls appearance only — colours and fonts, never which items or categories show.
-        Changes apply instantly to both the customer menu and this Admin panel.
+        Controls appearance — colours and fonts — and, separately, which items show:
+        any item set to "Day Menu only" or "Night Menu only" in its own editor (see Menu
+        Management) is hidden while the other theme is active. Changing the theme here
+        never adds, removes, or recategorizes any item itself. Changes apply instantly
+        to both the customer menu and this Admin panel.
       </p>
 
       <div className={styles.field}>

@@ -278,11 +278,20 @@ export function MenuPage() {
 
             {happyHours.length > 0 && (
               <section className={styles.happyHourBanner}>
-                <span className={styles.happyHourIcon}><Clock size={16} /></span>
-                <div className={styles.happyHourText}>
-                  <strong>Happy Hour is on now</strong>
-                  <p>{happyHours.map(hh => `${hh.name} — ${hh.discountPct}% off`).join(' · ')}</p>
+                <div className={styles.happyHourHeading}>
+                  <span className={styles.happyHourIcon}><Clock size={16} /></span>
+                  Happy Hour is on now
                 </div>
+                {/* Each happy hour gets its own titled row -- with more than
+                    one active, a single joined "A — x% · B — y%" string left
+                    every individual happy hour's own name buried in a run-on
+                    sentence instead of standing on its own. */}
+                {happyHours.map(hh => (
+                  <div key={hh.id} className={styles.happyHourRow}>
+                    <strong>{hh.name}</strong>
+                    <span>{hh.discountPct}% off</span>
+                  </div>
+                ))}
               </section>
             )}
 

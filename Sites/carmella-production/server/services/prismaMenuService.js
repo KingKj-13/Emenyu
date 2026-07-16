@@ -376,7 +376,10 @@ class PrismaMenuService {
       async prisma => {
         const categories = await prisma.menuCategory.findMany({
           where: { restaurantId: this.restaurantId },
-          include: { items: { orderBy: { sortOrder: 'asc' }, include: { variants: { orderBy: { sortOrder: 'asc' } } } } },
+          // id tie-breaker on items -- same reasoning as loadFlatItems/
+          // loadAdminItems: an item moved between (sub)categories keeps its
+          // old sortOrder, so ties within a section are possible without one.
+          include: { items: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }], include: { variants: { orderBy: { sortOrder: 'asc' } } } } },
           orderBy: [{ parentId: 'asc' }, { sortOrder: 'asc' }]
         });
 
@@ -429,7 +432,13 @@ class PrismaMenuService {
   async loadFlatItems() {
     return this.withPrisma(
       'menu_postgres_flat_items_failed',
-      async prisma => prisma.menuItem.findMany({ where: { restaurantId: this.restaurantId }, orderBy: { sortOrder: 'asc' } }),
+      // id tie-breaker: sortOrder is only guaranteed unique within the
+      // category an item was originally imported into -- moving an item to
+      // a different category (see updateItem's resolveCategoryChain) never
+      // reassigns it, so two items from different categories can end up
+      // sharing the same sortOrder. Without a secondary key, Postgres is
+      // free to return tied rows in a different order on every request.
+      async prisma => prisma.menuItem.findMany({ where: { restaurantId: this.restaurantId }, orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] }),
       []
     );
   }
@@ -441,7 +450,9 @@ class PrismaMenuService {
         const items = await prisma.menuItem.findMany({
           where: { restaurantId: this.restaurantId },
           include: { category: { include: { parent: true } }, variants: { orderBy: { sortOrder: 'asc' } } },
-          orderBy: { sortOrder: 'asc' }
+          // id tie-breaker -- see loadFlatItems' comment on why sortOrder
+          // alone can no longer be assumed unique.
+          orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }]
         });
         // item.category is the row categoryId actually points at, which in
         // this catalog is always a section (child) -- the chapter (top-level)
@@ -463,9 +474,20 @@ class PrismaMenuService {
     return this.withPrisma(
       'menu_postgres_toggle_availability_failed',
       async prisma => {
+        const isAvailable = Boolean(available);
         const result = await prisma.menuItem.updateMany({
           where: { id: Number(id), restaurantId: this.restaurantId },
-          data: { available: Boolean(available) }
+          // Keep the 3-state `availability` enum in sync with this boolean
+          // toggle -- they used to drift (this only touched `available`),
+          // which MenuCard and ItemModal then read inconsistently (MenuCard
+          // checked only `available`; ItemModal also checked `availability`).
+          // Only ever moves between available/unavailable here; 'ask' has
+          // no toggle of its own and is left alone if a future admin flow
+          // sets it directly.
+          data: {
+            available: isAvailable,
+            ...(isAvailable ? { availability: 'available' } : { availability: 'unavailable' })
+          }
         });
         return result.count > 0;
       },

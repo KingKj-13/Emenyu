@@ -236,8 +236,8 @@
 /* ───────── Happy Hour banner ───────── */
 .happyHourBanner {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   margin-bottom: 28px;
   padding: 14px 16px;
   border-radius: var(--radius-card);
@@ -245,30 +245,50 @@
   border: 1px solid rgba(var(--color-gold-rgb), 0.35);
 }
 
+.happyHourHeading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-heading);
+  font-size: 15px;
+  color: var(--color-cream);
+}
+
 .happyHourIcon {
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: rgba(var(--color-gold-rgb), 0.16);
   color: var(--color-gold);
-  margin-top: 1px;
 }
 
-.happyHourText strong {
-  display: block;
-  font-family: var(--font-heading);
-  font-size: 15px;
-  color: var(--color-cream);
-  margin-bottom: 2px;
-}
-
-.happyHourText p {
-  margin: 0;
+/* Each active happy hour gets its own titled row -- name on the left,
+   discount on the right -- instead of every name being folded into one
+   run-on sentence when more than one is active at a time. */
+.happyHourRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(var(--color-gold-rgb), 0.18);
   font-size: 13px;
-  color: var(--color-sand);
+}
+
+.happyHourRow:first-of-type { border-top: none; padding-top: 0; }
+
+.happyHourRow strong {
+  color: var(--color-cream);
+  font-weight: 700;
+}
+
+.happyHourRow span {
+  color: var(--color-gold);
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 @media (max-width: 480px) {
