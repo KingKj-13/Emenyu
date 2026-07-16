@@ -7,11 +7,33 @@ const EVENT_TYPES = new Set(['session_start', 'item_view', 'add_to_cart', 'remov
 const SEED_THRESHOLD = 50;
 const SEED_SESSION_COUNT = 40;
 
+// Carmella is in Johannesburg -- SAST, UTC+2, no daylight saving, so this
+// offset is a safe constant. "Peak hours" only means anything in the
+// restaurant's own local wall-clock time, so every hour-of-day computation
+// below is done explicitly in UTC and converted, rather than via Date's
+// setHours()/getHours(), which silently read whatever timezone the *server
+// process* happens to run under -- correct by coincidence on a dev machine
+// configured for Africa/Johannesburg, wrong (off by exactly this offset) on
+// a production server configured for UTC, as most cloud hosts are.
+const SAST_OFFSET_HOURS = 2;
+
+function sastHourOf(date) {
+  return (date.getUTCHours() + SAST_OFFSET_HOURS) % 24;
+}
+
 function startOfDay(daysAgo = 0) {
   const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  d.setUTCDate(d.getUTCDate() - daysAgo);
+  d.setUTCHours(0, 0, 0, 0);
+  // d is UTC midnight; the restaurant's own "day" boundary is SAST midnight,
+  // which is 2 hours earlier in UTC terms (SAST = UTC+2).
+  return new Date(d.getTime() - SAST_OFFSET_HOURS * 3600000);
+}
+
+// Builds a UTC instant for a given SAST local hour/minute on the given UTC
+// day (see startOfDay) -- the inverse of sastHourOf().
+function sastTimeOnDay(dayUtcMidnight, localHour, localMinute) {
+  return new Date(dayUtcMidnight.getTime() + (localHour * 60 + localMinute) * 60000 - SAST_OFFSET_HOURS * 3600000);
 }
 
 // Lunch (12-14) and dinner (18-20) are busiest; late night/early morning are quiet.
@@ -49,8 +71,9 @@ async function ensureAnalyticsSeed(prisma) {
   for (let s = 0; s < SEED_SESSION_COUNT; s++) {
     const sessionId = `seed_${s}_${Math.random().toString(36).slice(2, 8)}`;
     const daysAgo = Math.floor(Math.random() * 30);
-    const createdAt = new Date(now - daysAgo * 86400000);
-    createdAt.setHours(weightedHour(), Math.floor(Math.random() * 60), 0, 0);
+    const dayUtcMidnight = new Date(now - daysAgo * 86400000);
+    dayUtcMidnight.setUTCHours(0, 0, 0, 0);
+    const createdAt = sastTimeOnDay(dayUtcMidnight, weightedHour(), Math.floor(Math.random() * 60));
     const tableId = `table${1 + Math.floor(Math.random() * 12)}`;
 
     events.push({ type: 'session_start', sessionId, tableId, isSeed: true, createdAt });
@@ -162,7 +185,7 @@ function createAnalyticsController({ getPrisma, fileService }) {
         .sort((a, b) => b.count - a.count);
 
       const hourBuckets = new Array(24).fill(0);
-      hourRows.forEach(row => { hourBuckets[new Date(row.createdAt).getHours()] += 1; });
+      hourRows.forEach(row => { hourBuckets[sastHourOf(new Date(row.createdAt))] += 1; });
 
       const distinct = rows => new Set(rows.map(r => r.sessionId).filter(Boolean)).size;
 
