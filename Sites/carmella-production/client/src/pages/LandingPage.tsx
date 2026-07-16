@@ -4,19 +4,17 @@ import { ArrowRight, Menu, Sun, Moon, Home, UserRound, Leaf, ChefHat, Heart, Use
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { LANDING_BRAND_NAME } from '../constants/api';
-import { useScrollReveal } from '../hooks/useScrollReveal';
 import { resolveThumbnail } from '../lib/imageResolver';
 import styles from './LandingPage.module.css';
 
 const HERO_IMAGE = 'Images/048_bordeaux_flame.webp';
-const CARMELLA_IMAGE = 'Images/162_irish_coffee.webp';
 const MENU_CTA_IMAGE = 'Images/038_como_basilico.webp';
 
 const VALUE_PROPS = [
-  { icon: Leaf, label: 'Fresh Ingredients' },
-  { icon: ChefHat, label: 'Made with Care' },
-  { icon: Heart, label: 'Made for Moments' },
-  { icon: Users, label: 'Made for You' },
+  { icon: Leaf, label: 'Fresh' },
+  { icon: ChefHat, label: 'Care' },
+  { icon: Heart, label: 'Moments' },
+  { icon: Users, label: 'You' },
 ];
 
 function bg(path: string) {
@@ -27,6 +25,12 @@ function bg(path: string) {
 // house, and get them into the menu as fast as possible -- Deal of the Day /
 // Combo Offers / Happy Hour / Promotions and all category navigation live
 // exclusively on the Menu page now (see MenuPage.tsx's promotional hub).
+//
+// Deliberately a fixed, single-viewport layout (position:fixed + internal
+// flex sizing, NOT a scrollable page) -- every section below is sized as a
+// share of 100dvh rather than its own natural content height, and compacts
+// further at short-viewport breakpoints, so the whole page is always
+// visible at once with no scrolling on any real phone.
 export function LandingPage() {
   const { tableId: paramTableId } = useParams<{ tableId: string }>();
   const navigate = useNavigate();
@@ -34,9 +38,6 @@ export function LandingPage() {
   const { theme } = useTheme();
   const tableId = paramTableId || 'table1';
   const tableLabel = tableId.replace(/^table/i, 'Table ');
-
-  const carmellaReveal = useScrollReveal<HTMLDivElement>();
-  const gaspardReveal = useScrollReveal<HTMLDivElement>();
 
   useEffect(() => {
     if (paramTableId) setTableId(paramTableId);
@@ -51,7 +52,7 @@ export function LandingPage() {
     <div className={styles.page}>
       <header className={styles.topBar}>
         <button type="button" className={styles.topBarIcon} onClick={goToMenu} aria-label="Browse the menu">
-          <Menu size={19} />
+          <Menu size={17} />
         </button>
         <div className={styles.topBarBrand}>
           <span className={styles.topBarWordmark}>{LANDING_BRAND_NAME}</span>
@@ -62,7 +63,7 @@ export function LandingPage() {
             same theme (see ThemeContext). This is a status indicator, not a
             toggle, so it never lets one guest change what everyone sees. */}
         <span className={styles.topBarIcon} aria-hidden title={theme?.activeTheme === 'night' ? 'Night' : 'Day'}>
-          {theme?.activeTheme === 'night' ? <Moon size={17} /> : <Sun size={17} />}
+          {theme?.activeTheme === 'night' ? <Moon size={15} /> : <Sun size={15} />}
         </span>
       </header>
 
@@ -80,44 +81,29 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className={styles.story}>
-        <div ref={carmellaReveal.ref} className={`${styles.storyCard} ${carmellaReveal.revealed ? styles.storyRevealed : ''}`}>
-          <img src={bg(CARMELLA_IMAGE)} alt="" className={styles.storyImage} />
-          <div className={styles.storyText}>
-            <span className={styles.storyIcon} aria-hidden><Home size={17} /></span>
-            <span className={styles.storyEyebrow}>About Carmella</span>
-            <p className={styles.storyBody}>
-              Carmella is a European café built on an old idea: that a good table can hold a whole
-              evening. Long lunches, shared plates, unhurried mornings — in the heart of Cedar
-              Square, we've built a room for exactly that.
-            </p>
-          </div>
+      <section className={styles.about}>
+        <div className={styles.aboutCol}>
+          <span className={styles.aboutIcon} aria-hidden><Home size={15} /></span>
+          <span className={styles.aboutEyebrow}>About Carmella</span>
+          <p className={styles.aboutBody}>A European café where a good table holds a whole evening.</p>
         </div>
-
-        <div ref={gaspardReveal.ref} className={`${styles.storyCard} ${styles.storyCardReverse} ${gaspardReveal.revealed ? styles.storyRevealed : ''}`}>
-          <div className={styles.storyText}>
-            <span className={styles.storyIcon} aria-hidden><UserRound size={17} /></span>
-            <span className={styles.storyEyebrow}>About Sir Gaspard</span>
-            <p className={styles.storyBody}>
-              In 1948, a young man opened his first café in post-war Europe and named it for the
-              feeling he wanted every guest to carry home: gentleness, grace, and good
-              conversation. We call him Sir Gaspard — the spirit of this house.
-            </p>
-          </div>
-          <div className={styles.storyMonogram} aria-hidden>SG</div>
+        <div className={styles.aboutDivider} aria-hidden />
+        <div className={styles.aboutCol}>
+          <span className={styles.aboutIcon} aria-hidden><UserRound size={15} /></span>
+          <span className={styles.aboutEyebrow}>About Sir Gaspard</span>
+          <p className={styles.aboutBody}>Founded 1948 on gentleness, grace, and good conversation.</p>
         </div>
       </section>
 
       <section className={styles.ctaSection}>
         <button className={styles.cta} onClick={goToMenu}>
-          <div className={styles.ctaText}>
-            <span className={styles.ctaEyebrow}>Explore. Indulge. Enjoy.</span>
-            <span className={styles.ctaTitle}>Browse the Full Menu</span>
-            <span className={styles.ctaSub}>Every dish, pour and pairing curated for your experience.</span>
-          </div>
           <img src={bg(MENU_CTA_IMAGE)} alt="" className={styles.ctaImage} />
+          <div className={styles.ctaText}>
+            <span className={styles.ctaTitle}>Browse the Full Menu</span>
+            <span className={styles.ctaSub}>Every dish, pour and pairing</span>
+          </div>
           <span className={styles.ctaArrow} aria-hidden>
-            <ArrowRight size={20} />
+            <ArrowRight size={18} />
           </span>
         </button>
       </section>
@@ -125,7 +111,7 @@ export function LandingPage() {
       <footer className={styles.valueFooter}>
         {VALUE_PROPS.map(({ icon: Icon, label }, i) => (
           <div className={styles.valueItem} key={label}>
-            <Icon size={16} />
+            <Icon size={13} />
             <span>{label}</span>
             {i < VALUE_PROPS.length - 1 && <span className={styles.valueDivider} aria-hidden />}
           </div>

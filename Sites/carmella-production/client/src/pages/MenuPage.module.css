@@ -133,26 +133,37 @@
   opacity: 0.8;
 }
 
-/* ───────── Combo Offers (prominent, near the top of the Menu page) ───────── */
-.comboSection {
-  margin-bottom: 32px;
+/* ───────── Deal of the Day / Combo Offers -- horizontal sliding card strips
+   (left-right swipe, not a wrapping grid), matching the same strip/card
+   pattern used elsewhere on the platform for curated bundles. ───────── */
+.stripSection {
+  margin-bottom: 28px;
 }
 
-.comboSectionTitle {
-  margin: 0 0 14px;
+.stripTitle {
+  margin: 0 0 12px;
   font-family: var(--font-heading);
-  font-size: clamp(22px, 4vw, 28px);
+  font-size: clamp(20px, 4vw, 26px);
   font-weight: 700;
   color: var(--color-cream);
 }
 
-.comboGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
+.cardStrip {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  padding: 2px 2px 10px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
+.cardStrip::-webkit-scrollbar { display: none; }
+.stripEndSpacer { flex: 0 0 2px; }
 
-.comboCard {
+.slideCard {
+  scroll-snap-align: start;
+  flex: 0 0 min(300px, 82vw);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -167,162 +178,131 @@
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
   transition: transform 200ms ease, box-shadow 200ms ease;
 }
-.comboCard:hover { transform: translateY(-3px); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.24); }
-.comboCard:active { transform: translateY(0); }
+.slideCard:hover { transform: translateY(-3px); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.24); }
+.slideCard:active { transform: translateY(0); }
 
-.comboCardImage {
-  width: 100%;
-  height: 140px;
-  object-fit: cover;
-}
-
-.comboCardBody {
+.slideCardHead {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 16px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px 10px;
 }
 
-.comboCardTitle {
-  margin: 0;
+.slideCardIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(var(--color-gold-rgb), 0.14);
+  color: var(--color-gold);
+}
+
+.slideCardHeadText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.slideCardPersona {
   font-family: var(--font-heading);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--color-cream);
 }
 
-.comboCardDesc {
-  margin: 0;
-  font-size: 12.5px;
-  line-height: 1.5;
+.slideCardBlurb {
+  font-size: 11.5px;
+  line-height: 1.4;
   color: var(--color-sand);
   opacity: 0.9;
 }
 
-.comboCardPricing {
+.slideCardBadge {
+  flex: none;
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-gold);
+  color: #1a1206;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.slideCardItems {
   display: flex;
-  align-items: baseline;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 12px;
+}
+
+.slideCardItemRow {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  margin-top: 4px;
+  padding: 4px;
+  border-radius: 8px;
 }
 
-.comboCardOriginal {
-  font-size: 12.5px;
+.slideCardItemThumb {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  object-fit: cover;
+}
+
+.slideCardItemName {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--color-cream);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slideCardItemPrice {
+  flex: none;
+  font-size: 11.5px;
   color: var(--color-sand);
-  opacity: 0.6;
-  text-decoration: line-through;
+  opacity: 0.8;
 }
 
-.comboCardPrice {
+.slideCardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px 16px;
+  margin-top: auto;
+  border-top: 1px solid var(--color-line);
+}
+
+.slideCardTotalWrap { display: flex; flex-direction: column; }
+
+.slideCardTotalLabel {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-sand);
+}
+
+.slideCardTotal {
   font-family: var(--font-heading);
   font-size: 18px;
   font-weight: 700;
   color: var(--color-gold);
 }
 
-.comboCardSavings {
-  align-self: flex-start;
-  padding: 2px 9px;
+.slideCardSavings {
+  padding: 3px 10px;
   border-radius: 999px;
   background: rgba(120, 200, 140, 0.16);
   border: 1px solid rgba(120, 200, 140, 0.38);
   color: #6fbf8a;
   font-size: 10.5px;
   font-weight: 700;
-}
-
-/* ───────── Deal of the Day hero (a <button> -- clickable, opens the popup) ───────── */
-.dealHero {
-  position: relative;
-  display: block;
-  width: 100%;
-  border: none;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-  border-radius: var(--radius-card, 16px);
-  overflow: hidden;
-  margin-bottom: 28px;
-  min-height: 220px;
-  text-align: left;
-  background: var(--color-panel-soft);
-  transition: transform 200ms ease;
-}
-.dealHero:hover { transform: translateY(-2px); }
-.dealHero:active { transform: translateY(0); }
-
-.dealHeroImage {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.dealHeroTint {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.78) 92%);
-}
-
-.dealHeroContent {
-  position: relative;
-  padding: clamp(16px, 4vw, 28px);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  color: #F7F2E8;
-}
-
-.dealBadge {
-  align-self: flex-start;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--color-gold);
-  color: #1a1206;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.dealEyebrow {
-  font-family: var(--font-label);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  opacity: 0.85;
-}
-
-.dealTitle {
-  margin: 0;
-  font-family: var(--font-heading);
-  font-size: clamp(24px, 5vw, 34px);
-  font-weight: 700;
-}
-
-.dealDesc {
-  margin: 0;
-  font-size: 14px;
-  opacity: 0.92;
-  line-height: 1.4;
-  max-width: 60ch;
-}
-
-.dealItems {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.dealItemChip {
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.15);
-  font-size: 12px;
+  white-space: nowrap;
 }
 
 /* ───────── Happy Hour banner ───────── */
@@ -384,5 +364,5 @@
 }
 
 @media (max-width: 480px) {
-  .specialCardWrap { width: min(70vw, 220px); }
+  .slideCard { flex-basis: min(280px, 84vw); }
 }

@@ -3,7 +3,7 @@ import { preload } from 'react-dom';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Salad, Fish, Beef, Drumstick, UtensilsCrossed, Sandwich, Soup, Leaf, CakeSlice,
-  Wine, Beer, Martini, Coffee, Check, Clock,
+  Wine, Beer, Martini, Coffee, Check, Clock, Sparkles, Gift,
 } from 'lucide-react';
 import { useSocketEvent } from '../hooks/useSocket';
 import { AppShell } from '../components/layout/AppShell';
@@ -120,7 +120,6 @@ export function MenuPage() {
   // every other active promotion (never array position) shows as a smaller
   // Promotions card further down the hub.
   const deal = promotions.find(p => p.isDealOfDay) ?? null;
-  const dealHeroImage = deal?.bannerImage || deal?.items[0]?.img;
   const otherPromotions = promotions.filter(p => !p.isDealOfDay);
 
   // Which meal service is running right now (breakfast/lunch/dinner),
@@ -287,52 +286,78 @@ export function MenuPage() {
             </div>
 
             {deal && (
-              <button type="button" className={styles.dealHero} onClick={() => setDealModalOpen(true)} aria-label={`View Deal of the Day: ${deal.title}`}>
-                {dealHeroImage && (
-                  <img src={resolveThumbnail({ name: deal.title, price: 0, img: dealHeroImage })} alt="" className={styles.dealHeroImage} />
-                )}
-                <div className={styles.dealHeroTint} />
-                <div className={styles.dealHeroContent}>
-                  {deal.badge && <span className={styles.dealBadge}>{deal.badge}</span>}
-                  <span className={styles.dealEyebrow}>Deal of the Day</span>
-                  <h2 className={styles.dealTitle}>{deal.title}</h2>
-                  {deal.description && <p className={styles.dealDesc}>{deal.description}</p>}
-                  {deal.dealPrice != null && (
-                    <p className={styles.dealDesc}>
-                      <strong>{formatPrice(deal.dealPrice)}</strong>{deal.savings ? ` · save ${formatPrice(deal.savings)}` : ''}
-                    </p>
-                  )}
-                  {deal.items.length > 0 && (
-                    <div className={styles.dealItems}>
-                      {deal.items.slice(0, 4).map(item => (
-                        <span key={item.id} className={styles.dealItemChip}>{item.name}</span>
-                      ))}
+              <section className={styles.stripSection} aria-label="Deal of the Day">
+                <h2 className={styles.stripTitle}>Deal of the Day</h2>
+                <div className={styles.cardStrip}>
+                  <button type="button" className={styles.slideCard} onClick={() => setDealModalOpen(true)} aria-label={`View Deal of the Day: ${deal.title}`}>
+                    <div className={styles.slideCardHead}>
+                      <span className={styles.slideCardIcon} aria-hidden><Sparkles size={18} /></span>
+                      <div className={styles.slideCardHeadText}>
+                        <span className={styles.slideCardPersona}>{deal.title}</span>
+                        {deal.description && <span className={styles.slideCardBlurb}>{deal.description}</span>}
+                      </div>
+                      {deal.badge && <span className={styles.slideCardBadge}>{deal.badge}</span>}
                     </div>
-                  )}
+                    {deal.items.length > 0 && (
+                      <div className={styles.slideCardItems}>
+                        {deal.items.map(item => (
+                          <div key={item.id} className={styles.slideCardItemRow}>
+                            {item.img && (
+                              <img src={resolveThumbnail({ name: item.name, price: item.price, img: item.img })} alt="" className={styles.slideCardItemThumb} />
+                            )}
+                            <span className={styles.slideCardItemName}>{item.name}</span>
+                            <span className={styles.slideCardItemPrice}>{formatPrice(item.price)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className={styles.slideCardFoot}>
+                      <div className={styles.slideCardTotalWrap}>
+                        <span className={styles.slideCardTotalLabel}>Deal price</span>
+                        <span className={styles.slideCardTotal}>{formatPrice(deal.dealPrice ?? deal.items.reduce((s, i) => s + i.price, 0))}</span>
+                      </div>
+                      {deal.savings != null && deal.savings > 0 && <span className={styles.slideCardSavings}>Save {formatPrice(deal.savings)}</span>}
+                    </div>
+                  </button>
+                  <div className={styles.stripEndSpacer} aria-hidden />
                 </div>
-              </button>
+              </section>
             )}
 
             {combos.length > 0 && (
-              <section className={styles.comboSection}>
-                <h2 className={styles.comboSectionTitle}>Combo Offers</h2>
-                <div className={styles.comboGrid}>
+              <section className={styles.stripSection} aria-label="Combo Offers">
+                <h2 className={styles.stripTitle}>Combo Offers</h2>
+                <div className={styles.cardStrip}>
                   {combos.map(combo => (
-                    <button key={combo.id} type="button" className={styles.comboCard} onClick={() => setSelectedCombo(combo)}>
-                      {combo.bannerImage && (
-                        <img src={resolveThumbnail({ name: combo.title, price: 0, img: combo.bannerImage })} alt="" className={styles.comboCardImage} />
-                      )}
-                      <div className={styles.comboCardBody}>
-                        <h3 className={styles.comboCardTitle}>{combo.title}</h3>
-                        {combo.description && <p className={styles.comboCardDesc}>{combo.description}</p>}
-                        <div className={styles.comboCardPricing}>
-                          <span className={styles.comboCardOriginal}>{formatPrice(combo.originalPrice)}</span>
-                          <span className={styles.comboCardPrice}>{formatPrice(combo.comboPrice)}</span>
+                    <button key={combo.id} type="button" className={styles.slideCard} onClick={() => setSelectedCombo(combo)} aria-label={`View combo: ${combo.title}`}>
+                      <div className={styles.slideCardHead}>
+                        <span className={styles.slideCardIcon} aria-hidden><Gift size={18} /></span>
+                        <div className={styles.slideCardHeadText}>
+                          <span className={styles.slideCardPersona}>{combo.title}</span>
+                          {combo.description && <span className={styles.slideCardBlurb}>{combo.description}</span>}
                         </div>
-                        {combo.savings > 0 && <span className={styles.comboCardSavings}>Save {formatPrice(combo.savings)}</span>}
+                      </div>
+                      <div className={styles.slideCardItems}>
+                        {[...combo.items, ...combo.drinks].map(item => (
+                          <div key={item.id} className={styles.slideCardItemRow}>
+                            {item.img && (
+                              <img src={resolveThumbnail({ name: item.name, price: item.price, img: item.img })} alt="" className={styles.slideCardItemThumb} />
+                            )}
+                            <span className={styles.slideCardItemName}>{item.name}</span>
+                            <span className={styles.slideCardItemPrice}>{formatPrice(item.price)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className={styles.slideCardFoot}>
+                        <div className={styles.slideCardTotalWrap}>
+                          <span className={styles.slideCardTotalLabel}>Combo price</span>
+                          <span className={styles.slideCardTotal}>{formatPrice(combo.comboPrice)}</span>
+                        </div>
+                        {combo.savings > 0 && <span className={styles.slideCardSavings}>Save {formatPrice(combo.savings)}</span>}
                       </div>
                     </button>
                   ))}
+                  <div className={styles.stripEndSpacer} aria-hidden />
                 </div>
               </section>
             )}
