@@ -76,7 +76,7 @@ export function LandingPage() {
           <h1 className={styles.wordmark}>{LANDING_BRAND_NAME}</h1>
           <p className={styles.tagline}>A table for every moment</p>
           <button type="button" className={styles.tablePill} onClick={goToMenu}>
-            <span className={styles.tableDot} /> {tableLabel} · Browse the Menu
+            <span className={styles.tableDot} /> {tableLabel} · Shared Cart
           </button>
         </div>
       </section>
