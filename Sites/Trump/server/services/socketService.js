@@ -524,10 +524,18 @@ class SocketService {
     // Remember this table so the guest may control only this cart (see
     // socketCanControlTable). Staff are not constrained by this set.
     socket.data.tables.add(getCanonicalTableId(cleanId));
-    const state = await this.getTableState(cleanId);
-    this.emitCartToSocket(socket, cleanId, state.cart);
-    await this.emitHistoryToSocket(socket, cleanId);
-    this.emitAdminOverrideToSocket(socket, cleanId, state.adminOverrides);
+
+    // Fires on every phone connect/reconnect/refresh — a transient DB/file
+    // read error here must not become an unhandled rejection that takes down
+    // every table's connection (same reasoning as handleUpdateCart below).
+    try {
+      const state = await this.getTableState(cleanId);
+      this.emitCartToSocket(socket, cleanId, state.cart);
+      await this.emitHistoryToSocket(socket, cleanId);
+      this.emitAdminOverrideToSocket(socket, cleanId, state.adminOverrides);
+    } catch (error) {
+      this.logger?.warn?.('socket_join_table_failed', { tableId: cleanId, error });
+    }
   }
 
   async handleJoinAsWaiter(socket, payload = {}) {
@@ -698,7 +706,11 @@ class SocketService {
       return this.denySocket(socket, 'fetchHistory', payload);
     }
 
-    await this.emitHistoryToSocket(socket, payload.tableId);
+    try {
+      await this.emitHistoryToSocket(socket, payload.tableId);
+    } catch (error) {
+      this.logger?.warn?.('socket_fetch_history_failed', { tableId: payload.tableId, error });
+    }
   }
 
   async handleUpdateCart(socket, payload = {}) {
@@ -738,7 +750,11 @@ class SocketService {
       return;
     }
 
-    await this.setTableAdminOverrides(payload.tableId, payload.overrides, { emit: true });
+    try {
+      await this.setTableAdminOverrides(payload.tableId, payload.overrides, { emit: true });
+    } catch (error) {
+      this.logger?.warn?.('socket_update_admin_overrides_failed', { tableId: payload.tableId, error });
+    }
   }
 
   async handleAdminResetTable(socket, payload = {}) {
@@ -757,16 +773,20 @@ class SocketService {
     const cleanId = normalizeId(payload.tableId);
     const preserveOverrides = payload.preserveAdminOverrides !== false;
 
-    await this.resetTableState(cleanId, {
-      preserveAdminOverrides: preserveOverrides,
-      emit: true
-    });
+    try {
+      await this.resetTableState(cleanId, {
+        preserveAdminOverrides: preserveOverrides,
+        emit: true
+      });
 
-    this.logger?.info('socket_admin_reset_table', {
-      tableId: cleanId,
-      preserveAdminOverrides: preserveOverrides,
-      actor: socket.data.user?.username || 'admin'
-    });
+      this.logger?.info('socket_admin_reset_table', {
+        tableId: cleanId,
+        preserveAdminOverrides: preserveOverrides,
+        actor: socket.data.user?.username || 'admin'
+      });
+    } catch (error) {
+      this.logger?.warn?.('socket_admin_reset_table_failed', { tableId: cleanId, error });
+    }
   }
 
   async handleDisconnect(socket) {

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, ShoppingBag, Receipt, Heart, Plus, Check } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
@@ -44,6 +44,11 @@ export function CartDrawer() {
   const [tab, setTab] = useState<CartTab>('cart');
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [submitError, setSubmitError] = useState(false);
+  // Idempotency key for the in-flight submit attempt: generated once per
+  // attempt and deliberately NOT regenerated on failure, so a retry of the
+  // same tap (after a lost response, not a changed cart) is recognized
+  // server-side as the same order instead of creating a duplicate.
+  const pendingOrderId = useRef<string | null>(null);
 
   // Reopening the drawer with items in the cart should always land on the Cart
   // tab — otherwise a repeat order (add an item after checking out earlier)
@@ -93,6 +98,10 @@ export function CartDrawer() {
     setSubmitError(false);
     const orderedItems = items.map(item => ({ ...item }));
 
+    if (!pendingOrderId.current) {
+      pendingOrderId.current = crypto.randomUUID();
+    }
+
     try {
       await api.submitOrder({
         items: orderedItems.map(i => ({
@@ -108,6 +117,7 @@ export function CartDrawer() {
         // chosen tip (clamped server-side) and silently zeroes it when this
         // is absent, so every order was losing its selected tip.
         totals,
+        clientOrderId: pendingOrderId.current,
       });
       // Phase 4: attribute "ordered" events to any recommendations accepted this session.
       trackOrdered(orderedItems.map(i => i.name));
@@ -116,6 +126,7 @@ export function CartDrawer() {
       clear();
       setTab('current');
       setSubmitted(true);
+      pendingOrderId.current = null;
     } catch {
       setSubmitError(true);
     } finally {

@@ -32,4 +32,11 @@ export interface OrderPayload {
   // (orderValidationService.js clamps it server-side) -- omitting this field
   // entirely silently drops every order's tip to R0.
   totals?: CartTotals;
+  // Phase 05A idempotency key: the server already enforces a per-restaurant
+  // unique constraint on this field (orderValidationService.js /
+  // prismaOrderService.js) -- a retried submit carrying the same value
+  // resolves to the original order instead of creating a duplicate. Must stay
+  // stable across retries of the *same* attempt and only regenerate once
+  // that attempt actually succeeds.
+  clientOrderId?: string;
 }

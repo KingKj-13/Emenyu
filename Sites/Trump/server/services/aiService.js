@@ -1622,7 +1622,12 @@ class AiService {
       }
     });
     const { ordered } = this.rotation.rotate(candidates, payload);
-    const { kept } = this.rules.applyCategorySafety(ordered, enrichedCart);
+    const categorySafety = this.rules.applyCategorySafety(ordered, enrichedCart);
+    const { kept } = categorySafety;
+    if (payload.__debugTrace && typeof payload.__debugTrace === 'object') {
+      payload.__debugTrace.mealStage = categorySafety.stage;
+      payload.__debugTrace.rejectedByCategorySafety = categorySafety.dropped;
+    }
 
     // Phase 3A: enforce a dietary request as a hard constraint — meat must never
     // reach a vegetarian/vegan result, even from the popular/backfill sources.
@@ -1689,6 +1694,17 @@ class AiService {
       businessRules: this.businessRules,
       maxUnrelatedItems: this.businessRules.thresholds.maxUnrelatedItems
     });
+    // Dev-only inspection hook (scripts/inspect-recommendations.js): when a caller
+    // passes __debugTrace (a plain object reference), attach data this method
+    // already computes but would otherwise discard. No production HTTP route
+    // ever sets this field, so it has zero effect on any real request.
+    if (payload.__debugTrace && typeof payload.__debugTrace === 'object') {
+      payload.__debugTrace.candidatesConsidered = finalKept.map(c => ({
+        name: c.item?.name, source: c.source, chef: c.chef === true, score: c.score, brain: c.brain
+      }));
+      payload.__debugTrace.rejected = pipelineResult.dropped;
+      payload.__debugTrace.frequencyGated = pipelineResult.frequencyGated;
+    }
     finalKept = pipelineResult.kept;
 
     // Phase 3C: ONE copy source. Compose every result's reason via reasonComposer
@@ -1753,6 +1769,9 @@ class AiService {
         stage: this.mealStates.currentState(cart, menuContext.byName),
         proactive: payload.proactive === true
       });
+    }
+    if (payload.__debugTrace && typeof payload.__debugTrace === 'object') {
+      payload.__debugTrace.finalOutput = out;
     }
     return out;
   }

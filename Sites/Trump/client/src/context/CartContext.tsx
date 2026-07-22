@@ -37,6 +37,7 @@ interface CartContextValue {
   setCustomTip: (v: number) => void;
   justAdded: { name: string; t: number } | null;
   recommendations: CartRecommendation[];
+  recommendationsLoading: boolean;
   addItem: (item: Omit<CartItem, 'qty' | 'note'> & { qty?: number; note?: string }) => void;
   updateQty: (index: number, delta: number) => void;
   removeAt: (index: number) => void;
@@ -182,17 +183,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // reads this and still tracks impressions itself, once a card is actually
   // on screen.
   const [recommendations, setRecommendations] = useState<CartRecommendation[]>([]);
+  // Distinguishes "still fetching" from "fetch failed" / "engine has nothing
+  // more to say" -- CartRecommendations previously couldn't tell these apart
+  // (both rendered as nothing), so a slow network made a live pairing look
+  // identical to the AI having no suggestion at all.
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const recoDebounceKey = useDebounce(items.map(i => `${i.name}:${i.qty}`).join('|'), 600);
 
   useEffect(() => {
-    if (items.length === 0) { setRecommendations([]); return; }
+    if (items.length === 0) { setRecommendations([]); setRecommendationsLoading(false); return; }
     let cancelled = false;
+    setRecommendationsLoading(true);
     api.getRecommendations({ items: items.map(i => ({ name: i.name, price: i.price })), tableId })
       .then((data: unknown) => {
         if (cancelled) return;
         setRecommendations(Array.isArray(data) ? (data as CartRecommendation[]) : []);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setRecommendationsLoading(false);
+      });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recoDebounceKey]);
@@ -213,7 +223,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   return (
     <CartContext.Provider value={{
       items, history, count, subtotal,
-      tipMode, customTip, isOpen, justAdded, recommendations,
+      tipMode, customTip, isOpen, justAdded, recommendations, recommendationsLoading,
       setIsOpen, setTipMode, setCustomTip,
       addItem, updateQty, removeAt, setNote,
       clear, replaceCart, setHistory, getTotals, syncCart,

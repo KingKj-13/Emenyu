@@ -29,7 +29,7 @@ export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
   // added to the cart, not just once this component -- a child of the
   // drawer's open state -- happens to mount). This just reads the result and
   // renders one at a time.
-  const { addItem, setIsOpen, recommendations: recs } = useCart();
+  const { addItem, setIsOpen, recommendations: recs, recommendationsLoading } = useCart();
   const { setPendingItemName } = useApp();
   const [index, setIndex] = useState(0);
 
@@ -45,7 +45,23 @@ export function CartRecommendations({ cartItems }: { cartItems: CartItem[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current]);
 
-  if (!current) return null;
+  if (!current) {
+    // Was previously indistinguishable from "no suggestion" -- on a slow
+    // connection this made the whole recommendation block silently vanish
+    // right when it was being pointed at live. Only the in-flight state gets
+    // a visible placeholder; a genuinely empty/completed result still shows
+    // nothing, unchanged from before.
+    if (recommendationsLoading) {
+      return (
+        <div className={styles.wrap}>
+          <div className={styles.labelRow}>
+            <p className={styles.label}>Finding a pairing…</p>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  }
 
   function go(delta: number) {
     setIndex(i => (i + delta + recs.length) % recs.length);
