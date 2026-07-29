@@ -60,13 +60,17 @@ function createReasonComposer({ nlgService = null, heroPairings = null, logger =
     return '';
   }
 
-  function narrativeExtras(target, source) {
+  function narrativeExtras(target, source, suppressUpgradeNudge = false) {
     const dish = foodSideOf(target, source);
     if (!dish || !heroPairings || !heroPairings.ready) return '';
     const note = typeof heroPairings.dishNoteFor === 'function' ? heroPairings.dishNoteFor(dish.name, dish.tags || {}) : null;
     const parts = [];
     if (note && note.story) parts.push(note.story);
-    const nudge = upgradeNudge(dish);
+    // Phase 2 (recommendation-quality review): skip the "upgrade to X" nudge
+    // when the caller already knows X is being surfaced as its own separate
+    // recommendation this turn -- otherwise the same upsell gets narrated
+    // twice (once here, once as its own card).
+    const nudge = suppressUpgradeNudge ? '' : upgradeNudge(dish);
     if (nudge) parts.push(nudge);
     return parts.join(' ');
   }
@@ -88,7 +92,7 @@ function createReasonComposer({ nlgService = null, heroPairings = null, logger =
 
   // The per-item reason shown on cards / chat / waiter for `target`, optionally
   // paired to an anchor dish `source`. tone: 'short' | 'professional' | 'luxury' | …
-  async function pairingReason(target = {}, source = null, { tone = 'casual', cartWine = null } = {}) {
+  async function pairingReason(target = {}, source = null, { tone = 'casual', cartWine = null, suppressUpgradeNudge = false } = {}) {
     // Dessert + full table context (dish + wine) — checked first since it's the
     // most specific, most narrative-rich case when both anchors are available.
     const dessertLine = dessertNarrative(target, source, cartWine);
@@ -99,7 +103,7 @@ function createReasonComposer({ nlgService = null, heroPairings = null, logger =
     if (heroPairings && heroPairings.ready && source) {
       const hero = heroPairings.reasonFor(source, target);
       if (hero) {
-        const extras = narrativeExtras(target, source);
+        const extras = narrativeExtras(target, source, suppressUpgradeNudge);
         return extras ? `${hero} ${extras}` : hero;
       }
     }

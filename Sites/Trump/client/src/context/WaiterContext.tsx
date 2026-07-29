@@ -4,10 +4,10 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef, ty
 import { getSocket } from '../services/socket';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../services/api';
-import { RESTAURANT_ID } from '../constants/api';
+import { RESTAURANT_ID, DEMO_MODE } from '../constants/api';
 import { clockTime } from '../lib/waiterFormat';
 import type { MenuItem } from '../types/menu';
-import type { WaiterTab, WaiterRole, OrderLine, ServiceNotes, WaiterAlert, GuestEvent } from '../types/waiter';
+import type { WaiterTab, WaiterRole, OrderLine, ServiceNotes, WaiterAlert, GuestEvent, TableDeviceInfo } from '../types/waiter';
 
 export type OverlayKind = 'notes' | 'split' | 'recovery' | 'alerts' | 'voice';
 
@@ -77,6 +77,11 @@ interface WaiterContextValue {
   events: Record<string, GuestEvent>;
   placedItems: { name: string; price: number; quantity: number }[];
 
+  // Device Awareness (Curated Demo Mode): the current guest roster for
+  // selectedTableId — used by SplitBillModal's "By Device" mode and any
+  // "grouped by guest" cart view.
+  tableDevices: TableDeviceInfo[];
+
   toast: string | null;
   showToast: (msg: string) => void;
 
@@ -114,6 +119,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
   const [alerts, setAlerts] = useState<WaiterAlert[]>([]);
   const [events, setEvents] = useState<Record<string, GuestEvent>>({});
   const [placedItems, setPlacedItems] = useState<{ name: string; price: number; quantity: number }[]>([]);
+  const [tableDevices, setTableDevices] = useState<TableDeviceInfo[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [unseenTableUpdates, setUnseenTableUpdates] = useState<Set<string>>(new Set());
@@ -138,10 +144,11 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     socket.emit('joinAdmin', { restaurantId: RESTAURANT_ID });
   }, []);
 
-  // Direct staff access: /Waiter opens straight into a populated dashboard.
+  // Public demo build only: skip the manual "clock in" screen entirely so
+  // /waiter opens straight into a populated dashboard, no login/setup step.
   useEffect(() => {
-    if (!shift.started) {
-      startShift(user?.label || 'Carmella Waiter', 'Head Waiter', DEFAULT_SECTION);
+    if (DEMO_MODE) {
+      startShift('Demo Waiter', 'Head Waiter', DEFAULT_SECTION);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -151,7 +158,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
   // was never registered as this waiter -- redo just that half of
   // startShift once, on mount, for the restored-shift case.
   useEffect(() => {
-    if (shift.started && shift.name) {
+    if (!DEMO_MODE && shift.started && shift.name) {
       const socket = socketRef.current;
       socket.emit('joinAsWaiter', { restaurantId: RESTAURANT_ID, name: shift.name });
       socket.emit('joinAdmin', { restaurantId: RESTAURANT_ID });
@@ -175,6 +182,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     selectedTableRef.current = tableId;
     setOrder([]);
     setPlacedItems([]);
+    setTableDevices([]);
     setTab('tables');
     // Opening a table is the "refresh immediately" moment — clear its badge.
     setUnseenTableUpdates(prev => (prev.has(tableId) ? (() => { const next = new Set(prev); next.delete(tableId); return next; })() : prev));
@@ -189,13 +197,24 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
   // Replace the GUEST-tagged lines with the guest's current live cart on EVERY
   // sync (waiter-added lines are preserved) — so the waiter sees guest changes
   // in real time without reloading.
-  const seedGuestLines = useCallback((_tableId: string, lines: { name?: string; price?: number; quantity?: number; qty?: number }[]) => {
+  const seedGuestLines = useCallback((_tableId: string, lines: { name?: string; price?: number; quantity?: number; qty?: number; addedByDevice?: string; addedAt?: number }[]) => {
     setOrder(prev => {
       const waiterLines = prev.filter(l => l.source !== 'guest');
       const waiterNames = new Set(waiterLines.map(l => l.name));
       const guestLines: OrderLine[] = (lines || [])
         .filter(l => l.name && !waiterNames.has(l.name))
-        .map(l => ({ name: String(l.name), price: Number(l.price) || 0, quantity: Number(l.quantity ?? l.qty) || 1, source: 'guest' as const }));
+        .map(l => ({
+          name: String(l.name),
+          price: Number(l.price) || 0,
+          quantity: Number(l.quantity ?? l.qty) || 1,
+          source: 'guest' as const,
+          // Device Awareness / split-bill-by-device: carried through from the
+          // guest's live cart (CartItem.addedByDevice/addedAt) so the waiter's
+          // "By Device" split mode and any grouped-by-guest view can use it —
+          // previously dropped here, which is why neither existed until now.
+          addedByDevice: l.addedByDevice || undefined,
+          addedAt: l.addedAt || undefined,
+        }));
       return [...guestLines, ...waiterLines];
     });
   }, []);
@@ -313,10 +332,14 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     };
     const sameTable = (a?: string | null, b?: string | null) =>
       String(a || '').toLowerCase().replace(/[^a-z0-9]/g, '') === String(b || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const onSyncCart = (p: { tableId?: string; cart?: { name?: string; price?: number; quantity?: number; qty?: number }[] }) => {
+    const onSyncCart = (p: { tableId?: string; cart?: { name?: string; price?: number; quantity?: number; qty?: number; addedByDevice?: string; addedAt?: number }[] }) => {
       if (!p || !Array.isArray(p.cart)) return;
       if (!sameTable(p.tableId, selectedTableRef.current)) return;
       seedGuestLines(String(p.tableId), p.cart);
+    };
+    const onTableDevices = (p: { tableId?: string; devices?: TableDeviceInfo[] }) => {
+      if (!p || !sameTable(p.tableId, selectedTableRef.current)) return;
+      setTableDevices(Array.isArray(p.devices) ? p.devices : []);
     };
     const onSyncHistory = (p: { tableId?: string; history?: { name?: string; price?: number; quantity?: number; qty?: number }[] }) => {
       if (!p || !sameTable(p.tableId, selectedTableRef.current) || !Array.isArray(p.history)) return;
@@ -353,6 +376,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     socket.on('syncHistory', onSyncHistory);
     socket.on('orderPlaced', onOrderPlaced);
     socket.on('waiterTaskCreated', onWaiterTaskCreated);
+    socket.on('tableDevices', onTableDevices);
     return () => {
       socket.off('connect', onConnect);
       socket.off('incomingWaiterCall', onBell);
@@ -363,6 +387,7 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
       socket.off('syncHistory', onSyncHistory);
       socket.off('orderPlaced', onOrderPlaced);
       socket.off('waiterTaskCreated', onWaiterTaskCreated);
+      socket.off('tableDevices', onTableDevices);
     };
   }, [seedGuestLines, showToast, markTableUpdated]);
 
@@ -380,7 +405,8 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
       alerts, liveAlertCount, respondAlert, dismissAlert,
       events, placedItems,
       toast, showToast,
-      unseenTableUpdates
+      unseenTableUpdates,
+      tableDevices
     }}>
       {children}
     </WaiterContext.Provider>

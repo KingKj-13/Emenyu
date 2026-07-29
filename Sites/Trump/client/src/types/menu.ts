@@ -264,6 +264,10 @@ export interface ChatSuggestionItem {
   // already return; the chat card can now show WHY and offer Replace/Premium.
   reason?: string;
   chef?: boolean;
+  // Curated Demo Mode (server/services/curatedDemoJourney.js) — true only for
+  // a pick from the hand-designed demo journeys; gates the chat card's Skip
+  // button (ChatPanel.tsx's skipFromChat).
+  curated?: boolean;
   rotationGroup?: string;
   confidence?: number;
   expectedValue?: number;

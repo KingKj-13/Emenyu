@@ -34,8 +34,9 @@ export function CartDrawer() {
     setHistory,
     getTotals,
     clear,
+    tableDevices,
   } = useCart();
-  const { tableId, setPendingItemName } = useApp();
+  const { tableId, setPendingItemName, device } = useApp();
   const { favorites } = useFavorites();
   const { menuData } = useMenu();
   const [submitting, setSubmitting] = useState(false);
@@ -60,6 +61,20 @@ export function CartDrawer() {
   }, [isOpen]);
 
   const allMenuItems = useMemo(() => flattenMenu(menuData), [menuData]);
+
+  // Device Awareness (Shared Cart): only label lines by guest once more than
+  // one distinct device has actually added something — a solo diner's cart
+  // never shows a redundant "Guest 1" on every line.
+  const distinctDevices = useMemo(
+    () => new Set(items.map(i => i.addedByDevice).filter(Boolean)),
+    [items]
+  );
+  const showGuestLabels = distinctDevices.size > 1;
+  const guestLabelFor = (deviceId?: string): string | undefined => {
+    if (!showGuestLabels || !deviceId) return undefined;
+    if (deviceId === device.deviceId) return 'You';
+    return tableDevices.find(d => d.deviceId === deviceId)?.label || 'Guest';
+  };
   const favoriteRows = useMemo(() => favorites.map(name => ({
     name,
     item: allMenuItems.find(item => normalizeName(item.name) === normalizeName(name)) ?? null,
@@ -252,6 +267,7 @@ export function CartDrawer() {
                               onUpdateQty={updateQty}
                               onRemove={removeAt}
                               onNoteChange={setNote}
+                              guestLabel={guestLabelFor(item.addedByDevice)}
                             />
                           ))}
                         </div>

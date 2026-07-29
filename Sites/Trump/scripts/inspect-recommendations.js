@@ -103,6 +103,97 @@ const SCENARIOS = [
     key: 'proactive-frequency-gate',
     label: 'Unsolicited (proactive) nudge on a cart that already got recommendations this turn (frequency/cooldown check)',
     payload: { cart: [{ name: 'TRUMPS' }], limit: 4, proactive: true, tableId: 'inspect-freq-test' }
+  },
+
+  // ── Added for Phase 2 (recommendation-quality review) — 16 additional
+  // fine-dining scenarios beyond the original 8. Note: none of these are
+  // gated by TRUMP_SCRIPTED_DEMO_ENABLED -- that flag is off by default (see
+  // Sites/Trump/.env), so every scenario here exercises the REAL algorithmic
+  // engine, not the hardcoded demo chains, regardless of item names used.
+  {
+    key: 'business-dinner',
+    label: 'Business dinner — steak ordered directly, no wine yet (tests whether the wine suggestion reads as "boardroom appropriate")',
+    payload: { cart: [{ name: 'T-BONE 500g' }], limit: 4 }
+  },
+  {
+    key: 'anniversary-fine-dining',
+    label: 'Anniversary — a refined main already in, occasion flagged explicitly',
+    payload: { cart: [{ name: 'FILLET 260g' }], limit: 4, intent: { slots: { occasion: 'anniversary' } } }
+  },
+  {
+    key: 'birthday-celebration',
+    label: 'Birthday — occasion flagged, cart already has a starter (tests whether it reaches for something celebratory, not just the next mechanical course)',
+    payload: { cart: [{ name: 'SPRINGBOK CARPACCIO' }], limit: 4, intent: { slots: { occasion: 'birthday' } } }
+  },
+  {
+    key: 'wine-first-no-food',
+    label: 'Wine-first guest — a bottle of red ordered with NO food yet (tests: does it push a main, or awkwardly suggest a second wine)',
+    payload: { cart: [{ name: 'RUSTENBURG' }], limit: 4 }
+  },
+  {
+    key: 'couple-sharing-steak',
+    label: 'Couple sharing a large-format steak (tests whether sides/sauce suggestions read as "for two", not single-serve duplicates)',
+    payload: { cart: [{ name: 'TOMAHAWK (FRENCH CUT) 650g' }], limit: 4 }
+  },
+  {
+    key: 'solo-diner',
+    label: 'Solo diner — one starter, small order (tests whether recommendations assume a multi-person table by default)',
+    payload: { cart: [{ name: 'BEEF BILTONG' }], limit: 3 }
+  },
+  {
+    key: 'vegetarian-guest',
+    label: 'Vegetarian guest — dietary constraint declared, meat must never leak through',
+    payload: { cart: [{ name: 'VEG BURGER' }], limit: 5, intent: { slots: { dietary: ['vegetarian'] } } }
+  },
+  {
+    key: 'seafood-dinner-progression',
+    label: 'Seafood dinner — a premium fish main (not the scripted calamari-starter path) — tests wine pairing logic on a MAIN, not a starter',
+    payload: { cart: [{ name: 'KINGKLIP FILLET' }], limit: 4 }
+  },
+  {
+    key: 'dessert-decision-moment',
+    label: 'The exact moment a full savoury course is done — wine + main + side already in (tests that the journey correctly reaches for dessert next, not another side)',
+    payload: { cart: [{ name: 'RUSTENBURG' }, { name: 'T-BONE 500g' }, { name: 'CREAMED SPINACH' }], limit: 4 }
+  },
+  {
+    key: 'premium-wine-purchase',
+    label: 'Premium wine purchase — a R1,950 bottle of Champagne, nothing else yet (tests whether the follow-up suggestion matches that price tier or undersells it)',
+    payload: { cart: [{ name: 'MOËT & CHANDON BRUT' }], limit: 4 }
+  },
+  {
+    key: 'allergy-nut-dessert-stage',
+    label: 'Nut allergy declared at the dessert stage (desserts are the highest-risk course for hidden nuts)',
+    payload: { cart: [{ name: 'RIBEYE 380g' }, { name: 'RUSTENBURG' }], limit: 5, guestIntel: { present: true, allergies: 'nuts, peanuts, almonds' } }
+  },
+  {
+    key: 'allergy-dairy',
+    label: 'Dairy allergy declared on a side-heavy cart (creamed spinach, mash, etc. are common hidden-dairy items)',
+    payload: { cart: [{ name: 'T-BONE 500g' }], limit: 5, guestIntel: { present: true, allergies: 'dairy, milk, cream' } }
+  },
+  {
+    key: 'large-group-celebration',
+    label: 'Large group celebration — a sharing platter ordered for a big table (tests whether follow-ups scale to group size, not single-serve)',
+    payload: { cart: [{ name: 'TOMAHAWK 850g - 900g' }], limit: 4, intent: { slots: { occasion: 'celebration' } } }
+  },
+  {
+    key: 'repeat-declined-item',
+    label: 'A recommended item was already explicitly declined this session (tests never-re-suggest-rejected memory, not just duplicate-in-cart)',
+    payload: { cart: [{ name: 'RIBEYE 380g' }], limit: 4, excludeNames: ['STEAKHOUSE CHIPS', 'CREAMED SPINACH'] }
+  },
+  {
+    key: 'late-stage-coffee-only',
+    label: 'Dessert already ordered — tests it correctly reaches for coffee/digestif next, never a second dessert',
+    payload: { cart: [{ name: 'RIBEYE 380g' }, { name: 'RUSTENBURG' }, { name: 'DEATH BY CHOCOLATE CAKE' }], limit: 3 }
+  },
+  {
+    key: 'mixed-drinks-already-two',
+    label: 'Cart already has two different beverage kinds on the table (tests R1/R2 catch a third slipping through, not just a same-kind duplicate)',
+    payload: { cart: [{ name: 'RUSTENBURG' }, { name: 'CASTLE' }], limit: 4 }
+  },
+  {
+    key: 'starter-only-light-lunch',
+    label: 'A single starter, no wine — reads as a light lunch, not a full dinner (tests whether it still pushes a full-dinner wine upsell inappropriately)',
+    payload: { cart: [{ name: 'GARLIC LEMON CALAMARI' }], limit: 3, intent: { slots: { occasion: 'lunch' } } }
   }
 ];
 

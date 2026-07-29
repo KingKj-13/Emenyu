@@ -1,22 +1,30 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, BookOpen, Grid, ShoppingCart, User } from 'lucide-react';
+import { Menu, BookOpen, Grid, ShoppingCart, User, ChefHat } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useCart } from '../../hooks/useCart';
-import { LANDING_BRAND_NAME, BRAND_TAGLINE } from '../../constants/api';
+import { LANDING_BRAND_NAME, BRAND_TAGLINE, DEMO_MODE } from '../../constants/api';
+import { DayNightToggle } from './DayNightToggle';
 import styles from './Header.module.css';
 
 export function Header() {
-  const { tableId, tableLabel, setDrawerOpen } = useApp();
+  const { tableId, tableLabel, user, setDrawerOpen, dayParts } = useApp();
   const { count, setIsOpen } = useCart();
+  // Carmella-only: tenants with no day-part engine get [] from the server
+  // (see AppContext.tsx), so this is false for Trump/Demo and their existing
+  // Book view / Waiter dashboard icon is untouched.
+  const hasDayNightToggle = dayParts.length > 0;
+  // The "Book view" toggle used to flip a bookMode boolean in AppContext that
+  // only drove its own highlight styling -- it never navigated anywhere or
+  // set MenuPage's sectionFilter, so clicking it visibly highlighted but did
+  // nothing else. The real, working book view lives at its own route
+  // (App.tsx: /:tableId/book -> MenuPage sectionFilter="book"), so both
+  // buttons now navigate there/back instead of toggling a disconnected flag.
   const location = useLocation();
-  const path = location.pathname.toLowerCase();
-  const isWaiter = path === '/waiter' || path.endsWith('/book');
-  const isAdmin = path === '/admin';
-  const isMenu = !isWaiter && !isAdmin;
+  const inBookView = location.pathname.endsWith('/book');
 
   return (
     <header className={styles.header} role="banner">
-      <Link to={`/${tableId}`} className={styles.brand} aria-label={`${LANDING_BRAND_NAME} ${BRAND_TAGLINE} - back to start`}>
+      <Link to={`/${tableId}`} className={styles.brand} aria-label={`${LANDING_BRAND_NAME} ${BRAND_TAGLINE} — back to start`}>
         <div className={styles.brandMark} aria-hidden="true">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 19V5h16v14" />
@@ -37,44 +45,51 @@ export function Header() {
         )}
         <Link
           to={`/${tableId}/menu`}
-          className={`${styles.viewToggle} ${isMenu ? styles.active : ''}`}
-          aria-label="Calculator"
-          aria-current={isMenu ? 'page' : undefined}
-          title="Calculator"
+          className={`${styles.viewToggle} ${!inBookView ? styles.active : ''}`}
+          aria-label="Grid view"
+          aria-current={!inBookView ? 'page' : undefined}
+          title="Menu grid"
         >
           <Grid size={18} />
         </Link>
-        <Link
-          to="/Waiter"
-          className={`${styles.viewToggle} ${isWaiter ? styles.active : ''}`}
-          aria-label="Waiter"
-          aria-current={isWaiter ? 'page' : undefined}
-          title="Waiter"
-        >
-          <BookOpen size={18} />
-        </Link>
-        <Link
-          to="/Admin"
-          className={`${styles.userButton} ${isAdmin ? styles.active : ''}`}
-          aria-label="Admin"
-          aria-current={isAdmin ? 'page' : undefined}
-          title="Admin"
-        >
-          <User size={18} />
-        </Link>
+        {hasDayNightToggle ? (
+          <DayNightToggle />
+        ) : DEMO_MODE ? (
+          <Link
+            to="/Waiter"
+            className={styles.viewToggle}
+            aria-label="Waiter dashboard (demo — no login required)"
+            title="Waiter dashboard"
+          >
+            <ChefHat size={18} />
+          </Link>
+        ) : (
+          <Link
+            to={`/${tableId}/book`}
+            className={`${styles.viewToggle} ${inBookView ? styles.active : ''}`}
+            aria-label="Book view"
+            aria-current={inBookView ? 'page' : undefined}
+            title="Book view"
+          >
+            <BookOpen size={18} />
+          </Link>
+        )}
         <button
           className={styles.cartButton}
           onClick={() => setIsOpen(true)}
-          aria-label={`Cart, ${count} item${count !== 1 ? 's' : ''}`}
-          title="Cart"
+          aria-label={`Open cart, ${count} item${count !== 1 ? 's' : ''}`}
         >
           <ShoppingCart size={18} />
           {count > 0 && <span className={styles.cartBadge}>{count}</span>}
         </button>
+        {user ? (
+          <Link to="/Admin" className={styles.userButton} aria-label={DEMO_MODE ? 'Admin dashboard (demo — no login required)' : `Logged in as ${user.username}`}>
+            <User size={18} />
+          </Link>
+        ) : null}
         <button
           className={styles.menuButton}
-          aria-label="Menu"
-          title="Menu"
+          aria-label="Open navigation menu"
           onClick={() => setDrawerOpen(true)}
         >
           <Menu size={18} />

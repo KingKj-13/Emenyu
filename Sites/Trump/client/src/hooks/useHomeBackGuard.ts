@@ -29,7 +29,7 @@ export function useHomeBackGuard({ isHome = false }: { isHome?: boolean } = {}) 
       if (isHome) {
         if (window.confirm('Exit and sign out?')) {
           window.removeEventListener('popstate', onPop);
-          Promise.resolve(logout()).finally(() => navigate(home, { replace: true }));
+          Promise.resolve(logout()).finally(() => navigate('/login'));
           return;
         }
         window.history.pushState({ emenyuHomeGuard: true }, '');

@@ -6,6 +6,13 @@ const { PrismaMenuService } = require('./prismaMenuService');
 const { PrismaOrderService, makeOrderFilename } = require('./prismaOrderService');
 const { getTableAliases, normalizeId, safeFileName } = require('../utils/helpers');
 
+// Curated Demo Mode + future live-flippable admin settings, same JSON-file
+// pattern as DealOfDay.json. Defaults are merged under whatever is on disk so
+// adding a new key here later never breaks an existing settings.json.
+const DEFAULT_SETTINGS = {
+  curatedDemoMode: false
+};
+
 function cloneFallback(fallback) {
   if (Array.isArray(fallback) || (fallback && typeof fallback === 'object')) {
     return JSON.parse(JSON.stringify(fallback));
@@ -47,6 +54,7 @@ class FileService {
 
     await this.ensureJsonFile(this.config.files.deals, []);
     await this.ensureJsonFile(this.config.files.chatLogs, []);
+    await this.ensureJsonFile(this.config.files.settings, DEFAULT_SETTINGS);
 
     const hasOperationalData = await this.prismaOrder.hasOperationalData();
     if (!hasOperationalData) {
@@ -142,6 +150,18 @@ class FileService {
 
   async saveDeals(deals) {
     await this.writeJson(this.config.files.deals, deals);
+  }
+
+  async loadSettings() {
+    const saved = await this.readJson(this.config.files.settings, DEFAULT_SETTINGS);
+    return { ...DEFAULT_SETTINGS, ...(saved && typeof saved === 'object' ? saved : {}) };
+  }
+
+  async saveSettings(partial) {
+    const current = await this.loadSettings();
+    const next = { ...current, ...(partial && typeof partial === 'object' ? partial : {}) };
+    await this.writeJson(this.config.files.settings, next);
+    return next;
   }
 
   async loadRecommendations() {

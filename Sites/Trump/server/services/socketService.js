@@ -18,6 +18,14 @@ class SocketService {
     this.io = null;
     this.tableMemory = {};
     this.connectedWaiters = {};
+    // Device Awareness (Curated Demo Mode): tableId -> Map(deviceId -> {label,
+    // joinedAt}). Every QR scan/table join gets a stable, human-readable
+    // "Guest N" label for that table's visit, sequenced by join order —
+    // consumed by the shared-cart-by-device UI and split-bill-by-device.
+    // In-memory only (Trump runs PM2 in fork mode, single instance — same
+    // accepted pattern as tableMemory/connectedWaiters above); cleared on
+    // table reset so a new visit starts a fresh roster.
+    this.tableDevices = new Map();
     // Listeners notified when menu / recommendation / order data mutates. Used by
     // aiService to drop its reco caches immediately so owner edits show without
     // waiting out the cache TTL. Independent of socket connectivity.
@@ -248,14 +256,53 @@ class SocketService {
       await this.fileService.saveTableAdminOverrides(cleanId, []);
     }
 
+    // A fresh visit gets a fresh guest roster — otherwise the next party
+    // seated here would inherit the previous party's "Guest 1"/"Guest 2" labels.
+    this.tableDevices.delete(cleanId);
+
     if (options.emit !== false) {
       this.emitTableCart(tableId, []);
       if (!preserveAdminOverrides) {
         this.emitAdminOverride(tableId, []);
       }
+      this.emitTableDevices(tableId);
     }
 
     return state;
+  }
+
+  // ─── Device Awareness (Curated Demo Mode) ────────────────────────────────────
+
+  // First join for a (tableId, deviceId) pair mints the next sequential
+  // "Guest N" label for that table's visit; later joins (reconnect/refresh)
+  // return the same label. Not persisted across a server restart — same
+  // ephemeral-per-visit tradeoff as tableMemory/connectedWaiters above.
+  getOrAssignDeviceLabel(tableId, deviceId) {
+    const cleanId = getCanonicalTableId(tableId);
+    if (!this.tableDevices.has(cleanId)) {
+      this.tableDevices.set(cleanId, new Map());
+    }
+    const devices = this.tableDevices.get(cleanId);
+    if (!devices.has(deviceId)) {
+      devices.set(deviceId, { label: `Guest ${devices.size + 1}`, joinedAt: Date.now() });
+    }
+    return devices.get(deviceId);
+  }
+
+  getTableDevices(tableId) {
+    const cleanId = getCanonicalTableId(tableId);
+    const devices = this.tableDevices.get(cleanId);
+    if (!devices) return [];
+    return [...devices.entries()].map(([deviceId, info]) => ({ deviceId, label: info.label, joinedAt: info.joinedAt }));
+  }
+
+  emitTableDevices(tableId) {
+    if (!this.io) return;
+    this.io.to(this.getTableRooms(tableId)).emit('tableDevices', {
+      restaurantId: this.config.restaurantId,
+      tableId: normalizeId(tableId),
+      devices: this.getTableDevices(tableId)
+    });
   }
 
   // ─── Emit helpers ─────────────────────────────────────────────────────────────
@@ -335,6 +382,27 @@ class SocketService {
     if (this.io) {
       this.io.emit('dealUpdated');
     }
+  }
+
+  // Curated Demo Mode + future live-flippable settings — broadcast so every
+  // open customer/waiter/admin tab picks up the change instantly, no restart.
+  emitSettingsUpdated(settings) {
+    if (this.io) {
+      this.io.emit('settingsUpdated', settings || {});
+    }
+  }
+
+  // Curated Demo Mode: the Order Complete chatbot follow-up (thank-you, or
+  // "your next drink is on us" + reward QR) — pushed to the table's room so
+  // ChatPanel.tsx can append it even though the guest didn't ask anything
+  // (chat is normally request/response only).
+  emitOrderCompleteFollowUp(tableId, payload) {
+    if (!this.io) return;
+    this.io.to(this.getTableRooms(tableId)).emit('orderCompleteFollowUp', {
+      restaurantId: this.config.restaurantId,
+      tableId: normalizeId(tableId),
+      ...payload
+    });
   }
 
   emitRecommendationUpdated() {
@@ -524,6 +592,16 @@ class SocketService {
     // Remember this table so the guest may control only this cart (see
     // socketCanControlTable). Staff are not constrained by this set.
     socket.data.tables.add(getCanonicalTableId(cleanId));
+
+    // Device Awareness: every QR scan/table join carries the browser's stable
+    // deviceId (storage.ts's getDeviceIdentity) — assign/recall this table
+    // visit's "Guest N" label for it and let the whole table room (including
+    // any waiter viewing this table) know the current guest roster.
+    if (payload.deviceId) {
+      const identity = this.getOrAssignDeviceLabel(cleanId, payload.deviceId);
+      socket.emit('deviceIdentity', { deviceId: payload.deviceId, ...identity });
+      this.emitTableDevices(cleanId);
+    }
 
     // Fires on every phone connect/reconnect/refresh — a transient DB/file
     // read error here must not become an unhandled rejection that takes down

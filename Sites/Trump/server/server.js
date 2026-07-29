@@ -17,6 +17,7 @@ const { createAnalyticsController } = require('./controllers/analyticsController
 const { createRecommendationAnalyticsController } = require('./controllers/recommendationAnalyticsController');
 const { createRecommendationBundleController } = require('./controllers/recommendationBundleController');
 const { createDealController } = require('./controllers/dealController');
+const { createSettingsController } = require('./controllers/settingsController');
 const { createKitchenController } = require('./controllers/kitchenController');
 const { createMenuController } = require('./controllers/menuController');
 const { createPushController } = require('./controllers/pushController');
@@ -42,6 +43,7 @@ const { TokenService } = require('./services/tokenService');
 const { PushDispatcher } = require('./services/pushDispatcher');
 const { createAuthTokenController } = require('./controllers/authTokenController');
 const { registerDealRoutes } = require('./routes/dealRoutes');
+const { registerSettingsRoutes } = require('./routes/settingsRoutes');
 const { registerKitchenRoutes } = require('./routes/kitchenRoutes');
 const { registerMenuRoutes } = require('./routes/menuRoutes');
 const { registerPushRoutes } = require('./routes/pushRoutes');
@@ -66,8 +68,47 @@ const { SocketService } = require('./services/socketService');
 const { MediaEnrichmentService } = require('./services/mediaEnrichmentService');
 const { RecommendationEventService } = require('./services/recommendationEventService');
 const { RecommendationBundleService } = require('./services/recommendationBundleService');
+const { createRewardService } = require('./services/rewardService');
+const { createRewardController } = require('./controllers/rewardController');
+const { registerRewardRoutes } = require('./routes/rewardRoutes');
 const { createLogger } = require('./utils/logger');
 const { createConfig, createRoleAuth, tenantPaths } = require('./utils/helpers');
+
+// --- TEMPORARY MAINTENANCE MODE (reversible) -------------------------------
+// Set TRUMP_MAINTENANCE_MODE=true (in Sites/Trump/.env) and restart the
+// server to serve this page with a 503 for every request. To restore the
+// site, unset the var (or set it to anything else) and restart. See
+// server.js.bak-before-maintenance-mode for the pre-change file.
+const MAINTENANCE_PAGE_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carmella's Website - Temporarily Unavailable</title>
+<style>
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #faf7f2; color: #2b2420; text-align: center; padding: 24px;
+  }
+  .card { max-width: 480px; }
+  h1 { font-size: 1.5rem; margin: 0 0 8px; font-weight: 600; }
+  p { margin: 4px 0; line-height: 1.5; color: #5a4f45; }
+  .status { margin-top: 20px; font-size: 0.85rem; color: #a89a8c; letter-spacing: 0.02em; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Carmella's Website</h1>
+    <p>This website is temporarily unavailable.</p>
+    <p>Please check back later.</p>
+    <p>Thank you for your patience.</p>
+    <div class="status">503 Service Unavailable</div>
+  </div>
+</body>
+</html>`;
+// --- END TEMPORARY MAINTENANCE MODE -----------------------------------------
 
 function loadEnvironment() {
   dotenv.config({ quiet: true });
@@ -230,6 +271,15 @@ async function startServer(baseDirOverride) {
   await accountService.ensureReady();
 
   const app = express();
+
+  // TEMPORARY MAINTENANCE MODE — see block near the top of this file for the
+  // page content and restore instructions. No-op unless the env var is set.
+  if (process.env.TRUMP_MAINTENANCE_MODE === 'true') {
+    app.use((req, res) => {
+      res.status(503).set('Retry-After', '3600').type('html').send(MAINTENANCE_PAGE_HTML);
+    });
+  }
+
   const server = http.createServer(app);
   const auth = createRoleAuth(config, accountService, logger);
   const socketService = new SocketService(config, fileService, logger, { auth });
@@ -253,6 +303,7 @@ async function startServer(baseDirOverride) {
   const opportunityService = createOpportunityService({ config, aiService });
   const waiterAnalyticsService = createWaiterAnalyticsService({ config });
   const serviceRecoveryService = createServiceRecoveryService({ config });
+  const rewardService = createRewardService({ config, logger }); // Curated Demo Mode — one-time reward QR
   const floorService = createFloorService({ config });
   const waiterWorkflowService = createWaiterWorkflowService({ config, socketService });
   // Phase 03 — staff operations services (shifts, table ownership, notification
@@ -273,6 +324,7 @@ async function startServer(baseDirOverride) {
     recommendationAnalytics: createRecommendationAnalyticsController({ recommendationEventService, prismaMenuService: fileService.prismaMenu }),
     recommendationBundle: createRecommendationBundleController({ recommendationBundleService, socketService }),
     deal: createDealController({ fileService, socketService }),
+    settings: createSettingsController({ fileService, socketService }),
     kitchen: createKitchenController({ config, fileService, socketService, notificationService }),
     menu: createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService: fileService.prismaMenu, config }),
     order: createOrderController({ config, fileService, socketService, orderValidationService }),
@@ -291,8 +343,10 @@ async function startServer(baseDirOverride) {
       waiterAnalyticsService,
       serviceRecoveryService,
       floorService,
-      waiterWorkflowService
+      waiterWorkflowService,
+      rewardService
     }),
+    reward: createRewardController({ rewardService }),
     operations: createOperationsController({
       shiftService, tableOwnershipService, notificationService, operationsService, auditService
     }),
@@ -377,6 +431,8 @@ async function startServer(baseDirOverride) {
   registerRecommendationBundleRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
   registerMenuRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
   registerDealRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerSettingsRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerRewardRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager', 'waiter']));
   registerKitchenRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager', 'kitchen']));
   registerPushRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager', 'waiter', 'kitchen']));
   registerRatingRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));

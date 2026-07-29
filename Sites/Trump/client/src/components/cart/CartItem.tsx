@@ -11,9 +11,13 @@ interface CartItemProps {
   onUpdateQty: (index: number, delta: number) => void;
   onRemove: (index: number) => void;
   onNoteChange: (index: number, note: string) => void;
+  // Device Awareness: which guest at this table added this line — only ever
+  // passed when the table has more than one distinct device ordering (see
+  // CartDrawer.tsx), so a solo diner's cart never shows a redundant label.
+  guestLabel?: string;
 }
 
-export function CartItemRow({ item, index, onUpdateQty, onRemove, onNoteChange }: CartItemProps) {
+export function CartItemRow({ item, index, onUpdateQty, onRemove, onNoteChange, guestLabel }: CartItemProps) {
   const [imgError, setImgError] = useState(false);
   // 60x60 slot — the thumbnail, not the full-res image.
   const imgSrc = imgError ? '' : resolveThumbnail({
@@ -40,6 +44,7 @@ export function CartItemRow({ item, index, onUpdateQty, onRemove, onNoteChange }
       )}
       <div className={styles.info}>
         <span className={styles.name}>{item.name}</span>
+        {guestLabel && <span className={styles.guestLabel}>{guestLabel}</span>}
         <span className={styles.price}>{formatPrice(item.price)}</span>
         <input
           type="text"

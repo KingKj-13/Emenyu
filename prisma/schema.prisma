@@ -431,6 +431,11 @@ model RecommendationEvent {
   originatingName   String   @default("")
   rotationGroup     String   @default("")
   sessionId         String   @default("")
+  // Device-aware recommendations: which guest device/table this event came
+  // from (client/src/services/storage.ts identities), alongside the existing
+  // analytics-only sessionId — lets reporting slice by device/table too.
+  deviceId          String   @default("")
+  tableId           String   @default("")
   mode              String   @default("customer")        // customer | waiter
   chef              Boolean  @default(false)
   value             Float    @default(0)                 // item price — revenue attribution on accepted/ordered
@@ -440,6 +445,7 @@ model RecommendationEvent {
   @@index([restaurantId, recommendedName])
   @@index([restaurantId, rotationGroup])
   @@index([restaurantId, source])
+  @@index([restaurantId, deviceId])
 }
 
 // Phase 5: database-backed recommended-order bundles — the menu "Not sure what to
@@ -611,4 +617,28 @@ model Device {
 
   @@index([username, revokedAt])
   @@index([restaurantId, username])
+}
+
+// Curated Demo Mode — one-time-redemption "make-good" reward QR (Order
+// Complete flow: a guest who declined most curated recommendations gets
+// "your next drink is on us" instead of a thank-you). Same shape as
+// Device.refreshTokenHash above: only a hash of the signed secret is stored,
+// never the secret itself — redemption is a single atomic conditional
+// update (status: 'issued' -> 'redeemed'), which is what makes it provably
+// one-time-use even under a concurrent double-scan (see rewardService.js).
+model RewardCode {
+  id           Int       @id @default(autoincrement())
+  restaurantId String    @default("trump")
+  tableId      String    @default("")
+  deviceId     String    @default("")
+  codeHash     String    @unique
+  status       String    @default("issued") // issued | redeemed | expired | revoked
+  reason       String    @default("")       // e.g. "declined-recommendations"
+  issuedAt     DateTime  @default(now())
+  expiresAt    DateTime
+  redeemedAt   DateTime?
+  redeemedBy   String    @default("")       // staff username who redeemed it
+
+  @@index([restaurantId, deviceId])
+  @@index([restaurantId, status])
 }

@@ -35,6 +35,23 @@
   margin-bottom: 6px;
 }
 
+/* Device Awareness: which guest at the table added this line — only shown
+   when more than one device is ordering (see CartDrawer.tsx). */
+.guestLabel {
+  display: inline-flex;
+  align-self: flex-start;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-sand);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-pill);
+  padding: 1px 7px;
+  margin-bottom: 4px;
+}
+
 .noteInput {
   width: 100%;
   padding: 6px 8px;

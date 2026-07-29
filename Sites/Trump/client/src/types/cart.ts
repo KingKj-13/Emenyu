@@ -12,6 +12,16 @@ export interface CartItem {
   // Optional — items added without it fall back to a keyword heuristic.
   categoryType?: string;
   beverageKind?: string;
+  // Device-aware recommendations: which device (storage.ts#getDeviceIdentity)
+  // added this item to the shared table cart. Empty for legacy/pre-rollout
+  // items and waiter-added items — aiService.readCart() falls back to the
+  // full cart when nothing in it carries this tag.
+  addedByDevice?: string;
+  // Device Awareness / split-bill-by-device: epoch ms when this line was
+  // added — stamped once by CartContext.addItem(), never recomputed on sync,
+  // so a split-by-device grouping can label each guest's group with when
+  // they actually started ordering.
+  addedAt?: number;
 }
 
 export interface CartTotals {

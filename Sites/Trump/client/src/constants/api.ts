@@ -28,7 +28,10 @@ export const ENDPOINTS = {
   config: `${API_PREFIX}/api/config`,
   aiPairing: `${API_PREFIX}/api/ai-pairing`,
   submitOrder: `${API_PREFIX}/submit_order`,
+  authMe: `${API_PREFIX}/api/auth/me`,
+  authLogin: `${API_PREFIX}/api/auth/login`,
   authLogout: `${API_PREFIX}/api/auth/logout`,
+  authAccounts: `${API_PREFIX}/api/auth/accounts`,
   orders: `${API_PREFIX}/orders`,
   history: `${API_PREFIX}/history`,
   complete: `${API_PREFIX}/complete`,
@@ -121,4 +124,7 @@ export const ENDPOINTS = {
   notificationsAckAll: `${API_PREFIX}/api/notifications/ack-all`,
   ownerOperations: `${API_PREFIX}/api/owner/operations`,
   auditTrail: `${API_PREFIX}/api/audit`,
+  // Curated Demo Mode
+  settings: `${API_PREFIX}/api/settings`,
+  rewardRedeem: (code: string) => `${API_PREFIX}/api/rewards/${encodeURIComponent(code)}/redeem`,
 } as const;

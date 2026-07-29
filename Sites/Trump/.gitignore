@@ -43,6 +43,7 @@ data/accounts.json
 data/chat_logs.json
 data/brain_memory.json
 data/menu_embeddings.pkl
+data/settings.json
 
 # Logs, dumps, and validation artifacts
 *.log

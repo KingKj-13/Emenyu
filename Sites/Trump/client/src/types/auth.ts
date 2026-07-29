@@ -5,3 +5,15 @@ export interface AuthUser {
   role: Role;
   label?: string;
 }
+
+export interface LoginPayload {
+  username: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  ok: boolean;
+  user?: AuthUser;
+  defaultPath?: string;
+  error?: string;
+}

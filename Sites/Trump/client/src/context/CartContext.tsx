@@ -7,6 +7,7 @@ import { useDebounce } from '../hooks/useDebounce';
 import { api } from '../services/api';
 import { RESTAURANT_ID } from '../constants/api';
 import type { SyncCartEvent, SyncHistoryEvent } from '../types/socket';
+import type { TableDeviceInfo } from '../types/waiter';
 import type { RecommendationItem } from '../components/reco/RecommendationCard';
 
 export interface CartRecommendation extends RecommendationItem {
@@ -47,6 +48,10 @@ interface CartContextValue {
   setHistory: (items: CartItem[]) => void;
   getTotals: () => CartTotals;
   syncCart: () => void;
+  // Device Awareness: every device that has joined this table's visit —
+  // used to label cart lines by guest when more than one device is ordering
+  // (see CartDrawer.tsx).
+  tableDevices: TableDeviceInfo[];
 }
 
 const CartContext = createContext<CartContextValue>(null!);
@@ -62,6 +67,8 @@ function normalizeItem(item: Partial<CartItem>): CartItem {
     source: item.source ?? 'guest',
     categoryType: item.categoryType,
     beverageKind: item.beverageKind,
+    addedByDevice: item.addedByDevice || '',
+    addedAt: item.addedAt || undefined,
   };
 }
 
@@ -72,9 +79,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [customTip, setCustomTip] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [justAdded, setJustAdded] = useState<{ name: string; t: number } | null>(null);
+  const [tableDevices, setTableDevices] = useState<TableDeviceInfo[]>([]);
+  const { tableId, device } = useApp();
 
   const addItem = useCallback((raw: Partial<CartItem>) => {
     const next = normalizeItem(raw);
+    // Device-aware recommendations: stamp the adding device unless the caller
+    // already supplied one (e.g. a synced/waiter-added item).
+    if (!next.addedByDevice) next.addedByDevice = device.deviceId;
+    if (!next.addedAt) next.addedAt = Date.now();
     setItems(prev => {
       const existing = prev.find(e => e.name === next.name && e.price === next.price);
       if (existing) {
@@ -83,7 +96,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...prev, next];
     });
     setJustAdded({ name: next.name, t: Date.now() });
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [device.deviceId]);
 
   const updateQty = useCallback((index: number, delta: number) => {
     setItems(prev => {
@@ -121,21 +135,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // that many duplicate socket emits, and every incoming syncCart broadcast
   // was independently replayed that many times, each rebuilding the items
   // array -- the root cause of "glitchy" cart behavior under real use.
-  const { tableId, device } = useApp();
   const socket = useSocket();
   const normalizedTableId = normalizeClientTableId(tableId);
   const lastSyncSig = useRef<string>('');
 
   useEffect(() => {
-    socket.emit('joinTable', { restaurantId: RESTAURANT_ID, tableId: normalizedTableId });
+    // Device Awareness: every QR scan/table join carries this browser's
+    // stable deviceId so the server can assign/recall a "Guest N" label for
+    // this table visit (see socketService.js's handleJoinTable).
+    socket.emit('joinTable', { restaurantId: RESTAURANT_ID, tableId: normalizedTableId, deviceId: device.deviceId });
     // Re-join on (re)connect so cart sync survives server restarts / network blips.
-    const onConnect = () => socket.emit('joinTable', { restaurantId: RESTAURANT_ID, tableId: normalizedTableId });
+    const onConnect = () => socket.emit('joinTable', { restaurantId: RESTAURANT_ID, tableId: normalizedTableId, deviceId: device.deviceId });
     socket.on('connect', onConnect);
     return () => {
       socket.off('connect', onConnect);
       socket.emit('leaveTable', { restaurantId: RESTAURANT_ID, tableId: normalizedTableId });
     };
-  }, [socket, normalizedTableId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socket, normalizedTableId, device.deviceId]);
 
   // Server is the source of truth: apply whatever the table currently holds so
   // every device (phones, waiter) converges. Removals propagate too.
@@ -147,6 +164,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useSocketEvent<SyncHistoryEvent>('syncHistory', ({ tableId: tid, history: syncedHistory }) => {
     if (normalizeClientTableId(tid) === normalizedTableId) setHistory(syncedHistory);
+  });
+
+  // Device Awareness: the current guest roster for this table (see
+  // socketService.js's handleJoinTable/emitTableDevices) — lets the cart
+  // drawer label lines by guest once more than one device is ordering.
+  useSocketEvent<{ tableId?: string; devices?: TableDeviceInfo[] }>('tableDevices', (p) => {
+    if (!p || normalizeClientTableId(String(p.tableId || '')) !== normalizedTableId) return;
+    setTableDevices(Array.isArray(p.devices) ? p.devices : []);
   });
 
   // Push local cart changes to the table room so they appear on all devices.
@@ -194,7 +219,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (items.length === 0) { setRecommendations([]); setRecommendationsLoading(false); return; }
     let cancelled = false;
     setRecommendationsLoading(true);
-    api.getRecommendations({ items: items.map(i => ({ name: i.name, price: i.price })), tableId })
+    api.getRecommendations({
+      items: items.map(i => ({ name: i.name, price: i.price, addedByDevice: i.addedByDevice })),
+      tableId,
+      deviceId: device.deviceId,
+    })
       .then((data: unknown) => {
         if (cancelled) return;
         setRecommendations(Array.isArray(data) ? (data as CartRecommendation[]) : []);
@@ -227,6 +256,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setIsOpen, setTipMode, setCustomTip,
       addItem, updateQty, removeAt, setNote,
       clear, replaceCart, setHistory, getTotals, syncCart,
+      tableDevices,
     }}>
       {children}
     </CartContext.Provider>

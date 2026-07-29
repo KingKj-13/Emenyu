@@ -235,7 +235,11 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
   const files = {
     deals: path.join(directories.food, 'DealOfDay.json'),
     chatLogs: path.join(directories.data, 'chat_logs.json'),
-    accounts: path.join(directories.data, 'accounts.json')
+    accounts: path.join(directories.data, 'accounts.json'),
+    // Curated Demo Mode + future live-flippable admin settings — same
+    // JSON-file pattern as DealOfDay.json, so the toggle can flip instantly
+    // without a server restart (see fileService.loadSettings/saveSettings).
+    settings: path.join(directories.data, 'settings.json')
   };
 
   const config = {
@@ -472,11 +476,19 @@ function createRoleAuth(config, accountService, logger = null) {
   const crypto = require('crypto');
   const cookieName = config.auth.cookieName || 'trump_session';
 
-  function directAccessUser() {
+  // Public demo tenant only (config.demo.autoLoginRole is unset for Trump's own
+  // .env): every request/socket-handshake is treated as already authenticated,
+  // so the demo admin/waiter UIs open with no login step. Real credentials/
+  // accountService are never consulted on this path.
+  function demoUser() {
+    if (!config.demo?.autoLoginRole) {
+      return null;
+    }
+
     return {
-      username: 'carmella-direct',
-      role: 'owner',
-      label: 'Carmella',
+      username: config.demo.autoLoginUsername,
+      role: config.demo.autoLoginRole,
+      label: 'Demo Guest',
       status: 'active'
     };
   }
@@ -485,6 +497,19 @@ function createRoleAuth(config, accountService, logger = null) {
   // column (global uniqueness across every tenant sharing this DB), so the
   // demo admin's staff list is a process-local in-memory mock — it never
   // reads or writes the real Postgres `User` table, and resets on restart.
+  let demoAccountsStore = null;
+  function demoAccounts() {
+    if (!demoAccountsStore) {
+      demoAccountsStore = [
+        { username: 'demo-owner', role: 'owner', label: 'Owner', status: 'active', assignedTables: [], createdBy: 'system', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), suspendedAt: null },
+        { username: 'demo-manager', role: 'manager', label: 'Manager', status: 'active', assignedTables: [], createdBy: 'system', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), suspendedAt: null },
+        { username: 'demo-waiter', role: 'waiter', label: 'Waiter', status: 'active', assignedTables: [], createdBy: 'system', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), suspendedAt: null },
+        { username: 'demo-kitchen', role: 'kitchen', label: 'Kitchen', status: 'active', assignedTables: [], createdBy: 'system', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), suspendedAt: null }
+      ];
+    }
+    return demoAccountsStore;
+  }
+
   function sanitizeUser(user) {
     if (!user) {
       return null;
@@ -575,7 +600,7 @@ function createRoleAuth(config, accountService, logger = null) {
   }
 
   async function getRequestUser(req) {
-    return directAccessUser()
+    return demoUser()
       || (await getSessionUser(req))
       || (await getBearerUser(req))
       || (await readBasicUser(req, config, accountService));
@@ -597,7 +622,7 @@ function createRoleAuth(config, accountService, logger = null) {
   function getRoleHome(role) {
     if (role === 'waiter') return `${config.publicBasePath}/Waiter`;
     if (role === 'kitchen') return `${config.publicBasePath}/Kitchen`;
-    if (role === 'owner') return `${config.publicBasePath}/Admin`;
+    if (role === 'owner') return `${config.publicBasePath}/Owner`;
     return `${config.publicBasePath}/Admin`;
   }
 
@@ -614,7 +639,7 @@ function createRoleAuth(config, accountService, logger = null) {
         return res.redirect(getRoleHome(user.role));
       }
 
-      return res.redirect(`${config.publicBasePath}/table1`);
+      return res.redirect(`${config.publicBasePath}/login?next=${encodeURIComponent(req.originalUrl || config.publicBasePath)}`);
     }
 
     if (!user) {
@@ -663,23 +688,44 @@ function createRoleAuth(config, accountService, logger = null) {
     },
     // Verify a raw session token (same HMAC + active-user check as REST auth).
     // Returns the sanitized active user, or null. Used by the Socket.IO handshake.
-    getUserFromToken: token => directAccessUser() || readToken(token),
+    getUserFromToken: token => demoUser() || readToken(token),
     // Verify a session from a raw Cookie header string (Socket.IO handshake).
     async authenticateCookieHeader(cookieHeader) {
-      const directUser = directAccessUser();
-      if (directUser) return directUser;
+      if (demoUser()) {
+        return demoUser();
+      }
       const cookies = parseCookieHeader(cookieHeader);
       const token = cookies[cookieName];
       return token ? readToken(token) : null;
     },
     async login(req, res) {
-      const user = directAccessUser();
-      logger?.info('auth_login_bypassed', { user: sanitizeUser(user) });
-      return res.json({ ok: true, user: sanitizeUser(user), defaultPath: `${config.publicBasePath}/Admin` });
+      const { username, password } = req.body || {};
+      const existing = accountService ? await accountService.findAccount(username) : null;
+      if (existing && existing.status === 'suspended') {
+        logger?.warn('auth_login_suspended', { username });
+        return res.status(403).json({ error: 'This account is suspended. Contact the owner.' });
+      }
+
+      const user = accountService
+        ? await accountService.verifyCredentials(username, password)
+        : null;
+      if (!user) {
+        logger?.warn('auth_login_failed', { username });
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      issueSession(req, res, user);
+      logger?.info('auth_login_success', { user: sanitizeUser(user) });
+      return res.json({ ok: true, user: sanitizeUser(user), defaultPath: getRoleHome(user.role) });
     },
     async logout(req, res) {
+      const user = await getSessionUser(req);
+      if (user && accountService) {
+        await accountService.invalidateSessions(user.username);
+      }
+
       clearSession(req, res);
-      logger?.info('auth_logout_bypassed', { user: sanitizeUser(directAccessUser()) });
+      logger?.info('auth_logout', { user: sanitizeUser(user) });
       return res.json({ ok: true });
     },
     async me(req, res) {
@@ -687,25 +733,67 @@ function createRoleAuth(config, accountService, logger = null) {
       return res.json({ user: user ? sanitizeUser(user) : null, defaultPath: user ? getRoleHome(user.role) : config.publicBasePath });
     },
     async listAccounts(req, res) {
-      return res.json([]);
+      if (config.demo?.autoLoginRole) {
+        return res.json(demoAccounts());
+      }
+      const accounts = await accountService.listForActor(req.user);
+      return res.json(accounts);
     },
     async createAccount(req, res) {
-      return res.status(410).json({ error: 'Account management has been removed.' });
+      if (config.demo?.autoLoginRole) {
+        const body = req.body || {};
+        if (!body.username || !body.role) {
+          return res.status(400).json({ error: 'username and role are required' });
+        }
+        if (demoAccounts().some(a => a.username === body.username)) {
+          return res.status(409).json({ error: 'That username already exists' });
+        }
+        const account = {
+          username: body.username, role: body.role, label: body.label || body.role, status: 'active',
+          assignedTables: [], createdBy: 'demo', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), suspendedAt: null
+        };
+        demoAccounts().push(account);
+        return res.status(201).json(account);
+      }
+      try {
+        const account = await accountService.createAccount(req.user, req.body || {});
+        logger?.info('auth_account_created', { actor: sanitizeUser(req.user), account });
+        return res.status(201).json(account);
+      } catch (error) {
+        logger?.warn('auth_account_create_failed', { actor: sanitizeUser(req.user), error });
+        return res.status(error.statusCode || 500).json({ error: error.message || 'Account create failed' });
+      }
     },
     async updateAccount(req, res) {
-      return res.status(410).json({ error: 'Account management has been removed.' });
+      if (config.demo?.autoLoginRole) {
+        const account = demoAccounts().find(a => a.username === req.params.username);
+        if (!account) {
+          return res.status(404).json({ error: 'Account not found' });
+        }
+        Object.assign(account, req.body || {}, { updatedAt: new Date().toISOString() });
+        return res.json(account);
+      }
+      try {
+        const account = await accountService.updateAccount(req.user, req.params.username, req.body || {});
+        logger?.info('auth_account_updated', { actor: sanitizeUser(req.user), account });
+        return res.json(account);
+      } catch (error) {
+        logger?.warn('auth_account_update_failed', { actor: sanitizeUser(req.user), username: req.params.username, error });
+        return res.status(error.statusCode || 500).json({ error: error.message || 'Account update failed' });
+      }
     }
   };
 }
 
 function createAdminAuth(config) {
   return async function adminAuth(req, res, next) {
-    req.user = {
-      username: 'carmella-direct',
-      role: 'owner',
-      label: 'Carmella',
-      status: 'active'
-    };
+    const user = await readBasicUser(req, config);
+    if (!user || !roleAllows(user, ['owner', 'manager'])) {
+      res.set('WWW-Authenticate', 'Basic');
+      return res.sendStatus(401);
+    }
+
+    req.user = user;
     return next();
   };
 }

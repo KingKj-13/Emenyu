@@ -28,6 +28,10 @@ interface Message {
   content: string;
   suggestions?: ChatSuggestionItem[];
   proactive?: boolean;
+  // Curated Demo Mode: Order Complete follow-up — a "your next drink is on
+  // us" reward QR (server/services/rewardService.js), rendered inline.
+  rewardQrDataUrl?: string;
+  rewardExpiresAt?: string;
 }
 
 interface ChatPanelProps {
@@ -70,7 +74,7 @@ function highlightKeywords(content: string, names: string[]) {
 }
 
 export function ChatPanel({ onItemClick }: ChatPanelProps) {
-  const { chatOpen, setChatOpen, tableId, effectiveDayPartSlug } = useApp();
+  const { chatOpen, setChatOpen, tableId, effectiveDayPartSlug, device } = useApp();
   const { items: cartItems, addItem, removeAt, justAdded } = useCart();
   const { activeItemNames } = useMenuData();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -121,6 +125,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
         cart: cartItems,
         proactive: true,
         tableId,
+        deviceId: device.deviceId,
         ...(reason === 'dessert' ? { reason: 'dessert' } : {}),
       }) as ChatSuggestionItem[];
       // Day/Night toggle: the recommendation engine scores over the full
@@ -165,7 +170,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
         });
       }
     } catch { /* a missed proactive nudge is not worth surfacing an error for */ }
-  }, [cartItems, setChatOpen, tableId]);
+  }, [cartItems, setChatOpen, tableId, device.deviceId]);
 
   const { recordIgnored } = useConciergeTiming({
     cartItems,
@@ -189,6 +194,29 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
     const timer = window.setTimeout(() => setJustAccepted(false), POST_ACCEPT_PAUSE_MS);
     return () => window.clearTimeout(timer);
   }, [justAdded]);
+
+  // Curated Demo Mode: Order Complete follow-up, pushed server-side (chat is
+  // normally request/response only — see socketService.js's
+  // emitOrderCompleteFollowUp / waiterApiController.completeTable). Either a
+  // plain thank-you, or "your next drink is on us" plus a one-time reward QR.
+  useEffect(() => {
+    const socket = getSocket();
+    const onFollowUp = async (p: { tableId?: string; message?: string; rewardCode?: string; rewardExpiresAt?: string }) => {
+      if (!p?.message || String(p.tableId || '').toLowerCase() !== String(tableId || '').toLowerCase()) return;
+      let rewardQrDataUrl: string | undefined;
+      if (p.rewardCode) {
+        try {
+          const QRCode = (await import('qrcode')).default;
+          rewardQrDataUrl = await QRCode.toDataURL(p.rewardCode, { width: 220, margin: 2, color: { dark: '#001724', light: '#f5f0e8' } });
+        } catch { /* the text follow-up still lands even if the QR render fails */ }
+      }
+      setMessages(prev => [...prev, { role: 'assistant', content: p.message!, rewardQrDataUrl, rewardExpiresAt: p.rewardExpiresAt }]);
+      setHasUnseenSuggestion(true);
+      setChatOpen(true);
+    };
+    socket.on('orderCompleteFollowUp', onFollowUp);
+    return () => { socket.off('orderCompleteFollowUp', onFollowUp); };
+  }, [tableId, setChatOpen]);
 
   function callWaiter() {
     getSocket().emit('callWaiter', { restaurantId: RESTAURANT_ID, tableId });
@@ -239,11 +267,11 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
     // the guest with an error.
     async function attemptChat(): Promise<ChatResponse> {
       try {
-        return await api.chat({ message: content, history, tableId, cart: cartItems, dayPart: effectiveDayPartSlug }) as ChatResponse;
+        return await api.chat({ message: content, history, tableId, deviceId: device.deviceId, cart: cartItems, dayPart: effectiveDayPartSlug }) as ChatResponse;
       } catch (firstError) {
         await new Promise(resolve => setTimeout(resolve, 600));
         try {
-          return await api.chat({ message: content, history, tableId, cart: cartItems, dayPart: effectiveDayPartSlug }) as ChatResponse;
+          return await api.chat({ message: content, history, tableId, deviceId: device.deviceId, cart: cartItems, dayPart: effectiveDayPartSlug }) as ChatResponse;
         } catch {
           throw firstError;
         }
@@ -302,6 +330,24 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
     const oldIndex = cartItems.findIndex(c => c.name === item.replacement!.name);
     if (oldIndex >= 0) removeAt(oldIndex);
     addFromChat(item);
+  }
+
+  // Curated Demo Mode: "not this one" — re-asks the curated journey's stage
+  // machine (curatedDemoJourney.js) for the next alternative in the SAME
+  // message slot. No loop: after the journey's last alternative for this
+  // stage is skipped, the engine returns nothing and the card simply clears.
+  async function skipFromChat(messageIndex: number) {
+    try {
+      const recs = await api.getRecommendations({
+        cart: cartItems,
+        tableId,
+        deviceId: device.deviceId,
+        skip: true,
+      }) as ChatSuggestionItem[];
+      const next = (recs || [])[0] || null;
+      setMessages(prev => prev.map((m, idx) => (idx === messageIndex ? { ...m, suggestions: next?.name ? [next] : [] } : m)));
+      if (next?.name) trackImpressions([next], CHAT_RECO_CTX);
+    } catch { /* a missed skip is not worth surfacing an error for */ }
   }
 
   const chips = getContextChips(cartItems);
@@ -375,6 +421,16 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
                       ? highlightKeywords(msg.content, (msg.suggestions || []).map(s => s.name))
                       : msg.content}
                   </div>
+                  {msg.role === 'assistant' && msg.rewardQrDataUrl && (
+                    <div className={styles.rewardCard}>
+                      <img src={msg.rewardQrDataUrl} alt="Reward QR code" className={styles.rewardQrImg} />
+                      {msg.rewardExpiresAt && (
+                        <p className={styles.rewardExpiry}>
+                          Valid until {new Date(msg.rewardExpiresAt).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && (
                     <div className={`${styles.suggestionCards} ${flashLatest && i === lastMessageIndex ? styles.flash : ''}`}>
                       {msg.suggestions.map((item, j) => (
@@ -388,6 +444,7 @@ export function ChatPanel({ onItemClick }: ChatPanelProps) {
                           onOpen={() => { trackClick(item as RecommendationItem, CHAT_RECO_CTX); onItemClick?.(item); }}
                           onAdd={() => addFromChat(item)}
                           onReplace={canReplace(item) ? () => replaceFromChat(item) : undefined}
+                          onSkip={item.curated ? () => skipFromChat(i) : undefined}
                         />
                       ))}
                     </div>

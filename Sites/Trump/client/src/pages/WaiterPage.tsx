@@ -395,9 +395,13 @@ function Timeline({ status, placed }: { status?: string; placed: number }) {
   );
 }
 
+// Labels only ("Traditional" reads better to a waiter/guest than "Friendly"
+// for the same underlying script — see aiService.js/nlgService.js's
+// `professional`/`friendly`/`luxury` tone keys, left unchanged to avoid a
+// wider server-side rename).
 const TONE_TABS: { key: keyof NonNullable<CartRec['scripts']>; label: string }[] = [
   { key: 'professional', label: 'Professional' },
-  { key: 'friendly', label: 'Friendly' },
+  { key: 'friendly', label: 'Traditional' },
   { key: 'luxury', label: 'Luxury' },
 ];
 
@@ -645,11 +649,31 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
     }
   }
 
-  function declineRec(rec: CartRec) {
+  async function declineRec(rec: CartRec) {
     setStatusByName(prev => ({ ...prev, [rec.name]: 'declined' }));
     if (selectedTableId) {
       api.recordUpsell({ waiterName: shift.name, tableId: selectedTableId, suggestedItem: rec.name, accepted: false, source: rec.source_title || 'cart-rec', value: 0 }).catch(() => {});
     }
+    // Curated Demo Mode: re-ask the same accept/skip/no-loop stage machine
+    // recommend() uses (curatedDemoJourney.js) for the next alternative — up
+    // to 3 mains, no loop back to an already-declined one. A no-op outside
+    // curated mode / a non-demo cart: the server's curated resolver returns
+    // null and cartRecommendations() falls back to its normal algorithmic
+    // pick, same as today.
+    try {
+      const data = await api.cartRecommendations({
+        cart: fullCart.map(line => ({ name: line.name, price: line.price, qty: line.quantity })),
+        event: event?.type || null,
+        mode: table.isLuxury ? 'luxury' : 'standard',
+        tableId: table.tableId,
+        skip: true,
+      });
+      setRecData(data);
+      const next = data?.recommendations?.[0];
+      if (next) {
+        setStatusByName(prev => (prev[next.name] ? prev : { ...prev, [next.name]: 'suggested' }));
+      }
+    } catch { /* keep showing the declined card's terminal state on failure */ }
   }
 
   // Waiter-side "this table's whole visit is done" -- moves every active

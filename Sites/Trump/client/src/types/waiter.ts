@@ -278,6 +278,21 @@ export interface OrderLine {
   category?: string;
   img?: string;
   categoryType?: string;
+  // Device Awareness / split-bill-by-device: which guest device added this
+  // line (carried through from CartItem.addedByDevice via WaiterContext's
+  // seedGuestLines) and when — blank/undefined for waiter-added lines and
+  // legacy/pre-rollout carts.
+  addedByDevice?: string;
+  addedAt?: number;
+}
+
+// Device Awareness: one entry per guest device that has joined this table's
+// visit — populated from the server's `tableDevices` socket broadcast
+// (socketService.js's getOrAssignDeviceLabel/emitTableDevices).
+export interface TableDeviceInfo {
+  deviceId: string;
+  label: string;
+  joinedAt: number;
 }
 
 export interface ServiceNotes {

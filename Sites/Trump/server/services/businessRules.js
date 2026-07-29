@@ -76,11 +76,14 @@ function createBusinessRules({ file, frequencyFile } = {}) {
   const OILY_FISH_RE = new RegExp(oilyFishPatternSource, 'i');
 
   // value:never-downsell — block a same-role replacement candidate that is
-  // CHEAPER than the item it replaces, unless the guest explicitly asked for
-  // something more affordable/lighter (wantsValue).
+  // CHEAPER than (or, per the Phase 2 recommendation-quality review, exactly
+  // as expensive as) the item it replaces, unless the guest explicitly asked
+  // for something more affordable/lighter (wantsValue). A zero-gain "swap"
+  // was previously allowed through (netRevenueIncrease < 0 only), letting a
+  // same-price replacement surface with no actual upsell behind it.
   function isDownsell({ netRevenueIncrease, wantsValue = false } = {}) {
     if (wantsValue) return false;
-    return typeof netRevenueIncrease === 'number' && netRevenueIncrease < 0;
+    return typeof netRevenueIncrease === 'number' && netRevenueIncrease <= 0;
   }
 
   // stage:no-dessert-before-mains — a dessert candidate is only legal once at

@@ -1,7 +1,9 @@
 // Waiter-AI API surface. Thin orchestration: deterministic services make every
 // decision; nlgService only phrases the result. Never blocks on the LLM.
 const { getPrisma } = require('../services/prismaClient');
-const { normalizeId, getCanonicalTableId } = require('../utils/helpers');
+const { normalizeId, getCanonicalTableId, normalizeName } = require('../utils/helpers');
+const { countAccepted } = require('../services/curatedDemoJourney');
+const { MESSAGES, ENJOYED_THRESHOLD } = require('../config/trumpDemoJourney');
 
 function quantity(item = {}) {
   return Number(item.qty || item.quantity || 1) || 1;
@@ -19,7 +21,8 @@ function createWaiterApiController(deps) {
     waiterAnalyticsService,
     serviceRecoveryService,
     floorService,
-    waiterWorkflowService
+    waiterWorkflowService,
+    rewardService
   } = deps;
   const restaurantId = config?.restaurantId || 'trump';
   const KINDS = nlgService.KINDS;
@@ -393,6 +396,37 @@ function createWaiterApiController(deps) {
           where: { restaurantId, tableId, status: 'active' },
           select: { filename: true }
         });
+
+        // Curated Demo Mode: Order Complete follow-up — a guest who accepted
+        // most of the curated journey's stage offers gets a thank-you; one
+        // who declined most gets "your next drink is on us" plus a one-time
+        // reward QR. Computed from the table's FULL visit (live cart + every
+        // active order), purely from which items ended up on the table —
+        // countAccepted() is stateless, so this needs no per-device lookup.
+        // Deliberately read BEFORE resetTableState()/order-history-move below
+        // touch anything.
+        try {
+          const liveSettings = await fileService.loadSettings();
+          const cartItems = liveSettings?.curatedDemoMode ? await buildTableCart(tableId) : [];
+          const cartNames = cartItems.map(item => normalizeName(item.name));
+          const { journey, accepted } = countAccepted(cartNames);
+          if (journey && rewardService) {
+            if (accepted >= ENJOYED_THRESHOLD) {
+              socketService.emitOrderCompleteFollowUp(tableId, { message: MESSAGES.chat.orderCompleteThankYou });
+            } else {
+              const reward = await rewardService.issue({ tableId, deviceId: '', reason: 'declined-recommendations' });
+              socketService.emitOrderCompleteFollowUp(tableId, {
+                message: MESSAGES.chat.orderCompleteMakeGood,
+                rewardCode: reward.code,
+                rewardExpiresAt: reward.expiresAt,
+                rewardInstructions: MESSAGES.chat.rewardRedeemInstructions
+              });
+            }
+          }
+        } catch {
+          // A missed Order Complete follow-up (thank-you/reward) must never
+          // block the actual table-completion flow below.
+        }
 
         for (const order of activeOrders) {
           await fileService.moveOrder('orders', 'history', order.filename, actor).catch(() => {});

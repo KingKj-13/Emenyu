@@ -3,18 +3,47 @@ import { X, Plus, Minus } from 'lucide-react';
 import { useWaiter } from '../../context/WaiterContext';
 import { money } from '../../lib/waiterFormat';
 
-type Mode = 'equal' | 'item' | 'custom';
+type Mode = 'equal' | 'item' | 'custom' | 'device';
 
-// S14 — split equally, by item, or with custom amounts. Operates on the full
-// table bill (already-sent items + waiter-added lines), supports any party size.
+// S14 — split equally, by item, with custom amounts, or by device (Device
+// Awareness: group by which guest's phone actually ordered each line).
+// Operates on the full table bill (already-sent items + waiter-added lines),
+// supports any party size.
 export function SplitBillModal() {
-  const { selectedTableId, order, placedItems, closeOverlay, showToast } = useWaiter();
+  const { selectedTableId, order, placedItems, tableDevices, closeOverlay, showToast } = useWaiter();
   const lines = useMemo(
-    () => [...placedItems.map(p => ({ name: p.name, price: p.price, quantity: p.quantity })), ...order.map(o => ({ name: o.name, price: o.price, quantity: o.quantity }))],
+    () => [
+      ...placedItems.map(p => ({ name: p.name, price: p.price, quantity: p.quantity, addedByDevice: undefined as string | undefined, addedAt: undefined as number | undefined })),
+      ...order.map(o => ({ name: o.name, price: o.price, quantity: o.quantity, addedByDevice: o.addedByDevice, addedAt: o.addedAt })),
+    ],
     [placedItems, order]
   );
   const total = useMemo(() => lines.reduce((s, l) => s + l.price * l.quantity, 0), [lines]);
   const num = selectedTableId ? selectedTableId.replace('table', '') : '';
+
+  // Device Awareness: group lines by whoever's device added them. Lines with
+  // no device tag (already-sent kitchen history, waiter-added items) fall
+  // into one "Waiter / Table" bucket — those predate this feature's rollout
+  // or were never attributable to a single guest to begin with.
+  const deviceGroups = useMemo(() => {
+    const byDevice = new Map<string, { label: string; joinedAt: number; lines: typeof lines; total: number }>();
+    for (const line of lines) {
+      const key = line.addedByDevice || '__unassigned';
+      if (!byDevice.has(key)) {
+        const known = tableDevices.find(d => d.deviceId === key);
+        byDevice.set(key, {
+          label: known?.label || (key === '__unassigned' ? 'Waiter / Table' : 'Guest'),
+          joinedAt: known?.joinedAt ?? Number.MAX_SAFE_INTEGER,
+          lines: [],
+          total: 0,
+        });
+      }
+      const group = byDevice.get(key)!;
+      group.lines.push(line);
+      group.total += line.price * line.quantity;
+    }
+    return [...byDevice.values()].sort((a, b) => a.joinedAt - b.joinedAt);
+  }, [lines, tableDevices]);
 
   const [mode, setMode] = useState<Mode>('equal');
   const [guests, setGuests] = useState(4);
@@ -57,21 +86,23 @@ export function SplitBillModal() {
         </div>
 
         <div className="wv-split-modes" role="tablist">
-          {(['equal', 'item', 'custom'] as Mode[]).map(m => (
+          {(['equal', 'item', 'custom', 'device'] as Mode[]).map(m => (
             <button key={m} role="tab" aria-selected={mode === m} className={mode === m ? 'active' : ''} onClick={() => setMode(m)}>
-              {m === 'equal' ? 'Equally' : m === 'item' ? 'By item' : 'Custom'}
+              {m === 'equal' ? 'Equally' : m === 'item' ? 'By item' : m === 'custom' ? 'Custom' : 'By device'}
             </button>
           ))}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, margin: '20px 0' }}>
-          <button className="w-pair-add" style={{ width: 48, height: 48 }} onClick={() => setGuestCount(guests - 1)} aria-label="Fewer guests"><Minus size={20} /></button>
-          <div style={{ textAlign: 'center' }}>
-            <div className="w-display" style={{ fontSize: 48, color: 'var(--w-text)' }}>{guests}</div>
-            <div className="w-eyebrow-dim">Guests</div>
+        {mode !== 'device' && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, margin: '20px 0' }}>
+            <button className="w-pair-add" style={{ width: 48, height: 48 }} onClick={() => setGuestCount(guests - 1)} aria-label="Fewer guests"><Minus size={20} /></button>
+            <div style={{ textAlign: 'center' }}>
+              <div className="w-display" style={{ fontSize: 48, color: 'var(--w-text)' }}>{guests}</div>
+              <div className="w-eyebrow-dim">Guests</div>
+            </div>
+            <button className="w-pair-add" style={{ width: 48, height: 48 }} onClick={() => setGuestCount(guests + 1)} aria-label="More guests"><Plus size={20} /></button>
           </div>
-          <button className="w-pair-add" style={{ width: 48, height: 48 }} onClick={() => setGuestCount(guests + 1)} aria-label="More guests"><Plus size={20} /></button>
-        </div>
+        )}
 
         {mode === 'equal' && (
           <>
@@ -143,6 +174,34 @@ export function SplitBillModal() {
                 {money(Math.abs(customRemaining))}
               </span>
             </div>
+          </div>
+        )}
+
+        {mode === 'device' && (
+          <div style={{ marginTop: 6 }}>
+            {lines.length === 0 ? (
+              <p className="wv-empty">No items on this table yet.</p>
+            ) : (
+              deviceGroups.map(group => (
+                <div key={group.label + group.joinedAt} className="w-hero" style={{ padding: '14px', marginBottom: 10 }}>
+                  <div className="w-line" style={{ marginBottom: 6 }}>
+                    <span className="name" style={{ fontSize: 16, fontWeight: 700 }}>{group.label}</span>
+                    <span className="price" style={{ fontSize: 16, fontWeight: 700 }}>{money(group.total)}</span>
+                  </div>
+                  {group.joinedAt !== Number.MAX_SAFE_INTEGER && (
+                    <p className="w-eyebrow-dim" style={{ marginBottom: 8 }}>
+                      Joined {new Date(group.joinedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  )}
+                  {group.lines.map((l, i) => (
+                    <div key={`${l.name}-${i}`} className="w-line" style={{ fontSize: 13.5, opacity: 0.85 }}>
+                      <span className="name">{l.quantity}× {l.name}</span>
+                      <span className="price">{money(l.price * l.quantity)}</span>
+                    </div>
+                  ))}
+                </div>
+              ))
+            )}
           </div>
         )}
 

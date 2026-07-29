@@ -3,7 +3,7 @@
 // layout; colours use guest tokens with hardcoded gold/cream fallbacks so the card
 // also looks right inside the waiter theme.
 import { useState } from 'react';
-import { Plus, Sparkles, Play, Repeat, Crown } from 'lucide-react';
+import { Plus, Sparkles, Play, Repeat, Crown, SkipForward } from 'lucide-react';
 import { resolveThumbnail, resolveVideo, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import type { MenuItem } from '../../types/menu';
@@ -20,6 +20,11 @@ export interface RecommendationItem {
   source_title?: string;
   reason?: string;
   chef?: boolean;
+  // Curated Demo Mode (server/services/curatedDemoJourney.js): true only for
+  // a pick surfaced by the hand-designed demo journeys — gates the Skip
+  // button below, since Skip/alternatives only make sense for a curated pick
+  // (the algorithmic engine has no "next alternative" concept to advance to).
+  curated?: boolean;
   rotationGroup?: string;
   dbId?: number;
   // Phase 1 (Recommendation Brain) — not yet rendered by this card (no UI
@@ -51,6 +56,10 @@ interface Props {
   onReplace?: () => void;
   premium?: boolean; // "Premium" badge (e.g. the Wagyu upgrade nudge)
   large?: boolean;   // bigger image/text for a single-card context (e.g. chat, one card at a time)
+  // Curated Demo Mode: "not this one, show the next alternative" — only ever
+  // rendered when item.curated is true (see RecommendationItem.curated above).
+  onSkip?: () => void;
+  skipLabel?: string;
 }
 
 // Phase 5 (AI Concierge): a natural-language stand-in for the raw confidence
@@ -103,6 +112,8 @@ export function RecommendationCard({
   onReplace,
   premium,
   large,
+  onSkip,
+  skipLabel = 'Skip',
 }: Props) {
   const [playing, setPlaying] = useState(false);
   const src = imageFor(item);
@@ -190,7 +201,26 @@ export function RecommendationCard({
           <div className={styles.jInfo}>{infoBody}</div>
         )}
 
-        {onAdd && price > 0 && (
+        {onAdd && price > 0 && item.curated && onSkip ? (
+          <div className={styles.jActions}>
+            <button
+              type="button"
+              className={styles.jAddBtn}
+              aria-label={`Add ${item.name}`}
+              onClick={e => { e.stopPropagation(); onAdd(); }}
+            >
+              <Plus size={15} /><span>{addLabel}</span>
+            </button>
+            <button
+              type="button"
+              className={styles.jSkipBtn}
+              aria-label={`Skip ${item.name}`}
+              onClick={e => { e.stopPropagation(); onSkip(); }}
+            >
+              <SkipForward size={14} /><span>{skipLabel}</span>
+            </button>
+          </div>
+        ) : onAdd && price > 0 && (
           <button
             type="button"
             className={styles.jAddBtn}
@@ -260,6 +290,27 @@ export function RecommendationCard({
           <Repeat size={variant === 'compact' ? 12 : 15} />
           {variant !== 'compact' && <span>Replace</span>}
         </button>
+      ) : onAdd && price > 0 && item.curated && onSkip ? (
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.addBtn}
+            aria-label={`Add ${item.name}`}
+            onClick={e => { e.stopPropagation(); onAdd(); }}
+          >
+            <Plus size={variant === 'compact' ? 12 : 15} />
+            {variant !== 'compact' && <span>{addLabel}</span>}
+          </button>
+          <button
+            type="button"
+            className={styles.skipBtn}
+            aria-label={`Skip ${item.name}`}
+            onClick={e => { e.stopPropagation(); onSkip(); }}
+          >
+            <SkipForward size={variant === 'compact' ? 12 : 15} />
+            {variant !== 'compact' && <span>{skipLabel}</span>}
+          </button>
+        </div>
       ) : onAdd && price > 0 && (
         <button
           type="button"

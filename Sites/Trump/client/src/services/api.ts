@@ -1,6 +1,7 @@
 import { ENDPOINTS } from '../constants/api';
 import type { MenuData, ChefRec, ChefRecInput, RecommendationAnalytics, RecoInsightsResult, BundleAdmin, BundleInput, AppConfig } from '../types/menu';
 import type { PersonaOrder } from '../constants/recommendedOrders';
+import type { LoginPayload, LoginResponse, AuthUser } from '../types/auth';
 import type { OrderPayload } from '../types/cart';
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
@@ -40,6 +41,19 @@ export const api = {
     return postJson<unknown>(ENDPOINTS.recommend, payload);
   },
 
+  // Curated Demo Mode
+  getSettings() {
+    return fetchJson<{ curatedDemoMode: boolean }>(ENDPOINTS.settings);
+  },
+
+  saveSettings(payload: { curatedDemoMode?: boolean }) {
+    return postJson<{ ok: boolean; settings: { curatedDemoMode: boolean } }>(ENDPOINTS.settings, payload);
+  },
+
+  redeemReward(code: string) {
+    return postJson<{ ok: boolean; reason?: string }>(ENDPOINTS.rewardRedeem(code), {});
+  },
+
   chat(payload: unknown) {
     return postJson<unknown>(ENDPOINTS.chat, payload);
   },
@@ -56,8 +70,49 @@ export const api = {
     return postJson<{ ok: boolean }>(ENDPOINTS.submitOrder, payload);
   },
 
+  authMe(): Promise<AuthUser | null> {
+    return fetchJson<{ user: AuthUser | null } | AuthUser | null>(ENDPOINTS.authMe)
+      .then(result => {
+        if (result && typeof result === 'object' && 'user' in result) return result.user;
+        return result as AuthUser | null;
+      })
+      .catch(() => null);
+  },
+
+  async login(payload: LoginPayload): Promise<LoginResponse> {
+    // Don't route through fetchJson (which throws on any non-2xx): a 401/403 is a
+    // valid auth answer, not a connection failure. Surface the server's error
+    // message so the UI can say "Invalid credentials" instead of "Unable to connect".
+    // Only a genuine network failure (fetch rejects) propagates as a thrown error.
+    const res = await fetch(ENDPOINTS.authLogin, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const text = await res.text();
+    const data = text.trim() ? (JSON.parse(text) as LoginResponse) : ({} as LoginResponse);
+    if (res.ok) return data;
+    return { ok: false, error: data.error || 'Invalid credentials. Please try again.' };
+  },
+
   logout(): Promise<void> {
     return postJson<void>(ENDPOINTS.authLogout, {});
+  },
+
+  getAccounts() {
+    return fetchJson<unknown[]>(ENDPOINTS.authAccounts);
+  },
+
+  createAccount(payload: unknown) {
+    return postJson<unknown>(ENDPOINTS.authAccounts, payload);
+  },
+
+  updateAccount(username: string, payload: unknown) {
+    return fetchJson<unknown>(`${ENDPOINTS.authAccounts}/${username}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
   },
 
   getOrders() {
@@ -353,7 +408,7 @@ export const api = {
     return postJson<import('../types/waiter').OrderedTogetherResponse>(ENDPOINTS.orderedTogether, payload);
   },
 
-  cartRecommendations(payload: { cart?: unknown[]; event?: string | null; reason?: string; mode?: 'standard' | 'luxury'; tableId?: string }) {
+  cartRecommendations(payload: { cart?: unknown[]; event?: string | null; reason?: string; mode?: 'standard' | 'luxury'; tableId?: string; skip?: boolean }) {
     return postJson<import('../types/waiter').CartRecResponse>(ENDPOINTS.cartRecommendations, payload);
   },
   sommelier(payload: { dish?: string; cart?: unknown[]; tone?: string }) {

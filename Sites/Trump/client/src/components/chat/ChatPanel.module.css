@@ -351,6 +351,31 @@
   border-radius: 10px;
 }
 
+/* Curated Demo Mode: Order Complete "your next drink is on us" reward QR. */
+.rewardCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 14px;
+  border-radius: var(--radius-lg, 14px);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.4);
+  background: rgba(var(--color-gold-rgb), 0.08);
+}
+.rewardQrImg {
+  width: 160px;
+  height: 160px;
+  border-radius: 8px;
+  background: #f5f0e8;
+}
+.rewardExpiry {
+  font-size: 11px;
+  color: var(--color-sand);
+  opacity: 0.85;
+  margin: 0;
+}
+
 /* Phase 5 (AI Concierge): briefly highlights the recommendation a guest
    arrived at via a clicked browser notification — a quiet one-shot glow,
    not a repeating animation. */

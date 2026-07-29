@@ -22,6 +22,7 @@ const candidateFilterPipeline = require('./candidateFilterPipeline');
 const gaspardVoice = require('./nlg/gaspardVoice');
 const { resolveDayPart } = require('../utils/dayPartResolver');
 const { resolveScriptedPick } = require('./scriptedDemoChains');
+const { resolveCuratedPick } = require('./curatedDemoJourney');
 const fs = require('fs');
 const path = require('path');
 
@@ -749,6 +750,40 @@ class AiService {
       }
     }
 
+    // Curated Demo Mode override: applies the SAME resolveCuratedPick() stage
+    // machine recommend() already uses (see there), so the chat reply and the
+    // cart-level Chef's Pick always name the same next item. Checked before
+    // the older scriptedDemo override below so Curated Demo Mode takes
+    // priority whenever it's live-enabled from the Admin UI.
+    if (this.config?.restaurantId === 'trump' && this.fileService?.loadSettings) {
+      const liveSettings = await this.fileService.loadSettings();
+      if (liveSettings?.curatedDemoMode) {
+        const cartNames = cart.map(item => normalizeName(item.name));
+        const curatedPick = resolveCuratedPick(cartNames, {
+          tableId: requestBody.tableId,
+          deviceId: payload.deviceId || null,
+          skip: payload.skip === true
+        });
+        if (curatedPick === 'done') {
+          responseData = { ...responseData, suggestions: [] };
+        } else if (curatedPick) {
+          const item = findScriptedMenuItem(menuContext, curatedPick);
+          if (item) {
+            const pub = publicItem(item, "Chef's pairing");
+            pub.chef = true;
+            pub.beverageKind = item.beverageKind || 'NONE';
+            pub.scripted = true;
+            pub.curated = true;
+            pub.confidence = 0.92;
+            pub.netRevenueIncrease = Number(pub.price) || 0;
+            pub.expectedValue = Math.round(pub.confidence * pub.netRevenueIncrease * 100) / 100;
+            if (curatedPick.reason) pub.reason = curatedPick.reason;
+            responseData = { ...responseData, suggestions: [pub] };
+          }
+        }
+      }
+    }
+
     // Scripted demo override: applies the SAME resolveScriptedPick() chain
     // recommend() already uses (see there), so a scripted cart's chat reply,
     // waiter card and cart-level Chef's Pick all ever name one matching next
@@ -899,7 +934,7 @@ class AiService {
       // suppression (already built, otherwise dormant for this endpoint) can
       // actually apply here — previously silently dropped, so a card the
       // waiter had just ignored could resurface on the very next cart refetch.
-      this.recommend({ cart, limit: 8, reason: payload.reason, guestIntel: payload.guestIntel, tableId: payload.tableId })
+      this.recommend({ cart, limit: 8, reason: payload.reason, guestIntel: payload.guestIntel, tableId: payload.tableId, deviceId: payload.deviceId, skip: payload.skip })
     ]);
     const cartNames = new Set(cart.map(c => normalizeName(c.name)));
     const csvRecs = this.smartPairings.recommend({ cart, menuContext, limit: 4 });
@@ -1401,7 +1436,7 @@ class AiService {
     const rawItem = payload.item || payload.selectedItem || payload.name || payload.cart?.[0];
     const menuContext = await this.getMenuContext();
     const item = typeof rawItem === 'string' ? fuzzyFindItem(menuContext, rawItem) : fuzzyFindItem(menuContext, rawItem?.name) || rawItem;
-    const recs = await this.recommend({ cart: item ? [item] : [], limit: 6, menuContext });
+    const recs = await this.recommend({ cart: item ? [item] : [], limit: 6, menuContext, tableId: payload.tableId, deviceId: payload.deviceId });
 
     // Phase 3A: one shared copy layer (varietal notes, dish hooks, tag bridges,
     // chef-authored reason verbatim, never blank) — replaces the old bland templates.
@@ -1458,6 +1493,41 @@ class AiService {
     ]);
 
     const cartNames = cart.map(item => normalizeName(item.name));
+
+    // Curated Demo Mode (admin-togglable live, see settingsController.js) —
+    // takes priority over the older env-gated scriptedDemo mechanism below.
+    // Runs the accept/skip/no-loop stage machine in curatedDemoJourney.js
+    // against the 3 hand-designed journeys in config/trumpDemoJourney.js.
+    // Falls through untouched (curatedPick === null) when no curated
+    // journey's starter is in this cart, so a non-demo table, and every
+    // other tenant, is unaffected.
+    if (this.config?.restaurantId === 'trump' && this.fileService?.loadSettings) {
+      const liveSettings = await this.fileService.loadSettings();
+      if (liveSettings?.curatedDemoMode) {
+        const curatedPick = resolveCuratedPick(cartNames, {
+          tableId: payload.tableId ? normalizeId(payload.tableId) : null,
+          deviceId: payload.deviceId || null,
+          skip: payload.skip === true
+        });
+        if (curatedPick === 'done') {
+          return [];
+        }
+        if (curatedPick) {
+          const item = findScriptedMenuItem(menuContext, curatedPick);
+          if (item) {
+            const pub = publicItem(item, "Chef's pairing");
+            pub.chef = true;
+            pub.scripted = true;
+            pub.curated = true;
+            pub.confidence = 0.92;
+            pub.netRevenueIncrease = Number(pub.price) || 0;
+            pub.expectedValue = Math.round(pub.confidence * pub.netRevenueIncrease * 100) / 100;
+            if (curatedPick.reason) pub.reason = curatedPick.reason;
+            return [pub];
+          }
+        }
+      }
+    }
 
     // Live-demo hard-coded CHEF'S PICK chains (Trump's Prime Grillhouse demo
     // scripts — see demo trump rule.md). When active for this table, this
@@ -1683,7 +1753,13 @@ class AiService {
     // today, so the suggestion/frequency counters stay dormant for all of
     // them rather than silently emptying an always-on panel a guest expects
     // to see something in.
-    const tableId = payload.tableId || payload.deviceId || null;
+    // Device-aware recommendations: scope recoMemory's accepted/rejected/
+    // frequency-cooldown state per guest device, not per whole table, so one
+    // diner's decline doesn't suppress a suggestion for another diner at the
+    // same table (recommendationMemory.js treats this as an opaque key).
+    const tableId = payload.deviceId
+      ? `${payload.tableId || 'anon'}:${payload.deviceId}`
+      : (payload.tableId || null);
     const pipelineResult = candidateFilterPipeline.runPipeline({
       candidates: finalKept,
       cart,
@@ -1721,6 +1797,28 @@ class AiService {
       .map(c => fuzzyFindItem(menuContext, c.name))
       .find(m => m && m.categoryType === 'WINE') || null;
 
+    // Phase 2 (recommendation-quality review): reasonComposer's hero-pairing
+    // reason for a WINE/side candidate independently appends an "upgrade to
+    // the Wagyu X" nudge whenever sourceDish has one (narrativeExtras ->
+    // upgradeNudge). When that same upgrade is ALSO about to be surfaced as
+    // its own standalone candidate this turn (the journey's separate
+    // upgrade-stage logic below), the guest heard the identical pitch twice —
+    // once folded into another item's reason, once as its own card. Computed
+    // once here (source-dish-dependent, not per-candidate) and passed through
+    // so the composer can suppress the redundant mention; no scoring/ranking
+    // logic changes, purely a narrative dedup.
+    const sourceUpgrade = sourceDish && this.hero && this.hero.ready && typeof this.hero.upgradeFor === 'function'
+      ? this.hero.upgradeFor(sourceDish.name, sourceDish.tags || {})
+      : null;
+    // upgrade_rules.json's `to` is a generic archetype name ("Wagyu Ribeye"),
+    // not the full menu item name ("WAGYU RIBEYE 300g") -- substring match,
+    // not equality, same reason `fuzzyFindItem` elsewhere in this file does.
+    const upgradeAlreadyPresent = Boolean(sourceUpgrade) && finalKept.some(c => {
+      const candName = normalizeName(c.item?.name);
+      const upgradeName = normalizeName(sourceUpgrade.to);
+      return Boolean(candName) && Boolean(upgradeName) && candName.includes(upgradeName);
+    });
+
     const out = [];
     for (const candidate of finalKept.slice(0, recommendationLimit)) {
       const pub = publicItem(candidate.item, candidate.source);
@@ -1754,7 +1852,7 @@ class AiService {
       // Phase 4: carry the rotation group through so analytics can attribute
       // impressions/clicks to the group the engine drew from.
       pub.rotationGroup = candidate.rotationGroup || '';
-      pub.reason = await this.reason.pairingReason(pub, sourceDish, { cartWine });
+      pub.reason = await this.reason.pairingReason(pub, sourceDish, { cartWine, suppressUpgradeNudge: upgradeAlreadyPresent });
       out.push(pub);
     }
 
@@ -1780,13 +1878,26 @@ class AiService {
     if (Array.isArray(payload)) {
       return payload;
     }
-    if (Array.isArray(payload.cart)) {
-      return payload.cart;
+    const cart = Array.isArray(payload.cart)
+      ? payload.cart
+      : Array.isArray(payload.items)
+        ? payload.items
+        : [];
+
+    // Device-aware recommendations: a table's cart is shared/merged across
+    // every guest device (client/src/context/CartContext.tsx converges them
+    // on purpose), so a caller identifying itself via deviceId only wants
+    // recommendations built from the items IT added, not the whole table's.
+    // Falls back to the unfiltered cart when nothing in it carries an
+    // ownership tag at all (pre-rollout carts, waiter-added items) so a
+    // legacy cart never silently reads as empty.
+    if (payload.deviceId) {
+      const hasOwnershipData = cart.some(item => item?.addedByDevice);
+      if (hasOwnershipData) {
+        return cart.filter(item => item?.addedByDevice === payload.deviceId);
+      }
     }
-    if (Array.isArray(payload.items)) {
-      return payload.items;
-    }
-    return [];
+    return cart;
   }
 
   addPeopleAlsoOrdered(cartNames, menuContext, orderRecords, addCandidate) {
