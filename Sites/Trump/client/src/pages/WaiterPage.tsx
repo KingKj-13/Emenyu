@@ -654,12 +654,13 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
     if (selectedTableId) {
       api.recordUpsell({ waiterName: shift.name, tableId: selectedTableId, suggestedItem: rec.name, accepted: false, source: rec.source_title || 'cart-rec', value: 0 }).catch(() => {});
     }
-    // Curated Demo Mode: re-ask the same accept/skip/no-loop stage machine
-    // recommend() uses (curatedDemoJourney.js) for the next alternative — up
-    // to 3 mains, no loop back to an already-declined one. A no-op outside
-    // curated mode / a non-demo cart: the server's curated resolver returns
-    // null and cartRecommendations() falls back to its normal algorithmic
-    // pick, same as today.
+    // Re-ask for a recommendation with this card explicitly marked declined.
+    // In Curated Demo Mode this advances the same accept/skip/no-loop stage
+    // machine (curatedDemoJourney.js) to the next of up to 3 alternatives.
+    // Outside curated mode, declinedName is recorded via recoMemory.recordDecline
+    // (aiService.js recommend()), which the normal candidate filter pipeline
+    // already checks (isRejected) — so the very next algorithmic pick excludes
+    // whatever was just declined instead of re-showing the same top suggestion.
     try {
       const data = await api.cartRecommendations({
         cart: fullCart.map(line => ({ name: line.name, price: line.price, qty: line.quantity })),
@@ -667,6 +668,7 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
         mode: table.isLuxury ? 'luxury' : 'standard',
         tableId: table.tableId,
         skip: true,
+        declinedName: rec.name,
       });
       setRecData(data);
       const next = data?.recommendations?.[0];

@@ -934,7 +934,7 @@ class AiService {
       // suppression (already built, otherwise dormant for this endpoint) can
       // actually apply here — previously silently dropped, so a card the
       // waiter had just ignored could resurface on the very next cart refetch.
-      this.recommend({ cart, limit: 8, reason: payload.reason, guestIntel: payload.guestIntel, tableId: payload.tableId, deviceId: payload.deviceId, skip: payload.skip })
+      this.recommend({ cart, limit: 8, reason: payload.reason, guestIntel: payload.guestIntel, tableId: payload.tableId, deviceId: payload.deviceId, skip: payload.skip, declinedName: payload.declinedName })
     ]);
     const cartNames = new Set(cart.map(c => normalizeName(c.name)));
     const csvRecs = this.smartPairings.recommend({ cart, menuContext, limit: 4 });
@@ -1760,6 +1760,16 @@ class AiService {
     const tableId = payload.deviceId
       ? `${payload.tableId || 'anon'}:${payload.deviceId}`
       : (payload.tableId || null);
+    // Waiter "AI Recommendation" panel decline/skip: record it against the
+    // SAME tableId key the pipeline's isRejected/isRecentlyIgnored checks
+    // below already use, so the just-declined item is filtered out of THIS
+    // turn's result too — not just future ones — giving an immediate next-
+    // best pick instead of re-showing the same card. Curated Demo Mode never
+    // reaches this line (it returns earlier); this only affects the normal
+    // algorithmic engine every real table already runs.
+    if (payload.skip === true && payload.declinedName) {
+      this.recoMemory.recordDecline(tableId, payload.declinedName);
+    }
     const pipelineResult = candidateFilterPipeline.runPipeline({
       candidates: finalKept,
       cart,
