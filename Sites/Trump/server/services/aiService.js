@@ -379,8 +379,15 @@ function dietaryOk(item = {}, diets = []) {
   const hasMeat = hasTagData
     ? tags.some(t => MEAT_PROTEINS.has(t))
     : MEAT_TEXT.test(`${item.allergens || ''} ${item.searchText || item.name || ''}`.toLowerCase());
-  if (diets.includes('vegan')) return tags.includes('vegan') || (!hasTagData && !hasMeat);
-  if (diets.includes('vegetarian')) return tags.includes('vegetarian') || tags.includes('vegan') || (!hasTagData && !hasMeat) || (hasTagData && !hasMeat);
+  // Bug fix: wine/drinks are never tagged with dietary data AND never mention
+  // meat, so the "untagged = assume OK" fallback below let them slip through
+  // a "vegan option" food request (e.g. "vegan option" returning a wine).
+  // That fallback exists to rescue untagged FOOD items, not beverages — a
+  // drink can still pass if it's explicitly tagged vegan/vegetarian.
+  const categoryType = item.categoryType || classifier.categoryType(item);
+  const isBeverage = categoryType === 'WINE' || categoryType === 'DRINK';
+  if (diets.includes('vegan')) return tags.includes('vegan') || (!isBeverage && !hasTagData && !hasMeat);
+  if (diets.includes('vegetarian')) return tags.includes('vegetarian') || tags.includes('vegan') || (!isBeverage && !hasTagData && !hasMeat) || (hasTagData && !hasMeat);
   return true;
 }
 
