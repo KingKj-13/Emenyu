@@ -1,19 +1,21 @@
 #!/usr/bin/env node
 'use strict';
-// 6-month realistic demo dataset generator for the isolated `trump-preview`
-// tenant (restaurantId='trump-preview'). Built from REAL Trump menu items at
-// REAL prices only — nothing invented, nothing assigned as a target total.
-// Deterministic (fixed PRNG seed) so re-runs are reproducible.
+// 6-month realistic demo dataset generator. Two write targets:
+//   --target=trump-preview (default) — isolated synthetic tenant, safe to
+//     wipe/reseed wholesale.
+//   --target=trump — the LIVE restaurant tenant. Writes are additive and
+//     tag-scoped (Order.filename/RecommendationEvent.sessionId prefixed with
+//     TAG, Guest.notes/Reservation.notes marked '[DEMO]', Shift/WaiterAssignment
+//     metadata.seedBatch=TAG) so a re-run or rollback only ever touches rows
+//     this script created — never the real orders/guests already in that
+//     tenant. Requires --confirm-live-trump in addition to --apply (see below).
+// Built from REAL Trump menu items at REAL prices only — nothing invented,
+// nothing assigned as a target total. Deterministic (fixed PRNG seed) so
+// re-runs are reproducible.
 //
-//   node scripts/seed-demo-preview.js                  # DRY RUN -> local JSON summary (default, no DB)
-//   node scripts/seed-demo-preview.js --apply           # write to DB — trump-preview ONLY
-//
-// Safety: --apply is hard-blocked for any target other than 'trump-preview'.
-// This script must never write demo rows into the real restaurantId='trump'
-// tenant. Re-running --apply first wipes all restaurantId='trump-preview' rows
-// (across every model below) so the run is idempotent — never duplicates, never
-// touches anything under restaurantId='trump'. Use rollback-demo-preview.js for
-// a standalone wipe without reseeding.
+//   node scripts/seed-demo-preview.js                                          # DRY RUN -> local JSON summary (default, no DB)
+//   node scripts/seed-demo-preview.js --apply                                   # write to DB — trump-preview
+//   node scripts/seed-demo-preview.js --apply --target=trump --confirm-live-trump --tag=demo_20260805  # write to LIVE trump
 //
 // Coverage: Tables, Guests (loyalty), Orders + OrderItems + OrderStatusHistory
 // (kitchen ticket trail) + OrderRatings (feedback), Reservations (incl.
@@ -34,11 +36,16 @@ const ARGS = process.argv.slice(2);
 const APPLY = ARGS.includes('--apply');
 const TARGET = (ARGS.find(a => a.startsWith('--target=')) || '--target=trump-preview').split('=')[1];
 const TAG = (ARGS.find(a => a.startsWith('--tag=')) || '--tag=demo_20260804').split('=')[1];
+const CONFIRM_LIVE = ARGS.includes('--confirm-live-trump');
 const OUT_DIR = path.resolve(__dirname, '..', 'backups', `seed_${TAG}`);
 
-if (APPLY && TARGET !== 'trump-preview') {
-  console.error(`REFUSING: --apply is only allowed with --target=trump-preview (got '${TARGET}'). ` +
-    'This script must never write demo rows into the live trump tenant.');
+if (APPLY && TARGET !== 'trump-preview' && TARGET !== 'trump') {
+  console.error(`REFUSING: unknown --target='${TARGET}'. Expected 'trump-preview' or 'trump'.`);
+  process.exit(1);
+}
+if (APPLY && TARGET === 'trump' && !CONFIRM_LIVE) {
+  console.error("REFUSING: --target=trump writes demo data into the LIVE restaurant tenant, mixed with real " +
+    "orders/guests. Re-run with --confirm-live-trump added if this is genuinely intended.");
   process.exit(1);
 }
 
@@ -616,7 +623,7 @@ if (!APPLY) {
 }
 
 // ---------------------------------------------------------------------------
-// --apply — write everything to Postgres under restaurantId='trump-preview'.
+// --apply — write everything to Postgres under restaurantId=TARGET.
 // ---------------------------------------------------------------------------
 async function verifyAgainstLiveMenu(prisma) {
   const menu = await prisma.menuItem.findMany({ where: { restaurantId: 'trump' }, select: { name: true, price: true } });
@@ -641,32 +648,81 @@ async function verifyAgainstLiveMenu(prisma) {
   console.log(`verifyAgainstLiveMenu OK — ${usedNames.size} item/price pairs match the live trump menu.`);
 }
 
-async function wipeExistingPreview(prisma) {
-  const before = await prisma.order.count({ where: { restaurantId: 'trump-preview' } });
-  if (before === 0) { console.log('no prior trump-preview data — fresh seed.'); return; }
-  console.log(`wiping ${before} prior trump-preview order(s) and related rows for a clean idempotent reseed...`);
-  await prisma.order.deleteMany({ where: { restaurantId: 'trump-preview' } }); // cascades items/history/rating
-  await prisma.recommendationEvent.deleteMany({ where: { restaurantId: 'trump-preview' } });
-  await prisma.reservation.deleteMany({ where: { restaurantId: 'trump-preview' } });
-  await prisma.waiterAssignment.deleteMany({ where: { restaurantId: 'trump-preview' } });
-  await prisma.shift.deleteMany({ where: { restaurantId: 'trump-preview' } });
-  await prisma.guest.deleteMany({ where: { restaurantId: 'trump-preview' } });
-  await prisma.table.deleteMany({ where: { restaurantId: 'trump-preview' } });
-  console.log('wipe complete.');
+// trump-preview is 100% synthetic — a full tenant wipe is safe and is what
+// makes reruns idempotent. Live trump has real orders/guests mixed in, so its
+// wipe path must only ever remove rows this exact TAG created — a plain
+// restaurantId match would delete real production data.
+async function wipeExistingSeed(prisma, restaurantId) {
+  if (restaurantId === 'trump-preview') {
+    const before = await prisma.order.count({ where: { restaurantId } });
+    if (before === 0) { console.log('no prior trump-preview data — fresh seed.'); return; }
+    console.log(`wiping ${before} prior trump-preview order(s) and related rows for a clean idempotent reseed...`);
+    await prisma.order.deleteMany({ where: { restaurantId } }); // cascades items/history/rating
+    await prisma.recommendationEvent.deleteMany({ where: { restaurantId } });
+    await prisma.reservation.deleteMany({ where: { restaurantId } });
+    await prisma.waiterAssignment.deleteMany({ where: { restaurantId } });
+    await prisma.shift.deleteMany({ where: { restaurantId } });
+    await prisma.guest.deleteMany({ where: { restaurantId } });
+    await prisma.table.deleteMany({ where: { restaurantId } });
+    console.log('wipe complete.');
+    return;
+  }
+  // Live trump — tag-scoped only.
+  const orderWhere = { restaurantId, filename: { startsWith: `${TAG}_` } };
+  const before = await prisma.order.count({ where: orderWhere });
+  if (before === 0) { console.log(`no prior '${TAG}' demo rows under restaurantId='trump' — fresh seed.`); return; }
+  console.log(`wiping ${before} prior '${TAG}'-tagged demo order(s) under restaurantId='trump' (real orders are untouched — tag-scoped)...`);
+  await prisma.order.deleteMany({ where: orderWhere }); // cascades items/history/rating
+  await prisma.recommendationEvent.deleteMany({ where: { restaurantId, sessionId: { startsWith: `${TAG}:` } } });
+  await prisma.reservation.deleteMany({ where: { restaurantId, notes: { contains: TAG } } });
+  await prisma.waiterAssignment.deleteMany({ where: { restaurantId, metadata: { path: ['seedBatch'], equals: TAG } } });
+  await prisma.shift.deleteMany({ where: { restaurantId, metadata: { path: ['seedBatch'], equals: TAG } } });
+  await prisma.guest.deleteMany({ where: { restaurantId, notes: { contains: TAG } } });
+  await prisma.table.deleteMany({ where: { restaurantId, metadata: { path: ['seedBatch'], equals: TAG } } });
+  console.log('tag-scoped wipe complete.');
 }
 
 async function applyToDb() {
   const { getPrisma } = require('../server/services/prismaClient');
   const prisma = getPrisma();
+  const restaurantId = TARGET;
+
+  if (restaurantId === 'trump') {
+    console.log(`\n!!! WRITING TO LIVE restaurantId='trump' !!! tag=${TAG} — real orders/guests in this tenant are left in place; only ${TAG}-tagged rows this run creates are affected by any future rollback.\n`);
+  }
 
   await verifyAgainstLiveMenu(prisma);
-  await wipeExistingPreview(prisma);
+  await wipeExistingSeed(prisma, restaurantId);
 
-  console.log('\n1/7 creating tables...');
-  for (const t of TABLES) {
-    await prisma.table.create({
-      data: { restaurantId: 'trump-preview', tableId: t.tableId, displayName: t.displayName, covers: t.covers, status: 'active', metadata: { seedBatch: TAG, room: t.room } }
+  // Guest/Reservation notes are tagged '[DEMO <TAG>]' on the live-trump path so
+  // they're identifiable/purgeable without relying only on order linkage.
+  const demoNoteTag = restaurantId === 'trump' ? `[DEMO ${TAG}]` : '[DEMO] seeded loyalty guest';
+
+  // Live trump already has a real floor plan (real waitstaff pick tables from
+  // it during real service). Creating 78 invented pv*/private-room tables
+  // there would pollute that live UI with fake, clickable tables — instead,
+  // remap every synthetic tableId onto the real existing tables and create
+  // NO new Table rows at all for this target.
+  let mapTableId = id => id;
+  if (restaurantId === 'trump') {
+    const realTables = await prisma.table.findMany({
+      where: { restaurantId: 'trump', tableId: { not: 'waiter' } },
+      select: { tableId: true }
     });
+    const realTableIds = realTables.map(t => t.tableId).sort();
+    if (!realTableIds.length) throw new Error("no existing tables found under restaurantId='trump' to map synthetic orders onto");
+    const syntheticIds = [...new Set(allOrders.map(o => o.tableId))];
+    const remap = new Map(syntheticIds.map((id, i) => [id, realTableIds[i % realTableIds.length]]));
+    mapTableId = id => (id ? remap.get(id) : id);
+    console.log(`\nremapping ${syntheticIds.length} synthetic table(s) onto ${realTableIds.length} real existing table(s): ${realTableIds.join(', ')}`);
+    console.log('1/7 creating tables... skipped (reusing real tables, no new Table rows created)');
+  } else {
+    console.log('\n1/7 creating tables...');
+    for (const t of TABLES) {
+      await prisma.table.create({
+        data: { restaurantId, tableId: t.tableId, displayName: t.displayName, covers: t.covers, status: 'active', metadata: { seedBatch: TAG, room: t.room } }
+      });
+    }
   }
 
   console.log('2/7 creating guests...');
@@ -674,10 +730,10 @@ async function applyToDb() {
   for (const g of guestsUsed) {
     const row = await prisma.guest.create({
       data: {
-        restaurantId: 'trump-preview', name: g.name, phone: g.phone, email: g.email, vip: g.vip,
+        restaurantId, name: g.name, phone: g.phone, email: g.email, vip: g.vip,
         loyaltyTier: g.loyaltyTier, dietary: g.dietary, allergies: g.allergies,
         visitCount: g.visitCount, lifetimeSpend: g.lifetimeSpend, avgSpend: g.avgSpend, lastVisitAt: g.lastVisitAt,
-        notes: '[DEMO] seeded loyalty guest'
+        notes: demoNoteTag
       }
     });
     guestIdByKey.set(g.key, row.id);
@@ -693,11 +749,12 @@ async function applyToDb() {
     const status = isActive ? 'active' : 'history';
     const kitchenStatus = isActive ? 'preparing' : 'served';
     const ticketOpenedAt = new Date(o.timestamp.getTime() - 20 * 60 * 1000);
+    const tableId = mapTableId(o.tableId);
     const filename = `${TAG}_pv_${o.tableId}_${o.timestamp.getTime()}_${o.seq}.json`;
 
     const savedOrder = await prisma.order.create({
       data: {
-        restaurantId: 'trump-preview', filename, tableId: o.tableId, status, kitchenStatus,
+        restaurantId, filename, tableId, status, kitchenStatus,
         waiterName: o.waiterName, notes: o.isPrivateRoom ? '[DEMO] private dining booking' : '',
         subtotal: o.subtotal, vat: o.vat, service: o.service_, tip: o.tip, total: o.total, covers: o.covers,
         timestamp: o.timestamp, sourceKind: status,
@@ -713,19 +770,19 @@ async function applyToDb() {
               { fromStatus: 'served', toStatus: 'history', actor: 'system', reason: 'order_closed', createdAt: o.timestamp }
             ]
         },
-        rating: (!isActive && o.rating != null) ? { create: { restaurantId: 'trump-preview', rating: o.rating, comment: o.comment, tableId: o.tableId, createdAt: new Date(o.timestamp.getTime() + 15 * 60 * 1000) } } : undefined
+        rating: (!isActive && o.rating != null) ? { create: { restaurantId, rating: o.rating, comment: o.comment, tableId, createdAt: new Date(o.timestamp.getTime() + 15 * 60 * 1000) } } : undefined
       }
     });
 
     for (const e of o.reco.events) {
-      const base = { restaurantId: 'trump-preview', source: 'ai_suggestion', recType: 'UPSELL', recommendedName: e.suggestedItem[0], sessionId: `${TAG}:order${o.seq}`, tableId: o.tableId, mode: 'customer' };
+      const base = { restaurantId, source: 'ai_suggestion', recType: 'UPSELL', recommendedName: e.suggestedItem[0], sessionId: `${TAG}:order${o.seq}`, tableId, mode: 'customer' };
       recoEventRows.push({ ...base, eventType: 'impression', value: 0, createdAt: o.timestamp });
       if (e.clicked) recoEventRows.push({ ...base, eventType: 'click', value: 0, createdAt: o.timestamp });
       if (e.accepted) recoEventRows.push({ ...base, eventType: 'accepted', value: e.suggestedItem[1], createdAt: o.timestamp });
     }
 
     waiterAssignmentRows.push({
-      restaurantId: 'trump-preview', tableId: o.tableId, waiterName: o.waiterName, status: isActive ? 'active' : 'released',
+      restaurantId, tableId, waiterName: o.waiterName, status: isActive ? 'active' : 'released',
       assignedAt: new Date(o.timestamp.getTime() - 15 * 60 * 1000), releasedAt: isActive ? null : new Date(o.timestamp.getTime() + 30 * 60 * 1000),
       changeType: 'assign', assignedBy: 'system', metadata: { seedBatch: TAG }
     });
@@ -757,7 +814,7 @@ async function applyToDb() {
     const revenueHandled = r2(os.reduce((s, o) => s + o.total, 0));
     await prisma.shift.create({
       data: {
-        restaurantId: 'trump-preview', username: waiterName, role: 'waiter', status: 'ended',
+        restaurantId, username: waiterName, role: 'waiter', status: 'ended',
         startedAt, endedAt, startedBy: 'self', endedBy: 'self', endReason: 'shift_complete',
         ordersHandled: os.length, revenueHandled,
         metadata: { seedBatch: TAG, demoSeed: true, date: dayKey }
@@ -769,8 +826,8 @@ async function applyToDb() {
 
   console.log('7/7 creating reservations...');
   const reservationRows = reservations.map(r => ({
-    restaurantId: 'trump-preview', name: r.name, phone: r.phone, partySize: r.partySize, date: r.date,
-    notes: r.notes, status: r.status, tableId: r.tableId
+    restaurantId, name: r.name, phone: r.phone, partySize: r.partySize, date: r.date,
+    notes: restaurantId === 'trump' ? `${r.notes} ${demoNoteTag}` : r.notes, status: r.status, tableId: mapTableId(r.tableId)
   }));
   for (let i = 0; i < reservationRows.length; i += 500) {
     await prisma.reservation.createMany({ data: reservationRows.slice(i, i + 500) });
@@ -779,20 +836,18 @@ async function applyToDb() {
 
   console.log('\n=== VERIFICATION ===');
   const counts = {
-    tables: await prisma.table.count({ where: { restaurantId: 'trump-preview' } }),
-    guests: await prisma.guest.count({ where: { restaurantId: 'trump-preview' } }),
-    orders: await prisma.order.count({ where: { restaurantId: 'trump-preview' } }),
-    orderItems: await prisma.orderItem.count({ where: { order: { restaurantId: 'trump-preview' } } }),
-    ratings: await prisma.orderRating.count({ where: { restaurantId: 'trump-preview' } }),
-    reservations: await prisma.reservation.count({ where: { restaurantId: 'trump-preview' } }),
-    recommendationEvents: await prisma.recommendationEvent.count({ where: { restaurantId: 'trump-preview' } }),
-    waiterAssignments: await prisma.waiterAssignment.count({ where: { restaurantId: 'trump-preview' } }),
-    shifts: await prisma.shift.count({ where: { restaurantId: 'trump-preview' } }),
-    revenueSum: (await prisma.order.aggregate({ where: { restaurantId: 'trump-preview', status: 'history' }, _sum: { total: true } }))._sum.total
+    tables: await prisma.table.count({ where: { restaurantId } }),
+    guests: await prisma.guest.count({ where: { restaurantId } }),
+    orders: await prisma.order.count({ where: { restaurantId } }),
+    orderItems: await prisma.orderItem.count({ where: { order: { restaurantId } } }),
+    ratings: await prisma.orderRating.count({ where: { restaurantId } }),
+    reservations: await prisma.reservation.count({ where: { restaurantId } }),
+    recommendationEvents: await prisma.recommendationEvent.count({ where: { restaurantId } }),
+    waiterAssignments: await prisma.waiterAssignment.count({ where: { restaurantId } }),
+    shifts: await prisma.shift.count({ where: { restaurantId } }),
+    revenueSum: (await prisma.order.aggregate({ where: { restaurantId, status: 'history' }, _sum: { total: true } }))._sum.total
   };
   console.log(JSON.stringify(counts, null, 2));
-  const untouchedTrump = await prisma.order.count({ where: { restaurantId: 'trump' } });
-  console.log(`\nSanity: restaurantId='trump' order count unaffected by this run (informational, not before/after diffed here): ${untouchedTrump}`);
 
   fs.writeFileSync(path.join(OUT_DIR, 'apply-verification.json'), JSON.stringify(counts, null, 2));
   await prisma.$disconnect();
