@@ -287,6 +287,14 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
       autoLoginRole: env.TRUMP_DEMO_AUTO_LOGIN_ROLE || null,
       autoLoginUsername: env.TRUMP_DEMO_AUTO_LOGIN_USERNAME || 'demo-guest'
     },
+    // Live-demo role switching (distinct from config.demo above, which bypasses
+    // auth entirely for a whole separate tenant process). DEMO_MODE=true keeps
+    // real accounts/login/permissions intact — it only auto-issues a session for
+    // the matching seeded role account when /Admin, /Owner, /Waiter, or /Kitchen
+    // is visited directly, so a presenter can jump between role dashboards
+    // without logging out. Off by default; reversible with one env var
+    // (see createRoleAuth's demoAutoLogin()).
+    demoMode: parseBoolean(env.DEMO_MODE, false),
     // Live pitch-demo mode (demo trump rule.md; Carmella's 2026-07-12 demo
     // validation report Part 9): hard-coded CHEF'S PICK chains for
     // aiService.recommend()/chat(), off by default so real diners always get
@@ -613,10 +621,51 @@ function createRoleAuth(config, accountService, logger = null) {
     const parts = getCookieOptions(req, maxAgeSeconds);
     parts[0] = `${cookieName}=${encodeURIComponent(token)}`;
     res.setHeader('Set-Cookie', parts.join('; '));
+    return token;
   }
 
   function clearSession(req, res) {
     res.setHeader('Set-Cookie', getCookieOptions(req, 0).join('; '));
+  }
+
+  // Live-demo role switching (config.demoMode). Silently issues a fresh session
+  // for the given role's seeded account — same issueSession() a real login uses,
+  // so every downstream requireRoles()/requirePage() check, and the client's
+  // /api/auth/me call once the SPA boots, sees a normal, fully-permissioned
+  // session. Replaces whatever session cookie was already present; the caller
+  // never has to log out. No-op (calls next() only) when config.demoMode is
+  // false, so production behavior is byte-for-byte unchanged when unset.
+  function demoAutoLogin(role) {
+    return async function demoAutoLoginMiddleware(req, res, next) {
+      if (!config.demoMode) {
+        return next();
+      }
+
+      try {
+        const seed = (config.auth.users || []).find(candidate => candidate.role === role);
+        const user = seed && accountService ? await accountService.findActiveUser(seed.username) : null;
+        if (user) {
+          const token = issueSession(req, res, user);
+          // Set-Cookie only takes effect on the browser's *next* request — but
+          // orderRoutes.js registers requirePage() guards for /Admin, /Waiter,
+          // /Kitchen ahead of the SPA fallback, and this middleware must run
+          // ahead of those too (see server.js registration order) so the swap
+          // is visible to THIS same request, not just the following one.
+          const cookies = parseCookies(req);
+          cookies[cookieName] = token;
+          req.headers.cookie = Object.entries(cookies)
+            .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+            .join('; ');
+          logger?.info('demo_mode_auto_login', { role, username: user.username, path: req.originalUrl });
+        } else {
+          logger?.warn('demo_mode_auto_login_missing_account', { role, path: req.originalUrl });
+        }
+      } catch (error) {
+        logger?.warn('demo_mode_auto_login_failed', { role, error });
+      }
+
+      return next();
+    };
   }
 
   function getRoleHome(role) {
@@ -680,6 +729,7 @@ function createRoleAuth(config, accountService, logger = null) {
     requirePage(roles = []) {
       return requireRoles(roles, { page: true });
     },
+    demoAutoLogin,
     getRequestUser,
     // Phase 04 — mint a short-lived Bearer access token (reuses the cookie HMAC
     // format so readToken/getBearerUser validate it identically).

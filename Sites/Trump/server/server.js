@@ -426,6 +426,31 @@ async function startServer(baseDirOverride) {
     auth.updateAccount
   );
 
+  // DEMO MODE (config.demoMode / DEMO_MODE env var) — reversible, off by default.
+  // Visiting one of these role dashboards directly re-authenticates as that
+  // role's seeded account, so a live demo can jump Waiter -> Admin -> Owner ->
+  // Kitchen without a logout step. Must be registered before
+  // registerOrderRoutes() below, whose requirePage() guards on /Admin,
+  // /Waiter, /Kitchen would otherwise redirect to /login first (Express
+  // matches same-path routes in registration order). A pure no-op — just
+  // calls next() — when demoMode is false. See demoAutoLogin() in
+  // utils/helpers.js.
+  if (config.demoMode) {
+    const demoRoleRoutes = [
+      { role: 'manager', routePaths: ['/Admin', '/admin'] },
+      { role: 'owner', routePaths: ['/Owner'] },
+      { role: 'waiter', routePaths: ['/Waiter', '/waiter'] },
+      { role: 'kitchen', routePaths: ['/Kitchen'] }
+    ];
+    demoRoleRoutes.forEach(({ role, routePaths }) => {
+      const paths = [...new Set(routePaths.flatMap(p => tenantPaths(config, p)))];
+      app.get(paths, auth.demoAutoLogin(role));
+    });
+    logger.warn('demo_mode_enabled', {
+      note: 'DEMO_MODE=true — /Admin, /Owner, /Waiter, /Kitchen auto-authenticate. Unset for normal production auth.'
+    });
+  }
+
   registerAnalyticsRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
   registerRecommendationAnalyticsRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
   registerRecommendationBundleRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));

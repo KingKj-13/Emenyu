@@ -30,7 +30,8 @@ try {
     uploadMaxMb: Math.round(config.uploads.maxFileSizeBytes / (1024 * 1024)),
     uploadMimeTypes: config.uploads.allowedMimeTypes,
     uploadExtensions: config.uploads.allowedExtensions,
-    logLevel: config.logging.level
+    logLevel: config.logging.level,
+    demoMode: config.demoMode
   };
 
   console.log(JSON.stringify({ status: 'ok', summary }, null, 2));
