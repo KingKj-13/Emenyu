@@ -441,6 +441,17 @@ export const api = {
   seatGuest(tableId: string, guestId: number) {
     return postJson<{ ok: boolean; guestIntel: import('../types/waiter').GuestIntel }>(ENDPOINTS.seatGuest(tableId), { guestId });
   },
+  getAiEvents(params: { status?: string; tableId?: string } = {}) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<import('../types/waiter').AiEvent[]>(`${ENDPOINTS.aiEvents}${q ? `?${q}` : ''}`);
+  },
+  resolveAiEvent(id: number, status: string = 'resolved') {
+    return postJson<import('../types/waiter').AiEvent>(ENDPOINTS.resolveAiEvent(id), { status });
+  },
+  verifyTable(tableId: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return fetchJson<any>(ENDPOINTS.verifyTable(tableId));
+  },
   setTableCovers(tableId: string, covers: number) {
     return postJson<{ ok: boolean; tableId: string; covers: number }>(ENDPOINTS.tableCovers(tableId), { covers });
   },

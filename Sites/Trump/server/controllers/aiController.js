@@ -1,6 +1,6 @@
 const { resolveDayPart } = require('../utils/dayPartResolver');
 
-function createAiController({ aiService, config = {}, waiterWorkflowService = null, fileService = null }) {
+function createAiController({ aiService, config = {}, waiterWorkflowService = null, fileService = null, aiEventService = null }) {
   return {
     // Public client config (Phase 3B): lets the SPA render the assistant's name
     // from server config instead of hardcoding it.
@@ -27,13 +27,17 @@ function createAiController({ aiService, config = {}, waiterWorkflowService = nu
     async chat(req, res) {
       const data = await aiService.chat(req.body);
       res.json(data);
-      // S11: run guest messages through the deterministic event detector so the
-      // waiter gets birthday/allergy/complaint/VIP notifications automatically —
-      // fire-and-forget so it never delays or breaks the guest reply.
+      // S11: run guest messages through the deterministic event detectors so the
+      // waiter gets complaint/refund tasks (waiterWorkflowService) and shared AI
+      // events — birthday/allergy/VIP/etc. (aiEventService) — automatically.
+      // Fire-and-forget so it never delays or breaks the guest reply.
       const tableId = req.body?.tableId;
       const message = req.body?.message;
       if (waiterWorkflowService && tableId && message) {
         waiterWorkflowService.analyzeMessage({ tableId, message, waiterName: '' }).catch(() => {});
+      }
+      if (aiEventService && tableId && message) {
+        aiEventService.analyzeMessage({ tableId, message, waiterName: '' }).catch(() => {});
       }
     },
 

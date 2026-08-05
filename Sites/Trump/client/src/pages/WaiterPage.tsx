@@ -44,12 +44,15 @@ import { TableTimeline } from '../components/operations/TableTimeline';
 import { NotificationBell } from '../components/operations/NotificationBell';
 import { Spinner } from '../components/ui/Spinner';
 import type {
+  AiEvent,
   CartRec,
   CartRecResponse,
   ChatConversation,
   FloorState,
   FloorTable,
+  Guest,
   GuestEvent,
+  GuestIntel,
   Opportunity,
   Performance,
   RecommendationStatus,
@@ -376,6 +379,105 @@ function InsightTags({ intel, event, cart }: { intel: TableIntel | null; event?:
   return (
     <div className="wv-chipgrid">
       {tags.length ? tags.map(tag => <span key={tag} className="wv-info-chip">{tag}</span>) : <span className="wv-muted">No guest insights yet</span>}
+    </div>
+  );
+}
+
+// Root cause (Issue 1 investigation): GuestIntel rendering above has always
+// worked, but nothing in the app ever called api.seatGuest() to link a real
+// Guest record to a table, so guestIntel.present was effectively always
+// false. This picker is that missing link — search the guest list and seat
+// one, which also fires AI events (VIP/returning/high-value/dietary/allergy/
+// milestone) via aiEventService.evaluateGuestSeated on the backend.
+function GuestSeatPicker({ tableId, guestIntel, onSeated }: { tableId: string; guestIntel?: GuestIntel; onSeated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [guests, setGuests] = useState<Guest[] | null>(null);
+  const [seating, setSeating] = useState(false);
+
+  useEffect(() => {
+    if (!open || guests) return;
+    api.getGuests().then(setGuests).catch(() => setGuests([]));
+  }, [open, guests]);
+
+  async function seat(guestId: number) {
+    setSeating(true);
+    try {
+      await api.seatGuest(tableId, guestId);
+      onSeated();
+      setOpen(false);
+      setQuery('');
+    } catch {
+      /* best-effort — table simply stays unseated, no crash */
+    } finally {
+      setSeating(false);
+    }
+  }
+
+  if (guestIntel?.present) {
+    return (
+      <div className="wv-guest-seated">
+        <span>👤 <b>{guestIntel.name}</b>{guestIntel.vip ? ' · VIP' : ''}{guestIntel.loyaltyTier ? ` · ${guestIntel.loyaltyTier}` : ''}</span>
+        <button className="wv-plain-link" onClick={() => setOpen(true)}>Change</button>
+      </div>
+    );
+  }
+
+  const filtered = (guests || []).filter(g => g.name.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
+
+  return (
+    <div className="wv-guest-seat-picker">
+      {!open ? (
+        <button className="wv-secondary full" onClick={() => setOpen(true)}><User size={16} /> Seat a Recognized Guest</button>
+      ) : (
+        <div className="wv-guest-search">
+          <input autoFocus placeholder="Search guest by name..." value={query} onChange={e => setQuery(e.target.value)} />
+          <div className="wv-guest-results">
+            {guests === null && <p className="wv-empty">Loading guests...</p>}
+            {filtered.map(g => (
+              <button key={g.id} disabled={seating} onClick={() => seat(g.id)} className="wv-guest-result">
+                <b>{g.name}</b>
+                <small>{g.vip ? 'VIP · ' : ''}{g.loyaltyTier || 'No tier'} · {g.visitCount} visit{g.visitCount === 1 ? '' : 's'}</small>
+              </button>
+            ))}
+            {guests !== null && !filtered.length && <p className="wv-empty">No matching guest.</p>}
+          </div>
+          <button className="wv-plain-link" onClick={() => setOpen(false)}>Cancel</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// AI Shared Event System — same events the admin portal shows for this table,
+// read from the same /api/ai-events endpoint (single source of truth).
+function TableAiEvents({ tableId, refreshKey }: { tableId: string; refreshKey: string }) {
+  const [events, setEvents] = useState<AiEvent[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getAiEvents({ status: 'open', tableId }).then(list => { if (!cancelled) setEvents(list); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [tableId, refreshKey]);
+
+  if (!events.length) return null;
+
+  async function resolve(id: number) {
+    setEvents(prev => prev.filter(e => e.id !== id));
+    api.resolveAiEvent(id).catch(() => {});
+  }
+
+  return (
+    <div className="wv-ai-events">
+      {events.map(e => (
+        <div key={e.id} className="wv-ai-event-card">
+          <div className="wv-ai-event-head">
+            <span>{e.icon} {e.label}</span>
+            <button className="wv-plain-link" onClick={() => resolve(e.id)}>Done</button>
+          </div>
+          {e.suggestedWaiterMessage && <p>{e.suggestedWaiterMessage}</p>}
+        </div>
+      ))}
     </div>
   );
 }
@@ -761,6 +863,12 @@ function TableDetails({ table, onAddMode }: { table: FloorTable; onAddMode: () =
 
       <section className="wv-panel">
         <div className="wv-panel-title"><User size={17} /> Guest Insights</div>
+        <GuestSeatPicker
+          tableId={table.tableId}
+          guestIntel={intel?.guestIntel}
+          onSeated={() => api.getTableIntel(table.tableId).then(setIntel).catch(() => {})}
+        />
+        <TableAiEvents tableId={table.tableId} refreshKey={`${intel?.guestIntel?.id || ''}:${cartSig}`} />
         <InsightTags intel={intel} event={event} cart={fullCart} />
         {recData?.occasionPrompt && <p className="wv-occasion-prompt">🥂 {recData.occasionPrompt}</p>}
         {event?.type === 'birthday' && (

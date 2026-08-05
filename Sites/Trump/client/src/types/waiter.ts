@@ -107,6 +107,49 @@ export interface GuestFavorites {
   dessert: string | null;
 }
 
+// The raw Guest record (guestService.js) — used by the guest search/seat
+// picker. GuestIntel below is the derived, richer object for a SEATED guest.
+export interface Guest {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  vip: boolean;
+  loyaltyTier: string;
+  dietary: string;
+  allergies: string;
+  preferences: Record<string, unknown> | null;
+  notes: string;
+  visitCount: number;
+  lifetimeSpend: number;
+  avgSpend: number;
+  lastVisitAt: string | null;
+}
+
+// AI Shared Event System — mirrors server/services/aiEventService.js's
+// publicEvent() shape exactly; admin and waiter render from this one type.
+export interface AiEvent {
+  id: number;
+  eventType: string;
+  label: string;
+  icon: string;
+  guestId: number | null;
+  tableId: string;
+  waiterName: string;
+  priority: number;
+  confidence: number;
+  recommendedAction: string;
+  suggestedWaiterMessage: string;
+  suggestedManagerAction: string;
+  status: 'open' | 'acknowledged' | 'resolved' | 'dismissed';
+  source: string;
+  payload: Record<string, unknown>;
+  waiterTaskId: number | null;
+  createdAt: string;
+  acknowledgedAt: string | null;
+  resolvedAt: string | null;
+}
+
 export interface GuestIntel {
   present: boolean;
   id?: number;

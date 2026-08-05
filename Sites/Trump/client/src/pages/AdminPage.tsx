@@ -9,7 +9,7 @@ import { Badge } from '../components/ui/Badge';
 import { formatPrice, formatTableLabel } from '../lib/menuUtils';
 import { sastTodayStartIso } from '../lib/businessDay';
 import type { ChefRec, ChefRecInput, ChefRecType, ChefBeverageKind, RecommendationAnalytics, RecoTally, RecoInsightsResult, RecoInsight, BundleAdmin, BundleInput, BundleItemInput } from '../types/menu';
-import type { WaiterTask } from '../types/waiter';
+import type { WaiterTask, AiEvent, Guest } from '../types/waiter';
 import styles from './AdminPage.module.css';
 import { NotificationBell } from '../components/operations/NotificationBell';
 import { OwnerOperations } from '../components/operations/OwnerOperations';
@@ -19,7 +19,7 @@ import { ChefIntelligencePanel } from '../components/analytics/ChefIntelligenceP
 import { CustomerJourneyPanel } from '../components/analytics/CustomerJourneyPanel';
 import { BRAND_NAME, BRAND_TAGLINE, QR_BASE, ENDPOINTS } from '../constants/api';
 
-type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles' | 'servicedesk' | 'operations' | 'audit' | 'aiperformance' | 'chefintel' | 'journey' | 'demo';
+type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles' | 'servicedesk' | 'operations' | 'audit' | 'aiperformance' | 'chefintel' | 'journey' | 'demo' | 'aievents' | 'guests' | 'verify';
 
 interface Order {
   filename: string;
@@ -136,6 +136,8 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const [recoFilters, setRecoFilters] = useState<{ range: ReportRange; category: string; source: string; rotationGroup: string; mode: string }>({ range: '7d', category: '', source: '', rotationGroup: '', mode: '' });
   const [bundles, setBundles] = useState<BundleAdmin[]>([]);
   const [serviceTasks, setServiceTasks] = useState<WaiterTask[]>([]);
+  const [aiEvents, setAiEvents] = useState<AiEvent[]>([]);
+  const [guests, setGuests] = useState<Guest[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'item' | 'reservation' | 'deal' | 'account'>(null);
@@ -190,6 +192,12 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
       } else if (t === 'servicedesk') {
         const data = await api.getWaiterTasks({ status: 'all' });
         setServiceTasks((data as WaiterTask[]) || []);
+      } else if (t === 'aievents') {
+        const data = await api.getAiEvents({ status: 'all' });
+        setAiEvents((data as AiEvent[]) || []);
+      } else if (t === 'guests') {
+        const data = await api.getGuests();
+        setGuests((data as Guest[]) || []);
       }
     } catch (err) {
       console.error(err);
@@ -495,6 +503,8 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     { label: 'SERVICE', items: [
       { key: 'orders', label: 'Orders', icon: ClipboardList, badge: orders.length || undefined },
       { key: 'servicedesk', label: 'Service Desk', icon: Bell, badge: serviceTasks.filter(t => ['open', 'acknowledged'].includes(t.status)).length || undefined },
+      { key: 'aievents', label: 'AI Events', icon: Sparkles, badge: aiEvents.filter(e => e.status === 'open').length || undefined },
+      { key: 'guests', label: 'Guests', icon: Users },
       { key: 'history', label: 'History', icon: BookOpen },
       { key: 'tables', label: 'Tables', icon: LayoutGrid },
       { key: 'reservations', label: 'Reservations', icon: CalendarDays },
@@ -519,6 +529,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     { label: 'OPERATIONS', items: [
       { key: 'operations', label: 'Operations', icon: Activity },
       { key: 'audit', label: 'Audit Trail', icon: ShieldCheck },
+      { key: 'verify', label: 'Verify Data', icon: Check },
     ] },
   ];
 
@@ -529,6 +540,9 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const PAGE_HEADS: Record<Tab, { eyebrow: string; title: string; sub: string; actions?: ReactNode }> = {
     orders: { eyebrow: 'SERVICE · LIVE', title: 'Live orders', sub: `${orders.length} active ticket${orders.length !== 1 ? 's' : ''}`, actions: <><span className={styles.livePill}><span className={styles.liveDot} /> {liveCovers} live covers</span>{refreshAction}</> },
     servicedesk: { eyebrow: 'SERVICE · LIVE', title: 'Service desk', sub: 'Approvals, manager dispatch & live floor requests', actions: <><span className={styles.livePill}><span className={styles.liveDot} /> Live</span>{refreshAction}</> },
+    aievents: { eyebrow: 'AI SHARED EVENTS', title: 'AI Events', sub: `${aiEvents.filter(e => e.status === 'open').length} open · same events the waiter app sees, one shared source`, actions: refreshAction },
+    guests: { eyebrow: 'GUEST CRM', title: 'Guests', sub: `${guests.length} guest${guests.length !== 1 ? 's' : ''} · loyalty, dietary & VIP profile`, actions: refreshAction },
+    verify: { eyebrow: 'INTERNAL TOOL', title: 'Verify Data', sub: 'Database vs. backend API, side by side, for a given table' },
     history: { eyebrow: 'COMPLETED', title: 'Order history', sub: `${history.length} settled order${history.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtn} onClick={exportHistoryCsv}><Download size={14} /> Export CSV</button> },
     tables: { eyebrow: 'LIVE FLOOR', title: 'Tables', sub: `${liveCovers} active cart${liveCovers !== 1 ? 's' : ''} · manager override`, actions: <><span className={styles.livePill}><span className={styles.liveDot} /> Live sync</span>{refreshAction}</> },
     reservations: { eyebrow: 'BOOKINGS', title: 'Reservations', sub: `${reservations.length} booking${reservations.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('reservation')}><Plus size={14} /> New booking</button> },
@@ -753,6 +767,15 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
               )}
               {tab === 'servicedesk' && (
                 <ServiceDeskPanel tasks={serviceTasks} onChange={setServiceTasks} />
+              )}
+              {tab === 'aievents' && (
+                <AiEventsPanel events={aiEvents} onChange={setAiEvents} />
+              )}
+              {tab === 'guests' && (
+                <GuestsPanel guests={guests} />
+              )}
+              {tab === 'verify' && (
+                <VerifyPanel />
               )}
                 </>
               )}
@@ -2800,6 +2823,200 @@ function ServiceDeskPanel({ tasks, onChange }: { tasks: WaiterTask[]; onChange: 
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// AI Shared Event System (admin side) — reads the SAME /api/ai-events rows the
+// waiter app's TableAiEvents component reads (WaiterPage.tsx); no separate
+// business logic, no re-derivation of priority/label/suggested action.
+function AiEventsPanel({ events, onChange }: { events: AiEvent[]; onChange: (e: AiEvent[]) => void }) {
+  const [statusFilter, setStatusFilter] = useState<'open' | 'all'>('open');
+  const [busy, setBusy] = useState<number | null>(null);
+
+  const reload = useCallback(() => {
+    api.getAiEvents({ status: 'all' }).then(d => onChange((d as AiEvent[]) || [])).catch(() => {});
+  }, [onChange]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let cleanup = () => {};
+    import('../services/socket').then(({ getSocket }) => {
+      if (cancelled) return;
+      const socket = getSocket();
+      socket.emit('joinAdmin', { restaurantId: 'trump' });
+      const onEvt = () => reload();
+      socket.on('aiEventCreated', onEvt);
+      socket.on('aiEventUpdated', onEvt);
+      cleanup = () => { socket.off('aiEventCreated', onEvt); socket.off('aiEventUpdated', onEvt); };
+    });
+    return () => { cancelled = true; cleanup(); };
+  }, [reload]);
+
+  async function resolve(id: number) {
+    setBusy(id);
+    try { await api.resolveAiEvent(id); reload(); } catch {}
+    setBusy(null);
+  }
+
+  const visible = (statusFilter === 'open' ? events.filter(e => e.status === 'open') : events)
+    .sort((a, b) => a.priority - b.priority || +new Date(b.createdAt) - +new Date(a.createdAt));
+
+  const card: CSSProperties = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 16, marginBottom: 12 };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <button className={statusFilter === 'open' ? styles.actionBtnGold : styles.actionBtn} onClick={() => setStatusFilter('open')}>Open</button>
+        <button className={statusFilter === 'all' ? styles.actionBtnGold : styles.actionBtn} onClick={() => setStatusFilter('all')}>All</button>
+      </div>
+      {visible.length === 0 ? (
+        <div className={styles.emptyState}><p>No AI events{statusFilter === 'open' ? ' open right now' : ''}.</p></div>
+      ) : visible.map(e => (
+        <div key={e.id} style={{ ...card, borderColor: e.priority <= 1 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.08)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontWeight: 600 }}>{e.icon} {e.label}{e.tableId ? ` · Table ${deskTableNum(e.tableId)}` : ''}</div>
+              {e.suggestedWaiterMessage && <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}><b>Waiter:</b> {e.suggestedWaiterMessage}</div>}
+              {e.suggestedManagerAction && <div style={{ fontSize: 13, opacity: 0.8, marginTop: 2 }}><b>Manager:</b> {e.suggestedManagerAction}</div>}
+              <div style={{ fontSize: 12, opacity: 0.55, marginTop: 4 }}>
+                {e.status.toUpperCase()} · P{e.priority} · confidence {Math.round(e.confidence * 100)}% · source: {e.source}
+              </div>
+            </div>
+            {e.status === 'open' && (
+              <button className={styles.actionBtn} disabled={busy === e.id} onClick={() => resolve(e.id)}>Resolve</button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Guest CRM (admin side) — was previously built on the backend (guestService.js)
+// with no UI consumer anywhere in the app; this is that missing surface.
+function GuestsPanel({ guests }: { guests: Guest[] }) {
+  const [query, setQuery] = useState('');
+  const filtered = guests.filter(g => g.name.toLowerCase().includes(query.toLowerCase()));
+
+  const card: CSSProperties = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 16, marginBottom: 10 };
+
+  return (
+    <div>
+      <input
+        placeholder="Search guests by name..."
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        style={{ width: '100%', maxWidth: 360, padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.25)', color: 'inherit', fontSize: 14, marginBottom: 16 }}
+      />
+      {filtered.length === 0 ? (
+        <div className={styles.emptyState}><p>No guests match.</p></div>
+      ) : filtered.map(g => (
+        <div key={g.id} style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontWeight: 600 }}>
+                {g.name}{g.vip ? ' · ⭐ VIP' : ''}{g.loyaltyTier ? ` · ${g.loyaltyTier}` : ''}
+              </div>
+              <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>
+                {g.visitCount} visit{g.visitCount === 1 ? '' : 's'} · lifetime {formatPrice(g.lifetimeSpend)} · avg {formatPrice(g.avgSpend)}
+              </div>
+              {(g.dietary || g.allergies) && (
+                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+                  {g.dietary && <span>Dietary: {g.dietary} </span>}
+                  {g.allergies && <span style={{ color: '#f59e0b' }}>Allergy: {g.allergies}</span>}
+                </div>
+              )}
+              {g.notes && <div style={{ fontSize: 12, opacity: 0.55, marginTop: 4 }}>{g.notes}</div>}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Data Verification Tool — calls GET /api/admin/verify/:tableId
+// (debugController.js), which queries the raw DB row AND the same
+// service-layer function every admin/waiter screen actually calls, then
+// diffs them field by field. A clean run here means "the pipeline this
+// screen reads from is provably correct for this table right now" — use it
+// after any deploy/reseed before trusting what's on screen.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function VerifyPanel() {
+  const [tableNum, setTableNum] = useState('1');
+  const [loading, setLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState('');
+
+  async function check() {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.verifyTable(`table${parseInt(tableNum, 10) || 1}`);
+      setResult(data);
+    } catch {
+      setError('Verification request failed — check the table exists and you have owner/manager access.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const card: CSSProperties = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 16, marginBottom: 12 };
+  const mono: CSSProperties = { fontFamily: 'monospace', fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word' };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
+        <span>Table</span>
+        <input
+          value={tableNum}
+          onChange={e => setTableNum(e.target.value.replace(/[^0-9]/g, ''))}
+          inputMode="numeric"
+          style={{ width: 70, padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.25)', color: 'inherit', fontSize: 16 }}
+        />
+        <button className={styles.actionBtnGold} disabled={loading} onClick={check}>{loading ? 'Checking...' : 'Check'}</button>
+      </div>
+
+      {error && <div className={styles.emptyState}><p>{error}</p></div>}
+
+      {result && (
+        <>
+          <div style={{ ...card, borderColor: result.ok ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)' }}>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>
+              {result.ok ? '✓ Database and backend API agree' : `✗ ${result.mismatches.length} mismatch(es) found`}
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Checked {result.tableId} at {new Date(result.checkedAt).toLocaleTimeString()}</div>
+            {result.mismatches.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {result.mismatches.map((m: any, i: number) => (
+                  <div key={i} style={{ padding: '8px 0', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
+                    <b style={{ color: '#f59e0b' }}>{m.field}</b>
+                    <div style={mono}>database: {JSON.stringify(m.database)}{'\n'}backendApi: {JSON.stringify(m.backendApi)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={card}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>👤 Guest {result.guest.seated ? '(seated)' : '(none seated on this table)'}</div>
+            <div style={mono}>{JSON.stringify(result.guest, null, 2)}</div>
+          </div>
+
+          <div style={card}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>🔔 AI Events ({result.aiEvents.database.length})</div>
+            <div style={mono}>{JSON.stringify(result.aiEvents, null, 2)}</div>
+          </div>
+
+          <div style={card}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>🍽️ Active Orders ({result.activeOrders.length})</div>
+            <div style={mono}>{JSON.stringify(result.activeOrders, null, 2)}</div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

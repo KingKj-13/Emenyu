@@ -220,6 +220,35 @@
   color: var(--w-gold-bright); background: rgba(201,162,75,0.12); border: 1px solid var(--w-border-gold);
 }
 
+/* ── Guest seat picker ───────────────────────────────────────────────────── */
+.wv-guest-seated {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; margin-bottom: 10px; border-radius: var(--w-radius-sm);
+  background: var(--w-surface2); border: 1px solid var(--w-border); font-size: 13px;
+}
+.wv-plain-link { background: none; border: none; color: var(--w-gold-bright); font-weight: 600; font-size: 13px; cursor: pointer; }
+.wv-guest-seat-picker { margin-bottom: 10px; }
+.wv-guest-search input {
+  width: 100%; min-height: 42px; padding: 0 12px; border-radius: 10px; margin-bottom: 8px;
+  background: var(--w-surface2); border: 1px solid var(--w-border); color: var(--w-text); font-size: 14px;
+}
+.wv-guest-results { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; margin-bottom: 8px; }
+.wv-guest-result {
+  text-align: left; padding: 8px 10px; border-radius: 10px; background: var(--w-surface2);
+  border: 1px solid var(--w-border); cursor: pointer; display: flex; flex-direction: column; gap: 2px;
+}
+.wv-guest-result:hover { border-color: var(--w-border-gold); }
+.wv-guest-result small { color: var(--w-text3); }
+
+/* ── AI Shared Event System — waiter cards ──────────────────────────────── */
+.wv-ai-events { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.wv-ai-event-card {
+  padding: 10px 12px; border-radius: var(--w-radius-sm); background: rgba(201,162,75,0.08);
+  border: 1px solid var(--w-border-gold);
+}
+.wv-ai-event-head { display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 13px; }
+.wv-ai-event-card p { margin: 6px 0 0; font-size: 12px; color: var(--w-text2); }
+
 /* ── AI recommendation card ──────────────────────────────────────────────── */
 .wv-ai-card {
   background:

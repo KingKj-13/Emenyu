@@ -22,7 +22,8 @@ function createWaiterApiController(deps) {
     serviceRecoveryService,
     floorService,
     waiterWorkflowService,
-    rewardService
+    rewardService,
+    aiEventService
   } = deps;
   const restaurantId = config?.restaurantId || 'trump';
   const KINDS = nlgService.KINDS;
@@ -264,9 +265,37 @@ function createWaiterApiController(deps) {
 
     async analyzeChat(req, res) {
       try {
-        res.json(await waiterWorkflowService.analyzeMessage(req.body || {}));
+        const [ops, aiEvents] = await Promise.all([
+          waiterWorkflowService.analyzeMessage(req.body || {}),
+          aiEventService ? aiEventService.analyzeMessage(req.body || {}) : { events: [] }
+        ]);
+        res.json({ events: [...ops.events.map(t => ({ type: t.type, label: t.title, priority: t.priority })), ...aiEvents.events], tasks: ops.tasks, aiEvents: aiEvents.events });
       } catch {
-        res.json({ events: [], tasks: [] });
+        res.json({ events: [], tasks: [], aiEvents: [] });
+      }
+    },
+
+    async listAiEvents(req, res) {
+      try {
+        res.json(await aiEventService.listEvents({
+          status: req.query.status || 'open',
+          tableId: req.query.tableId || '',
+          eventType: req.query.eventType || '',
+          limit: req.query.limit || 100
+        }));
+      } catch {
+        res.json([]);
+      }
+    },
+
+    async resolveAiEvent(req, res) {
+      try {
+        res.json(await aiEventService.resolveEvent(req.params.id, {
+          status: req.body?.status || 'resolved',
+          actor: req.user?.username || 'staff'
+        }));
+      } catch {
+        res.status(500).json({ error: 'Failed to update AI event' });
       }
     },
 
@@ -357,6 +386,15 @@ function createWaiterApiController(deps) {
       try {
         const intel = await guestService.seatGuest(req.params.tableId, guestId);
         res.json({ ok: true, guestIntel: intel });
+        // Fire-and-forget: a real Guest record just got linked to a table —
+        // evaluate their stored profile (VIP/returning/high-value/dietary/
+        // allergy/milestone) into shared AI events. Response already sent
+        // above so this never delays the seat action.
+        if (aiEventService && guestId) {
+          guestService.getGuest(guestId)
+            .then(guest => aiEventService.evaluateGuestSeated(guest, req.params.tableId))
+            .catch(() => {});
+        }
       } catch {
         res.status(500).json({ error: 'Failed to seat guest' });
       }

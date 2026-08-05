@@ -642,3 +642,40 @@ model RewardCode {
   @@index([restaurantId, deviceId])
   @@index([restaurantId, status])
 }
+
+// AI Shared Event System — the single structured record for anything the
+// deterministic AI layer (chat-text pattern detection, guest-seating, order
+// composition) notices, so admin/waiter/analytics all read the same row
+// instead of each surface re-deriving its own interpretation. See
+// server/services/aiEventService.js for the event taxonomy and detection
+// rules; a linked WaiterTask (waiterTaskId) keeps the existing waiter
+// task-inbox UI working unchanged — this table is additive, not a
+// replacement for WaiterTask.
+model AiEvent {
+  id                     Int       @id @default(autoincrement())
+  restaurantId           String    @default("trump")
+  eventType              String    // birthday | anniversary | vip | returning_guest | high_value |
+                                    // wine_recommendation | upsell_opportunity | dietary_restriction | allergy |
+                                    // business_meeting | date_night | proposal | promotion_celebration |
+                                    // family_dinner | large_group | milestone
+  guestId                Int?
+  tableId                String    @default("")
+  waiterName             String    @default("")
+  priority               Int       @default(3)   // 1=urgent .. 3=low, same convention as WaiterTask.priority
+  confidence             Float     @default(1)   // 0..1 — deterministic rules, not ML; see aiEventService for how each type sets this
+  recommendedAction      String    @default("")
+  suggestedWaiterMessage String    @default("")
+  suggestedManagerAction String    @default("")
+  status                 String    @default("open") // open | acknowledged | resolved | dismissed
+  source                 String    @default("system") // chat | guest_seated | order_placed | system
+  payload                Json?
+  waiterTaskId           Int?
+  createdAt              DateTime  @default(now())
+  acknowledgedAt         DateTime?
+  resolvedAt             DateTime?
+
+  @@index([restaurantId, status, priority, createdAt])
+  @@index([restaurantId, tableId, status])
+  @@index([restaurantId, eventType])
+  @@index([restaurantId, guestId])
+}

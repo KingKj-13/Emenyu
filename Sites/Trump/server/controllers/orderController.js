@@ -2,7 +2,7 @@ const path = require('path');
 
 const { tableIdFromFilename } = require('../utils/helpers');
 
-function createOrderController({ config, fileService, socketService, orderValidationService }) {
+function createOrderController({ config, fileService, socketService, orderValidationService, aiEventService = null }) {
   return {
     serveAdminPage(req, res) {
       // Phase 01B: the admin console is the React SPA (client/dist). React Router
@@ -54,6 +54,7 @@ function createOrderController({ config, fileService, socketService, orderValida
         await socketService.replaceTableCart(tableId, [], { emit: true });
         await socketService.emitTableHistory(tableId);
         socketService.emitOrderPlaced(storedOrder);
+        aiEventService?.evaluateOrderPlaced(storedOrder, tableId).catch(() => {});
       } catch {
         /* best-effort: order is persisted; live UI will reconcile on next sync */
       }

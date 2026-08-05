@@ -28,6 +28,10 @@ function registerWaiterApiRoutes(app, config, controllers, auth) {
   app.post(alias('waiter/birthday-request'), waiterAuth, c.requestBirthdayApproval);
   app.post(alias('waiter/birthday-approval/:id'), auth.requireRoles(['owner', 'manager']), c.approveBirthday);
 
+  // AI Shared Event System — single source of truth read by both admin and waiter.
+  app.get(alias('ai-events'), waiterAuth, c.listAiEvents);
+  app.post(alias('ai-events/:id/resolve'), waiterAuth, c.resolveAiEvent);
+
   // Performance / leaderboard / shift report
   app.get(alias('waiter/me/performance'), waiterAuth, c.getMyPerformance);
   app.get(alias('waiter/me/shift-report'), waiterAuth, c.getMyShiftReport);

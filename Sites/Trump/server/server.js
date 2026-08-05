@@ -27,10 +27,12 @@ const { createOrderController } = require('./controllers/orderController');
 const { createUploadController } = require('./controllers/uploadController');
 const { createWaiterController } = require('./controllers/waiterController');
 const { createWaiterApiController } = require('./controllers/waiterApiController');
+const { createDebugController } = require('./controllers/debugController');
 const { registerAnalyticsRoutes } = require('./routes/analyticsRoutes');
 const { registerRecommendationAnalyticsRoutes } = require('./routes/recommendationAnalyticsRoutes');
 const { registerRecommendationBundleRoutes } = require('./routes/recommendationBundleRoutes');
 const { registerWaiterApiRoutes } = require('./routes/waiterApiRoutes');
+const { registerDebugRoutes } = require('./routes/debugRoutes');
 const { registerOperationsRoutes } = require('./routes/operationsRoutes');
 const { AuditService } = require('./services/auditService');
 const { ShiftService } = require('./services/shiftService');
@@ -62,6 +64,7 @@ const { createWaiterAnalyticsService } = require('./services/waiterAnalyticsServ
 const { createServiceRecoveryService } = require('./services/serviceRecoveryService');
 const { createFloorService } = require('./services/floorService');
 const { createWaiterWorkflowService } = require('./services/waiterWorkflowService');
+const { createAiEventService } = require('./services/aiEventService');
 const { AccountService } = require('./services/accountService');
 const { FileService } = require('./services/fileService');
 const { SocketService } = require('./services/socketService');
@@ -313,6 +316,11 @@ async function startServer(baseDirOverride) {
   const pushDispatcher = new PushDispatcher({ accountService, tokenService, config, logger });
   const notificationService = new NotificationService({ config, logger, socketService, auditService, pushDispatcher });
   socketService.setNotificationService(notificationService);
+  // AI Shared Event System — single source of truth for birthday/VIP/allergy/
+  // large-group/etc. signals across chat detection, guest-seating, and order
+  // placement. Depends on waiterWorkflowService (to keep the existing waiter
+  // task inbox working) and notificationService (existing notification bell).
+  const aiEventService = createAiEventService({ config, socketService, notificationService, waiterWorkflowService, logger });
   const shiftService = new ShiftService({ config, logger, auditService });
   const tableOwnershipService = new TableOwnershipService({ config, logger, auditService, notificationService });
   const operationsService = new OperationsService({ config, logger, shiftService, notificationService });
@@ -330,7 +338,7 @@ async function startServer(baseDirOverride) {
   }
 
   const controllers = {
-    ai: createAiController({ aiService, config, waiterWorkflowService, fileService }),
+    ai: createAiController({ aiService, config, waiterWorkflowService, fileService, aiEventService }),
     analytics: createAnalyticsController({ config }),
     recommendationAnalytics: createRecommendationAnalyticsController({ recommendationEventService, prismaMenuService: fileService.prismaMenu }),
     recommendationBundle: createRecommendationBundleController({ recommendationBundleService, socketService }),
@@ -338,11 +346,11 @@ async function startServer(baseDirOverride) {
     settings: createSettingsController({ fileService, socketService }),
     kitchen: createKitchenController({ config, fileService, socketService, notificationService }),
     menu: createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService: fileService.prismaMenu, config }),
-    order: createOrderController({ config, fileService, socketService, orderValidationService }),
+    order: createOrderController({ config, fileService, socketService, orderValidationService, aiEventService }),
     push: createPushController({ config }),
     rating: createRatingController({ config }),
     reservation: createReservationController({ config }),
-    waiter: createWaiterController({ config, fileService, socketService, orderValidationService }),
+    waiter: createWaiterController({ config, fileService, socketService, orderValidationService, aiEventService }),
     waiterApi: createWaiterApiController({
       config,
       fileService,
@@ -355,8 +363,10 @@ async function startServer(baseDirOverride) {
       serviceRecoveryService,
       floorService,
       waiterWorkflowService,
-      rewardService
+      rewardService,
+      aiEventService
     }),
+    debug: createDebugController({ config, guestService, aiEventService }),
     reward: createRewardController({ rewardService }),
     operations: createOperationsController({
       shiftService, tableOwnershipService, notificationService, operationsService, auditService
@@ -475,6 +485,7 @@ async function startServer(baseDirOverride) {
   registerReservationRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
   registerUploadRoutes(app, config, uploadController, auth.requireRoles(['owner', 'manager']));
   registerWaiterApiRoutes(app, config, controllers, auth);
+  registerDebugRoutes(app, config, controllers, auth);
   registerOperationsRoutes(app, config, controllers, auth);
   registerAuthTokenRoutes(app, config, controllers, auth);
   registerOrderRoutes(app, config, controllers, auth);

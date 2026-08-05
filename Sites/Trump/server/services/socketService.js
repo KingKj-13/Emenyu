@@ -466,6 +466,25 @@ class SocketService {
     }
   }
 
+  // AI Shared Event System — one structured event (birthday, VIP, allergy,
+  // large group, ...) pushed to both admin and waiter simultaneously, so
+  // they render from the same payload instead of each surface re-deriving it.
+  emitAiEvent(event) {
+    if (!this.io) return;
+    this.io.to(this.getAdminRoom()).to(this.getWaiterRoom()).emit('aiEventCreated', {
+      restaurantId: this.config.restaurantId,
+      event
+    });
+  }
+
+  emitAiEventUpdated(event) {
+    if (!this.io) return;
+    this.io.to(this.getAdminRoom()).to(this.getWaiterRoom()).emit('aiEventUpdated', {
+      restaurantId: this.config.restaurantId,
+      event
+    });
+  }
+
   // Server-initiated "guest wants the bill" pulse — same wire shape as a real
   // callWaiter ring (handleCallWaiter) so waiter/admin UIs need no special
   // casing, but callable directly (no socket) for staff-side/automated flows
