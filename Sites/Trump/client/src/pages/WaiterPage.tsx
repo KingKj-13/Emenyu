@@ -234,6 +234,12 @@ function TableCard({ table, status, intel, event, hasUpdate, onOpen }: {
   table: FloorTable; status: TableStatus; intel?: TableIntel; event?: GuestEvent; hasUpdate?: boolean; onOpen: () => void;
 }) {
   const ev = intel?.opportunity?.hasOpportunity ? (intel.opportunity.expectedValue ?? intel.opportunity.increase) : 0;
+  // Surfaced here (not just on the detail panel) so a waiter can see at a
+  // glance, from the table grid, whether there's a dietary/allergy note or an
+  // occasion for this table before opening it — no digging required.
+  const guest = intel?.guestIntel;
+  const dietaryChip = guest?.allergies ? `⚠️ ${guest.allergies}` : guest?.dietary ? `🥗 ${guest.dietary}` : null;
+  const hasIntelRow = event?.label || ev > 0 || dietaryChip || guest?.vip;
   return (
     <button className={`wv-table-card st-${status} ${table.isLuxury ? 'wv-luxury' : ''}`} onClick={onOpen}>
       {hasUpdate && <span className="wv-update-dot" aria-label="New activity" />}
@@ -249,9 +255,11 @@ function TableCard({ table, status, intel, event, hasUpdate, onOpen }: {
         <span><Clock size={14} /> {seatedLabel(table.seatedMinutes)}</span>
         <b>{table.spend ? money(table.spend) : 'R0'}</b>
       </div>
-      {(event?.label || ev > 0) && (
+      {hasIntelRow && (
         <div className="wv-card-intel">
           {event?.label && <span className="wv-occasion-chip">{event.emoji} {event.label}</span>}
+          {guest?.vip && <span className="wv-occasion-chip">⭐ VIP</span>}
+          {dietaryChip && <span className="wv-diet-chip">{dietaryChip}</span>}
           {ev > 0 && <span className="wv-ev-chip">+{money(ev)} potential</span>}
         </div>
       )}
