@@ -2736,10 +2736,14 @@ function ServiceDeskPanel({ tasks, onChange }: { tasks: WaiterTask[]; onChange: 
     return () => { cancelled = true; cleanup(); };
   }, [reload]);
 
-  const approvals = tasks.filter(t => t.type === 'birthday_approval' && t.status === 'open');
+  const approvals = tasks
+    .filter(t => t.type === 'birthday_approval' && t.status === 'open')
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
   const openTasks = tasks
     .filter(t => ['open', 'acknowledged'].includes(t.status) && t.type !== 'birthday_approval')
-    .sort((a, b) => a.priority - b.priority);
+    // Newest first within the same priority band, so a fresh notification
+    // never gets buried under an older one that merely shares a priority.
+    .sort((a, b) => a.priority - b.priority || +new Date(b.createdAt) - +new Date(a.createdAt));
 
   async function decide(id: number, approved: boolean) {
     setBusy(id);
