@@ -466,6 +466,41 @@ class SocketService {
     }
   }
 
+  // Server-initiated "guest wants the bill" pulse — same wire shape as a real
+  // callWaiter ring (handleCallWaiter) so waiter/admin UIs need no special
+  // casing, but callable directly (no socket) for staff-side/automated flows
+  // that aren't a guest device pressing the call button.
+  emitBillRequested(tableId) {
+    if (!this.io) return;
+    const cleanId = normalizeId(tableId);
+    const displayTable = cleanId.replace(/^table/i, 'Table ').toUpperCase();
+    const timestamp = new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+
+    this.io.to(this.getWaiterRoom()).emit('incomingWaiterCall', {
+      restaurantId: this.config.restaurantId,
+      tableId: cleanId,
+      displayTable,
+      message: `${displayTable} would like the bill.`,
+      timestamp
+    });
+    this.io.to(this.getAdminRoom()).emit('waiterCallAlert', {
+      restaurantId: this.config.restaurantId,
+      tableId: cleanId,
+      displayTable,
+      message: `${displayTable} has asked for the bill.`,
+      type: 'incoming',
+      timestamp
+    });
+    this.notifications?.notify({
+      source: 'waiter_call',
+      title: `${displayTable} wants the bill`,
+      body: `${displayTable} has asked for the bill.`,
+      priority: 1,
+      recipientRole: 'waiter',
+      tableId: cleanId
+    });
+  }
+
   // Phase 04B — live delivery of a Notification row to the right staff. Mirrors the
   // notificationService recipient rules so the in-app bell updates instantly without
   // polling. Background/offline delivery is handled separately by pushDispatcher.

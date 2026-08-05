@@ -318,6 +318,17 @@ async function startServer(baseDirOverride) {
   const operationsService = new OperationsService({ config, logger, shiftService, notificationService });
   logger.info('nlg_mode', nlgService.status());
 
+  // Demo Live Ticker — OPT-IN ONLY (see server/services/demoLiveTicker.js). Keeps
+  // the floor looking alive for sales demos: new orders on idle tables, kitchen
+  // tickets progressing, occasional bill-calls/birthdays. Never runs unless this
+  // env var is explicitly set — must stay inert the moment Trump serves a real
+  // paying guest on a table it could otherwise touch.
+  if (process.env.TRUMP_DEMO_LIVE_MODE === 'true') {
+    const { createDemoLiveTicker } = require('./services/demoLiveTicker');
+    const demoLiveTicker = createDemoLiveTicker({ config, socketService, notificationService, waiterWorkflowService, logger });
+    demoLiveTicker.start();
+  }
+
   const controllers = {
     ai: createAiController({ aiService, config, waiterWorkflowService, fileService }),
     analytics: createAnalyticsController({ config }),
