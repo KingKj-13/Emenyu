@@ -93,7 +93,7 @@ const JOURNEYS = [
       },
       {
         name: 'HALF CHICKEN',
-        price: null, // CONFIRM PRICE — not verifiable from the public menu API at authoring time; check the admin menu panel before this journey runs live.
+        price: 199, // confirmed against Sites/Trump DB menu (CHICKEN category) 2026-08-05
         reason: "If you'd rather something lighter than a burger, the half chicken is just as easy, and just as unpretentious.",
         side: { name: 'ONION RINGS', price: 65, reason: "Keeps the casual, shareable feel of the table going." },
         drink: { name: 'CORONA', price: 65, reason: "Still the same easy pairing — pairs beautifully with grilled chicken too." }
