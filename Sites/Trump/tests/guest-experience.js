@@ -8,6 +8,28 @@ const { chromium } = require(require('path').join(__dirname, '..', 'client', 'no
 const BASE = process.env.TEST_BASE || 'http://127.0.0.1:3099/Trump';
 const OUT = process.env.SHOT_DIR || require('os').tmpdir();
 
+/**
+ * NOT networkidle. The guest menu batches engagement beacons on a timer, so the
+ * network never goes quiet for the 500ms Playwright wants — against production
+ * that turns every navigation into a 30s timeout. Wait for the document instead
+ * and let the individual assertions wait on the elements they care about.
+ */
+const NAV = { waitUntil: 'domcontentloaded', timeout: 60000 };
+
+/**
+ * Navigate and wait for the screen to actually have content. domcontentloaded
+ * fires long before the menu has been fetched and rendered, so without this the
+ * assertions race the first paint.
+ */
+async function go(page, url) {
+  await page.goto(url, NAV);
+  await Promise.race([
+    page.locator('article').first().waitFor({ timeout: 45000 }),
+    page.locator('aside h2').first().waitFor({ timeout: 45000 }),
+  ]).catch(() => {});
+  await page.waitForTimeout(400);
+}
+
 const results = [];
 function check(name, ok, detail = '') {
   results.push({ name, ok, detail });
@@ -43,7 +65,7 @@ async function assertNoOrdering(page, where) {
   // ── 1. QR scan goes straight to the food, with no login and no gate ─────
   //     There is no language step in front of the door any more; the switch
   //     lives in the header chrome, so entry must reach content immediately.
-  await page.goto(`${BASE}/table1`, { waitUntil: 'networkidle' });
+  await go(page, `${BASE}/table1`);
   await page.waitForTimeout(600);
   const gateVisible = await page.locator('text=Choose your language').first().isVisible().catch(() => false);
   check('no full-screen language gate on entry', !gateVisible);
@@ -53,7 +75,7 @@ async function assertNoOrdering(page, where) {
   await page.screenshot({ path: `${OUT}/qr-1-entry.png` });
 
   // ── 2. the language dropdown in the header ──────────────────────────────
-  await page.goto(`${BASE}/table1/menu`, { waitUntil: 'networkidle' });
+  await go(page, `${BASE}/table1/menu`);
   await page.waitForTimeout(900);
   const langBtn = page.getByRole('button', { name: /^Language:/i });
   check('header carries a language button', await langBtn.count() === 1);
@@ -77,9 +99,13 @@ async function assertNoOrdering(page, where) {
   check('document lang follows the choice', htmlLang === 'de', htmlLang);
   // Assert on chrome that is actually on screen — the drawer strings
   // (Schnellzugriff, Weine…) only exist once the side drawer is opened.
-  const chromeDe = await page.evaluate(() => document.body.innerText || '');
-  check('UI chrome switches to German',
-    /Tippen Sie auf das Tier|Die Fleischerei|Unschlüssig/i.test(chromeDe));
+  // Poll rather than sleep: switching locale refetches the menu, and against
+  // production that round trip outlasts any fixed wait.
+  const germanShown = await page.waitForFunction(
+    () => /Tippen Sie auf das Tier|Die Fleischerei|Unschlüssig/i.test(document.body.innerText || ''),
+    null, { timeout: 30000 },
+  ).then(() => true).catch(() => false);
+  check('UI chrome switches to German', germanShown);
   check('dropdown closes after choosing', await page.locator('[role="listbox"]').count() === 0);
   await page.screenshot({ path: `${OUT}/qr-2b-german.png` });
 
@@ -135,7 +161,7 @@ async function assertNoOrdering(page, where) {
   await page.waitForTimeout(400);
 
   // ── 5. the butchery ─────────────────────────────────────────────────────
-  await page.goto(`${BASE}/table1/butchery?cut=rib`, { waitUntil: 'networkidle' });
+  await go(page, `${BASE}/table1/butchery?cut=rib`);
   await page.waitForTimeout(1800);
   const cutName = await page.locator('aside h2').first().textContent();
   check('cow selector opens the deep-linked cut', (cutName || '').trim() === 'Prime Rib', cutName || '');
@@ -156,7 +182,7 @@ async function assertNoOrdering(page, where) {
 
   // ── 6. Arabic: right-to-left throughout ─────────────────────────────────
   await page.evaluate(() => { localStorage.setItem('emenyu.locale', 'ar'); });
-  await page.goto(`${BASE}/table1/menu`, { waitUntil: 'networkidle' });
+  await go(page, `${BASE}/table1/menu`);
   await page.waitForTimeout(900);
   const dir = await page.evaluate(() => document.documentElement.dir);
   check('Arabic sets document direction to rtl', dir === 'rtl', dir);
@@ -172,7 +198,7 @@ async function assertNoOrdering(page, where) {
 
   // ── 7. CJK: layout survives different character widths ──────────────────
   await page.evaluate(() => { localStorage.setItem('emenyu.locale', 'ja'); });
-  await page.goto(`${BASE}/table1/butchery`, { waitUntil: 'networkidle' });
+  await go(page, `${BASE}/table1/butchery`);
   await page.waitForTimeout(1000);
   const jaDir = await page.evaluate(() => document.documentElement.dir);
   const jaLang = await page.evaluate(() => document.documentElement.lang);
@@ -184,7 +210,7 @@ async function assertNoOrdering(page, where) {
 
   // ── 8. in-app language switch ───────────────────────────────────────────
   await page.evaluate(() => { localStorage.setItem('emenyu.locale', 'en'); });
-  await page.goto(`${BASE}/table1/menu`, { waitUntil: 'networkidle' });
+  await go(page, `${BASE}/table1/menu`);
   await page.waitForTimeout(800);
   const midMenuLang = page.locator('header button[aria-label^="Language"]');
   check('header carries a language switch', await midMenuLang.count() === 1);
@@ -200,7 +226,7 @@ async function assertNoOrdering(page, where) {
 
   // ── 8b. the engagement events that used to be declared but never sent ───
   await page.evaluate(() => { localStorage.setItem('emenyu.locale', 'en'); });
-  await page.goto(`${BASE}/table1/menu`, { waitUntil: 'networkidle' });
+  await go(page, `${BASE}/table1/menu`);
   await page.waitForTimeout(1000);
 
   const sent = [];
@@ -232,7 +258,7 @@ async function assertNoOrdering(page, where) {
     `${sent.filter(e => e === 'SEARCH').length} SEARCH events`);
 
   // ── 9. admin login still protected ──────────────────────────────────────
-  await page.goto(`${BASE}/Admin`, { waitUntil: 'networkidle' });
+  await go(page, `${BASE}/Admin`);
   await page.waitForTimeout(900);
   const url = page.url();
   check('admin still requires authentication', /login/i.test(url), url);
