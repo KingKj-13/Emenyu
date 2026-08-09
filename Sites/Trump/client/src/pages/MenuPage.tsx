@@ -1,38 +1,37 @@
-import { useState, useMemo, useEffect, useCallback, useRef, Suspense, lazy, type ComponentType, type ReactNode } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef, Fragment, Suspense, lazy, type ComponentType, type ReactNode } from 'react';
 import { preload } from 'react-dom';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Salad, Fish, Beef, Drumstick, UtensilsCrossed, Sandwich, Soup, Leaf, CakeSlice,
-  Wine, Beer, Martini, Coffee, Check, CheckCircle2, PartyPopper, ChefHat, Star,
+  Wine, Beer, Martini, Coffee, Star,
 } from 'lucide-react';
-import { useSocketEvent } from '../hooks/useSocket';
 import { AppShell } from '../components/layout/AppShell';
 import { SideDrawer } from '../components/layout/SideDrawer';
 import { CategorySection } from '../components/menu/CategorySection';
 import { MenuSkeletonGrid } from '../components/menu/MenuSkeletonGrid';
-import { RecommendedOrders } from '../components/menu/RecommendedOrders';
 import { ItemModal } from '../components/menu/ItemModal';
 import { PairingModal } from '../components/menu/PairingModal';
 import { CategoryTabBar } from '../components/menu/CategoryTabBar';
-import { BottomBar } from '../components/cart/BottomBar';
-import { CartDrawer } from '../components/cart/CartDrawer';
-import { ChatPanel } from '../components/chat/ChatPanel';
 import { Spinner } from '../components/ui/Spinner';
+import { CowMeatSelector } from '../components/butchery/CowMeatSelector';
+import { useButcheryCuts } from '../components/butchery/useButcheryCuts';
+import { RecommendedOrders } from '../components/menu/RecommendedOrders';
+import { getCutMenuMapping, hasCutMenuMatches } from '../components/butchery/cutMenuMap';
 import { useMenu } from '../hooks/useMenu';
-import { useCart } from '../hooks/useCart';
 import { useFilters } from '../hooks/useFilters';
-import type { ChatSuggestionItem } from '../types/menu';
+import { useT, useI18n } from '../i18n';
+import { track } from '../lib/engagement';
+import { useDebounce } from '../hooks/useDebounce';
 import { useFavorites } from '../hooks/useFavorites';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { useApp } from '../context/AppContext';
 import { buildMenuSections, flattenMenu, normalizeName } from '../lib/menuUtils';
 import { resolveImage, resolveThumbnail } from '../lib/imageResolver';
 import { FOOD_CHAPTERS } from '../constants/chapters';
-import { MAINS_CATEGORY_TITLE, PASTAS_CATEGORY_TITLE } from '../constants/api';
+import { MAINS_CATEGORY_TITLE, PASTAS_CATEGORY_TITLE, RESTAURANT_ID } from '../constants/api';
 import type { MenuItem } from '../types/menu';
 import styles from './MenuPage.module.css';
 
-const BookViewer = lazy(() => import('../components/book/BookViewer').then(m => ({ default: m.BookViewer })));
 
 const DRINKS_TITLES = new Set([
   'Sparkling', 'White Wine', 'Red Wine', 'Beer & Cider', 'Spirits',
@@ -65,16 +64,15 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   const focusSection = searchParams.get('section');
   const { setTableId, pendingItemName, setPendingItemName } = useApp();
   const { menuData, loading, error } = useMenu();
-  const { addItem, isOpen: cartOpen } = useCart();
   const { activeFilters, searchQuery, setSearchQuery, toggleFilter, clearFilters, filterOptions } = useFilters();
   const { favorites, toggle: toggleFavorite } = useFavorites();
   const { addItem: addRecent } = useRecentlyViewed();
+  const t = useT();
+  const { locale } = useI18n();
+  const serverCuts = useButcheryCuts(locale);
 
   const [itemStack, setItemStack] = useState<MenuItem[]>([]);
   const [pairingItem, setPairingItem] = useState<MenuItem | null>(null);
-  const [orderStatus, setOrderStatus] = useState<string | null>(null);
-  const [ratingOrderId, setRatingOrderId] = useState<number | null>(null);
-  const [ratingModalOpen, setRatingModalOpen] = useState(false);
   const tableId = paramTableId || 'table1';
   const itemStackRef = useRef<MenuItem[]>([]);
   const modalDepthRef = useRef(0);
@@ -82,23 +80,10 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   const selectedItem = itemStack[itemStack.length - 1] ?? null;
   const modalOpen = itemStack.length > 0;
 
-  useSocketEvent<{ order: { tableId: string; id?: number; kitchenStatus?: string } }>('orderPlaced', useCallback(({ order }) => {
-    if (order.tableId === tableId) setOrderStatus('new');
-  }, [tableId]));
-
-  useSocketEvent<{ orderId: number; kitchenStatus: string; order?: { tableId: string } }>('kitchenStatusUpdate', useCallback(({ orderId, kitchenStatus, order }) => {
-    if (!order || order.tableId === tableId) {
-      setOrderStatus(kitchenStatus);
-      if (kitchenStatus === 'served') {
-        const key = `rated_${orderId}`;
-        if (!sessionStorage.getItem(key)) {
-          setRatingOrderId(orderId);
-          setTimeout(() => setRatingModalOpen(true), 2000);
-        }
-        setTimeout(() => setOrderStatus(null), 4000);
-      }
-    }
-  }, [tableId]));
+  // The order-status ticker and the post-meal rating prompt used to live here.
+  // Both were driven by orders the guest placed from this screen; with ordering
+  // handled by the waiter there is no order for this device to follow, so
+  // listening for those socket events would only ever show another table's.
 
   useEffect(() => {
     if (paramTableId) setTableId(paramTableId);
@@ -114,6 +99,35 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   }, [menuData, activeFilters, searchQuery, sectionFilter]);
 
   const allItems = useMemo(() => flattenMenu(menuData), [menuData]);
+
+  // The butchery chart only earns its place on a menu that actually sells beef
+  // primals — this is data-driven rather than tenant-gated, so a menu without
+  // them (Carmella) simply never renders the banner.
+  const showButchery = useMemo(
+    () => hasCutMenuMatches(allItems, getCutMenuMapping(RESTAURANT_ID)),
+    [allItems]
+  );
+  const scrollToSteaks = useCallback(() => {
+    const id = `section-${MAINS_CATEGORY_TITLE.toLowerCase().replace(/\s+/g, '-')}`;
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  // What guests search for, recorded once they stop typing — a per-keystroke
+  // event would record "r", "ri", "rib" and tell us nothing. Only the query is
+  // stored; there is no guest to attach it to.
+  const settledQuery = useDebounce(searchQuery, 900);
+  useEffect(() => {
+    const q = settledQuery.trim();
+    if (q.length < 2) return;
+    track({ eventType: 'SEARCH', label: q.slice(0, 60) });
+  }, [settledQuery]);
+
+  // One MENU_VIEW per screen entry — the denominator every other figure in the
+  // admin engagement report is read against.
+  useEffect(() => {
+    if (loading) return;
+    track({ eventType: 'MENU_VIEW', label: sectionFilter || 'grid' });
+  }, [loading, sectionFilter]);
 
   // Warm the first-screen card images: preload the first section's leading
   // thumbnails so the top of the menu paints immediately (the rest lazy-load).
@@ -215,15 +229,6 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
     }
   }, [setStack]);
 
-  // The cart button in Header is reachable while an item modal is open (it's
-  // part of the persistent app chrome, not disabled/hidden by the modal) --
-  // without this, opening the cart stacked both overlays' translucent
-  // backdrops on top of each other and left the cart drawer's own content
-  // hidden behind the modal (--z-modal sits above --z-drawer by design).
-  useEffect(() => {
-    if (cartOpen && modalOpen) closeItemModal();
-  }, [cartOpen, modalOpen, closeItemModal]);
-
   const goBackItem = useCallback(() => {
     if (itemStackRef.current.length > 1) {
       window.history.back();
@@ -299,86 +304,8 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [sections]);
 
-  const bookNavLinks = useMemo(() => FOOD_CHAPTERS.map(ch => {
-    const Icon = sectionIconFor(ch.title);
-    return { label: ch.title, icon: <Icon size={15} />, onClick: () => {} };
-  }), []);
-
   function handleItemClick(item: MenuItem) {
     openItem(item, 'replace');
-  }
-
-  function handleChatItemClick(item: ChatSuggestionItem) {
-    const fullItem = findItemByName(item.name);
-    handleItemClick(fullItem ?? (item as unknown as MenuItem));
-  }
-
-  function handleAddToCart(item: MenuItem) {
-    addItem({
-      name: item.name,
-      price: item.price,
-      img: resolveImage(item),
-      description: item.description || '',
-      categoryType: item.categoryType,
-      beverageKind: item.beverageKind,
-    });
-  }
-
-  function handleAddToCartWithDetails(item: MenuItem, qty: number, note: string) {
-    for (let i = 0; i < qty; i++) {
-      addItem({
-        name: item.name,
-        price: item.price,
-        img: resolveImage(item),
-        description: item.description || '',
-        categoryType: item.categoryType,
-        beverageKind: item.beverageKind,
-        qty: 1,
-        note,
-      });
-    }
-  }
-
-  if (sectionFilter === 'book') {
-    return (
-      <AppShell>
-        <SideDrawer
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          activeFilters={activeFilters}
-          onToggleFilter={toggleFilter}
-          onClearAll={clearFilters}
-          filterOptions={filterOptions}
-          navLinks={bookNavLinks}
-        />
-        <Suspense fallback={<div className={styles.loadingState}><Spinner size={40} /></div>}>
-          <BookViewer
-            menuData={menuData}
-            onItemClick={handleItemClick}
-            onAddToCart={handleAddToCart}
-            onPairingClick={setPairingItem}
-          />
-        </Suspense>
-        <ItemModal
-          item={selectedItem}
-          open={modalOpen}
-          onClose={closeItemModal}
-          isFavorite={selectedItem ? favorites.includes(selectedItem.name) : false}
-          onFavoriteToggle={toggleFavorite}
-          onAddToCart={handleAddToCartWithDetails}
-          onRequestItem={(name) => openItemByName(name, 'push')}
-          onOpenItem={(it) => openItem(it, 'push')}
-          onAddSuggestion={handleAddToCart}
-          canGoBack={itemStack.length > 1}
-          onBack={goBackItem}
-        />
-        <PairingModal item={pairingItem} open={!!pairingItem} onClose={() => setPairingItem(null)} />
-        <BottomBar />
-        <CartDrawer />
-        <ChatPanel onItemClick={handleChatItemClick} />
-        <AddedToast />
-      </AppShell>
-    );
   }
 
   return (
@@ -398,36 +325,47 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
           <MenuSkeletonGrid />
         ) : error ? (
           <div className={styles.errorState}>
-            <p>Unable to load menu. Please try refreshing.</p>
+            <p>{t('menu.error')}</p>
             <p className={styles.errorDetail}>{error}</p>
           </div>
         ) : sections.length === 0 ? (
           <div className={styles.emptyState}>
-            <p>No items match your filters.</p>
-            <button className={styles.clearBtn} onClick={clearFilters}>Clear filters</button>
+            <p>{t('menu.empty')}</p>
+            <button className={styles.clearBtn} onClick={clearFilters}>{t('nav.clearFilters')}</button>
           </div>
         ) : (
           <>
+            {/* The animal comes first — a guest should meet it before they start
+                scrolling, not halfway down at the steak chapter. */}
+            {showButchery && !sectionFilter && !searchQuery && activeFilters.size === 0 && (
+              <section className={styles.butcheryStage} aria-label={t('cut.title')}>
+                <CowMeatSelector
+                  items={allItems}
+                  serverCuts={serverCuts}
+                  onOpenItem={item => openItem(item, 'replace')}
+                  onBrowseAll={scrollToSteaks}
+                />
+              </section>
+            )}
+
+            {/* "Not sure what to order?" — the curated bundles. */}
             {!sectionFilter && !searchQuery && activeFilters.size === 0 && (
               <RecommendedOrders
                 resolveItem={findItemByName}
-                onOpenItem={(name) => openItemByName(name, 'replace')}
-                onAddOrder={(names) => names.forEach(n => {
-                  const found = findItemByName(n);
-                  if (found) handleAddToCart(found);
-                })}
+                onOpenItem={name => openItemByName(name, 'replace')}
               />
             )}
+
             {sections.map(section => (
-              <CategorySection
-                key={section.title}
-                section={section}
-                favorites={favorites}
-                onFavoriteToggle={toggleFavorite}
-                onAddToCart={handleAddToCart}
-                onItemClick={handleItemClick}
-                onPairingClick={setPairingItem}
-              />
+              <Fragment key={section.title}>
+                <CategorySection
+                  section={section}
+                  favorites={favorites}
+                  onFavoriteToggle={toggleFavorite}
+                  onItemClick={handleItemClick}
+                  onPairingClick={setPairingItem}
+                />
+              </Fragment>
             ))}
           </>
         )}
@@ -441,133 +379,17 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
         onClose={closeItemModal}
         isFavorite={selectedItem ? favorites.includes(selectedItem.name) : false}
         onFavoriteToggle={toggleFavorite}
-        onAddToCart={handleAddToCartWithDetails}
         onRequestItem={(name) => openItemByName(name, 'push')}
         onOpenItem={(it) => openItem(it, 'push')}
-        onAddSuggestion={handleAddToCart}
         canGoBack={itemStack.length > 1}
         onBack={goBackItem}
       />
 
       <PairingModal item={pairingItem} open={!!pairingItem} onClose={() => setPairingItem(null)} />
-
-      <BottomBar />
-      {orderStatus && <OrderStatusBar status={orderStatus} />}
-      {ratingModalOpen && ratingOrderId && (
-        <RatingModal
-          orderId={ratingOrderId}
-          tableId={tableId}
-          onClose={() => {
-            setRatingModalOpen(false);
-            sessionStorage.setItem(`rated_${ratingOrderId}`, '1');
-          }}
-        />
-      )}
-      <CartDrawer />
-      {!loading && <ChatPanel onItemClick={handleChatItemClick} />}
-        <AddedToast />
     </AppShell>
   );
 }
 
-function AddedToast() {
-  const { justAdded } = useCart();
-  const [visible, setVisible] = useState(false);
-  const [label, setLabel] = useState('');
-  useEffect(() => {
-    if (!justAdded) return;
-    setLabel(justAdded.name);
-    setVisible(true);
-    const id = window.setTimeout(() => setVisible(false), 1800);
-    return () => window.clearTimeout(id);
-  }, [justAdded?.t]);
-  return (
-    <div className={`${styles.addedToast} ${visible ? styles.addedToastShow : ''}`} role="status" aria-live="polite">
-      <span className={styles.addedCheck} aria-hidden><Check size={13} strokeWidth={3} /></span> Added to cart · {label}
-    </div>
-  );
-}
-
-const STATUS_STEPS: { key: string; label: string; icon: ReactNode }[] = [
-  { key: 'new', label: 'Order Received', icon: <Check size={14} /> },
-  { key: 'preparing', label: 'Being Prepared', icon: <ChefHat size={14} /> },
-  { key: 'ready', label: 'Ready for Service', icon: <CheckCircle2 size={14} /> },
-  { key: 'served', label: 'Enjoy your meal!', icon: <PartyPopper size={14} /> },
-];
-
-function RatingModal({ orderId, tableId, onClose }: { orderId: number; tableId: string; onClose: () => void }) {
-  const [rating, setRating] = useState(0);
-  const [hover, setHover] = useState(0);
-  const [comment, setComment] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-
-  async function handleSubmit() {
-    if (rating === 0) return;
-    try {
-      const { api } = await import('../services/api');
-      await api.submitRating({ orderId, tableId, rating, comment });
-    } catch {}
-    setSubmitted(true);
-    setTimeout(onClose, 1800);
-  }
-
-  return (
-    <div className={styles.ratingOverlay} onClick={onClose}>
-      <div className={styles.ratingModal} onClick={e => e.stopPropagation()}>
-        {submitted ? (
-          <div className={styles.ratingThanks}><PartyPopper size={18} /> Thank you for your feedback!</div>
-        ) : (
-          <>
-            <h3 className={styles.ratingTitle}>How was your experience?</h3>
-            <div className={styles.ratingStars}>
-              {[1,2,3,4,5].map(s => (
-                <button
-                  key={s}
-                  className={`${styles.ratingStar} ${s <= (hover || rating) ? styles.ratingStarActive : ''}`}
-                  onMouseEnter={() => setHover(s)}
-                  onMouseLeave={() => setHover(0)}
-                  onClick={() => setRating(s)}
-                  aria-label={`Rate ${s} star${s !== 1 ? 's' : ''}`}
-                ><Star size={22} fill={s <= (hover || rating) ? 'currentColor' : 'none'} /></button>
-              ))}
-            </div>
-            <textarea
-              className={styles.ratingComment}
-              placeholder="Optional comment…"
-              value={comment}
-              onChange={e => setComment(e.target.value)}
-              rows={2}
-            />
-            <div className={styles.ratingActions}>
-              <button className={styles.ratingSkip} onClick={onClose}>Skip</button>
-              <button className={styles.ratingSubmit} onClick={handleSubmit} disabled={rating === 0}>Submit</button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function OrderStatusBar({ status }: { status: string }) {
-  const activeIdx = STATUS_STEPS.findIndex(s => s.key === status);
-  const active = STATUS_STEPS[Math.max(0, activeIdx)];
-  return (
-    <div className={styles.statusBar}>
-      <div className={styles.statusSteps}>
-        {STATUS_STEPS.slice(0, 3).map((step, i) => (
-          <div
-            key={step.key}
-            className={`${styles.statusStep} ${i <= activeIdx ? styles.statusStepDone : ''} ${i === activeIdx ? styles.statusStepActive : ''}`}
-          >
-            <span className={styles.statusIcon}>{step.icon}</span>
-            <span className={styles.statusLabel}>{step.label}</span>
-          </div>
-        ))}
-      </div>
-      {status === 'served' && (
-        <div className={styles.statusServed}>{active.icon} {active.label}</div>
-      )}
-    </div>
-  );
-}
+/* The cart toast, the order-status ticker and the post-meal rating modal all
+   lived here. Every one of them was downstream of the guest placing an order
+   from this screen, which the QR menu no longer does. */

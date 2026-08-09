@@ -1,27 +1,22 @@
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, BookOpen, Grid, ShoppingCart, User, ChefHat } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useRef, useState } from 'react';
+import { Menu, Languages, User, ChefHat, ChevronDown } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { useCart } from '../../hooks/useCart';
+import { useI18n } from '../../i18n';
 import { LANDING_BRAND_NAME, BRAND_TAGLINE, DEMO_MODE } from '../../constants/api';
 import { DayNightToggle } from './DayNightToggle';
+import { LanguageMenu } from '../language/LanguageMenu';
 import styles from './Header.module.css';
 
 export function Header() {
   const { tableId, tableLabel, user, setDrawerOpen, dayParts } = useApp();
-  const { count, setIsOpen } = useCart();
+  const { definition, t } = useI18n();
+  const langBtn = useRef<HTMLButtonElement>(null);
+  const [langOpen, setLangOpen] = useState(false);
   // Carmella-only: tenants with no day-part engine get [] from the server
   // (see AppContext.tsx), so this is false for Trump/Demo and their existing
   // Book view / Waiter dashboard icon is untouched.
   const hasDayNightToggle = dayParts.length > 0;
-  // The "Book view" toggle used to flip a bookMode boolean in AppContext that
-  // only drove its own highlight styling -- it never navigated anywhere or
-  // set MenuPage's sectionFilter, so clicking it visibly highlighted but did
-  // nothing else. The real, working book view lives at its own route
-  // (App.tsx: /:tableId/book -> MenuPage sectionFilter="book"), so both
-  // buttons now navigate there/back instead of toggling a disconnected flag.
-  const location = useLocation();
-  const inBookView = location.pathname.endsWith('/book');
-
   return (
     <header className={styles.header} role="banner">
       <Link to={`/${tableId}`} className={styles.brand} aria-label={`${LANDING_BRAND_NAME} ${BRAND_TAGLINE} — back to start`}>
@@ -43,45 +38,24 @@ export function Header() {
             {tableLabel}
           </span>
         )}
-        <Link
-          to={`/${tableId}/menu`}
-          className={`${styles.viewToggle} ${!inBookView ? styles.active : ''}`}
-          aria-label="Grid view"
-          aria-current={!inBookView ? 'page' : undefined}
-          title="Menu grid"
-        >
-          <Grid size={18} />
-        </Link>
-        {hasDayNightToggle ? (
-          <DayNightToggle />
-        ) : DEMO_MODE ? (
-          <Link
-            to="/Waiter"
-            className={styles.viewToggle}
-            aria-label="Waiter dashboard (demo — no login required)"
-            title="Waiter dashboard"
-          >
-            <ChefHat size={18} />
-          </Link>
-        ) : (
-          <Link
-            to={`/${tableId}/book`}
-            className={`${styles.viewToggle} ${inBookView ? styles.active : ''}`}
-            aria-label="Book view"
-            aria-current={inBookView ? 'page' : undefined}
-            title="Book view"
-          >
-            <BookOpen size={18} />
-          </Link>
-        )}
+        {/* The cart button used to live here. The QR menu no longer takes
+            orders — guests order through their waiter — so the same slot now
+            carries the language switch, which is what an international guest
+            actually reaches for. */}
         <button
-          className={styles.cartButton}
-          onClick={() => setIsOpen(true)}
-          aria-label={`Open cart, ${count} item${count !== 1 ? 's' : ''}`}
+          ref={langBtn}
+          className={styles.langButton}
+          onClick={() => setLangOpen(o => !o)}
+          aria-label={`${t('lang.change')}: ${definition.english}`}
+          aria-expanded={langOpen}
+          aria-haspopup="listbox"
+          title={definition.native}
         >
-          <ShoppingCart size={18} />
-          {count > 0 && <span className={styles.cartBadge}>{count}</span>}
+          <Languages size={18} />
+          <span className={styles.langCode}>{definition.code.split('-')[0].toUpperCase()}</span>
+          <ChevronDown size={13} className={styles.langCaret} aria-hidden />
         </button>
+        <LanguageMenu anchorRef={langBtn} open={langOpen} onClose={() => setLangOpen(false)} />
         {user ? (
           <Link to="/Admin" className={styles.userButton} aria-label={DEMO_MODE ? 'Admin dashboard (demo — no login required)' : `Logged in as ${user.username}`}>
             <User size={18} />
@@ -89,7 +63,7 @@ export function Header() {
         ) : null}
         <button
           className={styles.menuButton}
-          aria-label="Open navigation menu"
+          aria-label={t('nav.categories')}
           onClick={() => setDrawerOpen(true)}
         >
           <Menu size={18} />

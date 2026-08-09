@@ -42,7 +42,7 @@ function sanitizeChefRec(body = {}, { partial = false } = {}) {
   return { value: out };
 }
 
-function createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService, config }) {
+function createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService, config, localizationService = null }) {
   // Phase 05 — menu response cache. MEASURED: an uncached GET /api/menu re-runs
   // loadMenu (Prisma load + deserialization of ~440 items, ~150ms warm) on EVERY
   // request, capping throughput at ~12 req/s and ballooning latency to ~800ms p50
@@ -51,9 +51,12 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
   // We cache the serialized JSON + a precomputed gzip buffer + ETag, invalidated on
   // any menu mutation, with a 60s TTL backstop for out-of-band changes.
   const MENU_CACHE_TTL_MS = 60 * 1000;
-  let menuCache = null;   // { json, gzip, etag, builtAt }
-  let menuRebuild = null; // single-flight guard — prevents a cold-cache stampede where
-                          // N concurrent requests each trigger the expensive loadMenu.
+  // Keyed by locale. The German menu and the English menu are different
+  // payloads with different ETags, so one shared slot would serve whichever
+  // language happened to warm the cache first to everybody — the exact bug a
+  // naive `?locale=` bolt-on produces.
+  const menuCaches = new Map();   // locale -> { json, gzip, etag, builtAt }
+  const menuRebuilds = new Map(); // locale -> Promise (single-flight, per locale)
 
   function buildMenuCache(menu) {
     const json = JSON.stringify(menu);
@@ -62,29 +65,42 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
     return { json, gzip, etag, builtAt: Date.now() };
   }
 
-  function invalidateMenuCache() { menuCache = null; }
+  function invalidateMenuCache() { menuCaches.clear(); }
 
-  function freshCache() {
-    return menuCache && Date.now() - menuCache.builtAt <= MENU_CACHE_TTL_MS ? menuCache : null;
+  function freshCache(locale) {
+    const entry = menuCaches.get(locale);
+    return entry && Date.now() - entry.builtAt <= MENU_CACHE_TTL_MS ? entry : null;
   }
 
   // Return a fresh cache, building it AT MOST ONCE across concurrent callers. The
   // 199 other requests during a cold rebuild await the same promise (no stampede).
-  async function ensureMenuCache() {
-    const fresh = freshCache();
+  async function ensureMenuCache(locale) {
+    const fresh = freshCache(locale);
     if (fresh) return fresh;
-    if (!menuRebuild) {
-      menuRebuild = (async () => {
+    let rebuild = menuRebuilds.get(locale);
+    if (!rebuild) {
+      rebuild = (async () => {
         try {
-          const menu = await fileService.loadMenu();
-          if (menu != null) menuCache = buildMenuCache(menu);
-          return menu != null ? menuCache : null;
+          // Ids are stamped so translations can be applied per item and so the
+          // client can reference a dish for its gallery or a view event.
+          const menu = await fileService.loadMenu({ includeIds: true });
+          if (menu == null) return null;
+          let payload = menu;
+          if (localizationService && locale !== localizationService.DEFAULT_LOCALE) {
+            const translations = await localizationService.loadTranslations(locale);
+            // No rows for this locale yet: serve English rather than blanks.
+            if (translations) payload = localizationService.localizeMenu(menu, translations);
+          }
+          const built = buildMenuCache(payload);
+          menuCaches.set(locale, built);
+          return built;
         } finally {
-          menuRebuild = null;
+          menuRebuilds.delete(locale);
         }
       })();
+      menuRebuilds.set(locale, rebuild);
     }
-    return menuRebuild;
+    return rebuild;
   }
 
   // Invalidate immediately on any menu data-change (covers all 7 mutation paths).
@@ -94,13 +110,17 @@ function createMenuController({ fileService, socketService, mediaEnrichmentServi
 
   return {
     async getMenu(req, res) {
-      const cache = await ensureMenuCache();
+      const locale = localizationService
+        ? localizationService.normalizeLocale(req.query.locale)
+        : 'en';
+      const cache = await ensureMenuCache(locale);
       // Don't cache empty/misses — let an empty menu be re-attempted next request.
       if (!cache) return res.json(null);
       const { json, gzip, etag } = cache;
       res.set('ETag', etag);
       res.set('Cache-Control', 'public, max-age=30');
       res.set('Vary', 'Accept-Encoding, Origin');
+      res.set('Content-Language', locale);
       res.type('application/json');
       if (req.headers['if-none-match'] === etag) return res.status(304).end();
       if (/\bgzip\b/.test(req.headers['accept-encoding'] || '')) {

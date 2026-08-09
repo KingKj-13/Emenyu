@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import type { MenuSection } from '../../types/menu';
+import { useT } from '../../i18n';
 import styles from './CategoryTabBar.module.css';
 
 interface CategoryTabBarProps {
@@ -32,6 +33,7 @@ function groupOf(title: string): Group {
 const sid = (title: string) => `section-${title.toLowerCase().replace(/\s+/g, '-')}`;
 
 export function CategoryTabBar({ sections }: CategoryTabBarProps) {
+  const t = useT();
   const [activeId, setActiveId] = useState<string>('');
   const [openGroup, setOpenGroup] = useState<Group | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -87,7 +89,7 @@ export function CategoryTabBar({ sections }: CategoryTabBarProps) {
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   return (
-    <nav className={styles.bar} aria-label="Jump to menu section">
+    <nav className={styles.bar} aria-label={t('nav.jumpToSection')}>
       <div className={styles.groupStrip}>
         {grouped.map(({ group, items }) => (
           <button

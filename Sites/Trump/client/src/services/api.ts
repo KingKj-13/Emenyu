@@ -1,8 +1,21 @@
 import { ENDPOINTS } from '../constants/api';
 import type { MenuData, ChefRec, ChefRecInput, RecommendationAnalytics, RecoInsightsResult, BundleAdmin, BundleInput, AppConfig } from '../types/menu';
-import type { PersonaOrder } from '../constants/recommendedOrders';
 import type { LoginPayload, LoginResponse, AuthUser } from '../types/auth';
 import type { OrderPayload } from '../types/cart';
+
+/** PATCH / PUT / DELETE — postJson only covers POST. */
+async function sendJson<T>(url: string, method: 'PATCH' | 'PUT' | 'DELETE', body?: unknown): Promise<T> {
+  return fetchJson<T>(url, {
+    method,
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+function qs(params: Record<string, string | undefined>): string {
+  const entries = Object.entries(params).filter(([, v]) => v != null && v !== '');
+  return entries.length ? `?${new URLSearchParams(entries as [string, string][])}` : '';
+}
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, options);
@@ -21,9 +34,15 @@ function postJson<T>(url: string, payload: unknown): Promise<T> {
 }
 
 export const api = {
-  getMenu(): Promise<MenuData> {
-    return fetchJson<MenuData>(ENDPOINTS.menu);
-  },
+  // The server localizes menu CONTENT and falls back to English per field, so
+  // the client never needs a translation table of its own.
+  getMenu(locale?: string): Promise<MenuData> {
+    const url = locale && locale !== 'en'
+      ? `${ENDPOINTS.menu}?locale=${encodeURIComponent(locale)}`
+      : ENDPOINTS.menu;
+    return fetchJson<MenuData>(url);
+  }
+,
 
   getDeals() {
     return fetchJson<unknown[]>(ENDPOINTS.deals);
@@ -174,6 +193,78 @@ export const api = {
     return fetchJson<unknown[]>(ENDPOINTS.menuAdminItems);
   },
 
+  // ── QR-menu redesign ────────────────────────────────────────────────────
+  getEngagementSummary(params: { from?: string; to?: string } = {}) {
+    return fetchJson<unknown>(`${ENDPOINTS.engagementSummary}${qs(params)}`);
+  },
+
+  getEngagementTimeline(params: { from?: string; to?: string } = {}) {
+    return fetchJson<unknown>(`${ENDPOINTS.engagementTimeline}${qs(params)}`);
+  },
+
+  getEngagementLeastViewed(params: { from?: string; to?: string } = {}) {
+    return fetchJson<unknown>(`${ENDPOINTS.engagementLeastViewed}${qs(params)}`);
+  },
+
+  getButcheryCuts(locale?: string) {
+    return fetchJson<{ locale: string; cuts: unknown[] }>(
+      locale && locale !== 'en' ? `${ENDPOINTS.butcheryCuts}?locale=${encodeURIComponent(locale)}` : ENDPOINTS.butcheryCuts
+    );
+  },
+
+  getItemGallery(id: number) {
+    return fetchJson<{ media: unknown[] }>(ENDPOINTS.itemGallery(id));
+  },
+
+  // ── owner content management ────────────────────────────────────────────
+  getAdminMedia(entityType: string, entityId: number) {
+    return fetchJson<{ media: unknown[] }>(`${ENDPOINTS.adminMedia}${qs({ entityType, entityId: String(entityId) })}`);
+  },
+
+  addAdminMedia(payload: Record<string, unknown>) {
+    return postJson<unknown>(ENDPOINTS.adminMedia, payload);
+  },
+
+  updateAdminMedia(id: number, patch: Record<string, unknown>) {
+    return sendJson<unknown>(ENDPOINTS.adminMediaItem(id), 'PATCH', patch);
+  },
+
+  reorderAdminMedia(payload: { entityType: string; entityId: number; ids: number[] }) {
+    return postJson<unknown>(ENDPOINTS.adminMediaReorder, payload);
+  },
+
+  deleteAdminMedia(id: number) {
+    return sendJson<unknown>(ENDPOINTS.adminMediaItem(id), 'DELETE');
+  },
+
+  getAdminTranslations(entityType: string, entityId: number) {
+    return fetchJson<{ translations: unknown[] }>(`${ENDPOINTS.adminTranslations}${qs({ entityType, entityId: String(entityId) })}`);
+  },
+
+  saveAdminTranslations(payload: Record<string, unknown>) {
+    return sendJson<unknown>(ENDPOINTS.adminTranslations, 'PUT', payload);
+  },
+
+  getTranslationCoverage() {
+    return fetchJson<unknown>(ENDPOINTS.adminTranslationCoverage);
+  },
+
+  getAdminCuts() {
+    return fetchJson<{ cuts: unknown[] }>(ENDPOINTS.adminCuts);
+  },
+
+  updateAdminCut(id: number, patch: Record<string, unknown>) {
+    return sendJson<unknown>(ENDPOINTS.adminCut(id), 'PATCH', patch);
+  },
+
+  linkAdminCutItem(id: number, payload: Record<string, unknown>) {
+    return postJson<unknown>(ENDPOINTS.adminCutItems(id), payload);
+  },
+
+  unlinkAdminCutItem(id: number, itemId: number) {
+    return sendJson<unknown>(ENDPOINTS.adminCutItem(id, itemId), 'DELETE');
+  },
+
   getMenuCategories() {
     return fetchJson<Array<{ id: number; title: string }>>(ENDPOINTS.menuCategories);
   },
@@ -256,7 +347,7 @@ export const api = {
 
   // Recommended-order bundles (Phase 5)
   getBundles() {
-    return fetchJson<PersonaOrder[]>(ENDPOINTS.bundles);
+    return fetchJson<unknown[]>(ENDPOINTS.bundles);
   },
 
   getBundlesAdmin() {

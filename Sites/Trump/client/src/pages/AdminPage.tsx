@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, type ReactNode, type CSSProperties } from 'react';
-import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Pencil, Plus, X, Sparkles, TrendingUp, Activity, ShieldCheck, Copy, Check, Star, Armchair, Brain, ChefHat, Route } from 'lucide-react';
+import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Pencil, Plus, X, Sparkles, TrendingUp, Activity, ShieldCheck, Copy, Check, Star, Armchair, Brain, ChefHat, Route, Eye } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../hooks/useAuth';
 import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
@@ -17,9 +17,11 @@ import { AuditViewer } from '../components/operations/AuditViewer';
 import { AIPerformancePanel } from '../components/analytics/AIPerformancePanel';
 import { ChefIntelligencePanel } from '../components/analytics/ChefIntelligencePanel';
 import { CustomerJourneyPanel } from '../components/analytics/CustomerJourneyPanel';
+import { EngagementPanel } from '../components/analytics/EngagementPanel';
+import { ContentPanel } from '../components/content/ContentPanel';
 import { BRAND_NAME, BRAND_TAGLINE, QR_BASE, ENDPOINTS } from '../constants/api';
 
-type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles' | 'servicedesk' | 'operations' | 'audit' | 'aiperformance' | 'chefintel' | 'journey' | 'demo' | 'aievents' | 'guests' | 'verify';
+type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles' | 'servicedesk' | 'operations' | 'audit' | 'engagement' | 'content' | 'aiperformance' | 'chefintel' | 'journey' | 'demo' | 'aievents' | 'guests' | 'verify';
 
 interface Order {
   filename: string;
@@ -511,6 +513,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     ] },
     { label: 'MENU & OFFERS', items: [
       { key: 'menu', label: 'Menu', icon: UtensilsCrossed },
+      { key: 'content', label: 'Media & Languages', icon: ImageIcon },
       { key: 'chefrecs', label: 'Chef Recs', icon: Sparkles },
       { key: 'bundles', label: 'Bundles', icon: LayoutGrid },
       { key: 'deals', label: 'Deals', icon: Clock },
@@ -519,6 +522,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     ] },
     { label: 'INSIGHT', items: [
       { key: 'reports', label: 'Reports', icon: BarChart2 },
+      { key: 'engagement', label: 'Guest Engagement', icon: Eye },
       { key: 'recoanalytics', label: 'Reco Analytics', icon: TrendingUp },
       { key: 'aiperformance', label: 'AI Performance', icon: Brain },
       { key: 'chefintel', label: 'Chef Intelligence', icon: ChefHat },
@@ -554,6 +558,8 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     qrcodes: { eyebrow: 'TABLE QR CODES', title: 'QR codes', sub: 'Each links a guest straight to its table session' },
     demo: { eyebrow: 'LIVE DEMO', title: 'Curated Demo', sub: 'Toggle the curated dining journeys and redeem guest reward codes' },
     reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top items, peak hours & guest ratings', actions: <button className={styles.actionBtn} onClick={exportReportsCsv}><Download size={14} /> Export CSV</button> },
+    content: { eyebrow: 'CONTENT', title: 'Media & Languages', sub: 'Photos, videos, butchery cuts and translations — no deploy needed' },
+    engagement: { eyebrow: 'ANALYTICS', title: 'Guest Engagement', sub: 'What guests looked at, for how long, and in which language' },
     aiperformance: { eyebrow: 'ANALYTICS', title: 'AI Performance', sub: 'Recommendations made, accepted, and the revenue behind them' },
     chefintel: { eyebrow: 'ANALYTICS', title: 'Chef Intelligence', sub: 'Best & worst sellers, wine pairings, pricing tier & trends' },
     journey: { eyebrow: 'ANALYTICS', title: 'Customer Journey', sub: 'One table’s visit, course by course' },
@@ -643,6 +649,8 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
               )}
               {tab === 'accounts' && <AccountsList accounts={accounts} currentUsername={user?.username} onUpdateStatus={handleUpdateAccountStatus} />}
               {tab === 'chat' && <><LiveChatMonitor /><ChatLogList logs={chatLogs} /></>}
+              {tab === 'content' && <ContentPanel />}
+              {tab === 'engagement' && <EngagementPanel />}
               {tab === 'aiperformance' && <AIPerformancePanel />}
               {tab === 'chefintel' && <ChefIntelligencePanel />}
               {tab === 'journey' && <CustomerJourneyPanel />}

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 import { api } from '../services/api';
 import { useApp } from './AppContext';
+import { useI18n } from '../i18n';
 import { flattenMenu, normalizeName } from '../lib/menuUtils';
 import type { MenuData, MenuCategory } from '../types/menu';
 
@@ -37,6 +38,7 @@ function filterByActiveChapters(raw: MenuData, activeChapterSlugs: Set<string> |
 
 export function MenuProvider({ children }: { children: ReactNode }) {
   const { dayParts, menuMode } = useApp();
+  const { locale } = useI18n();
   const [rawMenuData, setRawMenuData] = useState<MenuData>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
 
-    api.getMenu()
+    api.getMenu(locale)
       .then(data => {
         if (!cancelled) { setRawMenuData(data); setLoading(false); }
       })
@@ -56,7 +58,9 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       });
 
     return () => { cancelled = true; };
-  }, [tick]);
+    // Refetching on locale change is the whole localization path for content:
+    // the server returns a menu already translated wherever translations exist.
+  }, [tick, locale]);
 
   const reload = () => setTick(t => t + 1);
 

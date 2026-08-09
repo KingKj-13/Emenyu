@@ -91,7 +91,7 @@
 }
 
 .viewToggle,
-.cartButton,
+.langButton,
 .userButton,
 .menuButton {
   display: grid;
@@ -110,7 +110,7 @@
 }
 
 .viewToggle:hover,
-.cartButton:hover,
+.langButton:hover,
 .userButton:hover,
 .menuButton:hover {
   border-color: rgba(var(--color-gold-rgb), 0.6);
@@ -125,21 +125,24 @@
   background: rgba(var(--color-gold-rgb), 0.1);
 }
 
-.cartBadge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: var(--radius-pill);
-  background: var(--color-gold);
-  color: #000;
+/* The language switch replaces the old cart button in the header. It is wider
+   than the icon buttons because it carries the active locale's code — an
+   international guest should be able to see at a glance which language the
+   menu is currently in, not just that a switch exists. */
+.langButton {
+  width: auto;
+  min-width: 42px;
+  gap: 6px;
+  grid-auto-flow: column;
+  padding: 0 11px;
+}
+
+.langCode {
+  font-family: var(--font-label);
   font-size: 10px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--color-gold);
 }
 
 @media (max-width: 480px) {

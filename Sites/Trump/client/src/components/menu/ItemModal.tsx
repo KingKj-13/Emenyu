@@ -1,10 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Heart, Plus, Minus, ShoppingCart, ChevronLeft, Flame } from 'lucide-react';
+import { X, Heart, ChevronLeft, Flame, ConciergeBell } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
 import { resolveImage, resolveVideo, resolveYouTubeEmbed, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
+import { useT } from '../../i18n';
+import { track, startDwell } from '../../lib/engagement';
+import { useVideoEngagement } from '../../hooks/useVideoEngagement';
+import { ItemGallery } from './ItemGallery';
 import { api } from '../../services/api';
 import { useMenuData } from '../../context/MenuContext';
 import { normalizeName } from '../../lib/menuUtils';
@@ -20,10 +24,8 @@ interface ItemModalProps {
   onClose: () => void;
   isFavorite: boolean;
   onFavoriteToggle: (name: string) => void;
-  onAddToCart: (item: MenuItem, qty: number, note: string) => void;
   onRequestItem?: (name: string) => void;
   onOpenItem?: (item: MenuItem) => void;
-  onAddSuggestion?: (item: MenuItem) => void;
   canGoBack?: boolean;
   onBack?: () => void;
 }
@@ -115,15 +117,28 @@ export function ItemModal({
   onClose,
   isFavorite,
   onFavoriteToggle,
-  onAddToCart,
   onRequestItem,
   onOpenItem,
-  onAddSuggestion,
   canGoBack = false,
   onBack,
 }: ItemModalProps) {
-  const [qty, setQty] = useState(1);
-  const [note, setNote] = useState('');
+  const t = useT();
+
+  const video = useVideoEngagement(item?.dbId, item?.name ?? '');
+
+  // How long a dish detail stayed open is the closest thing a menu without a
+  // cart has to "interest". Emitted on close so the duration is real.
+  useEffect(() => {
+    if (!open || !item) return;
+    video.reset();
+    const stop = startDwell({
+      eventType: 'ITEM_VIEW',
+      menuItemId: item.dbId ?? null,
+      label: item.name,
+      categoryName: item.category || '',
+    });
+    return stop;
+  }, [open, item?.dbId, item?.name]);
   const [selectedVariantName, setSelectedVariantName] = useState<string | null>(null);
   const [selectedAddonNames, setSelectedAddonNames] = useState<string[]>([]);
   const [imgError, setImgError] = useState(false);
@@ -177,16 +192,6 @@ export function ItemModal({
     );
   }
 
-  function handleAdd() {
-    const cartItem: MenuItem = selectedVariant
-      ? { ...item!, name: effectiveName, price: effectivePrice, img: selectedVariant.img || item!.img }
-      : item!;
-    onAddToCart(cartItem, qty, note);
-    setQty(1);
-    setNote('');
-    onClose();
-  }
-
   function handleTouchStart(e: React.TouchEvent) {
     // Don't hijack horizontal swipes that begin inside the recommendation strip
     // (or any opted-out region) — let them scroll/select on their own.
@@ -223,9 +228,7 @@ export function ItemModal({
     setSwipeX(0);
     touchStartRef.current = null;
     swipeActiveRef.current = false;
-    if (finalSwipe > SWIPE_THRESHOLD) {
-      handleAdd();
-    } else if (finalSwipe < -SWIPE_THRESHOLD) {
+    if (finalSwipe < -SWIPE_THRESHOLD) {
       if (canGoBack && onBack) onBack();
       else onClose();
     }
@@ -238,7 +241,6 @@ export function ItemModal({
   }
 
   const swipeProgress = Math.min(1, Math.abs(swipeX) / SWIPE_THRESHOLD);
-  const isRightSwipe = swipeX > 20;
   const isLeftSwipe = swipeX < -20;
 
   return (
@@ -272,6 +274,8 @@ export function ItemModal({
                 className={styles.videoLayer}
                 onCanPlay={() => setVideoReady(true)}
                 onError={() => setVideoError(true)}
+                onPlaying={video.onPlaying}
+                onTimeUpdate={video.onTimeUpdate}
               />
               {imgSrc && (
                 <img
@@ -335,12 +339,12 @@ export function ItemModal({
             {item.spice && <Badge variant="muted"><Flame size={11} /> {spiceLevelLabel(item.spice)}</Badge>}
           </div>
 
-          <h2 className={styles.name}>{item.name}</h2>
-          {item.subtitle ? <p className={styles.description}>{item.subtitle}</p> : null}
+          <h2 className={styles.name} dir="auto">{item.name}</h2>
+          {item.subtitle ? <p className={styles.description} dir="auto">{item.subtitle}</p> : null}
           <p className={styles.price}>{formatPrice(effectivePrice)}</p>
 
           {item.story ? <p className={styles.story}>{item.story}</p> : null}
-          {item.description ? <p className={styles.description}>{item.description}</p> : null}
+          {item.description ? <p className={styles.description} dir="auto">{item.description}</p> : null}
 
           {baseVariants.length > 0 && (
             <div className={styles.variantGroup} role="radiogroup" aria-label="Choose an option">
@@ -386,6 +390,7 @@ export function ItemModal({
           )}
 
           {open && <ItemPairings item={item} onRequestItem={onRequestItem} />}
+          {item.dbId != null && <ItemGallery menuItemId={item.dbId} itemName={item.name} />}
         </div>
 
         {/* Moved out of .body (Bug #3 fix): .actions used to be the last child
@@ -400,52 +405,21 @@ export function ItemModal({
             sibling of .media/.body, outside the scrollable region entirely
             (see the .modal/.body/.actions rewrite in ItemModal.module.css) --
             it can no longer overlap anything, sticky or not. */}
+        {/* The quantity stepper, the special-requests box and the
+            "Add to cart" button used to sit here. This menu does not take
+            orders: the guest reads, then speaks to their waiter, which is the
+            hospitality the restaurant is built on. What replaces them is the
+            price and a plain statement of how to order. */}
         <div className={styles.actions}>
-          <div className={styles.qtyRow}>
-            <button
-              className={styles.qtyBtn}
-              onClick={() => setQty(q => Math.max(1, q - 1))}
-              aria-label="Decrease quantity"
-            >
-              <Minus size={16} />
-            </button>
-            <span className={styles.qtyValue} aria-live="polite">{qty}</span>
-            <button
-              className={styles.qtyBtn}
-              onClick={() => setQty(q => q + 1)}
-              aria-label="Increase quantity"
-            >
-              <Plus size={16} />
-            </button>
+          <div className={styles.orderHint}>
+            <ConciergeBell size={17} aria-hidden />
+            <span>{t('dish.orderHint')}</span>
           </div>
-
-          <textarea
-            className={styles.noteInput}
-            data-noswipe
-            placeholder="Special requests or dietary notes…"
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            rows={2}
-            aria-label="Special notes for this item"
-          />
-
-          <button
-            className={styles.addBtn}
-            onClick={handleAdd}
-            disabled={item.available === false}
-            aria-label={item.available === false ? `${item.name} is sold out` : `Add ${qty} ${item.name} to cart`}
-          >
-            <ShoppingCart size={18} />
-            {item.available === false ? 'Sold Out' : `Add ${qty > 1 ? `${qty} × ` : ''}${formatPrice(item.price * qty)}`}
-          </button>
+          <span className={styles.priceTag}>
+            {item.available === false ? t('menu.unavailable') : formatPrice(effectivePrice)}
+          </span>
         </div>
 
-        {isRightSwipe && (
-          <div className={styles.swipeHintRight} style={{ opacity: swipeProgress }}>
-            <ShoppingCart size={36} />
-            <span>Add to Cart</span>
-          </div>
-        )}
         {isLeftSwipe && (
           <div className={styles.swipeHintLeft} style={{ opacity: swipeProgress }}>
             <ChevronLeft size={36} />

@@ -230,3 +230,24 @@
   color: var(--color-cream);
   padding: 4px 0;
 }
+
+/* The interactive cow, embedded in the scrolling menu.
+   A bounded height matters: the lift-off measures screen boxes, so an
+   auto-height stage that reflowed as images loaded would send the cut to the
+   wrong place. This gives it a stable box to fly inside. */
+.butcheryStage {
+  height: clamp(460px, 68vh, 720px);
+  margin: 0 0 var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(ellipse 60% 80% at 30% 45%, rgba(var(--color-gold-rgb), 0.07), transparent 70%),
+    linear-gradient(160deg, rgba(13, 34, 54, 0.55), rgba(4, 14, 26, 0.4));
+  overflow: hidden;
+}
+
+@media (max-width: 899px) {
+  /* On a phone the panel is a bottom sheet anchored to the viewport, so the
+     stage only has to hold the animal and its rail. */
+  .butcheryStage { height: clamp(360px, 52vh, 520px); }
+}

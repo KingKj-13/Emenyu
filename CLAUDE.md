@@ -6,6 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
+> **Redesigned 2026-08-08.** Trump's guest app is a **premium multilingual
+> digital menu**, not an ordering system. There is no cart, no checkout, no
+> customer login and no chatbot: guests read, explore the butchery chart, and
+> order through their waiter. See
+> `docs/project-progress/qr-menu-redesign-2026-08-08.md`.
+
 Emenyu is a restaurant SaaS platform. **Trump** (production-grade modular Node.js) is the only active restaurant. Three legacy reference sites (**Greek**, **Imli**, **AlPescatore** — monolithic Express + vanilla JS) were retired 2026-07-05; see `docs/project-progress/` for the retirement report. Their code and production data were fully backed up before removal.
 
 The shared Prisma schema (root `prisma/`) supports multiple restaurants via a `restaurantId` field, but only Trump is deployed and only Trump actively uses PostgreSQL.
@@ -79,7 +85,13 @@ Sites/Trump/
       constants/api.ts     ← BASE_PATH = '/Trump'
       services/api.ts      ← typed API client
       components/menu/     ← ItemModal, PairingModal, menu cards
-      pages/               ← MenuPage, LoginPage, CheckoutPage, etc.
+      components/butchery/ ← CowMeatSelector, CowChart, ButcheryTeaser, cutCatalog
+      components/language/ ← LanguageGate (first scan), LanguageSheet, LanguagePicker
+      components/content/  ← ContentPanel (admin media/translation/cut editor)
+      components/analytics/← EngagementPanel (admin guest-engagement dashboard)
+      i18n/                ← 14 locales; locales.ts + one catalogue per language
+      lib/engagement.ts    ← anonymous view/dwell/video capture, batched + beacon
+      pages/               ← MenuPage, ButcheryPage, LandingPage, AdminPage, LoginPage
   frontend/
     scripts/
       admin.js             ← vanilla JS admin panel
@@ -121,12 +133,56 @@ All socket logic lives in `server/services/socketService.js`. The socket path is
 - `joinAdmin` — admin receives all events
 - `updateCart` — bidirectional cart updates
 
+### Localization (14 locales)
+
+Codes: `en af de fr nl it es pt-BR zh-Hans ja ko hi ru ar`.
+
+**UI strings** live in `client/src/i18n/messages/<locale>.ts`, typed against
+English so a missing key is a compile error. **Menu content** is translated
+server-side: `GET /Trump/api/menu?locale=de` applies `Translation` rows and
+falls back to English **per field**. English is never stored as a Translation
+row — the `MenuItem`/`MenuCategory` column is the source of truth.
+
+Adding a 15th language = one entry in `locales.ts` + one catalogue. No schema
+change, no migration.
+
+Arabic is RTL: direction is set on `<html dir>`, and menu content carries
+`dir="auto"` so English dish names inside an RTL page keep their punctuation on
+the correct side.
+
+### Butchery (the cow chart)
+
+The chart's **geometry** (traced SVG paths, label placement) is presentation and
+lives in `client/src/components/butchery/cutCatalog.ts`. The **content** (cut
+copy, media, which dishes come off which primal) lives in the database
+(`CowCut`, `CowCutItem`, `MediaAsset`) and is editable from the admin panel.
+`GET /Trump/api/butchery/cuts` serves it; a tenant that has not curated its cuts
+falls back to the client catalogue plus name-matching rules in `cutMenuMap.ts`.
+
+Chart artwork is in `client/public/butchery/` (WebP, 1.24 MB total).
+
+### Guest analytics
+
+`POST /Trump/api/engagement` — anonymous, unauthenticated, always 202 so
+analytics can never break a guest's menu. Stores item/category/cut views, dwell
+time, video play/complete, language selection. The only identifier is a random
+per-sitting `sessionId` held in `sessionStorage`; **no PII is stored**.
+
+Admin reports: `/api/analytics/engagement{,/timeline,/least-viewed}`
+(owner/manager only), surfaced in the **Guest Engagement** tab.
+
+> `sendBeacon` MUST be given a `Blob` with `type: 'application/json'`. A bare
+> string is sent as `text/plain`, `express.json()` ignores it, and every queued
+> event is silently lost.
+
 ### AI / recommendations
 
-`server/services/aiService.js` is a fully local, deterministic recommendation/chat engine (keyword + order-popularity + course-completion scoring). It makes **no external LLM/API calls** — there is no Groq, Anthropic, or OpenAI integration. Waiter-app wording is generated locally by `server/services/nlg/templateNlgProvider.js`. Endpoints:
+`server/services/aiService.js` is a fully local, deterministic recommendation
+engine. It makes **no external LLM/API calls**. The customer chatbot was removed
+in the 2026-08-08 redesign; `POST /Trump/api/chat` and the pairing/recommend
+endpoints remain for the admin and pairing views:
 - `POST /Trump/api/ai-pairing` — per-item food + drink pairings (used in ItemModal)
-- `POST /Trump/api/recommend` — cart-level suggestions (used in waiter order view)
-- `POST /Trump/api/chat` — customer chatbot (deterministic)
+- `POST /Trump/api/recommend` — cart-level suggestions (no longer called by the guest app)
 
 ### Analytics API
 
@@ -147,6 +203,17 @@ All accept `?from=YYYY-MM-DD&to=YYYY-MM-DD` query params.
 **Static asset paths**: Images at `/Trump/Images/<filename>`, videos at `/Trump/Video/<filename>`. The `resolveImage` / `resolveVideo` functions in `imageResolver.ts` are the single source of truth — don't hardcode paths elsewhere.
 
 **Role hierarchy**: `owner > manager > waiter > kitchen`. Owner-only features use `requirePage(['owner'])`. Admin panel accepts `['owner', 'manager']`.
+
+**Guests are never authenticated.** A QR scan leads to a language choice and
+then the menu. Do not add a customer login, account or session concept — that
+is the product decision, not an oversight.
+
+**Waiter + kitchen apps are retired.** Their client code is deleted; their
+server routes answer `410 Gone` unless `TRUMP_WAITER_APP_ENABLED=true`. The
+server modules are deliberately still on disk because `rewardController`,
+`aiService`, `demoLiveTicker`, `orderValidationService` and
+`recommendationScoring` import them. **No waiter data was deleted** — order,
+shift, assignment and guest history are all retained.
 
 **React build is required** after any changes to `client/src/`. The server serves `client/dist/` — editing source files without rebuilding has no effect in production. Run `cd Sites/Trump/client && npm run build`.
 

@@ -117,31 +117,41 @@ class FileService {
   // collapses N concurrent loads into one. Read-only callers only (controller stringifies,
   // validator indexes) — the cached object must not be mutated. 30s TTL bounds staleness
   // for any menu edit that doesn't route through saveMenu().
-  async loadMenu() {
+  // Two shapes are cached separately: the plain tree every existing caller
+  // (orders, AI, admin save) expects, and the id-stamped tree the public menu
+  // API needs for translation and analytics. Sharing one slot would let an
+  // id-stamped payload reach saveMenu, which round-trips it back into the
+  // database as item metadata.
+  async loadMenu({ includeIds = false } = {}) {
     const TTL = 30 * 1000;
-    if (this._menuCacheValue && Date.now() - this._menuCacheAt <= TTL) {
-      return this._menuCacheValue;
+    const slot = includeIds ? '_menuCacheIds' : '_menuCache';
+    const at = `${slot}At`;
+    const pending = `${slot}Promise`;
+    const value = `${slot}Value`;
+    if (this[value] && Date.now() - this[at] <= TTL) {
+      return this[value];
     }
-    if (!this._menuCachePromise) {
-      this._menuCachePromise = (async () => {
+    if (!this[pending]) {
+      this[pending] = (async () => {
         try {
-          const menu = await this.prismaMenu.loadMenu();
+          const menu = await this.prismaMenu.loadMenu({ includeIds });
           if (menu != null) {
-            this._menuCacheValue = menu;
-            this._menuCacheAt = Date.now();
+            this[value] = menu;
+            this[at] = Date.now();
           }
           return menu;
         } finally {
-          this._menuCachePromise = null;
+          this[pending] = null;
         }
       })();
     }
-    return this._menuCachePromise;
+    return this[pending];
   }
 
   async saveMenu(menuData) {
     await this.prismaMenu.saveMenu(menuData);
-    this._menuCacheValue = null; // invalidate the source memo on write
+    this._menuCacheValue = null;    // invalidate both source memos on write
+    this._menuCacheIdsValue = null;
   }
 
   async loadDeals() {

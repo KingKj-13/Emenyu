@@ -65,9 +65,14 @@ const CARMELLA_CATEGORIES: Category[] = [
 
 const CATEGORIES: Category[] = RESTAURANT_ID === 'carmella' ? CARMELLA_CATEGORIES : TRUMP_CATEGORIES;
 
-const FOOTER_LINK = RESTAURANT_ID === 'carmella'
-  ? { section: 'The Interludes', label: 'The Interludes' }
-  : { section: 'Butchery', label: 'Butchery' };
+// Trump's footer link used to deep-link at a menu section literally called
+// "Butchery" — there has never been one in the live data, so the tile scrolled
+// nowhere. It now opens the interactive butchery chart instead, which is what
+// "Grillhouse & Butchery" was always pointing at. Carmella is untouched.
+const FOOTER_LINK: { label: string; to: (t: string) => string } =
+  RESTAURANT_ID === 'carmella'
+    ? { label: 'The Interludes', to: t => sec(t, 'The Interludes') }
+    : { label: 'The Butchery', to: t => `/${t}/butchery` };
 
 export function LandingPage() {
   const { tableId: paramTableId } = useParams<{ tableId: string }>();
@@ -132,7 +137,7 @@ export function LandingPage() {
           })}
         </div>
 
-        <a className={styles.footer} href={sec(tableId, FOOTER_LINK.section)} onClick={e => { e.preventDefault(); navigate(sec(tableId, FOOTER_LINK.section)); }}>
+        <a className={styles.footer} href={FOOTER_LINK.to(tableId)} onClick={e => { e.preventDefault(); navigate(FOOTER_LINK.to(tableId)); }}>
           <span className={styles.butchery}><UtensilsCrossed size={11} /> {FOOTER_LINK.label}</span>
         </a>
       </div>

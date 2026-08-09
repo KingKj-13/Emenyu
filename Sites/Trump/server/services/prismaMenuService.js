@@ -420,7 +420,12 @@ class PrismaMenuService {
     }
   }
 
-  async loadMenu() {
+  // `includeIds` stamps each item/category with its database id. The public
+  // menu needs them so translations can be applied by id and so the client
+  // can request a gallery or record a view for a specific dish. Off by
+  // default: the admin save path round-trips this payload back into the
+  // database, and it must not start persisting ids as item metadata.
+  async loadMenu({ includeIds = false } = {}) {
     return this.withPrisma(
       'menu_postgres_load_failed',
       async prisma => {
@@ -449,7 +454,7 @@ class PrismaMenuService {
         const menu = {};
         (byParent.get(0) || []).sort((left, right) => left.sortOrder - right.sortOrder).forEach(root => {
           const metadata = root.metadata && typeof root.metadata === 'object' ? root.metadata : {};
-          const directItems = root.items.map(item => dbItemToJson(item, { categoryTitle: root.title }));
+          const directItems = root.items.map(item => dbItemToJson(item, { categoryTitle: root.title, includeId: includeIds }));
           if (metadata.storage === 'array') {
             menu[root.title] = directItems;
             return;
@@ -457,6 +462,7 @@ class PrismaMenuService {
 
           const categoryValue = {
             ...(metadata.extra && typeof metadata.extra === 'object' ? metadata.extra : {}),
+            ...(includeIds ? { dbId: root.id } : {}),
             visible: root.visible,
             slug: root.slug,
             ...(root.intro ? { intro: root.intro } : {}),
@@ -467,8 +473,11 @@ class PrismaMenuService {
             const subMetadata = sub.metadata && typeof sub.metadata === 'object' ? sub.metadata : {};
             categoryValue[sub.title] = {
               ...(subMetadata.extra && typeof subMetadata.extra === 'object' ? subMetadata.extra : {}),
+              ...(includeIds ? { dbId: sub.id } : {}),
               visible: sub.visible,
-              items: sub.items.map(item => dbItemToJson(item, { categoryTitle: root.title, subcategoryTitle: sub.title }))
+              items: sub.items.map(item => dbItemToJson(item, {
+                categoryTitle: root.title, subcategoryTitle: sub.title, includeId: includeIds
+              }))
             };
           });
 

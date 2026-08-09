@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { X, UtensilsCrossed, Wine, Star, UserCog, ShieldCheck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
+import { useT } from '../../i18n';
 import styles from './SideDrawer.module.css';
 
 interface NavLink {
@@ -24,6 +25,7 @@ export function SideDrawer({
   searchQuery, onSearchChange, activeFilters, onToggleFilter, onClearAll, filterOptions, navLinks
 }: SideDrawerProps) {
   const { drawerOpen, setDrawerOpen, tableId } = useApp();
+  const t = useT();
   const navigate = useNavigate();
 
   if (!drawerOpen) return null;
@@ -35,38 +37,38 @@ export function SideDrawer({
   return (
     <>
       <div className={styles.backdrop} onClick={close} aria-hidden="true" />
-      <aside className={styles.panel} aria-label="Filters and navigation">
+      <aside className={styles.panel} aria-label={t('nav.menu')}>
         <div className={styles.header}>
-          <h2 className={styles.title}>Menu</h2>
-          <button className={styles.closeBtn} onClick={close} aria-label="Close">
+          <h2 className={styles.title}>{t('nav.menu')}</h2>
+          <button className={styles.closeBtn} onClick={close} aria-label={t('nav.close')}>
             <X size={18} />
           </button>
         </div>
 
         {/* Quick Access icon tiles */}
         <div className={styles.quickSection}>
-          <p className={styles.sectionLabel}>Quick Access</p>
+          <p className={styles.sectionLabel}>{t('nav.quickAccess')}</p>
           <div className={styles.quickGrid}>
             <button
               className={styles.quickTile}
               onClick={() => { close(); navigate(`/${tableId}/menu`); }}
             >
               <UtensilsCrossed size={22} />
-              <span>Food Menu</span>
+              <span>{t('nav.foodMenu')}</span>
             </button>
             <button
               className={styles.quickTile}
               onClick={() => { close(); navigate(`/${tableId}/drinks`); }}
             >
               <Wine size={22} />
-              <span>Wine & Drinks</span>
+              <span>{t('nav.drinks')}</span>
             </button>
             <button
               className={styles.quickTile}
               onClick={() => { close(); navigate(`/${tableId}/setmenu`); }}
             >
               <Star size={22} />
-              <span>Signature Set Menus</span>
+              <span>{t('nav.setMenus')}</span>
             </button>
           </div>
         </div>
@@ -74,7 +76,7 @@ export function SideDrawer({
         {/* Section navigation */}
         {navLinks && navLinks.length > 0 && (
           <div className={styles.section}>
-            <p className={styles.sectionLabel}>Menu Sections</p>
+            <p className={styles.sectionLabel}>{t('nav.sections')}</p>
             <nav className={styles.navList}>
               {navLinks.map(link => (
                 <button
@@ -91,19 +93,19 @@ export function SideDrawer({
         )}
 
         <div className={styles.section}>
-          <p className={styles.sectionLabel}>Search</p>
+          <p className={styles.sectionLabel}>{t('nav.searchLabel')}</p>
           <input
             type="search"
             className={styles.searchInput}
-            placeholder="Search menu…"
+            placeholder={t('nav.searchPlaceholder')}
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
-            aria-label="Search menu items"
+            aria-label={t('nav.searchPlaceholder')}
           />
         </div>
 
         <div className={styles.section}>
-          <p className={styles.sectionLabel}>Dietary Filters</p>
+          <p className={styles.sectionLabel}>{t('nav.dietary')}</p>
           <div className={styles.chips}>
             {filterOptions.map(opt => (
               <button
@@ -117,12 +119,12 @@ export function SideDrawer({
             ))}
           </div>
           {hasActive && (
-            <button className={styles.clearAll} onClick={onClearAll}>Clear all filters</button>
+            <button className={styles.clearAll} onClick={onClearAll}>{t('nav.clearAllFilters')}</button>
           )}
         </div>
 
         <div className={styles.staff}>
-          <p className={styles.sectionLabel}>Staff Access</p>
+          <p className={styles.sectionLabel}>{t('nav.staffAccess')}</p>
           <Link to="/Waiter" className={styles.staffBtn} onClick={close}>
             <UserCog size={15} /> Waiter App
           </Link>

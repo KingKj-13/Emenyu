@@ -20,6 +20,16 @@ const { createDealController } = require('./controllers/dealController');
 const { createSettingsController } = require('./controllers/settingsController');
 const { createKitchenController } = require('./controllers/kitchenController');
 const { createMenuController } = require('./controllers/menuController');
+// QR-menu redesign (2026-08-08): localization, butchery chart data and
+// anonymous guest-engagement analytics.
+const { createLocalizationService } = require('./services/localizationService');
+const { createButcheryService } = require('./services/butcheryService');
+const { createViewAnalyticsService } = require('./services/viewAnalyticsService');
+const { createQrMenuController } = require('./controllers/qrMenuController');
+const { registerQrMenuRoutes } = require('./routes/qrMenuRoutes');
+const { createContentAdminService } = require('./services/contentAdminService');
+const { createContentAdminController } = require('./controllers/contentAdminController');
+const { registerContentAdminRoutes } = require('./routes/contentAdminRoutes');
 const { createPushController } = require('./controllers/pushController');
 const { createRatingController } = require('./controllers/ratingController');
 const { createReservationController } = require('./controllers/reservationController');
@@ -337,6 +347,25 @@ async function startServer(baseDirOverride) {
     demoLiveTicker.start();
   }
 
+  const localizationService = createLocalizationService({
+    prismaMenuService: fileService.prismaMenu,
+    logger
+  });
+  const butcheryService = createButcheryService({
+    prismaMenuService: fileService.prismaMenu,
+    localizationService,
+    logger
+  });
+  const contentAdminService = createContentAdminService({
+    prismaMenuService: fileService.prismaMenu,
+    socketService,
+    logger
+  });
+  const viewAnalyticsService = createViewAnalyticsService({
+    prismaMenuService: fileService.prismaMenu,
+    logger
+  });
+
   const controllers = {
     ai: createAiController({ aiService, config, waiterWorkflowService, fileService, aiEventService }),
     analytics: createAnalyticsController({ config }),
@@ -345,7 +374,9 @@ async function startServer(baseDirOverride) {
     deal: createDealController({ fileService, socketService }),
     settings: createSettingsController({ fileService, socketService }),
     kitchen: createKitchenController({ config, fileService, socketService, notificationService }),
-    menu: createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService: fileService.prismaMenu, config }),
+    menu: createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService: fileService.prismaMenu, config, localizationService }),
+    qrMenu: createQrMenuController({ butcheryService, viewAnalyticsService, localizationService, logger }),
+    contentAdmin: createContentAdminController({ contentAdminService, logger }),
     order: createOrderController({ config, fileService, socketService, orderValidationService, aiEventService }),
     push: createPushController({ config }),
     rating: createRatingController({ config }),
@@ -385,6 +416,31 @@ async function startServer(baseDirOverride) {
   app.get(tenantPaths(config, '/favicon.ico'), (req, res) => {
     res.status(204).end();
   });
+
+  // ── waiter + kitchen: retired ────────────────────────────────────────────
+  // Registered before any auth guard on purpose: a stale waiter tablet should
+  // be told the app is gone, not bounced to a login screen it can never get
+  // past. TRUMP_WAITER_APP_ENABLED=true restores every route below.
+  const waiterAppEnabled = String(process.env.TRUMP_WAITER_APP_ENABLED || 'false').toLowerCase() === 'true';
+  if (!waiterAppEnabled) {
+    const retired = (what) => (_req, res) => {
+      if (_req.accepts(['html', 'json']) === 'json') {
+        return res.status(410).json({ error: `The ${what} application has been retired.` });
+      }
+      return res.status(410).type('text/plain').send(`The ${what} application has been retired.`);
+    };
+    // Express 5 / path-to-regexp v8 require a NAMED wildcard — a bare `*`
+    // throws at registration and takes the whole server down on boot.
+    app.all(tenantPaths(config, '/api/waiter/*rest'), retired('waiter'));
+    app.all(tenantPaths(config, '/api/kitchen/*rest'), retired('kitchen'));
+    app.get(tenantPaths(config, '/waiter.html'), retired('waiter'));
+    for (const p of ['/Waiter', '/waiter']) app.get(tenantPaths(config, p), retired('waiter'));
+    app.get(tenantPaths(config, '/Kitchen'), retired('kitchen'));
+  } else {
+    logger.warn('waiter_app_enabled', {
+      note: 'TRUMP_WAITER_APP_ENABLED=true — the retired waiter/kitchen routes are exposed.'
+    });
+  }
 
   // Retired (Phase 01B): the vanilla admin.html is superseded by the React /Admin
   // dashboard. Redirect preserves the old bookmark and keeps the same owner/manager
@@ -460,15 +516,13 @@ async function startServer(baseDirOverride) {
     const demoRoleRoutes = [
       { role: 'manager', routePaths: ['/Admin', '/admin'] },
       { role: 'owner', routePaths: ['/Owner'] },
-      { role: 'waiter', routePaths: ['/Waiter', '/waiter'] },
-      { role: 'kitchen', routePaths: ['/Kitchen'] }
     ];
     demoRoleRoutes.forEach(({ role, routePaths }) => {
       const paths = [...new Set(routePaths.flatMap(p => tenantPaths(config, p)))];
       app.get(paths, auth.demoAutoLogin(role));
     });
     logger.warn('demo_mode_enabled', {
-      note: 'DEMO_MODE=true — /Admin, /Owner, /Waiter, /Kitchen auto-authenticate. Unset for normal production auth.'
+      note: 'DEMO_MODE=true — /Admin and /Owner auto-authenticate. Unset for normal production auth.'
     });
   }
 
@@ -476,15 +530,22 @@ async function startServer(baseDirOverride) {
   registerRecommendationAnalyticsRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
   registerRecommendationBundleRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
   registerMenuRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerQrMenuRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerContentAdminRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
   registerDealRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
   registerSettingsRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
   registerRewardRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager', 'waiter']));
-  registerKitchenRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager', 'kitchen']));
+  if (waiterAppEnabled) {
+    registerKitchenRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager', 'kitchen']));
+  }
   registerPushRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager', 'waiter', 'kitchen']));
   registerRatingRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
   registerReservationRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
   registerUploadRoutes(app, config, uploadController, auth.requireRoles(['owner', 'manager']));
-  registerWaiterApiRoutes(app, config, controllers, auth);
+  // The retirement gate above already answers every waiter/kitchen route.
+  if (waiterAppEnabled) {
+    registerWaiterApiRoutes(app, config, controllers, auth);
+  }
   registerDebugRoutes(app, config, controllers, auth);
   registerOperationsRoutes(app, config, controllers, auth);
   registerAuthTokenRoutes(app, config, controllers, auth);
