@@ -3,6 +3,7 @@ import { Heart, Star, Sparkles, Wine, Video } from 'lucide-react';
 import { resolveImage, resolveThumbnail, resolveVideo, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import { useT } from '../../i18n';
+import { localizeAllergens } from '../../lib/allergens';
 import type { MenuItem } from '../../types/menu';
 import styles from './MenuCard.module.css';
 
@@ -112,7 +113,7 @@ export const MenuCard = memo(function MenuCard({
           {soldOut && <span className={styles.soldOut}>{t('menu.unavailable')}</span>}
         </div>
         {item.allergens && (
-          <p className={styles.allergens} dir="auto"><strong>{t('menu.contains')}</strong> {item.allergens}</p>
+          <p className={styles.allergens} dir="auto"><strong>{t('menu.contains')}</strong> {localizeAllergens(item.allergens, t)}</p>
         )}
       </div>
     </article>

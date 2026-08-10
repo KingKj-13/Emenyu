@@ -11,6 +11,14 @@ interface CategoryTabBarProps {
 // a sub-bar of just that group's sections. Sushi lives under Mains (per spec).
 type Group = 'Starters' | 'Mains' | 'Dessert' | 'Drinks';
 const GROUP_ORDER: Group[] = ['Starters', 'Mains', 'Dessert', 'Drinks'];
+// The Group value stays English — it is a routing key, matched by groupOf()
+// against section titles. Only the pill's wording is localised.
+const GROUP_KEY = {
+  Starters: 'group.starters',
+  Mains: 'group.mains',
+  Dessert: 'group.dessert',
+  Drinks: 'group.drinks',
+} as const;
 
 function groupOf(title: string): Group {
   const t = title.toLowerCase();
@@ -98,7 +106,7 @@ export function CategoryTabBar({ sections }: CategoryTabBarProps) {
             onClick={() => { setOpenGroup(group); scrollTo(sid(items[0].title)); }}
             aria-current={shownGroup === group ? 'true' : undefined}
           >
-            {group}
+            {t(GROUP_KEY[group])}
           </button>
         ))}
       </div>
@@ -115,7 +123,7 @@ export function CategoryTabBar({ sections }: CategoryTabBarProps) {
                 onClick={() => scrollTo(id)}
                 aria-current={active ? 'location' : undefined}
               >
-                {s.title}
+                {s.displayTitle ?? s.title}
               </button>
             );
           })}

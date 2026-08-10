@@ -40,7 +40,7 @@ interface I18nValue {
   definition: LocaleDefinition;
   dir: 'ltr' | 'rtl';
   setLocale: (code: LocaleCode) => void;
-  t: (key: MessageKey) => string;
+  t: (key: MessageKey, params?: Record<string, string>) => string;
 }
 
 const I18nContext = createContext<I18nValue>(null!);
@@ -84,9 +84,17 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   // Falls back to English per key, not per catalogue: a locale that is missing
   // one string still renders every other string in its own language.
-  const t = useCallback((key: MessageKey): string => {
+  //
+  // `params` fills {placeholders}. Word order differs wildly between these
+  // fourteen languages, so a translator must be free to move the slots around
+  // the sentence — which is exactly what a named placeholder allows and string
+  // concatenation does not.
+  const t = useCallback((key: MessageKey, params?: Record<string, string>): string => {
     const table = CATALOGUES[locale];
-    return table?.[key] ?? en[key] ?? key;
+    const raw = table?.[key] ?? en[key] ?? key;
+    if (!params) return raw;
+    return raw.replace(/\{(\w+)\}/g, (whole, name: string) =>
+      Object.prototype.hasOwnProperty.call(params, name) ? params[name] : whole);
   }, [locale]);
 
   const value = useMemo<I18nValue>(() => ({
@@ -101,6 +109,6 @@ export function useI18n(): I18nValue {
 }
 
 /** Shorthand for components that only need the translate function. */
-export function useT(): (key: MessageKey) => string {
+export function useT(): (key: MessageKey, params?: Record<string, string>) => string {
   return useContext(I18nContext).t;
 }

@@ -292,7 +292,8 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   const gridNavLinks = useMemo(() => sections.map(s => {
     const Icon = sectionIconFor(s.title);
     return {
-      label: s.title,
+      // The English title is the scroll key; the guest reads displayTitle.
+      label: s.displayTitle ?? s.title,
       icon: <Icon size={15} />,
       onClick: () => {
         const id = `section-${s.title.toLowerCase().replace(/\s+/g, '-')}`;

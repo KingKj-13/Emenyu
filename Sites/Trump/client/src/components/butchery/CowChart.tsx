@@ -1,8 +1,10 @@
-import { memo, useCallback, useRef, type PointerEvent as ReactPointerEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { memo, useCallback, useLayoutEffect, useRef, type PointerEvent as ReactPointerEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   SILHOUETTE, MEND, SEAMS, REGIONS, LABELS, CUT_BY_ID,
   cutAccessibleName, type NamingScheme,
 } from './cutCatalog';
+import { useI18n } from '../../i18n';
+import { resolveCutCopy } from '../../i18n/butchery';
 import styles from './CowChart.module.css';
 
 export interface CowChartProps {
@@ -40,7 +42,79 @@ export const CowChart = memo(function CowChart({
   onHoverCut, onSelectCut, onWarmCut, svgRef, primaryRegionsRef,
   plateLoaded, onPlateError,
 }: CowChartProps) {
+  // memo() still re-renders on a context change, which is what we want: the
+  // chart's in-animal labels are localised.
+  const { locale } = useI18n();
   const regionsRef = useRef<SVGPathElement[]>([]);
+  const labelRefs = useRef<(SVGTextElement | null)[]>([]);
+
+  /**
+   * Keep every label inside its own primal, in any language.
+   *
+   * The English tags were picked to fit by eye. A translation has no such
+   * guarantee — in chart units the Spanish "LOMO ALTO" renders 240 against
+   * English's widest at 144 — and character count does not predict it, because
+   * glyph widths differ wildly between scripts.
+   *
+   * A single global budget is not enough either: 150 units fits the rump but
+   * spills out of the rib, so a capped label still crossed the seam into its
+   * neighbour. The budget therefore comes from the primal the label sits in.
+   * An upright label is bounded by that region's width, a rotated one by its
+   * height, since rotated labels run along the animal.
+   */
+  useLayoutEffect(() => {
+    const svg = labelRefs.current.find(Boolean)?.ownerSVGElement;
+    if (!svg) return;
+
+    /**
+     * How much room the primal actually gives this label, measured at the
+     * label's own position rather than from the region's bounding box.
+     *
+     * A bbox lies here: the primals are slanted quadrilaterals, so the rib's
+     * box is 172 units wide while the band under the label is nearer 110. A
+     * budget from the box let "LOMO ALTO" spill across the seam. Walking
+     * outwards with isPointInFill until we leave the shape gives the true
+     * width of the band at that height.
+     */
+    const roomAt = (cut: string, x: number, y: number, along: 'x' | 'y') => {
+      const paths = [...svg.querySelectorAll<SVGPathElement>(`path[data-cut="${cut}"]`)];
+      if (!paths.length) return 0;
+      const inside = (px: number, py: number) => {
+        const pt = new DOMPoint(px, py);
+        return paths.some(p => p.isPointInFill(pt));
+      };
+      const STEP = 4, LIMIT = 420;
+      let back = 0, fwd = 0;
+      for (let d = STEP; d <= LIMIT; d += STEP) {
+        if (!inside(along === 'x' ? x - d : x, along === 'x' ? y : y - d)) break;
+        back = d;
+      }
+      for (let d = STEP; d <= LIMIT; d += STEP) {
+        if (!inside(along === 'x' ? x + d : x, along === 'x' ? y : y + d)) break;
+        fwd = d;
+      }
+      return back + fwd;
+    };
+
+    labelRefs.current.forEach((el, i) => {
+      if (!el) return;
+      const l = LABELS[i];
+      el.removeAttribute('textLength');
+      el.removeAttribute('lengthAdjust');
+      if (!l) return;
+
+      // y is the text baseline; sample slightly above it, through the glyphs.
+      const probeY = l.y - l.size * 0.3;
+      const room = roomAt(l.cut, l.x, probeY, l.rot ? 'y' : 'x');
+      // 0.88 keeps a sliver of the primal visible either side of the word.
+      const budget = room > 0 ? Math.max(44, room * 0.88) : (l.rot ? 210 : 150);
+
+      if (el.getComputedTextLength() > budget) {
+        el.setAttribute('textLength', String(Math.round(budget)));
+        el.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+      }
+    });
+  }, [locale, scheme, showLabels, plateLoaded]);
 
   const registerRegion = useCallback((el: SVGPathElement | null, index: number, cutId: string) => {
     if (!el) return;
@@ -137,6 +211,10 @@ export const CowChart = memo(function CowChart({
             <path
               key={`fill-${id}`}
               d={d}
+              /* Lets the label auto-fit measure the primal it has to sit
+                 inside. On the fill layer rather than the hit regions because
+                 the teaser renders with interactive={false} and has none. */
+              data-cut={cut}
               className={
                 cut === selectedCut ? styles.fillOn
                   : (!selectedCut && cut === hoverCut) ? styles.fillHover
@@ -158,13 +236,14 @@ export const CowChart = memo(function CowChart({
               return (
                 <text
                   key={`${l.cut}-${i}`}
+                  ref={el => { labelRefs.current[i] = el; }}
                   x={l.x}
                   y={l.y}
                   fontSize={l.size}
                   transform={l.rot ? `rotate(${l.rot} ${l.x} ${l.y})` : undefined}
                   className={l.cut === selectedCut ? styles.labelOn : undefined}
                 >
-                  {cut.tag[scheme]}
+                  {resolveCutCopy(cut, locale, scheme).tag}
                 </text>
               );
             })}

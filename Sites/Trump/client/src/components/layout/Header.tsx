@@ -27,15 +27,19 @@ export function Header() {
           </svg>
         </div>
         <div className={styles.brandText}>
+          {/* The name is the mark on the door and never translates. The
+              tagline under it is ordinary prose and does. */}
           <p className={styles.brandTitle}>{LANDING_BRAND_NAME}</p>
-          <p className={styles.brandSubtitle}>{BRAND_TAGLINE.toUpperCase()}</p>
+          <p className={styles.brandSubtitle}>{t('brand.tagline').toUpperCase()}</p>
         </div>
       </Link>
 
       <nav className={styles.nav} aria-label="Main navigation">
+        {/* tableLabel stays English in context (analytics and the waiter's view
+            key off it); only the word shown to the guest is localised. */}
         {tableLabel && (
-          <span className={styles.tablePill} aria-label={`Table: ${tableLabel}`}>
-            {tableLabel}
+          <span className={styles.tablePill} aria-label={`${t('welcome.table')}: ${tableLabel}`}>
+            {tableLabel.replace(/^Table\s*/i, `${t('welcome.table')} `)}
           </span>
         )}
         {/* The cart button used to live here. The QR menu no longer takes

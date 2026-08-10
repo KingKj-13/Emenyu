@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Beef, Fish, Salad, UtensilsCrossed, Wine, Sparkles, Martini, ArrowRight, Coffee, GlassWater } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
+import { useI18n } from '../i18n';
+import type { MessageKey } from '../i18n/messages/en';
 import { LANDING_BRAND_NAME, BRAND_TAGLINE, MAINS_CATEGORY_TITLE, RESTAURANT_ID } from '../constants/api';
 import styles from './LandingPage.module.css';
 
@@ -11,8 +13,12 @@ const drink = (t: string, s: string) => `/${t}/drinks?section=${encodeURICompone
 
 interface Category {
   key: string;
+  /** Fallback wording. Tenants with a translated catalogue set `labelKey`
+   *  instead and this is only used when no key is given (Carmella). */
   label: string;
   sub: string;
+  labelKey?: MessageKey;
+  subKey?: MessageKey;
   glow: string;
   icon: typeof Beef;
   to: (t: string) => string;
@@ -25,12 +31,12 @@ interface Category {
 // read stronger than olive/green at equal alpha — see the alpha inversely
 // scaled to each color's HSL saturation, tuned around the wine tile's alpha).
 const TRUMP_CATEGORIES: Category[] = [
-  { key: 'wine', label: 'Wine', sub: 'The cellar', glow: 'rgba(122, 64, 130, 0.32)', icon: Wine, to: t => drink(t, 'Red Wine') },
-  { key: 'cocktails', label: 'Cocktails', sub: 'Signature pours', glow: 'rgba(162, 102, 42, 0.19)', icon: Martini, to: t => drink(t, 'Cocktails') },
-  { key: 'setmenu', label: 'Set Menu', sub: 'Curated combos', glow: 'rgba(128, 118, 52, 0.26)', icon: Sparkles, to: t => `/${t}/setmenu` },
-  { key: 'mains', label: 'Mains', sub: 'Steaks, seafood and grill', glow: 'rgba(150, 72, 38, 0.19)', icon: Beef, to: t => sec(t, MAINS_CATEGORY_TITLE) },
-  { key: 'starters', label: 'Starters', sub: 'To begin', glow: 'rgba(74, 122, 78, 0.45)', icon: Salad, to: t => sec(t, 'Starters') },
-  { key: 'sushi', label: 'Sushi & Sashimi', sub: 'From the sea', glow: 'rgba(58, 112, 152, 0.25)', icon: Fish, to: t => sec(t, 'Sushi') },
+  { key: 'wine', label: 'Wine', sub: 'The cellar', labelKey: 'landing.wine', subKey: 'landing.wineSub', glow: 'rgba(122, 64, 130, 0.32)', icon: Wine, to: t => drink(t, 'Red Wine') },
+  { key: 'cocktails', label: 'Cocktails', sub: 'Signature pours', labelKey: 'landing.cocktails', subKey: 'landing.cocktailsSub', glow: 'rgba(162, 102, 42, 0.19)', icon: Martini, to: t => drink(t, 'Cocktails') },
+  { key: 'setmenu', label: 'Set Menu', sub: 'Curated combos', labelKey: 'landing.setMenu', subKey: 'landing.setMenuSub', glow: 'rgba(128, 118, 52, 0.26)', icon: Sparkles, to: t => `/${t}/setmenu` },
+  { key: 'mains', label: 'Mains', sub: 'Steaks, seafood and grill', labelKey: 'landing.mains', subKey: 'landing.mainsSub', glow: 'rgba(150, 72, 38, 0.19)', icon: Beef, to: t => sec(t, MAINS_CATEGORY_TITLE) },
+  { key: 'starters', label: 'Starters', sub: 'To begin', labelKey: 'landing.starters', subKey: 'landing.startersSub', glow: 'rgba(74, 122, 78, 0.45)', icon: Salad, to: t => sec(t, 'Starters') },
+  { key: 'sushi', label: 'Sushi & Sashimi', sub: 'From the sea', labelKey: 'landing.sushi', subKey: 'landing.sushiSub', glow: 'rgba(58, 112, 152, 0.25)', icon: Fish, to: t => sec(t, 'Sushi') },
 ];
 
 // Carmella's own chapters (demo validation report Bug C-1 — the welcome
@@ -69,17 +75,20 @@ const CATEGORIES: Category[] = RESTAURANT_ID === 'carmella' ? CARMELLA_CATEGORIE
 // "Butchery" — there has never been one in the live data, so the tile scrolled
 // nowhere. It now opens the interactive butchery chart instead, which is what
 // "Grillhouse & Butchery" was always pointing at. Carmella is untouched.
-const FOOTER_LINK: { label: string; to: (t: string) => string } =
+const FOOTER_LINK: { label: string; labelKey?: MessageKey; to: (t: string) => string } =
   RESTAURANT_ID === 'carmella'
     ? { label: 'The Interludes', to: t => sec(t, 'The Interludes') }
-    : { label: 'The Butchery', to: t => `/${t}/butchery` };
+    : { label: 'The Butchery', labelKey: 'landing.butchery', to: t => `/${t}/butchery` };
 
 export function LandingPage() {
   const { tableId: paramTableId } = useParams<{ tableId: string }>();
   const navigate = useNavigate();
   const { setTableId } = useApp();
+  const { t } = useI18n();
   const tableId = paramTableId || 'table1';
-  const tableLabel = tableId.replace(/^table/i, 'Table ');
+  // "table7" -> "<localised word for Table> 7". The number is the only part the
+  // guest matches against the physical table, so it never moves.
+  const tableLabel = tableId.replace(/^table\s*/i, `${t('welcome.table')} `);
   useHomeBackGuard({ isHome: true });
 
   useEffect(() => {
@@ -98,18 +107,21 @@ export function LandingPage() {
       <div className={styles.inner}>
         <header className={styles.header}>
           <span className={styles.monogram} aria-hidden>{LANDING_BRAND_NAME.charAt(0)}</span>
-          <span className={styles.eyebrow}>Welcome to</span>
+          <span className={styles.eyebrow}>{t('welcome.eyebrow')}</span>
+          {/* The brand NAME is the one thing that stays English everywhere. */}
           <h1 className={styles.brand}>{LANDING_BRAND_NAME}</h1>
-          <div className={styles.brandSub}>{BRAND_TAGLINE}</div>
+          <div className={styles.brandSub}>
+            {RESTAURANT_ID === 'carmella' ? BRAND_TAGLINE : t('brand.tagline')}
+          </div>
           <div className={styles.pill}>
-            <span className={styles.dot} /> {tableLabel} · Scan · Order · Savour
+            <span className={styles.dot} /> {tableLabel} {t('welcome.pill')}
           </div>
         </header>
 
         <button className={styles.cta} onClick={() => navigate(`/${tableId}/menu`)}>
           <span className={styles.ctaText}>
-            <span className={styles.ctaTitle}>Browse the Full Menu</span>
-            <span className={styles.ctaSub}>Every dish, pour and pairing</span>
+            <span className={styles.ctaTitle}>{t('welcome.browseAll')}</span>
+            <span className={styles.ctaSub}>{t('welcome.browseAllSub')}</span>
           </span>
           <span className={styles.ctaArrow} aria-hidden>
             <ArrowRight size={22} />
@@ -129,8 +141,8 @@ export function LandingPage() {
                 <span className={styles.glow} aria-hidden />
                 <span className={styles.icon} aria-hidden><Icon size={24} /></span>
                 <span className={styles.tileText}>
-                  <span className={styles.tileLabel}><span className={styles.tileLabelText}>{c.label}</span></span>
-                  <span className={styles.tileSub}>{c.sub}</span>
+                  <span className={styles.tileLabel}><span className={styles.tileLabelText}>{c.labelKey ? t(c.labelKey) : c.label}</span></span>
+                  <span className={styles.tileSub}>{c.subKey ? t(c.subKey) : c.sub}</span>
                 </span>
               </button>
             );
@@ -138,7 +150,7 @@ export function LandingPage() {
         </div>
 
         <a className={styles.footer} href={FOOTER_LINK.to(tableId)} onClick={e => { e.preventDefault(); navigate(FOOTER_LINK.to(tableId)); }}>
-          <span className={styles.butchery}><UtensilsCrossed size={11} /> {FOOTER_LINK.label}</span>
+          <span className={styles.butchery}><UtensilsCrossed size={11} /> {FOOTER_LINK.labelKey ? t(FOOTER_LINK.labelKey) : FOOTER_LINK.label}</span>
         </a>
       </div>
     </div>

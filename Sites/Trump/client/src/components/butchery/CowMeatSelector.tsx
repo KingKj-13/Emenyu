@@ -12,7 +12,8 @@ import {
 } from './cutMenuMap';
 import { serverCutToMatch, type ServerCut } from './useButcheryCuts';
 import { formatPrice } from '../../lib/menuUtils';
-import { useT } from '../../i18n';
+import { useI18n } from '../../i18n';
+import { resolveCutCopy } from '../../i18n/butchery';
 import { track } from '../../lib/engagement';
 import { BASE_PATH, RESTAURANT_ID } from '../../constants/api';
 import type { MenuItem } from '../../types/menu';
@@ -122,14 +123,31 @@ function fitBox(cx: number, cy: number, maxW: number, maxH: number, aspect: numb
   return { left: cx - w / 2, top: cy - h / 2, width: w, height: h };
 }
 
+/**
+ * Below the 900px breakpoint the detail panel stops being a side column and
+ * becomes a bottom sheet covering 52dvh (see CowMeatSelector.module.css). The
+ * desktop resting place — 72% down the stage — then sits right on the sheet's
+ * lip, so on a short phone the cut reads as tucked behind the description.
+ *
+ * On those viewports the cut rests higher, and takes the width the vanished
+ * side column freed up so it does not just get smaller and further away.
+ */
+function landingMetrics(): { y: number; w: number; h: number } {
+  const compact = typeof window !== 'undefined' && window.innerWidth < 900;
+  return compact
+    ? { y: 0.50, w: 0.62, h: 0.46 }
+    : { y: T.LAND_Y, w: T.LAND_W, h: T.LAND_H };
+}
+
 /** Where the cut rests: centred horizontally, low in the stage, sized so the
  *  carcass and its lit primal stay readable behind and above it. */
 function landingBox(stg: Box, first: Box, aspect: number): Box {
+  const m = landingMetrics();
   const box = fitBox(
     stg.left + stg.width / 2,
-    stg.top + stg.height * T.LAND_Y,
-    stg.width * T.LAND_W,
-    stg.height * T.LAND_H,
+    stg.top + stg.height * m.y,
+    stg.width * m.w,
+    stg.height * m.h,
     aspect
   );
   // Never let the cut run off the bottom of the stage.
@@ -185,7 +203,7 @@ export function CowMeatSelector({
   onCutChange,
   serverCuts = null,
 }: CowMeatSelectorProps) {
-  const t = useT();
+  const { t, locale } = useI18n();
   const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -251,19 +269,50 @@ export function CowMeatSelector({
     return merged;
   }, [items, resolvedMapping, serverCuts]);
 
-  /** Catalogue copy overlaid with whatever the restaurant has edited. */
+  /**
+   * The cut's copy, resolved per field. Precedence, highest first:
+   *   1. what the restaurant curated in the admin panel (`serverCuts`)
+   *   2. the guest's language (`resolveCutCopy`)
+   *   3. the English catalogue
+   * Unlike before, this always returns a value: the locale overlay applies even
+   * when the tenant has curated nothing, which is the normal case.
+   */
   const cutCopy = useCallback((cut: CutDefinition) => {
+    const local = resolveCutCopy(cut, locale, scheme);
     const server = serverCuts?.get(cut.id);
-    if (!server) return null;
+
+    /**
+     * The server wins only when it actually says something the English
+     * catalogue does not — an owner's edit, or a COW_CUT translation it has
+     * already applied for this locale. When it merely echoes the English (the
+     * normal case: a tenant with seeded cuts and no COW_CUT translation rows),
+     * a guest reading Japanese should get our translated catalogue, not the
+     * server's untranslated English.
+     *
+     * Comparing against the English catalogue is what makes that distinction
+     * possible, and it keeps owner edits visible in every language.
+     */
+    const custom = (value: string | undefined, english: string) =>
+      !!value && value !== english;
+
+    const serverBestForIsCustom = !!server?.bestFor?.length
+      && server.bestFor.join(' ') !== cut.bestFor.join(' ');
+
     return {
-      name: server.name || cutName(cut, scheme),
-      altName: server.altName,
-      description: server.description || cut.description,
-      texture: server.texture || cut.texture,
-      bestFor: server.bestFor.length > 0 ? server.bestFor : cut.bestFor,
-      media: server.media,
+      name: custom(server?.name, cut.names[scheme]) ? server!.name : local.name,
+      altName: custom(server?.altName, cutAltName(cut, scheme)) ? server!.altName : '',
+      // The same cut under the OTHER naming convention, in the guest's
+      // language — shown as "US - <name>" beneath the heading.
+      altLocal: resolveCutCopy(cut, locale, scheme === 'za' ? 'us' : 'za').name,
+      description: custom(server?.description, cut.description) ? server!.description : local.description,
+      texture: custom(server?.texture, cut.texture) ? server!.texture : local.texture,
+      bestFor: serverBestForIsCustom ? server!.bestFor : local.bestFor,
+      dishes: local.dishes,
+      tag: local.tag,
+      usNote: local.usNote,
+      media: server?.media,
     };
-  }, [serverCuts, scheme]);
+  }, [serverCuts, scheme, locale]);
 
   /* ── naming ──────────────────────────────────────────────────────────── */
   const applyScheme = useCallback((next: NamingScheme) => {
@@ -690,7 +739,7 @@ export function CowMeatSelector({
 
         <p className={styles.caption} aria-live="polite">
           {captionCut
-            ? <><b>{cutName(captionCut, scheme)}</b><span className={styles.captionAlt}> · {cutAltName(captionCut, scheme)}</span></>
+            ? <><b>{cutCopy(captionCut).name}</b><span className={styles.captionAlt}> · {cutCopy(captionCut).altLocal}</span></>
             : t('cut.tapAnimal')}
         </p>
 
@@ -705,7 +754,7 @@ export function CowMeatSelector({
               onPointerDown={() => warm(c.id)}
               onClick={() => selectById(c.id)}
             >
-              {serverCuts?.get(c.id)?.name || cutName(c, scheme)}
+              {cutCopy(c).name}
               {cutIndex[c.id]?.primary.length ? <i className={styles.railDot} aria-hidden /> : null}
             </button>
           ))}
@@ -744,11 +793,11 @@ export function CowMeatSelector({
             <p className={styles.altName}>
               {copy?.altName
                 ? `${scheme === 'za' ? 'US' : 'ZA'} · ${copy.altName}`
-                : cutAltName(activeCut, scheme)}
+                : `${scheme === 'za' ? 'US' : 'ZA'} · ${copy?.altLocal ?? cutAltName(activeCut, scheme)}`}
             </p>
 
-            {activeCut.usNote && scheme === 'us' && (
-              <p className={styles.note}>{activeCut.usNote}</p>
+            {copy?.usNote && scheme === 'us' && (
+              <p className={styles.note}>{copy.usNote}</p>
             )}
 
             <p className={styles.desc}>{copy?.description ?? activeCut.description}</p>
@@ -768,7 +817,7 @@ export function CowMeatSelector({
             {/* Extra photographs and any video the restaurant attached to this
                 primal. The first image is already flying off the animal, so the
                 strip shows what is left rather than repeating it. */}
-            {copy && copy.media.length > 1 && (
+            {copy?.media && copy.media.length > 1 && (
               <div className={styles.field}>
                 <h3>{t('dish.photos')}</h3>
                 <ul className={styles.cutMedia}>
@@ -830,7 +879,7 @@ export function CowMeatSelector({
             <div className={styles.field}>
               <h3>{t('cut.classically')}</h3>
               <ul className={styles.classics}>
-                {activeCut.dishes.map(d => (
+                {(copy?.dishes ?? activeCut.dishes).map(d => (
                   <li key={d.name}><b>{d.name}</b><span>{d.blurb}</span></li>
                 ))}
               </ul>
@@ -852,7 +901,7 @@ export function CowMeatSelector({
               {CUTS.filter(c => (cutIndex[c.id]?.primary.length ?? 0) > 0).slice(0, 4).map(c => (
                 <li key={c.id}>
                   <button type="button" onClick={() => selectById(c.id)}>
-                    {cutName(c, scheme)}
+                    {cutCopy(c).name}
                     <span>{cutIndex[c.id].primary.length} {t('cut.onTheMenu')}</span>
                   </button>
                 </li>

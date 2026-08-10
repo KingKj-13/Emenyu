@@ -188,9 +188,18 @@ async function assertNoOrdering(page, where) {
   check('Arabic sets document direction to rtl', dir === 'rtl', dir);
   const arabicUi = await page.evaluate(() => /القائمة|الأقسام|النادل|قسم اللحوم/.test(document.body.innerText || ''));
   check('Arabic UI strings render', arabicUi);
-  // Menu CONTENT must stay English — no invented translations.
-  const contentEnglish = await page.evaluate(() => /RIBEYE|SIRLOIN|TOMAHAWK|FILLET/i.test(document.body.innerText || ''));
-  check('menu content falls back to English (no invented translations)', contentEnglish);
+  // Menu CONTENT is now translated too. Dish names and descriptions arrive in
+  // the guest's language; what deliberately stays Latin is the restaurant's own
+  // name and the wine/spirit PRODUCER names, because a guest orders that exact
+  // bottle and renaming it would break service.
+  const arabicContent = await page.evaluate(() => {
+    const text = document.body.innerText || '';
+    const arabicRuns = (text.match(/[؀-ۿ]{3,}/g) || []).length;
+    return { arabicRuns, hasBrand: /Trump/.test(text) };
+  });
+  check('menu content is translated, not just the chrome',
+    arabicContent.arabicRuns > 40, `${arabicContent.arabicRuns} Arabic runs`);
+  check('the brand name stays Latin', arabicContent.hasBrand);
   const overflow = await page.evaluate(() =>
     document.documentElement.scrollWidth - document.documentElement.clientWidth);
   check('no horizontal overflow in RTL', overflow <= 1, `${overflow}px`);

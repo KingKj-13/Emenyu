@@ -208,12 +208,18 @@ export interface MenuData {
 }
 
 export interface MenuSection {
+  /** The English title. Stays English on purpose: it is the key the tab bar,
+   *  the scroll anchors, the analytics events and `?section=` deep links all
+   *  match on. Never render it directly — render `displayTitle ?? title`. */
   title: string;
+  /** The title in the guest's language, supplied by `GET /api/menu?locale=`.
+   *  Absent for English and for any category with no translation yet. */
+  displayTitle?: string;
   // Chapter narrative opener (Carmella's "chapters"); absent for tenants
   // whose categories don't carry one.
   intro?: string;
   items: MenuItem[];
-  subSections: { title: string; items: MenuItem[] }[];
+  subSections: { title: string; displayTitle?: string; items: MenuItem[] }[];
 }
 
 export interface Deal {

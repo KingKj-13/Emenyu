@@ -3,6 +3,7 @@ import { X, UtensilsCrossed, Wine, Star, UserCog, ShieldCheck } from 'lucide-rea
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useT } from '../../i18n';
+import type { MessageKey } from '../../i18n/messages/en';
 import styles from './SideDrawer.module.css';
 
 interface NavLink {
@@ -17,7 +18,7 @@ interface SideDrawerProps {
   activeFilters: Set<string>;
   onToggleFilter: (key: string) => void;
   onClearAll: () => void;
-  filterOptions: Array<{ key: string; label: string; mode: 'include' | 'exclude' }>;
+  filterOptions: Array<{ key: string; label: string; labelKey?: MessageKey; mode: 'include' | 'exclude' }>;
   navLinks?: NavLink[];
 }
 
@@ -114,7 +115,7 @@ export function SideDrawer({
                 onClick={() => onToggleFilter(opt.key)}
                 aria-pressed={activeFilters.has(opt.key)}
               >
-                {opt.label}
+                {opt.labelKey ? t(opt.labelKey) : opt.label}
               </button>
             ))}
           </div>
@@ -126,10 +127,10 @@ export function SideDrawer({
         <div className={styles.staff}>
           <p className={styles.sectionLabel}>{t('nav.staffAccess')}</p>
           <Link to="/Waiter" className={styles.staffBtn} onClick={close}>
-            <UserCog size={15} /> Waiter App
+            <UserCog size={15} /> {t('staff.waiterApp')}
           </Link>
           <Link to="/Admin" className={styles.staffBtn} onClick={close}>
-            <ShieldCheck size={15} /> Admin Dashboard
+            <ShieldCheck size={15} /> {t('staff.adminDashboard')}
           </Link>
         </div>
       </aside>

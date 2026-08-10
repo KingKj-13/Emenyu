@@ -6,6 +6,7 @@ import { Spinner } from '../ui/Spinner';
 import { resolveImage, resolveVideo, resolveYouTubeEmbed, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import { useT } from '../../i18n';
+import { localizeAllergens } from '../../lib/allergens';
 import { track, startDwell } from '../../lib/engagement';
 import { useVideoEngagement } from '../../hooks/useVideoEngagement';
 import { ItemGallery } from './ItemGallery';
@@ -49,10 +50,10 @@ interface PairingResult {
 
 // The stored `spice` field is a raw chili-emoji string (🌶️ / 🌶️🌶️ / 🌶️🌶️🌶️),
 // not a formatted label — map it to a level word instead of rendering emoji.
-const SPICE_LEVELS = ['', 'Mild heat', 'Medium heat', 'Hot'];
-function spiceLevelLabel(spice: string): string {
+const SPICE_KEYS = ['', 'spice.mild', 'spice.medium', 'spice.hot'] as const;
+function spiceLevelKey(spice: string): 'spice.mild' | 'spice.medium' | 'spice.hot' | 'spice.spiced' {
   const count = (spice.match(/🌶/gu) || []).length;
-  return SPICE_LEVELS[Math.min(count, SPICE_LEVELS.length - 1)] || 'Spiced';
+  return SPICE_KEYS[Math.min(count, SPICE_KEYS.length - 1)] || 'spice.spiced';
 }
 
 function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?: (name: string) => void }) {
@@ -336,7 +337,7 @@ export function ItemModal({
           <div className={styles.chips}>
             {item.chefPick && <Badge variant="gold">Chef Recommends</Badge>}
             {item.popular && <Badge variant="gold">Guest Favourite</Badge>}
-            {item.spice && <Badge variant="muted"><Flame size={11} /> {spiceLevelLabel(item.spice)}</Badge>}
+            {item.spice && <Badge variant="muted"><Flame size={11} /> {t(spiceLevelKey(item.spice))}</Badge>}
           </div>
 
           <h2 className={styles.name} dir="auto">{item.name}</h2>
@@ -381,7 +382,7 @@ export function ItemModal({
 
           {item.allergens && (
             <p className={styles.allergens}>
-              <strong>Contains:</strong> {item.allergens}
+              <strong>{t('menu.contains')}</strong> {localizeAllergens(item.allergens, t)}
             </p>
           )}
 

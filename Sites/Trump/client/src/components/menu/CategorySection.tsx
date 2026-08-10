@@ -52,7 +52,7 @@ export const CategorySection = memo(function CategorySection({
           size={20}
           className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
         />
-        <h2 className={styles.title} dir="auto">{section.title}</h2>
+        <h2 className={styles.title} dir="auto">{section.displayTitle ?? section.title}</h2>
       </button>
       {section.intro && <p className={styles.intro} dir="auto">{section.intro}</p>}
       <div className={styles.divider} aria-hidden="true" />
@@ -81,7 +81,7 @@ export const CategorySection = memo(function CategorySection({
           {section.subSections.map(sub => (
             <SubSection
               key={sub.title}
-              title={sub.title}
+              title={sub.displayTitle ?? sub.title}
               items={sub.items}
               favorites={favorites}
               onFavoriteToggle={onFavoriteToggle}

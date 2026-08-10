@@ -111,25 +111,39 @@ export function buildMenuSections(
       return;
     }
 
+    // `GET /api/menu?locale=` keeps the object KEY in English (it is what the
+    // tab bar, scroll anchors and ?section= deep links match on) and carries the
+    // guest's language alongside it. Without this the category translations are
+    // fetched and then silently dropped.
+    const displayTitle = typeof categoryValue.displayTitle === 'string'
+      ? categoryValue.displayTitle
+      : undefined;
+
     const directItems = visibleItems(
       (categoryValue.items as MenuItem[]) || [],
       activeFilters,
       searchQuery
     );
-    const subSections: { title: string; items: MenuItem[] }[] = [];
+    const subSections: { title: string; displayTitle?: string; items: MenuItem[] }[] = [];
 
     Object.entries(categoryValue).forEach(([subTitle, subValue]) => {
       if (subTitle === 'items' || subTitle === 'visible' || !subValue) return;
       if (typeof subValue !== 'object' || Array.isArray(subValue)) return;
-      const sv = subValue as { visible?: boolean; items?: MenuItem[] };
+      const sv = subValue as { visible?: boolean; items?: MenuItem[]; displayTitle?: string };
       if (sv.visible === false) return;
       const items = visibleItems(sv.items || [], activeFilters, searchQuery);
-      if (items.length > 0) subSections.push({ title: subTitle, items });
+      if (items.length > 0) {
+        subSections.push({
+          title: subTitle,
+          displayTitle: typeof sv.displayTitle === 'string' ? sv.displayTitle : undefined,
+          items,
+        });
+      }
     });
 
     if (directItems.length > 0 || subSections.length > 0) {
       const intro = typeof categoryValue.intro === 'string' ? categoryValue.intro : undefined;
-      sections.push({ title: categoryTitle, intro, items: directItems, subSections });
+      sections.push({ title: categoryTitle, displayTitle, intro, items: directItems, subSections });
     }
   });
 

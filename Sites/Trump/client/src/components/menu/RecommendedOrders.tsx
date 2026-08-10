@@ -8,6 +8,7 @@ import { useApp } from '../../context/AppContext';
 import { trackImpressions, trackClick, type RecoContext, type RecoItemLike } from '../../lib/recoAnalytics';
 import type { MenuItem } from '../../types/menu';
 import { useT } from '../../i18n';
+import type { MessageKey } from '../../i18n/messages/en';
 import styles from './RecommendedOrders.module.css';
 
 interface Props {
@@ -21,6 +22,16 @@ interface Props {
 // live/admin-sourced bundle whose id isn't one of the five curated personas.
 const PERSONA_ICON: Record<string, ComponentType<{ size?: number }>> = {
   sushi: Fish, steak: Beef, fish: Fish, veg: Leaf, pasta: Soup,
+};
+
+// The five curated personas carry translated copy. A bundle sourced from the
+// admin panel has no key here and keeps whatever the owner typed.
+const PERSONA_KEY: Record<string, { name: MessageKey; sub: MessageKey }> = {
+  sushi: { name: 'reco.persona.sushi', sub: 'reco.persona.sushiSub' },
+  steak: { name: 'reco.persona.steak', sub: 'reco.persona.steakSub' },
+  fish:  { name: 'reco.persona.fish',  sub: 'reco.persona.fishSub'  },
+  veg:   { name: 'reco.persona.veg',   sub: 'reco.persona.vegSub'   },
+  pasta: { name: 'reco.persona.pasta', sub: 'reco.persona.pastaSub' },
 };
 
 function OrderCard({ order, resolveItem, onOpenItem }: Props & { order: PersonaOrder }) {
@@ -37,14 +48,15 @@ function OrderCard({ order, resolveItem, onOpenItem }: Props & { order: PersonaO
   }, [order.id]);
 
   const PersonaIcon = PERSONA_ICON[order.id] ?? ChefHat;
+  const personaKey = PERSONA_KEY[order.id];
 
   return (
     <div className={styles.card} style={{ ['--accent' as string]: order.accent }}>
       <div className={styles.cardHead}>
         <span className={styles.icon}><PersonaIcon size={20} /></span>
         <div className={styles.headText}>
-          <span className={styles.persona}>{order.persona}</span>
-          <span className={styles.blurb}>{order.blurb}</span>
+          <span className={styles.persona}>{personaKey ? t(personaKey.name) : order.persona}</span>
+          <span className={styles.blurb}>{personaKey ? t(personaKey.sub) : order.blurb}</span>
         </div>
       </div>
 
@@ -118,7 +130,7 @@ export function RecommendedOrders(props: Props) {
     <section className={styles.wrap} aria-label={t('reco.title')}>
       <div className={styles.header}>
         <h2 className={styles.title}>{t('reco.title')}</h2>
-        <p className={styles.sub}>One-tap chef pairings — a drink, starter, main &amp; dessert</p>
+        <p className={styles.sub}>{t('reco.strapline')}</p>
       </div>
       <div className={styles.strip}>
         {orders.map(order => (

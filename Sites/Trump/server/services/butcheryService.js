@@ -89,18 +89,25 @@ function createButcheryService({ prismaMenuService, localizationService, logger 
         // A dish hidden from the menu must not resurface through the chart.
         items: cut.items
           .filter(link => link.menuItem && link.menuItem.visible !== false)
-          .map(link => ({
-            menuItemId: link.menuItem.id,
-            name: link.menuItem.name,
-            description: link.menuItem.description || '',
-            price: link.menuItem.price,
-            img: link.menuItem.imagePath || '',
-            video: link.menuItem.videoPath || '',
-            available: link.menuItem.available !== false
-              && link.menuItem.availability !== 'unavailable',
-            matchType: link.matchType,
-            label: link.label || '',
-          })),
+          .map(link => {
+            // The cut itself was localized above, but the dishes hanging off it
+            // were being returned raw — so a guest reading Japanese got a
+            // Japanese chart with an English dish list under it. Same per-field
+            // fallback the menu endpoint uses.
+            const tx = translations ? translations.get(`MENU_ITEM:${link.menuItem.id}`) : null;
+            return {
+              menuItemId: link.menuItem.id,
+              name: (tx && tx.name) || link.menuItem.name,
+              description: (tx && tx.description) || link.menuItem.description || '',
+              price: link.menuItem.price,
+              img: link.menuItem.imagePath || '',
+              video: link.menuItem.videoPath || '',
+              available: link.menuItem.available !== false
+                && link.menuItem.availability !== 'unavailable',
+              matchType: link.matchType,
+              label: link.label || '',
+            };
+          }),
       };
     });
   }
