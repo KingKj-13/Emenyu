@@ -64,6 +64,8 @@ export const ptBR: Messages = {
   'cut.teaserBody': 'Cada carne aqui vem de uma parte específica do animal, e esse lugar define o sabor. Toque em um corte para ver o que ele se torna no cardápio.',
   'cut.openButchery': 'Abrir o açougue',
   'cut.loadingImage': 'O corte está chegando…',
+  'cut.mobileTitle': 'De onde vem meu corte?',
+  'cut.mobileSubtitle': '12 cortes · nomes ZA e US',
 
   // ── strings that were still hardcoded English on the guest screens ──
   'nav.quickAccess': 'Acesso rápido',

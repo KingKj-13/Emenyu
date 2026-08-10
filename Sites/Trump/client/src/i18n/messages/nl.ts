@@ -62,6 +62,8 @@ export const nl: Messages = {
   'cut.teaserBody': 'Elke steak hier komt van een specifiek deel van het dier, en die plek bepaalt hoe het smaakt. Tik op een deelstuk om te zien wat het op de kaart wordt.',
   'cut.openButchery': 'Open de slagerij',
   'cut.loadingImage': 'Het stuk komt eraan…',
+  'cut.mobileTitle': 'Waar komt mijn stuk vandaan?',
+  'cut.mobileSubtitle': '12 deelstukken · ZA- en US-benamingen',
 
   // ── strings that were still hardcoded English on the guest screens ──
   'nav.quickAccess': 'Snelle toegang',

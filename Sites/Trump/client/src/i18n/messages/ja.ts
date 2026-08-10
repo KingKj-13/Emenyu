@@ -62,6 +62,8 @@ export const ja: Messages = {
   'cut.teaserBody': 'ステーキはそれぞれ牛の特定の部位から取られ、その位置が味わいを決めます。部位をタップして、メニューのどの一皿になるかをご覧ください。',
   'cut.openButchery': '精肉室を見る',
   'cut.loadingImage': 'ただいまご用意しています…',
+  'cut.mobileTitle': 'この部位はどこから？',
+  'cut.mobileSubtitle': '十二部位 · ZA / US 呼称',
 
   // ── strings that were still hardcoded English on the guest screens ──
   'nav.quickAccess': 'クイックアクセス',

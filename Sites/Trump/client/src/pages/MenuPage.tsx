@@ -336,20 +336,8 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
           </div>
         ) : (
           <>
-            {/* The animal comes first — a guest should meet it before they start
-                scrolling, not halfway down at the steak chapter. */}
-            {showButchery && !sectionFilter && !searchQuery && activeFilters.size === 0 && (
-              <section className={styles.butcheryStage} aria-label={t('cut.title')}>
-                <CowMeatSelector
-                  items={allItems}
-                  serverCuts={serverCuts}
-                  onOpenItem={item => openItem(item, 'replace')}
-                  onBrowseAll={scrollToSteaks}
-                />
-              </section>
-            )}
-
-            {/* "Not sure what to order?" — the curated bundles. */}
+            {/* "Not sure what to order?" — the curated bundles. Still first:
+                only the butchery block moved (see below), this stays put. */}
             {!sectionFilter && !searchQuery && activeFilters.size === 0 && (
               <RecommendedOrders
                 resolveItem={findItemByName}
@@ -359,6 +347,26 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
 
             {sections.map(section => (
               <Fragment key={section.title}>
+                {/* The animal sits under Mains now, not before every category —
+                    it's a beef-primal tool, and on mobile the old placement put
+                    a full-viewport chart between a guest and every Starter. Gated
+                    on the exact section title so it appears once, in the one
+                    place it's actually about. showButchery itself stays
+                    data-driven (hasCutMenuMatches): a tenant with no beef
+                    primals on the menu, matched or curated, never renders it,
+                    on any category. */}
+                {showButchery && !sectionFilter && !searchQuery && activeFilters.size === 0
+                  && section.title === MAINS_CATEGORY_TITLE && (
+                  <section className={styles.butcheryStage} aria-label={t('cut.title')}>
+                    <CowMeatSelector
+                      items={allItems}
+                      serverCuts={serverCuts}
+                      onOpenItem={item => openItem(item, 'replace')}
+                      onBrowseAll={scrollToSteaks}
+                      mobileEntry
+                    />
+                  </section>
+                )}
                 <CategorySection
                   section={section}
                   favorites={favorites}

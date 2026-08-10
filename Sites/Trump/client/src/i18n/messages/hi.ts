@@ -62,6 +62,8 @@ export const hi: Messages = {
   'cut.teaserBody': 'यहाँ हर स्टेक पशु के एक विशेष हिस्से से आता है, और वही हिस्सा उसका स्वाद तय करता है। किसी कट पर टैप करें और देखें कि मेन्यू में वह क्या बनता है।',
   'cut.openButchery': 'मीट काउंटर खोलें',
   'cut.loadingImage': 'कट तैयार किया जा रहा है…',
+  'cut.mobileTitle': 'मेरा कट किस हिस्से से आया है?',
+  'cut.mobileSubtitle': '12 कट · ZA और US नामकरण',
 
   // ── strings that were still hardcoded English on the guest screens ──
   'nav.quickAccess': 'त्वरित पहुँच',

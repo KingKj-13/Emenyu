@@ -4,7 +4,7 @@ import {
 import { X, ArrowRight, Ban, ChevronRight } from 'lucide-react';
 import { CowChart } from './CowChart';
 import {
-  CUTS, CUT_BY_ID, cutAltName, cutName,
+  CUTS, CUT_BY_ID, cutAltName, cutName, SILHOUETTE,
   type CutDefinition, type NamingScheme,
 } from './cutCatalog';
 import {
@@ -189,6 +189,15 @@ export interface CowMeatSelectorProps {
    * from the map fall back to the built-in catalogue, per cut.
    */
   serverCuts?: Map<string, ServerCut> | null;
+  /**
+   * Below 900px, collapse to a 64px trigger row instead of mounting the full
+   * chart inline. Tapping it reveals the exact same experience as an overlay.
+   *
+   * Off by default so every EXISTING call site (the dedicated /butchery route,
+   * whose whole purpose is showing this) is untouched. The guest-menu embed,
+   * where the chart used to sit inline above the dish grid, opts in.
+   */
+  mobileEntry?: boolean;
 }
 
 export function CowMeatSelector({
@@ -202,6 +211,7 @@ export function CowMeatSelector({
   browseAllLabel,
   onCutChange,
   serverCuts = null,
+  mobileEntry = false,
 }: CowMeatSelectorProps) {
   const { t, locale } = useI18n();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -240,6 +250,31 @@ export function CowMeatSelector({
     mq.addEventListener('change', on);
     return () => mq.removeEventListener('change', on);
   }, []);
+
+  /**
+   * The 900px breakpoint the stylesheet already uses for the bottom sheet
+   * (see the "Under 900px the rail becomes a bottom sheet" comment on .root
+   * below). Tracked as state, not read once, so rotating a tablet across the
+   * line re-renders rather than leaving a phone-sized layout on a now-wide
+   * screen.
+   */
+  const [compact, setCompact] = useState(
+    () => mobileEntry && typeof window !== 'undefined' && window.innerWidth < 900
+  );
+  useEffect(() => {
+    if (!mobileEntry) return;
+    const mq = window.matchMedia('(max-width: 899.98px)');
+    const on = () => setCompact(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, [mobileEntry]);
+
+  // Whether the trigger row has been tapped open. A deep link (initialCut)
+  // bypasses the row entirely — a guest who followed a specific link expects
+  // to see that cut, not one more tap standing between them and it.
+  const [revealed, setRevealed] = useState(() => !!initialCut);
+  const collapseMobile = useCallback(() => setRevealed(false), []);
 
   const artUrl = useCallback((cut: CutDefinition) => {
     // A photograph the restaurant uploaded for this cut wins over the shipped
@@ -609,7 +644,12 @@ export function CowMeatSelector({
   /* ── background warm-up, one at a time. These are full-quality alpha
         images; fetching eleven at once would saturate the link at exactly the
         moment someone is trying to tap their first cut. ──────────────────── */
+  // Collapsed on mobile, nothing is on screen yet — spending bandwidth on
+  // photographs for a widget the guest hasn't opened, and may never open on
+  // this visit, is the wrong trade. Warm-up starts once the row is tapped.
+  const shouldWarm = !compact || revealed;
   useEffect(() => {
+    if (!shouldWarm) return;
     let cancelled = false;
     const warmAll = async () => {
       // Warm ONLY the cuts with something on tonight's menu, most-stocked
@@ -641,7 +681,7 @@ export function CowMeatSelector({
       if (hasIdle) window.cancelIdleCallback(handle);
       else window.clearTimeout(handle);
     };
-  }, [artUrl, cutIndex]);
+  }, [artUrl, cutIndex, shouldWarm]);
 
   /* ── deep link (?cut=rib) — runs once the regions have mounted ────────── */
   const deepLinked = useRef(false);
@@ -659,11 +699,15 @@ export function CowMeatSelector({
   /* ── escape closes, resize re-measures ───────────────────────────────── */
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape' && activeCutRef.current) { e.preventDefault(); close(); }
+      if (e.key !== 'Escape') return;
+      if (activeCutRef.current) { e.preventDefault(); close(); return; }
+      // No cut lifted, but the mobile sheet is open on its idle content —
+      // Escape steps back to the trigger row, same as tapping the backdrop.
+      if (compact && revealed) { e.preventDefault(); collapseMobile(); }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [close]);
+  }, [close, compact, revealed, collapseMobile]);
 
   useEffect(() => {
     function onResize() {
@@ -709,6 +753,15 @@ export function CowMeatSelector({
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
   }, []);
 
+  // Same lock Modal.tsx uses: freeze the page behind the overlay so the guest
+  // can't scroll the menu underneath it, and — usefully here — so the page's
+  // scrollTop is provably untouched by the time the sheet closes.
+  useEffect(() => {
+    if (!(compact && revealed)) return;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, [compact, revealed]);
+
 
   /* ── render ──────────────────────────────────────────────────────────── */
   const match: CutMenuMatch | null = activeCut ? cutIndex[activeCut.id] ?? null : null;
@@ -716,10 +769,43 @@ export function CowMeatSelector({
   const previewCut = hoverCut ? CUT_BY_ID.get(hoverCut) ?? null : null;
   const captionCut = activeCut ?? previewCut;
   const plateSrc = `${assetBase}/cow.webp`;
-  const isOpen = !!activeCut && panelOpen;
+  // On mobile, revealing the sheet opens it straight to whatever it should
+  // show — idle content if no cut is picked yet, or the lifted cut's detail —
+  // rather than requiring a lifted cut before the sheet will show at all.
+  const isOpen = (!!activeCut && panelOpen) || (compact && revealed);
+
+  /* ── collapsed: a single 64px row, nothing else mounted ────────────────
+     No stage, no panel, no chart SVG — the guest hasn't asked for any of it
+     yet. Reveals the exact markup below, unchanged, as a fixed overlay. */
+  if (compact && !revealed) {
+    return (
+      <button
+        type="button"
+        className={styles.triggerRow}
+        onClick={() => setRevealed(true)}
+        aria-label={`${t('cut.mobileTitle')} — ${t('cut.mobileSubtitle')}`}
+      >
+        <svg className={styles.triggerGlyph} viewBox="0 0 1200 720" aria-hidden="true" focusable="false">
+          <path d={SILHOUETTE} />
+        </svg>
+        <span className={styles.triggerText}>
+          <span className={styles.triggerTitle}>{t('cut.mobileTitle')}</span>
+          <span className={styles.triggerSub}>{t('cut.mobileSubtitle')}</span>
+        </span>
+        <ChevronRight size={18} className={styles.triggerChevron} aria-hidden />
+      </button>
+    );
+  }
 
   return (
-    <div ref={rootRef} className={`${styles.root} ${isOpen ? styles.open : ''}`}>
+    <>
+      {compact && revealed && (
+        <div className={styles.mobileBackdrop} onClick={collapseMobile} aria-hidden="true" />
+      )}
+      <div
+        ref={rootRef}
+        className={`${styles.root} ${isOpen ? styles.open : ''} ${compact && revealed ? styles.mobileSheet : ''}`}
+      >
       <div className={styles.stageCol}>
         <div ref={stageRef} className={styles.stage}>
           <CowChart
@@ -887,6 +973,15 @@ export function CowMeatSelector({
           </>
         ) : (
           <div className={styles.idle}>
+            {/* No cut lifted — nothing to reverse. This just collapses back
+                to the trigger row, so it only makes sense once mobile has
+                actually revealed the sheet; desktop's idle state is the
+                permanent resting view and has nothing to close back to. */}
+            {compact && revealed && (
+              <button type="button" className={styles.close} onClick={collapseMobile} aria-label={t('nav.close')}>
+                <X size={13} /> {t('nav.close')}
+              </button>
+            )}
             <p className={styles.eyebrow}>{t('nav.butchery')}</p>
             <h2 className={styles.idleTitle}>{t('cut.twelvePrimals')}</h2>
             <p className={styles.idleBody}>{t('cut.intro')}</p>
@@ -910,7 +1005,8 @@ export function CowMeatSelector({
           </div>
         )}
       </aside>
-    </div>
+      </div>
+    </>
   );
 }
 

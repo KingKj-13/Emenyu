@@ -62,6 +62,8 @@ export const fr: Messages = {
   'cut.teaserBody': "Chaque pièce de bœuf provient d'un endroit précis de l'animal, et cet endroit détermine son goût. Touchez un morceau pour voir ce qu'il devient sur la carte.",
   'cut.openButchery': 'Ouvrir la boucherie',
   'cut.loadingImage': 'Le morceau arrive…',
+  'cut.mobileTitle': "D'où vient mon morceau ?",
+  'cut.mobileSubtitle': '12 morceaux · appellations ZA et US',
 
   // ── strings that were still hardcoded English on the guest screens ──
   'nav.quickAccess': 'Accès rapide',

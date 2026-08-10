@@ -62,6 +62,8 @@ export const it: Messages = {
   'cut.teaserBody': "Ogni bistecca proviene da una parte precisa dell'animale, e quella posizione ne determina il sapore. Tocca un taglio per vedere cosa diventa nel menu.",
   'cut.openButchery': 'Apri la macelleria',
   'cut.loadingImage': 'Il taglio sta arrivando…',
+  'cut.mobileTitle': 'Da dove viene il mio taglio?',
+  'cut.mobileSubtitle': '12 tagli · denominazioni ZA e US',
 
   // ── strings that were still hardcoded English on the guest screens ──
   'nav.quickAccess': 'Accesso rapido',

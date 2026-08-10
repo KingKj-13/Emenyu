@@ -64,6 +64,8 @@ export const ar: Messages = {
   'cut.teaserBody': 'كل قطعة لحم هنا تأتي من موضع محدّد من الذبيحة، وهذا الموضع هو ما يحدّد مذاقها. اضغط على أي قطعة لترى ما الذي تصبح عليه في القائمة.',
   'cut.openButchery': 'ادخل قسم اللحوم',
   'cut.loadingImage': 'جارٍ إحضار القطعة…',
+  'cut.mobileTitle': 'من أي جزء أتت قطعتي؟',
+  'cut.mobileSubtitle': '12 قطعة · تسميات ZA و US',
 
   // ── strings that were still hardcoded English on the guest screens ──
   'nav.quickAccess': 'وصول سريع',

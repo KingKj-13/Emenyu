@@ -562,10 +562,91 @@
     background: rgba(var(--color-gold-rgb), 0.35);
   }
   .open .panel { transform: none; }
-  /* Nothing is selected: the sheet is off-screen, so its idle copy would be
-     unreachable — the rail above already carries the invitation. */
-  .idle { display: none; }
+  /* Previously `.idle { display: none }` here — idle content used to be
+     unreachable on mobile (the sheet only opened once a cut was already
+     lifted). The trigger row now opens the sheet directly onto it, so it
+     needs to render; the base rule above already gives it display:flex. */
   .cutName { padding-right: 76px; }
+
+  /* ── the collapsed trigger row (mobileEntry) ──────────────────────────
+     Same dark-card surface as .butcheryStage in MenuPage.module.css, which
+     still wraps this component — the row inherits that border/radius/
+     background for free and only needs its own internal layout. */
+  .triggerRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 44px;
+    height: 64px;
+    padding: 0 clamp(14px, 4vw, 20px);
+    background: transparent;
+    border: 0;
+    color: inherit;
+    text-align: left;
+  }
+  .triggerGlyph {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 21px;
+    fill: rgba(var(--color-gold-rgb), 0.85);
+  }
+  .triggerText {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .triggerTitle {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 1.2;
+    color: var(--color-cream);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .triggerSub {
+    font-family: var(--font-label);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .triggerChevron {
+    flex: 0 0 auto;
+    color: var(--color-gold-dim);
+  }
+  [dir='rtl'] .triggerChevron { transform: scaleX(-1); }
+
+  /* ── the revealed overlay (mobileEntry, tapped open) ──────────────────
+     The row above stays exactly where it is — nothing about it resizes —
+     while this takes the whole viewport on top of it. Because .root is
+     removed from flow entirely, the wrapping .butcheryStage card in
+     MenuPage.module.css (auto-height on mobile) never grows to hold it,
+     so nothing below the row ever shifts, open or closed. */
+  .mobileBackdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: calc(var(--z-drawer) - 1);
+  }
+  .root.mobileSheet {
+    /* Same z-index and inset:0 coverage as SideDrawer's own overlay — this
+       covers the site header while open, matching that existing convention
+       rather than inventing a new one just for this sheet. */
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-drawer);
+    height: auto;
+    overflow-y: auto;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

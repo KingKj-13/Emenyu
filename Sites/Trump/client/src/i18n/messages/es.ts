@@ -62,6 +62,8 @@ export const es: Messages = {
   'cut.teaserBody': 'Cada carne aquí procede de una parte concreta del animal, y ese lugar determina su sabor. Toque un corte para ver en qué se convierte en la carta.',
   'cut.openButchery': 'Abrir la carnicería',
   'cut.loadingImage': 'El corte está en camino…',
+  'cut.mobileTitle': '¿De dónde viene mi corte?',
+  'cut.mobileSubtitle': '12 cortes · nombres ZA y US',
 
   // ── strings that were still hardcoded English on the guest screens ──
   'nav.quickAccess': 'Acceso rápido',

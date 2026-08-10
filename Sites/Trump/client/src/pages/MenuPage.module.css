@@ -247,7 +247,12 @@
 }
 
 @media (max-width: 899px) {
-  /* On a phone the panel is a bottom sheet anchored to the viewport, so the
-     stage only has to hold the animal and its rail. */
-  .butcheryStage { height: clamp(360px, 52vh, 520px); }
+  /* On a phone this wraps CowMeatSelector's mobileEntry trigger row, not the
+     chart itself — the chart only mounts once the row is tapped, and then as
+     a position:fixed overlay that contributes no box height of its own (see
+     .root.mobileSheet in CowMeatSelector.module.css). So this card hugs
+     whatever's actually inside it (the row, 64px) instead of reserving a
+     fixed share of the viewport the way it used to when the chart was always
+     inline here. */
+  .butcheryStage { height: auto; }
 }

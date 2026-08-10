@@ -62,6 +62,8 @@ export const ko: Messages = {
   'cut.teaserBody': '모든 스테이크는 소의 특정 부위에서 나오며, 그 위치가 맛과 식감을 결정합니다. 부위를 눌러 메뉴에서 어떤 요리가 되는지 확인해 보세요.',
   'cut.openButchery': '정육 코너 열기',
   'cut.loadingImage': '준비 중입니다…',
+  'cut.mobileTitle': '이 부위는 소의 어디서 왔을까요?',
+  'cut.mobileSubtitle': '12부위 · ZA·US 명칭',
 
   // ── strings that were still hardcoded English on the guest screens ──
   'nav.quickAccess': '빠른 이동',

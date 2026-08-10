@@ -62,6 +62,8 @@ export const ru: Messages = {
   'cut.teaserBody': 'Каждый стейк вырезается из определённой части туши, и именно это определяет его вкус. Нажмите на отруб, чтобы увидеть, во что он превращается в меню.',
   'cut.openButchery': 'Открыть мясную лавку',
   'cut.loadingImage': 'Готовим отруб…',
+  'cut.mobileTitle': 'Откуда мой отруб?',
+  'cut.mobileSubtitle': '12 отрубов · названия ZA и US',
 
   // ── strings that were still hardcoded English on the guest screens ──
   'nav.quickAccess': 'Быстрый доступ',

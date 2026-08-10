@@ -63,6 +63,8 @@ export const zhHans: Messages = {
   'cut.teaserBody': '每一块牛排都来自牛身上的特定部位，部位决定了口感。点击任一部位，了解它在菜单上对应的菜品。',
   'cut.openButchery': '进入肉品坊',
   'cut.loadingImage': '正在呈现…',
+  'cut.mobileTitle': '我的这块肉来自哪个部位？',
+  'cut.mobileSubtitle': '十二个部位 · ZA 与 US 命名',
 
   // ── strings that were still hardcoded English on the guest screens ──
   'nav.quickAccess': '快速导航',

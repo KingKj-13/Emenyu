@@ -123,7 +123,11 @@ async function assertNoOrdering(page, where) {
   const chat = await page.locator('[class*="chat" i], [aria-label*="chat" i], [aria-label*="sommelier" i]').count();
   check('no chatbot on the menu', chat === 0, String(chat));
 
-  // ── 3b. the cow sits inline on the menu, ABOVE the bundles ──────────────
+  // ── 3b. the cow sits inline on the menu, under MAINS ─────────────────────
+  // It used to sit above the bundles, before every category — a beef-primal
+  // tool has no business gating a guest's path to Starters. It now lives
+  // right before the Mains category it's actually about; the bundles stay
+  // exactly where they were.
   const cowInline = await page.locator('svg[data-cow-chart]').count();
   check('cow selector is inline on the menu', cowInline === 1, String(cowInline));
   const reco = await page.locator('h2:has-text("Not sure what to order")').count();
@@ -131,16 +135,19 @@ async function assertNoOrdering(page, where) {
   // compareDocumentPosition, not bounding boxes: the cow lives in a bounded
   // stage whose contents transform during flight, so its box is not a
   // reliable proxy for where the section sits in the page.
-  const order = await page.evaluate(() => {
+  const placement = await page.evaluate(() => {
     const cow = document.querySelector('svg[data-cow-chart]');
     const bundles = [...document.querySelectorAll('h2')]
       .find(h => /not sure what to order/i.test(h.textContent || ''));
-    if (!cow || !bundles) return `missing cow=${!!cow} bundles=${!!bundles}`;
-    // FOLLOWING (4) means bundles come after the cow in document order.
-    return (cow.compareDocumentPosition(bundles) & Node.DOCUMENT_POSITION_FOLLOWING)
-      ? 'cow-above-reco' : 'reco-above-cow';
+    const stage = cow?.closest('section[aria-label]') ?? null;
+    if (!cow || !bundles || !stage) return { ok: false, detail: `missing cow=${!!cow} bundles=${!!bundles} stage=${!!stage}` };
+    // FOLLOWING (4) on (bundles, stage) means the stage comes AFTER the
+    // bundles in document order — i.e. the bundles are still first.
+    const bundlesFirst = !!(bundles.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING);
+    const nextHeading = stage.nextElementSibling?.querySelector('h2')?.textContent?.trim();
+    return { ok: bundlesFirst && nextHeading === 'Trumps Premium Steaks', detail: `bundlesFirst=${bundlesFirst} nextSection="${nextHeading}"` };
   });
-  check('cow sits above the bundles', order === 'cow-above-reco', order);
+  check('cow sits under Mains; bundles stay first', placement.ok, placement.detail);
 
   // The Trump book view was removed outright — no toggle, no route.
   const bookToggle = await page.locator('[aria-label*="book" i], button:has-text("Book")').count();
@@ -265,6 +272,52 @@ async function assertNoOrdering(page, where) {
   check('SEARCH is emitted once settled',
     sent.filter(e => e === 'SEARCH').length === 1,
     `${sent.filter(e => e === 'SEARCH').length} SEARCH events`);
+
+  // ── 8c. mobile: the compact entry row (390px) ────────────────────────────
+  // A second, phone-sized context — every assertion above ran at the tablet-
+  // landscape viewport (1194x834), which sits above the 900px breakpoint and
+  // never exercises this code path at all.
+  const mobileCtx = await browser.newContext({
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true,
+  });
+  const mp = await mobileCtx.newPage();
+  await go(mp, `${BASE}/table1/menu`);
+  await mp.waitForTimeout(1000);
+
+  const starterCow = await mp.locator('svg[data-cow-chart]').count();
+  check('no cow mounted at Starters on mobile', starterCow === 0, String(starterCow));
+
+  const row = mp.locator('button[class*="triggerRow"]');
+  await row.scrollIntoViewIfNeeded().catch(() => {});
+  await mp.waitForTimeout(500);
+  const rowCount = await row.count();
+  check('mobile trigger row exists', rowCount === 1, String(rowCount));
+  const rowBox = await row.boundingBox();
+  check('trigger row is a real tap target (>=44px tall)',
+    !!rowBox && rowBox.height >= 44, rowBox ? `${Math.round(rowBox.height)}px` : 'no box');
+
+  const scrollBefore = await mp.evaluate(() => window.scrollY);
+  await row.click();
+  await mp.waitForTimeout(800);
+  const scrollAfterOpen = await mp.evaluate(() => window.scrollY);
+  check('opening the sheet does not scroll the page',
+    scrollAfterOpen === scrollBefore, `${scrollBefore} -> ${scrollAfterOpen}`);
+
+  const sheetCow = await mp.locator('svg[data-cow-chart]').count();
+  check('revealing mounts the chart', sheetCow === 1, String(sheetCow));
+  const idleText = await mp.locator('[class*="idle"]').first().innerText().catch(() => '');
+  check('sheet opens straight to idle content (naming toggle + cut list)',
+    /ZA/.test(idleText) && /US/.test(idleText), idleText.slice(0, 60).replace(/\n/g, ' | '));
+
+  await mp.keyboard.press('Escape');
+  await mp.waitForTimeout(700);
+  const scrollAfterClose = await mp.evaluate(() => window.scrollY);
+  check('closing restores the exact scroll position',
+    scrollAfterClose === scrollBefore, `${scrollBefore} -> ${scrollAfterClose}`);
+  const rowStillThere = await mp.locator('button[class*="triggerRow"]').count();
+  check('collapses back to the row rather than vanishing', rowStillThere === 1, String(rowStillThere));
+
+  await mobileCtx.close();
 
   // ── 9. admin login still protected ──────────────────────────────────────
   await go(page, `${BASE}/Admin`);

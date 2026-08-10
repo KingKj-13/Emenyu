@@ -64,6 +64,8 @@ export const af: Messages = {
   'cut.teaserBody': 'Elke steak hier kom van ’n spesifieke deel van die dier af, en waar dit gesit het bepaal hoe dit eet. Tik op ’n hoofsnit om te sien wat dit op die spyskaart word.',
   'cut.openButchery': 'Open die slaghuis',
   'cut.loadingImage': 'Die snit kom nou…',
+  'cut.mobileTitle': 'Waar kom my snit vandaan?',
+  'cut.mobileSubtitle': '12 hoofsnitte · ZA- en US-benamings',
 
   // ── strings that were still hardcoded English on the guest screens ──
   'nav.quickAccess': 'Vinnige toegang',

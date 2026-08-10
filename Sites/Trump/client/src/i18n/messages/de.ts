@@ -62,6 +62,8 @@ export const de: Messages = {
   'cut.teaserBody': 'Jedes Steak hier stammt von einer bestimmten Stelle des Tieres, und wo es saß, entscheidet über den Geschmack. Tippen Sie auf ein Teilstück, um zu sehen, was auf der Karte daraus wird.',
   'cut.openButchery': 'Fleischerei öffnen',
   'cut.loadingImage': 'Das Stück kommt gleich…',
+  'cut.mobileTitle': 'Woher kommt mein Stück?',
+  'cut.mobileSubtitle': '12 Teilstücke · ZA- und US-Bezeichnungen',
 
   // ── strings that were still hardcoded English on the guest screens ──
   'nav.quickAccess': 'Schnellzugriff',

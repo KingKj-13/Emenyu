@@ -76,6 +76,13 @@ export const en = {
   'cut.teaserBody': 'Every steak here comes off a specific part of the animal, and where it sat decides how it eats. Tap a primal to see what it becomes on the menu.',
   'cut.openButchery': 'Open the butchery',
   'cut.loadingImage': 'Bringing the cut through…',
+  // The mobile trigger row's own two-line copy — see cut.twelvePrimals /
+  // cut.naming for the panel this opens onto. "ZA and US" is written to match
+  // the toggle it opens onto, which shows the codes "ZA" / "US" untranslated
+  // in every language — that pairing is what the guest will actually see, not
+  // a market-specific naming clash, so this stays literal rather than local.
+  'cut.mobileTitle': "Where's my cut from?",
+  'cut.mobileSubtitle': '12 primals · ZA and US names',
 
   // ── generic ─────────────────────────────────────────────────────────────
   // ── strings that were still hardcoded English on the guest screens ──
