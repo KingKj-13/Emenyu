@@ -10,6 +10,7 @@ import {
 import {
   buildCutMenuIndex, getCutMenuMapping, type CutMenuMapping, type CutMenuMatch,
 } from './cutMenuMap';
+import { useEnglishNameByDbId } from '../../hooks/useEnglishMenu';
 import { serverCutToMatch, type ServerCut } from './useButcheryCuts';
 import { formatPrice } from '../../lib/menuUtils';
 import { useI18n } from '../../i18n';
@@ -291,8 +292,25 @@ export function CowMeatSelector({
     () => mapping ?? getCutMenuMapping(restaurantId),
     [mapping, restaurantId]
   );
+  // The match rules are English regex; `items` carries whatever the guest's
+  // locale translated dish names into. Matching against the localized name
+  // directly works by ACCIDENT in a language that happens to leave enough of
+  // the English cut word intact (this menu's own "T-Bone"/"Tomahawk" do), and
+  // fails completely in one that translates everything — the whole chart
+  // would then show every cut as empty rather than the real menu. Resolve the
+  // English name back out by dbId and match against that instead; the
+  // returned MenuItem objects are still the localized ones, so display is
+  // unaffected.
+  const englishNameByDbId = useEnglishNameByDbId();
+  const matchName = useCallback(
+    (item: MenuItem) => {
+      const english = item.dbId != null ? englishNameByDbId.get(item.dbId) : undefined;
+      return english ?? item.name;
+    },
+    [englishNameByDbId]
+  );
   const cutIndex = useMemo(() => {
-    const derived = buildCutMenuIndex(CUTS.map(c => c.id), items, resolvedMapping);
+    const derived = buildCutMenuIndex(CUTS.map(c => c.id), items, resolvedMapping, matchName);
     if (!serverCuts) return derived;
     // A curated cut REPLACES the name-matched result rather than merging with
     // it: an owner who removed a link meant to remove it, and a merge would
@@ -302,7 +320,7 @@ export function CowMeatSelector({
       if (cut.items.length > 0) merged[slug] = serverCutToMatch(cut);
     }
     return merged;
-  }, [items, resolvedMapping, serverCuts]);
+  }, [items, resolvedMapping, serverCuts, matchName]);
 
   /**
    * The cut's copy, resolved per field. Precedence, highest first:

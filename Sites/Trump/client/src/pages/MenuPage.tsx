@@ -17,6 +17,7 @@ import { CowMeatSelector } from '../components/butchery/CowMeatSelector';
 import { useButcheryCuts } from '../components/butchery/useButcheryCuts';
 import { RecommendedOrders } from '../components/menu/RecommendedOrders';
 import { getCutMenuMapping, hasCutMenuMatches } from '../components/butchery/cutMenuMap';
+import { useEnglishNameByDbId } from '../hooks/useEnglishMenu';
 import { useMenu } from '../hooks/useMenu';
 import { useFilters } from '../hooks/useFilters';
 import { useT, useI18n } from '../i18n';
@@ -103,9 +104,22 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   // The butchery chart only earns its place on a menu that actually sells beef
   // primals — this is data-driven rather than tenant-gated, so a menu without
   // them (Carmella) simply never renders the banner.
+  //
+  // Matched against the ENGLISH name, not allItems' own (possibly localized)
+  // .name — the match rules are English regex, and a fully-translated menu
+  // (no Latin substring survives in any dish name) would otherwise make this
+  // false in that guest's language even though the English menu clearly has
+  // beef primals. Found live: this menu's own German translation happens to
+  // leave "T-Bone"/"Tomahawk" in Latin script, so it kept matching by
+  // accident; Japanese and Arabic translate everything, so hasCutMenuMatches
+  // silently went false and the chart disappeared for those guests entirely.
+  const englishNameByDbId = useEnglishNameByDbId();
   const showButchery = useMemo(
-    () => hasCutMenuMatches(allItems, getCutMenuMapping(RESTAURANT_ID)),
-    [allItems]
+    () => hasCutMenuMatches(allItems, getCutMenuMapping(RESTAURANT_ID), item => {
+      const english = item.dbId != null ? englishNameByDbId.get(item.dbId) : undefined;
+      return english ?? item.name;
+    }),
+    [allItems, englishNameByDbId]
   );
   const scrollToSteaks = useCallback(() => {
     const id = `section-${MAINS_CATEGORY_TITLE.toLowerCase().replace(/\s+/g, '-')}`;

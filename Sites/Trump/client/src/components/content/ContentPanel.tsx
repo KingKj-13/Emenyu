@@ -5,8 +5,8 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { LOCALES } from '../../i18n/locales';
-import { flattenMenu } from '../../lib/menuUtils';
-import type { MenuData, MenuItem } from '../../types/menu';
+import { useEnglishMenu } from '../../hooks/useEnglishMenu';
+import type { MenuItem } from '../../types/menu';
 import styles from './ContentPanel.module.css';
 
 /**
@@ -77,26 +77,8 @@ export function ContentPanel() {
 }
 
 /* ── dishes ──────────────────────────────────────────────────────────────── */
-
-/**
- * The English menu, fetched explicitly.
- *
- * NOT the MenuContext copy: that is localized to whatever language the admin is
- * personally reading in, so an owner browsing in Korean would see Korean text
- * labelled "English" beneath every translation field — the one reference the
- * editor exists to show them.
- */
-function useEnglishMenu(): MenuItem[] {
-  const [menu, setMenu] = useState<MenuData>({});
-  useEffect(() => {
-    let cancelled = false;
-    api.getMenu('en')
-      .then(d => { if (!cancelled) setMenu(d); })
-      .catch(() => { /* the list simply stays empty */ });
-    return () => { cancelled = true; };
-  }, []);
-  return useMemo(() => flattenMenu(menu).filter(i => i.dbId != null), [menu]);
-}
+// useEnglishMenu moved to hooks/useEnglishMenu.ts — a second, unrelated
+// consumer (the butchery chart's cut matching) needed the exact same thing.
 
 function DishContent() {
   const items = useEnglishMenu();

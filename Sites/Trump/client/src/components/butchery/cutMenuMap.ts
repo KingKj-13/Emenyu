@@ -129,13 +129,34 @@ function test(name: string, patterns: RegExp[]): boolean {
 }
 
 /**
+ * The string a rule is tested against. Defaults to the item's own `.name`,
+ * which is correct as long as that name is English.
+ *
+ * It stops being correct the moment a caller's items carry LOCALIZED names —
+ * `GET /api/menu?locale=ja` overwrites `item.name` with the Japanese
+ * translation, and every rule above is an English regex. A menu whose dishes
+ * are fully translated (no Latin substrings survive — this menu's own
+ * "T-Bone"/"Tomahawk" happen to stay Latin, which is why German silently
+ * kept working while Japanese and Arabic went dark: neither retains an
+ * English word anywhere) then matches nothing, `hasCutMenuMatches` returns
+ * false, and the whole chart disappears — not just fails to translate.
+ *
+ * A caller whose items may be localized should pass a resolver that looks up
+ * the item's ENGLISH name (by the locale-invariant `dbId`) instead of using
+ * the localized `.name` directly. See hooks/useEnglishNameByDbId.
+ */
+export type MatchNameResolver = (item: MenuItem) => string;
+const defaultNameResolver: MatchNameResolver = item => String(item.name || '');
+
+/**
  * Resolve one cut against the tenant's live menu. Pure and cheap — memoize the
  * whole table once per menu load rather than calling this per render.
  */
 export function matchCutItems(
   cutId: string,
   items: MenuItem[],
-  mapping: CutMenuMapping
+  mapping: CutMenuMapping,
+  matchName: MatchNameResolver = defaultNameResolver
 ): CutMenuMatch {
   const rule = mapping.rules[cutId];
   if (!rule) return EMPTY;
@@ -145,7 +166,7 @@ export function matchCutItems(
   const claimed = new Set<MenuItem>();
 
   for (const item of items) {
-    const name = String(item.name || '');
+    const name = matchName(item);
     if (!name || mapping.notBeef.test(name)) continue;
     if (rule.exclude && test(name, rule.exclude)) continue;
     if (test(name, rule.match)) {
@@ -157,7 +178,7 @@ export function matchCutItems(
   if (rule.related) {
     for (const item of items) {
       if (claimed.has(item)) continue;
-      const name = String(item.name || '');
+      const name = matchName(item);
       if (!name || mapping.notBeef.test(name)) continue;
       if (rule.related.exclude && test(name, rule.related.exclude)) continue;
       if (test(name, rule.related.match)) relatedItems.push(item);
@@ -177,11 +198,15 @@ export function matchCutItems(
  * butchery entirely for a tenant whose menu has no beef primals, without that
  * caller needing to know anything about cuts. Early-exits on the first hit.
  */
-export function hasCutMenuMatches(items: MenuItem[], mapping: CutMenuMapping): boolean {
+export function hasCutMenuMatches(
+  items: MenuItem[],
+  mapping: CutMenuMapping,
+  matchName: MatchNameResolver = defaultNameResolver
+): boolean {
   for (const rule of Object.values(mapping.rules)) {
     if (rule.match.length === 0) continue;
     for (const item of items) {
-      const name = String(item.name || '');
+      const name = matchName(item);
       if (!name || mapping.notBeef.test(name)) continue;
       if (rule.exclude && test(name, rule.exclude)) continue;
       if (test(name, rule.match)) return true;
@@ -194,9 +219,10 @@ export function hasCutMenuMatches(items: MenuItem[], mapping: CutMenuMapping): b
 export function buildCutMenuIndex(
   cutIds: string[],
   items: MenuItem[],
-  mapping: CutMenuMapping
+  mapping: CutMenuMapping,
+  matchName: MatchNameResolver = defaultNameResolver
 ): Record<string, CutMenuMatch> {
   const index: Record<string, CutMenuMatch> = {};
-  for (const id of cutIds) index[id] = matchCutItems(id, items, mapping);
+  for (const id of cutIds) index[id] = matchCutItems(id, items, mapping, matchName);
   return index;
 }
