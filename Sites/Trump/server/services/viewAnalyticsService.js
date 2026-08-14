@@ -112,6 +112,66 @@ function createViewAnalyticsService({ prismaMenuService, logger = null } = {}) {
     return { restaurantId, createdAt: { gte: range.from, lte: range.to } };
   }
 
+  /** Same matching key on both sides of a video<->order name comparison. */
+  function normalizeItemName(value) {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  /**
+   * Video watch -> order, correlated by the browser's own engagement session
+   * id (lib/engagement.ts getSessionId()), which a Demo-tenant order carries
+   * in its `raw` JSON when the guest submits their own cart (see
+   * PremiumCartSheet.tsx). Deliberately NOT built for Trump: its guest app has
+   * no cart (orders come from the waiter's own device, with no guest session
+   * attached), so a session-based conversion has nothing to attach to there —
+   * see the file-header comment on why that's a real product distinction, not
+   * a gap. A restaurantId with no session-tagged orders simply gets zero
+   * conversions everywhere below, same as "no traffic yet."
+   *
+   * Correlation is per-SESSION, not per-event-with-a-time-window: a guest who
+   * watched the video is a guest who watched the video, however many loops or
+   * however long before they actually ordered from the same phone.
+   */
+  async function videoConversionsBySession(prisma, range, menuItemIds) {
+    if (menuItemIds.length === 0) return new Map();
+
+    const [playRows, orders] = await Promise.all([
+      prisma.viewEvent.findMany({
+        where: { restaurantId, createdAt: { gte: range.from, lte: range.to }, eventType: 'VIDEO_PLAY', menuItemId: { in: menuItemIds } },
+        select: { menuItemId: true, label: true, sessionId: true },
+      }),
+      prisma.order.findMany({
+        where: { restaurantId, timestamp: { gte: range.from, lte: range.to } },
+        select: { raw: true },
+      }),
+    ]);
+
+    // sessionId -> Set of normalized item names that session ordered.
+    const orderedBySession = new Map();
+    for (const o of orders) {
+      const raw = o.raw;
+      const sid = typeof raw?.sessionId === 'string' ? raw.sessionId.trim() : '';
+      if (!sid) continue; // waiter-submitted order, no guest session to correlate
+      const names = Array.isArray(raw?.items) ? raw.items.map(it => normalizeItemName(it?.name)) : [];
+      if (names.length === 0) continue;
+      let set = orderedBySession.get(sid);
+      if (!set) { set = new Set(); orderedBySession.set(sid, set); }
+      names.forEach(n => set.add(n));
+    }
+
+    // menuItemId -> Set of sessions that watched AND later ordered it.
+    const convertedSessionsByItem = new Map();
+    for (const row of playRows) {
+      const sid = row.sessionId;
+      const orderedNames = orderedBySession.get(sid);
+      if (!orderedNames || !orderedNames.has(normalizeItemName(row.label))) continue;
+      let set = convertedSessionsByItem.get(row.menuItemId);
+      if (!set) { set = new Set(); convertedSessionsByItem.set(row.menuItemId, set); }
+      set.add(sid);
+    }
+    return new Map([...convertedSessionsByItem].map(([id, set]) => [id, set.size]));
+  }
+
   /**
    * The admin dashboard payload, in one pass.
    *
@@ -175,6 +235,7 @@ function createViewAnalyticsService({ prismaMenuService, logger = null } = {}) {
 
       const totalLocale = byLocale.reduce((s, r) => s + r._count._all, 0) || 1;
       const completesById = new Map(videoCompletes.map(r => [r.menuItemId, r._count._all]));
+      const conversionsById = await videoConversionsBySession(prisma, range, videoPlays.map(r => r.menuItemId).filter(id => id != null));
 
       return {
         range: { from: range.from.toISOString(), to: range.to.toISOString() },
@@ -200,12 +261,15 @@ function createViewAnalyticsService({ prismaMenuService, logger = null } = {}) {
         })),
         video: videoPlays.map(r => {
           const completed = completesById.get(r.menuItemId) || 0;
+          const conversions = conversionsById.get(r.menuItemId) || 0;
           return {
             menuItemId: r.menuItemId,
             name: r.label,
             plays: r._count._all,
             completes: completed,
             completionRate: r._count._all ? Math.round((completed / r._count._all) * 1000) / 10 : 0,
+            conversions,
+            conversionRate: r._count._all ? Math.round((conversions / r._count._all) * 1000) / 10 : 0,
           };
         }).sort((a, b) => b.plays - a.plays).slice(0, 25),
       };

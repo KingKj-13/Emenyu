@@ -32,6 +32,7 @@ export function ChefIntelligencePanel() {
   const [loading, setLoading] = useState(true);
   const [topItems, setTopItems] = useState<Item[]>([]);
   const [bottomItems, setBottomItems] = useState<Item[]>([]);
+  const [topDrinks, setTopDrinks] = useState<Item[]>([]);
   const [wineItems, setWineItems] = useState<{ name: string; revenue: number; acceptanceRate: number; impressions: number }[]>([]);
   const [premiumItems, setPremiumItems] = useState<MenuRow[]>([]);
   const [chefRecs, setChefRecs] = useState<ChefRec[]>([]);
@@ -51,9 +52,10 @@ export function ChefIntelligencePanel() {
 
     // "Dishes" here must never include drinks — excludeCategory pulls a wider
     // pool server-side and filters before slicing to the display limit.
-    const [ti, bi, reco, menu, recs, recentItems, priorItems] = await Promise.all([
+    const [ti, bi, di, reco, menu, recs, recentItems, priorItems] = await Promise.all([
       api.getAnalyticsItems({ from, to, order: 'desc', limit: 8, excludeCategory: 'WINE,DRINK' }).catch(() => []),
       api.getAnalyticsItems({ from, to, order: 'asc', limit: 8, excludeCategory: 'WINE,DRINK' }).catch(() => []),
+      api.getAnalyticsItems({ from, to, order: 'desc', limit: 8, category: 'WINE,DRINK' }).catch(() => []),
       api.getRecommendationAnalytics({ from, to }).catch(() => null),
       api.getAdminMenuItems().catch(() => []),
       api.getChefRecs().catch(() => []),
@@ -63,6 +65,7 @@ export function ChefIntelligencePanel() {
 
     setTopItems(ti as Item[]);
     setBottomItems(bi as Item[]);
+    setTopDrinks(di as Item[]);
     setChefRecs((recs as ChefRec[]) || []);
 
     const wine = ((reco?.items || []) as { name?: string; recType?: string; revenue: number; acceptanceRate: number; impressions: number }[])
@@ -124,6 +127,10 @@ export function ChefIntelligencePanel() {
           <ItemList rows={bottomItems} empty="No sales yet." />
         </Section>
       </div>
+
+      <Section title="Most ordered drinks" subtitle="Wine, cocktails and other beverages">
+        <ItemList rows={topDrinks} empty="No drink sales yet." />
+      </Section>
 
       <div className={styles.twoUp}>
         <Section title="Best wine pairings" subtitle={`Recommended wine, by ${ASSISTANT_NAME} acceptance & revenue`}>

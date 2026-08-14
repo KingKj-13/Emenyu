@@ -31,7 +31,15 @@ interface Summary {
   topCategories: Array<{ name: string; views: number }>;
   topCuts: Array<{ slug: string; name: string; views: number }>;
   languages: Array<{ locale: string; views: number; share: number }>;
-  video: Array<{ menuItemId: number; name: string; plays: number; completes: number; completionRate: number }>;
+  video: Array<{
+    menuItemId: number; name: string; plays: number; completes: number; completionRate: number;
+    // Sessions that watched this dish's video and later placed an order
+    // containing it — correlated by the guest's own browser session, so this
+    // is only ever non-zero for a tenant whose guests order from their own
+    // device (the Demo tenant). Trump's waiter-submitted orders carry no
+    // guest session to correlate against, by design — see server comment.
+    conversions: number; conversionRate: number;
+  }>;
 }
 
 interface Timeline {
@@ -201,7 +209,7 @@ export function EngagementPanel() {
               ) : (
                 <table className={styles.table}>
                   <thead>
-                    <tr><th>Dish</th><th>Plays</th><th>Finished</th><th>Rate</th></tr>
+                    <tr><th>Dish</th><th>Plays</th><th>Finished</th><th>Rate</th><th>Ordered after</th></tr>
                   </thead>
                   <tbody>
                     {summary.video.map(v => (
@@ -210,6 +218,9 @@ export function EngagementPanel() {
                         <td>{v.plays}</td>
                         <td>{v.completes}</td>
                         <td className={styles.rate}>{v.completionRate}%</td>
+                        <td className={styles.rate}>
+                          {v.conversions > 0 ? `${v.conversions} (${v.conversionRate}%)` : '—'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

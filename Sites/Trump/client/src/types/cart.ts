@@ -49,4 +49,10 @@ export interface OrderPayload {
   // stable across retries of the *same* attempt and only regenerate once
   // that attempt actually succeeds.
   clientOrderId?: string;
+  // The engagement lib's per-sitting id (lib/engagement.ts getSessionId()) —
+  // lets analytics correlate a guest watching a dish's video with that same
+  // session later ordering it. Optional: Trump's own waiter-submitted orders
+  // never carry one, and that's fine, not a bug (see viewAnalyticsService's
+  // comment on why conversion tracking doesn't apply there).
+  sessionId?: string;
 }

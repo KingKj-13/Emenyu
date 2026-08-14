@@ -8,6 +8,7 @@ import { api } from '../services/api';
 import { flattenMenu, formatPrice, normalizeName } from '../lib/menuUtils';
 import { resolveImage, resolveThumbnail, FALLBACK_IMAGE } from '../lib/imageResolver';
 import { trackOrdered } from '../lib/recoAnalytics';
+import { getSessionId } from '../lib/engagement';
 import { Spinner } from '../components/ui/Spinner';
 import { PremiumCartItem } from './cart/PremiumCartItem';
 import { PremiumTipSelector } from './cart/PremiumTipSelector';
@@ -98,6 +99,7 @@ export function PremiumCartSheet({ open, onClose }: Props) {
         table_number: tableId,
         totals,
         clientOrderId: pendingOrderId.current,
+        sessionId: getSessionId(),
       });
       trackOrdered(orderedItems.map(i => i.name));
       setHistory([...currentOrder, ...orderedItems]);

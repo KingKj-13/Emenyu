@@ -32,6 +32,34 @@ if (!explicitDatabaseUrl) {
   process.env.DATABASE_URL = explicitDatabaseUrl;
 }
 
+// Hard stop before touching anything: the three-levels-up '.env'/'.env.local'
+// paths above assume THIS repo's local layout (Sites/Trump/scripts, three
+// directories below the repo root that holds .env.local). Production's
+// flattened deploy layout (Emenyu/Trump/scripts) resolves those same paths to
+// somewhere that doesn't exist, so the fallback silently lands on TRUMP'S OWN
+// .env one level up instead — and this script would then seed/clear
+// 'demo-steakhouse' rows into Trump's real database. Caught live 2026-08-14:
+// exactly that happened on production (48 items / 625 view events / 44
+// orders written to `emenyu`, cleaned up after). This tenant-name check is
+// the actual guardrail — the path resolution above is left as-is (fixing it
+// to detect "flattened" vs "nested" layouts is more fragile than just
+// refusing to run against the wrong database).
+const resolvedDbUrl = process.env.DATABASE_URL || '';
+const resolvedDbName = (resolvedDbUrl.split('/').pop() || '').split('?')[0];
+if (!/demo/i.test(resolvedDbName)) {
+  console.error(
+    `Refusing to run: resolved DATABASE_URL points at database "${resolvedDbName || '(none)'}", ` +
+    `which doesn't look like a demo database. This script only ever writes/clears ` +
+    `restaurantId='demo-steakhouse' rows, but it writes them into WHATEVER database ` +
+    `DATABASE_URL resolves to — on the wrong database that means seeding demo rows ` +
+    `into a different tenant's real data.\n` +
+    `Pass the demo database explicitly, e.g.:\n` +
+    `  DATABASE_URL=postgresql://user:pass@host:5432/emenyu_demo node scripts/seed-demo-restaurant.js --apply`
+  );
+  process.exit(1);
+}
+console.log(`Target database: ${resolvedDbName}`);
+
 const { getPrisma } = require('../server/services/prismaClient');
 const { PrismaOrderService } = require('../server/services/prismaOrderService');
 const { getCategoryType } = require('../server/utils/helpers');
@@ -197,6 +225,7 @@ async function main() {
     const assignments = await prisma.waiterAssignment.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
     const carts = await prisma.activeCartState.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
     const orders = await prisma.order.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+    const views = await prisma.viewEvent.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
     const [items, cats, bundles, recs, tables, guests] = await Promise.all([
       prisma.menuItem.deleteMany({ where: { restaurantId: RESTAURANT_ID } }),
       prisma.menuCategory.deleteMany({ where: { restaurantId: RESTAURANT_ID } }),
@@ -205,7 +234,7 @@ async function main() {
       prisma.table.deleteMany({ where: { restaurantId: RESTAURANT_ID } }),
       prisma.guest.deleteMany({ where: { restaurantId: RESTAURANT_ID } }),
     ]);
-    console.log(`Cleared demo-steakhouse rows: ${items.count} items, ${cats.count} categories, ${bundles.count} bundles, ${recs.count} recs, ${tables.count} tables, ${guests.count} guests, ${orders.count} orders, ${assignments.count} assignments, ${carts.count} carts.`);
+    console.log(`Cleared demo-steakhouse rows: ${items.count} items, ${cats.count} categories, ${bundles.count} bundles, ${recs.count} recs, ${tables.count} tables, ${guests.count} guests, ${orders.count} orders, ${assignments.count} assignments, ${carts.count} carts, ${views.count} view events.`);
     await prisma.$disconnect();
     process.exit(0);
   }
@@ -225,6 +254,7 @@ async function main() {
   await prisma.waiterAssignment.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
   await prisma.activeCartState.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
   await prisma.order.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+  await prisma.viewEvent.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
   await prisma.menuItem.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
   await prisma.menuCategory.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
   await prisma.recommendationBundle.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
@@ -408,6 +438,115 @@ async function main() {
     }
   }
   console.log(`Seeded ${seededLive} live orders + waiter assignments (tables now show occupied).`);
+
+  // ── Guest engagement (ViewEvent) + session-correlated orders ────────────────
+  // Simulates real browsing so the admin's Guest Engagement tab, and the video
+  // table's "Ordered after" conversion column, aren't empty on a fresh demo.
+  // Each simulated visit is one guest session: MENU_VIEW/ITEM_VIEW/CUT_VIEW/
+  // VIDEO_PLAY events, and — for a realistic subset, not all of them — an
+  // Order carrying the SAME sessionId (mirrors PremiumCartSheet.tsx's real
+  // getSessionId() call). That shared id, stored in Order.raw, is what lets
+  // viewAnalyticsService.getVideoConversions attribute a watch to an order
+  // with no schema change.
+  const VIDEO_ITEM_NAMES = [
+    'Springbok Carpaccio', 'Chicken Trinchado', 'Boerewors & Chakalaka',
+    'Wagyu Ribeye 300g', 'T-Bone 500g', 'Beef Ribs (3 pce) ±1kg', 'Oxtail', 'Mixed Grill',
+    'Kingklip & Prawn', 'Jalapeno Chilli and Cheese Burger', 'Seafood Pasta',
+    'Firecracker Chicken Wings (400g)', 'Cape Malva Pudding', 'Chocolate Brownie',
+    'Flash Pan Fried Chicken Livers',
+  ];
+  const LOCALES = ['en', 'fr', 'es', 'zh-Hans', 'de', 'af', 'ja', 'pt-BR'];
+  const DEVICE_TYPES = ['phone', 'phone', 'phone', 'tablet'];
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const pickSome = (arr, n) => {
+    const pool = [...arr];
+    const out = [];
+    while (out.length < n && pool.length > 0) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    return out;
+  };
+
+  const SESSION_COUNT = 60;
+  let seededEvents = 0;
+  let seededSessionOrders = 0;
+  const allItemRows = [...itemsByName.values()];
+  const videoItemRows = allItemRows.filter(i => VIDEO_ITEM_NAMES.includes(i.name));
+
+  for (let s = 0; s < SESSION_COUNT; s++) {
+    const sessId = `seed-${Date.now().toString(36)}-${s}-${Math.random().toString(36).slice(2, 8)}`;
+    const table = `table${1 + (s % TABLE_COUNT)}`;
+    const locale = Math.random() < 0.55 ? 'en' : pick(LOCALES);
+    const deviceType = pick(DEVICE_TYPES);
+    const visitStart = new Date();
+    visitStart.setDate(visitStart.getDate() - Math.floor(Math.random() * 14));
+    visitStart.setHours(17 + Math.floor(Math.random() * 6), Math.floor(Math.random() * 60), 0, 0);
+    let cursor = new Date(visitStart);
+    const advance = secs => { cursor = new Date(cursor.getTime() + secs * 1000); return new Date(cursor); };
+
+    const events = [];
+    const push = (eventType, extra = {}) => events.push({
+      restaurantId: RESTAURANT_ID, eventType, sessionId: sessId, locale, tableId: table, deviceType,
+      label: '', categoryName: '', dwellMs: null, positionSec: null, menuItemId: null, cutSlug: null,
+      createdAt: advance(2 + Math.random() * 6),
+      ...extra,
+    });
+
+    push('MENU_VIEW');
+    if (locale !== 'en') push('LANGUAGE_SELECT', { label: locale });
+
+    const viewedCount = 2 + Math.floor(Math.random() * 4);
+    const viewedPool = Math.random() < 0.7 && videoItemRows.length > 0
+      ? [...pickSome(videoItemRows, Math.min(2, videoItemRows.length)), ...pickSome(allItemRows, viewedCount)]
+      : pickSome(allItemRows, viewedCount);
+    const viewed = pickSome(viewedPool, Math.min(viewedCount, viewedPool.length));
+
+    for (const item of viewed) {
+      push('CATEGORY_VIEW', { categoryName: item.categoryTitle });
+      const dwellMs = 4000 + Math.floor(Math.random() * 22000);
+      push('ITEM_VIEW', { menuItemId: item.id, label: item.name, categoryName: item.categoryTitle, dwellMs });
+      if (VIDEO_ITEM_NAMES.includes(item.name) && Math.random() < 0.65) {
+        push('VIDEO_PLAY', { menuItemId: item.id, label: item.name });
+        if (Math.random() < 0.6) push('VIDEO_COMPLETE', { menuItemId: item.id, label: item.name, positionSec: 12 });
+      }
+    }
+
+    if (Math.random() < 0.3) {
+      const cut = pick(['rib', 'sirloin', 'fillet', 'rump', 'chuck']);
+      push('CUT_VIEW', { cutSlug: cut, label: cut.charAt(0).toUpperCase() + cut.slice(1) });
+    }
+    if (Math.random() < 0.15) push('SEARCH', { label: pick(['wagyu', 'wine', 'burger', 'gluten free']) });
+
+    seededEvents += events.length;
+    await prisma.viewEvent.createMany({ data: events });
+
+    // ~55% of visits convert into an order, carrying items THIS session
+    // actually viewed most of the time (a real conversion) — and sometimes
+    // something else entirely, since a real guest browsing steak and
+    // ordering a burger is still a real, non-video-driven visit.
+    if (Math.random() < 0.55 && viewed.length > 0) {
+      const basketItems = Math.random() < 0.75
+        ? pickSome(viewed, Math.min(1 + Math.floor(Math.random() * 2), viewed.length))
+        : pickSome(allItemRows, 1 + Math.floor(Math.random() * 2));
+      const items = basketItems.map(row => {
+        const priced = CATEGORIES.flatMap(c => c.items).find(x => x.name === row.name);
+        return { name: row.name, price: priced?.price || 0, qty: 1, img: '', description: '' };
+      });
+      const subtotal = r2(items.reduce((sum, it) => sum + it.price * it.qty, 0));
+      const vat = r2(subtotal * 0.15);
+      const service = r2(subtotal * 0.05);
+      const total = r2(subtotal + vat + service);
+      const orderTs = advance(60 + Math.random() * 300);
+      const filename = `demo_seed_session_${table}_${orderTs.getTime()}_${s}.json`;
+      const order = {
+        table_number: table, waiterName: '', covers: 1 + Math.floor(Math.random() * 3),
+        notes: '[DEMO] seeded guest session', demoSeed: true, sessionId: sessId,
+        timestamp: orderTs.toISOString(), items,
+        totals: { subtotal, vat, service, tip: 0, total },
+      };
+      const saved = await orderService.saveOrder(order, table, filename, 'history');
+      if (saved) seededSessionOrders += 1;
+    }
+  }
+  console.log(`Seeded ${seededEvents} view events and ${seededSessionOrders} session-correlated orders across ${SESSION_COUNT} simulated guest sessions.`);
 
   if (typeof orderService.close === 'function') await orderService.close();
   await prisma.$disconnect();

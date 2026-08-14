@@ -52,6 +52,16 @@ let timer: number | null = null;
 let currentLocale = 'en';
 let currentTableId = '';
 
+/**
+ * The same per-sitting id every engagement event carries — exposed so an
+ * order submission can be tagged with it too, letting analytics correlate
+ * "watched this video" with "this session later ordered it" without any new
+ * identifier or a guest login. See viewAnalyticsService.getVideoConversions.
+ */
+export function getSessionId(): string {
+  return sessionId();
+}
+
 function sessionId(): string {
   try {
     let id = sessionStorage.getItem(SESSION_KEY);

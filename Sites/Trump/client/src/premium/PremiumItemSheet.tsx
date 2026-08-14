@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../services/api';
-import { resolveImage, resolveThumbnail, FALLBACK_IMAGE } from '../lib/imageResolver';
+import { resolveImage, resolveThumbnail, resolveVideo, FALLBACK_IMAGE } from '../lib/imageResolver';
 import { formatPrice } from '../lib/menuUtils';
 import { startDwell } from '../lib/engagement';
+import { useVideoEngagement } from '../hooks/useVideoEngagement';
 import { useCart } from '../hooks/useCart';
 import type { MenuItem } from '../types/menu';
 import styles from './PremiumItemSheet.module.css';
@@ -34,11 +35,20 @@ export function PremiumItemSheet({ item, open, onClose, onOpenItem, onAdded }: P
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
   const [pairing, setPairing] = useState<PairingItem | null>(null);
   const [imgError, setImgError] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+  const [playMedia, setPlayMedia] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const video = useVideoEngagement(item?.dbId, item?.name ?? '');
 
   useEffect(() => {
     if (!open || !item) return;
     setQty(1);
     setImgError(false);
+    setVideoError(false);
+    setPlayMedia(false);
+    setVideoReady(false);
+    video.reset();
     const baseVariants = (item.variants || []).filter(v => !v.isAddon);
     setSelectedVariant(baseVariants[0]?.name ?? null);
 
@@ -53,9 +63,18 @@ export function PremiumItemSheet({ item, open, onClose, onOpenItem, onAdded }: P
       })
       .catch(() => {});
 
-    return stop;
+    // Poster-first, same as Trump's ItemModal: the <video> tag (and the
+    // network request it triggers) doesn't exist in the DOM at all until the
+    // guest has actually lingered on this dish.
+    const timer = window.setTimeout(() => setPlayMedia(true), 3000);
+    return () => { stop(); window.clearTimeout(timer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item?.name]);
+
+  useEffect(() => {
+    if (!playMedia || !videoReady || !videoRef.current) return;
+    videoRef.current.play().catch(() => {});
+  }, [playMedia, videoReady]);
 
   if (!item) return null;
 
@@ -64,6 +83,7 @@ export function PremiumItemSheet({ item, open, onClose, onOpenItem, onAdded }: P
   const unitPrice = selected ? selected.price : item.price;
   const soldOut = item.available === false;
   const src = imgError ? FALLBACK_IMAGE : resolveImage(item);
+  const videoSrc = videoError ? null : resolveVideo(item);
 
   function handleAdd() {
     if (!item || soldOut) return;
@@ -98,8 +118,27 @@ export function PremiumItemSheet({ item, open, onClose, onOpenItem, onAdded }: P
       <div className={styles.sheet} role="dialog" aria-modal="true" aria-label={item.name}>
         <div className={styles.scroll}>
           <div className={styles.mediaWrap}>
+            {playMedia && videoSrc && (
+              <video
+                ref={videoRef}
+                src={videoSrc}
+                muted
+                loop
+                playsInline
+                className={styles.media}
+                onCanPlay={() => setVideoReady(true)}
+                onError={() => setVideoError(true)}
+                onPlaying={video.onPlaying}
+                onTimeUpdate={video.onTimeUpdate}
+              />
+            )}
             {src && (
-              <img src={src} alt={item.name} className={styles.media} onError={() => setImgError(true)} />
+              <img
+                src={src}
+                alt={item.name}
+                className={`${styles.media}${videoReady ? ` ${styles.mediaHidden}` : ''}`}
+                onError={() => setImgError(true)}
+              />
             )}
             <div className={styles.mediaScrim} />
             <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close">

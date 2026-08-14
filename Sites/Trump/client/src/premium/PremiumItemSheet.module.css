@@ -39,6 +39,19 @@
   object-fit: cover;
 }
 
+/* Video and image both carry .media and stack in the same box — the image
+   sits on top until the video (added to the DOM only after a 3s dwell) has
+   actually decoded a frame, then fades out rather than popping. */
+img.media {
+  position: absolute;
+  inset: 0;
+  transition: opacity 240ms ease;
+}
+
+img.media.mediaHidden {
+  opacity: 0;
+}
+
 .mediaScrim {
   position: absolute;
   inset: 0;
