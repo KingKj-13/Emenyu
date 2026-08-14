@@ -55,6 +55,7 @@ export const af: Messages = {
   'cut.texture': 'Tekstuur',
   'cut.bestFor': 'Beste vir',
   'cut.onMenu': 'Vanaand van hierdie snit',
+  'cut.from': 'Van {cut}',
   'cut.classically': 'Klassiek',
   'cut.notOnMenu': 'Nie vanaand op die spyskaart nie — vra jou kelner wat die slaghuis het.',
   'cut.browseSteaks': 'Sien elke steak',

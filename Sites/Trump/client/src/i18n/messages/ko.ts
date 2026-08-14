@@ -53,6 +53,7 @@ export const ko: Messages = {
   'cut.texture': '식감',
   'cut.bestFor': '어울리는 조리법',
   'cut.onMenu': '오늘 이 부위의 메뉴',
+  'cut.from': '{cut}에서',
   'cut.classically': '전통적인 조리법',
   'cut.notOnMenu': '오늘 메뉴에는 없습니다 — 정육 코너 재고는 직원에게 문의해 주세요.',
   'cut.browseSteaks': '모든 스테이크 보기',

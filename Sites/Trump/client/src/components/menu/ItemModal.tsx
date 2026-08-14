@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Heart, ChevronLeft, Flame, ConciergeBell } from 'lucide-react';
+import { X, Heart, ChevronLeft, Flame, ConciergeBell, Beef } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
 import { resolveImage, resolveVideo, resolveYouTubeEmbed, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
-import { useT } from '../../i18n';
+import { useT, useI18n } from '../../i18n';
+import { resolveCutCopy } from '../../i18n/butchery';
+import type { CutDefinition } from '../butchery/cutCatalog';
 import { localizeAllergens } from '../../lib/allergens';
 import { track, startDwell } from '../../lib/engagement';
 import { useVideoEngagement } from '../../hooks/useVideoEngagement';
@@ -29,6 +31,8 @@ interface ItemModalProps {
   onOpenItem?: (item: MenuItem) => void;
   canGoBack?: boolean;
   onBack?: () => void;
+  cutInfo?: { cut: CutDefinition; relation: 'primary' | 'related'; relatedLabel?: string } | null;
+  onViewCut?: (cutId: string) => void;
 }
 
 interface PairingItem {
@@ -122,8 +126,11 @@ export function ItemModal({
   onOpenItem,
   canGoBack = false,
   onBack,
+  cutInfo = null,
+  onViewCut,
 }: ItemModalProps) {
   const t = useT();
+  const { locale } = useI18n();
 
   const video = useVideoEngagement(item?.dbId, item?.name ?? '');
 
@@ -339,6 +346,20 @@ export function ItemModal({
             {item.popular && <Badge variant="gold">Guest Favourite</Badge>}
             {item.spice && <Badge variant="muted"><Flame size={11} /> {t(spiceLevelKey(item.spice))}</Badge>}
           </div>
+
+          {cutInfo && (
+            <button
+              type="button"
+              className={styles.cutLink}
+              onClick={() => onViewCut?.(cutInfo.cut.id)}
+              disabled={!onViewCut}
+            >
+              <Beef size={13} />
+              {cutInfo.relation === 'related'
+                ? `${cutInfo.relatedLabel} — ${resolveCutCopy(cutInfo.cut, locale, 'za').name}`
+                : t('cut.from', { cut: resolveCutCopy(cutInfo.cut, locale, 'za').name })}
+            </button>
+          )}
 
           <h2 className={styles.name} dir="auto">{item.name}</h2>
           {item.subtitle ? <p className={styles.description} dir="auto">{item.subtitle}</p> : null}

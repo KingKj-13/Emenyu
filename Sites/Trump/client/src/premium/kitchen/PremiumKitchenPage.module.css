@@ -1,0 +1,131 @@
+/* Kitchen display board — the one screen in this whole redesign that stays
+   dark on purpose: a KDS board lives on a mounted screen in a hot, bright
+   kitchen and has to be scannable at a glance, which is exactly why every
+   real KDS product (Toast, Square, etc.) stays near-black regardless of the
+   brand's front-of-house palette. What ties it back to the premium system is
+   the color FAMILY (the same muted brass/sage/amber/teal-blue used across
+   the waiter app) and the typography (Cormorant Garamond + Manrope), not the
+   background. */
+.page { padding: 20px; min-height: 100vh; background: #14120d; }
+
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px; padding-bottom: 16px;
+  border-bottom: 1px solid rgba(245,240,230,0.1);
+}
+.headerLeft { display: flex; align-items: center; gap: 16px; }
+.title { margin: 0; font-size: clamp(18px,3vw,26px); font-weight: 500; color: #f5efe0; font-family: 'Cormorant Garamond', Georgia, serif; }
+.liveTag {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: 99px;
+  background: rgba(91,122,82,0.18); color: #8fae83;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.liveDot { width: 6px; height: 6px; border-radius: 50%; background: #8fae83; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.headerActions { display: flex; gap: 8px; }
+.logoutBtn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid rgba(245,240,230,0.14); border-radius: 99px;
+  background: transparent; color: rgba(245,240,230,0.6);
+  font-family: 'Manrope', sans-serif;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+}
+.logoutBtn:hover { border-color: rgba(165,43,45,0.5); color: #d99b9c; }
+
+.columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .columns { grid-template-columns: 1fr; } }
+
+.column { display: flex; flex-direction: column; gap: 12px; }
+
+.columnHeader {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 8px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+}
+.colNew { background: rgba(76,122,140,0.16); color: #9cc2d4; }
+.colPreparing { background: rgba(181,121,46,0.18); color: #e0ab68; }
+.colReady { background: rgba(91,122,82,0.18); color: #9dc190; }
+
+.columnCount {
+  margin-left: auto;
+  background: rgba(245,240,230,0.1); border-radius: 99px;
+  padding: 1px 8px; font-size: 11px; font-weight: 700; color: #f5efe0;
+}
+
+.orderCard {
+  background: #1c1911; border: 1px solid rgba(245,240,230,0.08);
+  border-radius: 10px; padding: 14px;
+  transition: border-color 160ms;
+  position: relative; overflow: hidden;
+}
+.cardNew { border-left: 3px solid #4c7a8c; }
+.cardPreparing { border-left: 3px solid #b5792e; }
+.cardReady { border-left: 3px solid #5b7a52; }
+.cardOverdue { animation: flashBorder 1.2s infinite, flashBg 1.2s infinite; border-left-width: 4px; }
+@keyframes flashBorder { 0%,100% { border-left-color: #a52b2d; } 50% { border-left-color: #5c1817; } }
+@keyframes flashBg { 0%,100% { background: #1c1911; } 50% { background: #2a1614; } }
+
+.cardHeader { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.cardHeaderLeft { display: flex; flex-direction: column; gap: 2px; }
+.tableLabel { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 24px; font-weight: 500; color: #f5efe0; }
+.orderId { font-size: 11px; font-weight: 600; color: rgba(245,240,230,0.4); font-variant-numeric: tabular-nums; }
+.timeElapsed {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.timeNormal { color: #9dc190; }
+.timeWarning { color: #e0ab68; }
+.timeOverdue { color: #d97a7a; }
+
+.itemsList { margin-bottom: 12px; }
+.orderItem {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 6px 0; border-bottom: 1px solid rgba(245,240,230,0.06);
+}
+.orderItem:last-child { border-bottom: none; }
+.itemQty {
+  flex: 0 0 auto; min-width: 28px;
+  font-size: 16px; font-weight: 800; color: #f5efe0; font-variant-numeric: tabular-nums;
+}
+.itemBody { flex: 1; min-width: 0; }
+.itemName { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 20px; font-weight: 600; color: #ede5d0; letter-spacing: 0.01em; }
+.itemNote { color: #e0ab68; font-size: 13px; font-weight: 500; font-style: italic; margin-top: 2px; }
+
+.actionBtn {
+  width: 100%; min-height: 48px; padding: 12px;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  border: none; border-radius: 8px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 12.5px; font-weight: 700; letter-spacing: 0.04em; cursor: pointer;
+  transition: filter 120ms, transform 80ms;
+}
+.actionBtn:active { transform: scale(0.98); }
+.btnNew { background: #4c7a8c; color: #14120d; }
+.btnNew:hover { filter: brightness(1.12); }
+.btnPreparing { background: #b5792e; color: #14120d; }
+.btnPreparing:hover { filter: brightness(1.12); }
+.btnReady { background: #5b7a52; color: #14120d; }
+.btnReady:hover { filter: brightness(1.12); }
+
+.emptyCol {
+  display: flex; align-items: center; justify-content: center;
+  height: 80px;
+  border: 1px dashed rgba(245,240,230,0.12); border-radius: 8px;
+  color: rgba(245,240,230,0.25); font-size: 12px;
+}
+
+.loadingState { display: flex; justify-content: center; align-items: center; min-height: 300px; }
+
+.soundToggle {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid rgba(245,240,230,0.12); border-radius: 99px;
+  background: transparent; color: rgba(245,240,230,0.5);
+  font-family: 'Manrope', sans-serif;
+  font-size: 11px; cursor: pointer;
+}
+.soundToggle.on { border-color: rgba(157,193,144,0.35); color: #9dc190; }

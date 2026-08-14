@@ -53,6 +53,7 @@ export const ru: Messages = {
   'cut.texture': 'Текстура',
   'cut.bestFor': 'Лучше всего для',
   'cut.onMenu': 'Сегодня из этого отруба',
+  'cut.from': 'Из: {cut}',
   'cut.classically': 'Классически',
   'cut.notOnMenu': 'Сегодня этого нет в меню — спросите официанта, что есть в мясной лавке.',
   'cut.browseSteaks': 'Посмотреть все стейки',

@@ -54,6 +54,7 @@ export const zhHans: Messages = {
   'cut.texture': '口感',
   'cut.bestFor': '适合烹调方式',
   'cut.onMenu': '今晚此部位的菜品',
+  'cut.from': '来自：{cut}',
   'cut.classically': '经典做法',
   'cut.notOnMenu': '今晚菜单暂无此部位 — 请询问服务员肉品坊的现货。',
   'cut.browseSteaks': '查看所有牛排',

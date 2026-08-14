@@ -37,7 +37,7 @@ export interface LocaleDefinition {
   script?: 'cjk' | 'arabic' | 'devanagari' | 'cyrillic';
 }
 
-export const LOCALES: LocaleDefinition[] = [
+const ALL_LOCALES: LocaleDefinition[] = [
   { code: 'en', english: 'English', native: 'English', dir: 'ltr', aliases: ['english', 'eng'] },
   { code: 'af', english: 'Afrikaans', native: 'Afrikaans', dir: 'ltr', aliases: ['afrikaans', 'af'] },
   { code: 'de', english: 'German', native: 'Deutsch', dir: 'ltr', aliases: ['german', 'deutsch', 'germany'] },
@@ -55,6 +55,21 @@ export const LOCALES: LocaleDefinition[] = [
 ];
 
 export const DEFAULT_LOCALE: LocaleCode = 'en';
+
+/**
+ * VITE_SUPPORTED_LOCALES narrows the list a given build actually offers —
+ * a comma-separated list of codes (e.g. "en,fr,es,zh-Hans"). Unset (the
+ * default) offers every locale above; this is how the Demo tenant keeps
+ * all 14 while Trump's own build narrows to a curated set. DEFAULT_LOCALE
+ * is always kept even if the env var omits it — every fallback path in this
+ * module assumes it's a valid, resolvable code.
+ */
+const restrictedCodes = (import.meta.env.VITE_SUPPORTED_LOCALES as string | undefined)
+  ?.split(',').map(s => s.trim()).filter(Boolean);
+
+export const LOCALES: LocaleDefinition[] = restrictedCodes && restrictedCodes.length > 0
+  ? ALL_LOCALES.filter(l => restrictedCodes.includes(l.code) || l.code === DEFAULT_LOCALE)
+  : ALL_LOCALES;
 
 export const LOCALE_BY_CODE = new Map<string, LocaleDefinition>(LOCALES.map(l => [l.code, l]));
 

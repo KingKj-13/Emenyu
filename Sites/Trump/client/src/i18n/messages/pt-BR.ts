@@ -55,6 +55,7 @@ export const ptBR: Messages = {
   'cut.texture': 'Textura',
   'cut.bestFor': 'Ideal para',
   'cut.onMenu': 'Hoje, deste corte',
+  'cut.from': 'De: {cut}',
   'cut.classically': 'Tradicionalmente',
   'cut.notOnMenu': 'Não está no cardápio hoje — pergunte ao garçom o que o açougue tem.',
   'cut.browseSteaks': 'Ver todas as carnes',

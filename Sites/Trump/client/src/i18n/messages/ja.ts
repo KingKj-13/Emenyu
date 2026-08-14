@@ -53,6 +53,7 @@ export const ja: Messages = {
   'cut.texture': '食感',
   'cut.bestFor': '適した調理法',
   'cut.onMenu': '本日のこの部位の一皿',
+  'cut.from': '{cut}より',
   'cut.classically': '伝統的な調理',
   'cut.notOnMenu': '本日のメニューにはございません — 精肉室の在庫は係の者にお尋ねください。',
   'cut.browseSteaks': 'すべてのステーキを見る',

@@ -44,8 +44,47 @@ function normalizeLocale(raw) {
   return match || DEFAULT_LOCALE;
 }
 
+/**
+ * TRUMP_SUPPORTED_LOCALES narrows the locales THIS server instance's menu
+ * API will localize into — a comma-separated list of codes (e.g.
+ * "en,fr,es,zh-Hans"). Unset (the default) accepts every locale in
+ * SUPPORTED_LOCALES; matches the client's VITE_SUPPORTED_LOCALES so a
+ * request for a de-restricted locale falls back to English on both ends
+ * instead of one silently translating what the other refuses to offer.
+ * Read lazily (not at module load) so it always sees the real env, however
+ * the process loaded it. DEFAULT_LOCALE is always kept even if the env var
+ * omits it — normalizeLocale's fallback assumes it's always resolvable.
+ */
+function resolveInstanceLocales() {
+  const raw = process.env.TRUMP_SUPPORTED_LOCALES;
+  if (!raw) return { locales: SUPPORTED_LOCALES, set: LOCALE_SET };
+  const restricted = raw.split(',').map(s => s.trim()).filter(Boolean);
+  if (!restricted.length) return { locales: SUPPORTED_LOCALES, set: LOCALE_SET };
+  const wanted = new Set(restricted.map(l => l.toLowerCase()));
+  wanted.add(DEFAULT_LOCALE.toLowerCase());
+  const locales = SUPPORTED_LOCALES.filter(l => wanted.has(l.toLowerCase()));
+  return { locales, set: new Set(locales.map(l => l.toLowerCase())) };
+}
+
 function createLocalizationService({ prismaMenuService, logger = null } = {}) {
   const restaurantId = prismaMenuService?.restaurantId || 'trump';
+  const { locales: instanceLocales, set: instanceLocaleSet } = resolveInstanceLocales();
+
+  /**
+   * Normalize whatever arrived on the query string to a locale this
+   * INSTANCE actually supports (may be narrower than the global list above).
+   */
+  function instanceNormalizeLocale(raw) {
+    const value = String(raw || '').trim();
+    if (!value) return DEFAULT_LOCALE;
+    const lower = value.toLowerCase();
+    if (instanceLocaleSet.has(lower)) {
+      return instanceLocales.find(l => l.toLowerCase() === lower);
+    }
+    const primary = lower.split('-')[0];
+    const match = instanceLocales.find(l => l.toLowerCase().split('-')[0] === primary);
+    return match || DEFAULT_LOCALE;
+  }
 
   /**
    * All translations for one locale, as `${entityType}:${entityId}` -> {field: value}.
@@ -159,9 +198,9 @@ function createLocalizationService({ prismaMenuService, logger = null } = {}) {
   }
 
   return {
-    SUPPORTED_LOCALES,
+    SUPPORTED_LOCALES: instanceLocales,
     DEFAULT_LOCALE,
-    normalizeLocale,
+    normalizeLocale: instanceNormalizeLocale,
     loadTranslations,
     localizeMenu,
     localizeCut,

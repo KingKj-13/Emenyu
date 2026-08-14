@@ -21,6 +21,15 @@ interface AppContextValue {
   setDrawerOpen: (v: boolean) => void;
   pendingItemName: string | null;
   setPendingItemName: (name: string | null) => void;
+  // The header's cow icon and a dish's "From the X" link both open the same
+  // butchery modal — one lives in Header.tsx, the other in ItemModal.tsx,
+  // neither a parent of the other, so this is context rather than a prop.
+  butcheryOpen: boolean;
+  setButcheryOpen: (v: boolean) => void;
+  // Which cut the modal should open pre-selected to, consumed once (same
+  // pattern as pendingItemName) by whichever component mounts the modal.
+  pendingCutId: string | null;
+  setPendingCutId: (id: string | null) => void;
   // Day-part theming (ARCHITECTURE_DECISIONS.md AD-004) — null for tenants
   // with no day-part engine (Trump, Demo); the data-theme attribute is only
   // ever set when this is non-null, so their CSS is never touched.
@@ -71,6 +80,8 @@ export function AppProvider({ children, tableIdFromUrl }: { children: ReactNode;
   const [chatOpen, setChatOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [pendingItemName, setPendingItemName] = useState<string | null>(null);
+  const [butcheryOpen, setButcheryOpen] = useState(false);
+  const [pendingCutId, setPendingCutId] = useState<string | null>(null);
   const [dayPart, setDayPart] = useState<DayPart | null>(null);
   const [dayParts, setDayParts] = useState<DayPart[]>([]);
   const [menuMode, setMenuModeState] = useState<'day' | 'night' | null>(null);
@@ -163,6 +174,10 @@ export function AppProvider({ children, tableIdFromUrl }: { children: ReactNode;
       setDrawerOpen,
       pendingItemName,
       setPendingItemName,
+      butcheryOpen,
+      setButcheryOpen,
+      pendingCutId,
+      setPendingCutId,
       dayPart,
       dayParts,
       menuMode,

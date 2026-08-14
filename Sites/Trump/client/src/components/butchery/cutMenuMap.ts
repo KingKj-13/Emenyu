@@ -226,3 +226,35 @@ export function buildCutMenuIndex(
   for (const id of cutIds) index[id] = matchCutItems(id, items, mapping, matchName);
   return index;
 }
+
+export interface ItemCutMatch {
+  cutId: string;
+  relation: 'primary' | 'related';
+  /** Only set when relation === 'related' — the rule's own label (e.g. "Ground for our patties"). */
+  relatedLabel?: string;
+}
+
+/**
+ * The inverse of buildCutMenuIndex: which cut (if any) does a given menu item
+ * come from? Built from the SAME index the chart itself displays (pass the
+ * post-serverCuts-overlay index, not a freshly-derived one) so a dish's "From
+ * the Ribeye" link can never disagree with what the chart shows for that cut.
+ *
+ * Keyed by object reference — correct as long as both indexes are built from
+ * the same `items` array for one menu load, which every call site does.
+ * `primary` wins over `related` when an item somehow matches both.
+ */
+export function buildItemToCutIndex(cutIndex: Record<string, CutMenuMatch>): Map<MenuItem, ItemCutMatch> {
+  const index = new Map<MenuItem, ItemCutMatch>();
+  for (const [cutId, match] of Object.entries(cutIndex)) {
+    if (match.related) {
+      for (const item of match.related.items) {
+        if (!index.has(item)) index.set(item, { cutId, relation: 'related', relatedLabel: match.related.label });
+      }
+    }
+  }
+  for (const [cutId, match] of Object.entries(cutIndex)) {
+    for (const item of match.primary) index.set(item, { cutId, relation: 'primary' });
+  }
+  return index;
+}

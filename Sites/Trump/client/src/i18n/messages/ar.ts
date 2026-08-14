@@ -55,6 +55,7 @@ export const ar: Messages = {
   'cut.texture': 'القوام',
   'cut.bestFor': 'الأنسب لـ',
   'cut.onMenu': 'الليلة من هذه القطعة',
+  'cut.from': 'من: {cut}',
   'cut.classically': 'تقليدياً',
   'cut.notOnMenu': 'غير مدرجة في قائمة الليلة — اسأل النادل عمّا يتوفر في قسم اللحوم.',
   'cut.browseSteaks': 'عرض جميع قطع اللحم',

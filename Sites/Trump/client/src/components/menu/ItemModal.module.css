@@ -122,6 +122,31 @@
 
 .chips { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 
+.cutLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 5px 11px;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.3);
+  border-radius: 999px;
+  background: rgba(var(--color-gold-rgb), 0.08);
+  color: var(--color-gold);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.cutLink:not(:disabled):hover {
+  border-color: rgba(var(--color-gold-rgb), 0.55);
+  background: rgba(var(--color-gold-rgb), 0.14);
+}
+
+.cutLink:disabled {
+  cursor: default;
+}
+
 .name {
   margin: 0 0 6px;
   font-family: var(--font-heading);

@@ -67,6 +67,7 @@ export const en = {
   'cut.texture': 'Texture',
   'cut.bestFor': 'Best for',
   'cut.onMenu': 'From this cut tonight',
+  'cut.from': 'From {cut}',
   'cut.classically': 'Classically',
   'cut.notOnMenu': 'Not on tonight’s menu — ask your waiter what the butchery has in.',
   'cut.browseSteaks': 'See every steak',

@@ -53,6 +53,7 @@ export const hi: Messages = {
   'cut.texture': 'बनावट',
   'cut.bestFor': 'सर्वोत्तम',
   'cut.onMenu': 'आज इस कट से',
+  'cut.from': '{cut} से',
   'cut.classically': 'पारंपरिक रूप से',
   'cut.notOnMenu': 'आज के मेन्यू में नहीं — मीट काउंटर में क्या उपलब्ध है, अपने वेटर से पूछें।',
   'cut.browseSteaks': 'सभी स्टेक देखें',

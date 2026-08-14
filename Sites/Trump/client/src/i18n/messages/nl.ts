@@ -53,6 +53,7 @@ export const nl: Messages = {
   'cut.texture': 'Structuur',
   'cut.bestFor': 'Het best voor',
   'cut.onMenu': 'Vanavond uit dit deelstuk',
+  'cut.from': 'Van: {cut}',
   'cut.classically': 'Klassiek',
   'cut.notOnMenu': 'Vanavond niet op de kaart — vraag uw ober wat de slagerij in huis heeft.',
   'cut.browseSteaks': 'Bekijk alle steaks',

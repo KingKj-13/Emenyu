@@ -53,6 +53,7 @@ export const fr: Messages = {
   'cut.texture': 'Texture',
   'cut.bestFor': 'Idéal pour',
   'cut.onMenu': 'Ce soir, dans ce morceau',
+  'cut.from': 'De : {cut}',
   'cut.classically': 'Traditionnellement',
   'cut.notOnMenu': "Pas à la carte ce soir — demandez à votre serveur ce que la boucherie a en réserve.",
   'cut.browseSteaks': 'Voir toutes les pièces',

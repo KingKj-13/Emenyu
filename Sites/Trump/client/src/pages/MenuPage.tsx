@@ -13,10 +13,10 @@ import { ItemModal } from '../components/menu/ItemModal';
 import { PairingModal } from '../components/menu/PairingModal';
 import { CategoryTabBar } from '../components/menu/CategoryTabBar';
 import { Spinner } from '../components/ui/Spinner';
-import { CowMeatSelector } from '../components/butchery/CowMeatSelector';
-import { useButcheryCuts } from '../components/butchery/useButcheryCuts';
+import { useButcheryCuts, serverCutToMatch } from '../components/butchery/useButcheryCuts';
 import { RecommendedOrders } from '../components/menu/RecommendedOrders';
-import { getCutMenuMapping, hasCutMenuMatches } from '../components/butchery/cutMenuMap';
+import { getCutMenuMapping, buildCutMenuIndex, buildItemToCutIndex } from '../components/butchery/cutMenuMap';
+import { CUTS, CUT_BY_ID } from '../components/butchery/cutCatalog';
 import { useEnglishNameByDbId } from '../hooks/useEnglishMenu';
 import { useMenu } from '../hooks/useMenu';
 import { useFilters } from '../hooks/useFilters';
@@ -63,7 +63,7 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const focusSection = searchParams.get('section');
-  const { setTableId, pendingItemName, setPendingItemName } = useApp();
+  const { setTableId, pendingItemName, setPendingItemName, setButcheryOpen, setPendingCutId } = useApp();
   const { menuData, loading, error } = useMenu();
   const { activeFilters, searchQuery, setSearchQuery, toggleFilter, clearFilters, filterOptions } = useFilters();
   const { favorites, toggle: toggleFavorite } = useFavorites();
@@ -101,30 +101,30 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
 
   const allItems = useMemo(() => flattenMenu(menuData), [menuData]);
 
-  // The butchery chart only earns its place on a menu that actually sells beef
-  // primals — this is data-driven rather than tenant-gated, so a menu without
-  // them (Carmella) simply never renders the banner.
-  //
-  // Matched against the ENGLISH name, not allItems' own (possibly localized)
-  // .name — the match rules are English regex, and a fully-translated menu
-  // (no Latin substring survives in any dish name) would otherwise make this
-  // false in that guest's language even though the English menu clearly has
-  // beef primals. Found live: this menu's own German translation happens to
-  // leave "T-Bone"/"Tomahawk" in Latin script, so it kept matching by
-  // accident; Japanese and Arabic translate everything, so hasCutMenuMatches
-  // silently went false and the chart disappeared for those guests entirely.
+  // The butchery chart itself now lives in a header-triggered modal
+  // (GlobalButcheryModal, mounted once in App.tsx) rather than inline here —
+  // see Header.tsx for the entry point and its own showButchery gate. What
+  // stays here is the REVERSE direction: which cut (if any) a given dish
+  // comes from, for ItemModal's "From the X" link. Built from the same
+  // matching rules and the same English-name resolution CowMeatSelector uses
+  // internally (see its own comment on why English, not the localized
+  // .name) so a dish's link can never disagree with what the chart shows.
   const englishNameByDbId = useEnglishNameByDbId();
-  const showButchery = useMemo(
-    () => hasCutMenuMatches(allItems, getCutMenuMapping(RESTAURANT_ID), item => {
-      const english = item.dbId != null ? englishNameByDbId.get(item.dbId) : undefined;
-      return english ?? item.name;
-    }),
-    [allItems, englishNameByDbId]
-  );
-  const scrollToSteaks = useCallback(() => {
-    const id = `section-${MAINS_CATEGORY_TITLE.toLowerCase().replace(/\s+/g, '-')}`;
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
+  const matchCutName = useCallback((item: MenuItem) => {
+    const english = item.dbId != null ? englishNameByDbId.get(item.dbId) : undefined;
+    return english ?? item.name;
+  }, [englishNameByDbId]);
+  const itemCutIndex = useMemo(() => {
+    const mapping = getCutMenuMapping(RESTAURANT_ID);
+    const derived = buildCutMenuIndex(CUTS.map(c => c.id), allItems, mapping, matchCutName);
+    if (serverCuts) {
+      // A curated cut REPLACES the name-matched result — see CowMeatSelector.
+      for (const [slug, cut] of serverCuts) {
+        if (cut.items.length > 0) derived[slug] = serverCutToMatch(cut);
+      }
+    }
+    return buildItemToCutIndex(derived);
+  }, [allItems, matchCutName, serverCuts]);
 
   // What guests search for, recorded once they stop typing — a per-keystroke
   // event would record "r", "ri", "rib" and tell us nothing. Only the query is
@@ -323,6 +323,19 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
     openItem(item, 'replace');
   }
 
+  const selectedItemCutMatch = selectedItem ? itemCutIndex.get(selectedItem) : undefined;
+  const selectedItemCutInfo = useMemo(() => {
+    if (!selectedItemCutMatch) return null;
+    const cut = CUT_BY_ID.get(selectedItemCutMatch.cutId);
+    if (!cut) return null;
+    return { cut, relation: selectedItemCutMatch.relation, relatedLabel: selectedItemCutMatch.relatedLabel };
+  }, [selectedItemCutMatch]);
+
+  function viewCut(cutId: string) {
+    setPendingCutId(cutId);
+    setButcheryOpen(true);
+  }
+
   return (
     <AppShell>
       <SideDrawer
@@ -361,26 +374,6 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
 
             {sections.map(section => (
               <Fragment key={section.title}>
-                {/* The animal sits under Mains now, not before every category —
-                    it's a beef-primal tool, and on mobile the old placement put
-                    a full-viewport chart between a guest and every Starter. Gated
-                    on the exact section title so it appears once, in the one
-                    place it's actually about. showButchery itself stays
-                    data-driven (hasCutMenuMatches): a tenant with no beef
-                    primals on the menu, matched or curated, never renders it,
-                    on any category. */}
-                {showButchery && !sectionFilter && !searchQuery && activeFilters.size === 0
-                  && section.title === MAINS_CATEGORY_TITLE && (
-                  <section className={styles.butcheryStage} aria-label={t('cut.title')}>
-                    <CowMeatSelector
-                      items={allItems}
-                      serverCuts={serverCuts}
-                      onOpenItem={item => openItem(item, 'replace')}
-                      onBrowseAll={scrollToSteaks}
-                      mobileEntry
-                    />
-                  </section>
-                )}
                 <CategorySection
                   section={section}
                   favorites={favorites}
@@ -406,6 +399,8 @@ export function MenuPage({ sectionFilter }: { sectionFilter?: string } = {}) {
         onOpenItem={(it) => openItem(it, 'push')}
         canGoBack={itemStack.length > 1}
         onBack={goBackItem}
+        cutInfo={selectedItemCutInfo}
+        onViewCut={viewCut}
       />
 
       <PairingModal item={pairingItem} open={!!pairingItem} onClose={() => setPairingItem(null)} />

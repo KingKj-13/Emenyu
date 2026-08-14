@@ -1,0 +1,204 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--p-scrim);
+  z-index: 55;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: pFade 0.25s both;
+}
+
+@media (min-width: 480px) {
+  .overlay { align-items: center; }
+}
+
+.receipt {
+  width: 100%;
+  max-width: 420px;
+  max-height: 90dvh;
+  overflow-y: auto;
+  background: var(--p-paper);
+  border-radius: 14px 14px 0 0;
+  box-shadow: var(--p-shadow);
+}
+
+@media (min-width: 480px) {
+  .receipt { border-radius: 6px; }
+}
+
+.inner {
+  padding: 30px 26px 10px;
+}
+
+.header {
+  text-align: center;
+}
+
+.brand {
+  font-family: var(--p-serif);
+  font-size: 21px;
+}
+
+.tagline {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--p-faint);
+  margin-top: 4px;
+}
+
+.divider {
+  height: 1px;
+  background: var(--p-line);
+  margin: 16px 0;
+  border-top: 1px dashed var(--p-line);
+  background: none;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--p-faint);
+}
+
+.itemRow {
+  display: flex;
+  gap: 10px;
+  font-size: 12.5px;
+  padding: 5px 0;
+}
+
+.itemQty {
+  color: var(--p-faint);
+  flex: none;
+  width: 26px;
+}
+
+.itemName {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemTotal {
+  flex: none;
+}
+
+.totals { font-size: 12.5px; }
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  color: var(--p-sub);
+}
+
+.grandTotal {
+  font-family: var(--p-serif);
+  font-size: 18px;
+  color: var(--p-ink);
+  border-top: 1px solid var(--p-line);
+  margin-top: 6px;
+  padding-top: 10px;
+}
+
+.perPerson {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 12px;
+  background: var(--p-card);
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+
+.perPersonLabel {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--p-faint);
+}
+
+.perPersonAmount {
+  font-family: var(--p-serif);
+  font-size: 16px;
+}
+
+.footerNote {
+  text-align: center;
+  font-family: var(--p-serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--p-brass);
+  margin: 8px 0 0;
+}
+
+.actions {
+  padding: 16px 26px calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
+.splitRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.splitLabel {
+  font-size: 11px;
+  color: var(--p-faint);
+}
+
+.splitBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--p-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--p-sub);
+}
+
+.splitCount {
+  font-family: var(--p-serif);
+  font-size: 15px;
+  min-width: 14px;
+  text-align: center;
+}
+
+.actionBtns {
+  display: flex;
+  gap: 10px;
+}
+
+.closeBtn, .printBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 13px 0;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border-radius: 999px;
+}
+
+.closeBtn {
+  border: 1px solid var(--p-line);
+  color: var(--p-sub);
+}
+
+.printBtn {
+  background: var(--p-nav);
+  color: var(--p-navtext);
+}
+
+@media print {
+  .actions { display: none; }
+  .overlay { position: static; background: none; }
+  .receipt { max-height: none; box-shadow: none; }
+}
