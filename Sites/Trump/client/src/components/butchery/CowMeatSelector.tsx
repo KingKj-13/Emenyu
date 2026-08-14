@@ -13,6 +13,7 @@ import {
 import { useEnglishNameByDbId } from '../../hooks/useEnglishMenu';
 import { serverCutToMatch, type ServerCut } from './useButcheryCuts';
 import { formatPrice } from '../../lib/menuUtils';
+import { resolveImage, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { useI18n } from '../../i18n';
 import { resolveCutCopy } from '../../i18n/butchery';
 import { track } from '../../lib/engagement';
@@ -1036,8 +1037,18 @@ function DishRow({ item, onOpen }: {
   onOpen?: (item: MenuItem) => void;
 }) {
   const sold = item.available === false || item.availability === 'unavailable';
+  const [imgError, setImgError] = useState(false);
+  const thumbSrc = imgError ? FALLBACK_IMAGE : (resolveImage(item) || FALLBACK_IMAGE);
   return (
     <li className={styles.dish}>
+      <img
+        className={styles.dishThumb}
+        src={thumbSrc}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        onError={() => setImgError(true)}
+      />
       <button
         type="button"
         className={styles.dishMain}

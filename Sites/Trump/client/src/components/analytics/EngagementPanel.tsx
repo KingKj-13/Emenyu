@@ -39,6 +39,10 @@ interface Summary {
     // device (the Demo tenant). Trump's waiter-submitted orders carry no
     // guest session to correlate against, by design — see server comment.
     conversions: number; conversionRate: number;
+    avgWatchSec: number;
+  }>;
+  mostWatchedVideos: Array<{
+    menuItemId: number; name: string; plays: number; avgWatchSec: number; totalWatchSec: number;
   }>;
 }
 
@@ -209,7 +213,7 @@ export function EngagementPanel() {
               ) : (
                 <table className={styles.table}>
                   <thead>
-                    <tr><th>Dish</th><th>Plays</th><th>Finished</th><th>Rate</th><th>Ordered after</th></tr>
+                    <tr><th>Dish</th><th>Plays</th><th>Finished</th><th>Rate</th><th>Avg. watched</th><th>Ordered after</th></tr>
                   </thead>
                   <tbody>
                     {summary.video.map(v => (
@@ -218,6 +222,7 @@ export function EngagementPanel() {
                         <td>{v.plays}</td>
                         <td>{v.completes}</td>
                         <td className={styles.rate}>{v.completionRate}%</td>
+                        <td className={styles.rate}>{seconds(v.avgWatchSec * 1000)}</td>
                         <td className={styles.rate}>
                           {v.conversions > 0 ? `${v.conversions} (${v.conversionRate}%)` : '—'}
                         </td>
@@ -225,6 +230,19 @@ export function EngagementPanel() {
                     ))}
                   </tbody>
                 </table>
+              )}
+            </Card>
+
+            <Card title="Most-watched videos" icon={<PlayCircle size={14} />}>
+              {summary.mostWatchedVideos.length === 0 ? (
+                <p className={styles.none}>No videos played in this period.</p>
+              ) : (
+                <RankList
+                  rows={summary.mostWatchedVideos.map(v => ({
+                    label: `${v.name} (avg ${seconds(v.avgWatchSec * 1000)}/play)`,
+                    value: v.totalWatchSec,
+                  }))}
+                />
               )}
             </Card>
 

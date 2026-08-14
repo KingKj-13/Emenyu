@@ -266,6 +266,7 @@ export function ItemModal({
           touchAction: 'pan-y',
         }}
       >
+        <div className={styles.body}>
         <div className={styles.media}>
           {videoSrc && playMedia ? (
             // Poster-first, same as RecommendationCard/WaiterPage: the <video> tag
@@ -329,7 +330,7 @@ export function ItemModal({
           </button>
         </div>
 
-        <div className={styles.body}>
+        <div className={styles.bodyContent}>
           {(item.available === false || item.availability === 'unavailable') && (
             <div className={styles.unavailableBanner}>
               Sold Out
@@ -414,6 +415,7 @@ export function ItemModal({
           {open && <ItemPairings item={item} onRequestItem={onRequestItem} />}
           {item.dbId != null && <ItemGallery menuItemId={item.dbId} itemName={item.name} />}
         </div>
+        </div>
 
         {/* Moved out of .body (Bug #3 fix): .actions used to be the last child
             INSIDE the scrollable .body, sticky-pinned to the bottom of the
@@ -424,9 +426,15 @@ export function ItemModal({
             visually overlapping the freshly-loaded recommendation cards (and,
             depending on a given dish's text length, whatever else happened to
             fall in that same screen region). Now .actions is a true flex
-            sibling of .media/.body, outside the scrollable region entirely
-            (see the .modal/.body/.actions rewrite in ItemModal.module.css) --
-            it can no longer overlap anything, sticky or not. */}
+            sibling of .body, outside the scrollable region entirely (see the
+            .modal/.body/.actions rewrite in ItemModal.module.css) -- it can no
+            longer overlap anything, sticky or not.
+
+            .media now lives INSIDE .body (sticky-pinned to its top) rather
+            than beside it -- see the .media comment in ItemModal.module.css
+            for why: relying on .body being the one that scrolls turned out to
+            be fragile on mobile, so .media pins to whichever of .body/.panel
+            actually ends up scrolling instead. */}
         {/* The quantity stepper, the special-requests box and the
             "Add to cart" button used to sit here. This menu does not take
             orders: the guest reads, then speaks to their waiter, which is the

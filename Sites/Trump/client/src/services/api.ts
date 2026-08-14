@@ -189,6 +189,13 @@ export const api = {
     });
   },
 
+  importOrdersCsv(formData: FormData) {
+    return fetchJson<{ ordersCreated: number; itemsImported: number; skippedRows: number; errors: string[] }>(
+      ENDPOINTS.ordersImport,
+      { method: 'POST', body: formData }
+    );
+  },
+
   getAdminMenuItems() {
     return fetchJson<unknown[]>(ENDPOINTS.menuAdminItems);
   },

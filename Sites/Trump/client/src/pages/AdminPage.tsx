@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ReactNode, type CSSProperties } from 'react';
+import { useState, useEffect, useCallback, useRef, type ReactNode, type CSSProperties } from 'react';
 import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Pencil, Plus, X, Sparkles, TrendingUp, Activity, ShieldCheck, Copy, Check, Star, Armchair, Brain, ChefHat, Route, Eye } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../hooks/useAuth';
@@ -121,6 +121,8 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [reservationDate, setReservationDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportRange, setReportRange] = useState<ReportRange>('7d');
+  const [importingCsv, setImportingCsv] = useState(false);
+  const csvInputRef = useRef<HTMLInputElement>(null);
   const [reportSummary, setReportSummary] = useState<AnalyticsSummary | null>(null);
   const [reportItems, setReportItems] = useState<AnalyticsItem[]>([]);
   const [reportTables, setReportTables] = useState<AnalyticsTable[]>([]);
@@ -499,6 +501,26 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     URL.revokeObjectURL(url);
   }
 
+  async function handleImportOrdersCsv(file: File) {
+    setImportingCsv(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const result = await api.importOrdersCsv(formData);
+      const errorNote = result.errors.length ? `\n\n${result.errors.slice(0, 5).join('\n')}` : '';
+      alert(
+        `Imported ${result.ordersCreated} order${result.ordersCreated !== 1 ? 's' : ''} `
+        + `(${result.itemsImported} item${result.itemsImported !== 1 ? 's' : ''}).`
+        + (result.skippedRows ? ` ${result.skippedRows} row(s) skipped.` : '')
+        + errorNote
+      );
+      await loadReports(reportRange);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'CSV import failed');
+    }
+    setImportingCsv(false);
+  }
+
   const liveCovers = tableCarts.filter(t => t.itemCount > 0).length;
 
   const NAV_GROUPS: { label: string; items: { key: Tab; label: string; icon: typeof ClipboardList; badge?: number }[] }[] = [
@@ -557,7 +579,32 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     deals: { eyebrow: 'OFFERS', title: 'Deals', sub: 'Bundle dishes into featured set menus', actions: <button className={styles.actionBtnGold} onClick={openNewDeal}><Plus size={14} /> New deal</button> },
     qrcodes: { eyebrow: 'TABLE QR CODES', title: 'QR codes', sub: 'Each links a guest straight to its table session' },
     demo: { eyebrow: 'LIVE DEMO', title: 'Curated Demo', sub: 'Toggle the curated dining journeys and redeem guest reward codes' },
-    reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top items, peak hours & guest ratings', actions: <button className={styles.actionBtn} onClick={exportReportsCsv}><Download size={14} /> Export CSV</button> },
+    reports: {
+      eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top items, peak hours & guest ratings',
+      actions: (
+        <>
+          <input
+            ref={csvInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            style={{ display: 'none' }}
+            onChange={e => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (file) void handleImportOrdersCsv(file);
+            }}
+          />
+          <button
+            className={styles.actionBtn}
+            onClick={() => csvInputRef.current?.click()}
+            disabled={importingCsv}
+          >
+            <Upload size={14} /> {importingCsv ? 'Importing…' : 'Import order history (CSV)'}
+          </button>
+          <button className={styles.actionBtn} onClick={exportReportsCsv}><Download size={14} /> Export CSV</button>
+        </>
+      ),
+    },
     content: { eyebrow: 'CONTENT', title: 'Media & Languages', sub: 'Photos, videos, butchery cuts and translations — no deploy needed' },
     engagement: { eyebrow: 'ANALYTICS', title: 'Guest Engagement', sub: 'What guests looked at, for how long, and in which language' },
     aiperformance: { eyebrow: 'ANALYTICS', title: 'AI Performance', sub: 'Recommendations made, accepted, and the revenue behind them' },

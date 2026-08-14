@@ -35,6 +35,8 @@ const { createRatingController } = require('./controllers/ratingController');
 const { createReservationController } = require('./controllers/reservationController');
 const { createOrderController } = require('./controllers/orderController');
 const { createUploadController } = require('./controllers/uploadController');
+const { createOrderImportController } = require('./controllers/orderImportController');
+const { registerOrderImportRoutes } = require('./routes/orderImportRoutes');
 const { createWaiterController } = require('./controllers/waiterController');
 const { createWaiterApiController } = require('./controllers/waiterApiController');
 const { createDebugController } = require('./controllers/debugController');
@@ -405,6 +407,7 @@ async function startServer(baseDirOverride) {
     authToken: createAuthTokenController({ accountService, auth, tokenService, config, logger })
   };
   const uploadController = createUploadController(config, { logger });
+  const orderImportController = createOrderImportController({ fileService, logger });
 
   app.use(createRequestLogger(logger, config));
   configureSecurity(app, config, logger);
@@ -542,6 +545,7 @@ async function startServer(baseDirOverride) {
   registerRatingRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
   registerReservationRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
   registerUploadRoutes(app, config, uploadController, auth.requireRoles(['owner', 'manager']));
+  registerOrderImportRoutes(app, config, orderImportController, auth.requireRoles(['owner', 'manager']));
   // The retirement gate above already answers every waiter/kitchen route.
   if (waiterAppEnabled) {
     registerWaiterApiRoutes(app, config, controllers, auth);

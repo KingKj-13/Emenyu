@@ -37,6 +37,7 @@ export const ENDPOINTS = {
   complete: `${API_PREFIX}/complete`,
   incomplete: `${API_PREFIX}/incomplete`,
   upload: `${API_PREFIX}/api/upload`,
+  ordersImport: `${API_PREFIX}/api/admin/orders/import`,
   waiterTableStatus: (tableId: string) => `${API_PREFIX}/api/waiter/table/${tableId}/status`,
   waiterAddItems: `${API_PREFIX}/api/waiter/add-items`,
   waiterArchiveTable: `${API_PREFIX}/api/waiter/archive-table`,

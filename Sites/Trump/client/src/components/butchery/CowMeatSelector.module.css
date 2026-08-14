@@ -300,13 +300,21 @@
 
 .dish {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 10px;
   padding: 9px 0;
   border-bottom: 1px solid rgba(var(--color-gold-rgb), 0.08);
 }
 .dish:last-child { border-bottom: 0; }
+
+.dishThumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: rgba(var(--color-gold-rgb), 0.06);
+}
 
 .dishMain {
   display: block;

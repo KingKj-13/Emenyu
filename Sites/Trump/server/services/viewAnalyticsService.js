@@ -187,7 +187,7 @@ function createViewAnalyticsService({ prismaMenuService, logger = null } = {}) {
     return prismaMenuService.withPrisma('view_analytics_summary_failed', async prisma => {
       const [
         totals, byType, sessions, topItems, topCategories, topCuts,
-        byLocale, videoPlays, videoCompletes, dwell,
+        byLocale, videoPlays, videoCompletes, dwell, videoWatchTime,
       ] = await Promise.all([
         prisma.viewEvent.count({ where }),
         prisma.viewEvent.groupBy({ by: ['eventType'], where, _count: { _all: true } }),
@@ -231,11 +231,24 @@ function createViewAnalyticsService({ prismaMenuService, logger = null } = {}) {
           where: { ...where, eventType: 'ITEM_VIEW', dwellMs: { not: null } },
           _avg: { dwellMs: true }, _count: { dwellMs: true },
         }),
+        // How far into a dish's video guests actually get — VIDEO_PROGRESS fires
+        // at the halfway point and VIDEO_COMPLETE at the end (see
+        // useVideoEngagement.ts), each carrying the playback position reached.
+        // Averaging both per dish is what answers "which video do guests
+        // actually watch the most of", as distinct from "which gets played the
+        // most" (videoPlays above) — a video with few plays that are all
+        // watched to the end is a different, and arguably more useful, signal.
+        prisma.viewEvent.groupBy({
+          by: ['menuItemId'],
+          where: { ...where, eventType: { in: ['VIDEO_PROGRESS', 'VIDEO_COMPLETE'] }, positionSec: { not: null } },
+          _avg: { positionSec: true },
+        }),
       ]);
 
       const totalLocale = byLocale.reduce((s, r) => s + r._count._all, 0) || 1;
       const completesById = new Map(videoCompletes.map(r => [r.menuItemId, r._count._all]));
       const conversionsById = await videoConversionsBySession(prisma, range, videoPlays.map(r => r.menuItemId).filter(id => id != null));
+      const avgWatchSecById = new Map(videoWatchTime.map(r => [r.menuItemId, Math.round(r._avg.positionSec || 0)]));
 
       return {
         range: { from: range.from.toISOString(), to: range.to.toISOString() },
@@ -270,8 +283,23 @@ function createViewAnalyticsService({ prismaMenuService, logger = null } = {}) {
             completionRate: r._count._all ? Math.round((completed / r._count._all) * 1000) / 10 : 0,
             conversions,
             conversionRate: r._count._all ? Math.round((conversions / r._count._all) * 1000) / 10 : 0,
+            avgWatchSec: avgWatchSecById.get(r.menuItemId) || 0,
           };
         }).sort((a, b) => b.plays - a.plays).slice(0, 25),
+        // Same dishes, ranked by how much of the video guests actually watched
+        // (plays x average watched seconds) rather than by play count alone --
+        // "which video gets watched the most" as opposed to "which gets started
+        // the most".
+        mostWatchedVideos: videoPlays.map(r => {
+          const avgWatchSec = avgWatchSecById.get(r.menuItemId) || 0;
+          return {
+            menuItemId: r.menuItemId,
+            name: r.label,
+            plays: r._count._all,
+            avgWatchSec,
+            totalWatchSec: Math.round(avgWatchSec * r._count._all),
+          };
+        }).filter(v => v.totalWatchSec > 0).sort((a, b) => b.totalWatchSec - a.totalWatchSec).slice(0, 10),
       };
     }, null);
   }
