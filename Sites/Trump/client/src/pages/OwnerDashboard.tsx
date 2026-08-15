@@ -1,11 +1,11 @@
 // Owner / BI dashboard — a decluttered, mobile-first view for the owner role.
 // It REUSES the existing analytics endpoints (summary / items / tables / hours /
-// trend / day-of-week / ratings / engagement) — no analytics are re-implemented
-// here; this file only fetches and frames data the server already computes.
+// trend / day-of-week / engagement) — no analytics are re-implemented here;
+// this file only fetches and frames data the server already computes.
 // Operational depth still lives in /Admin.
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, Star, LogOut, SlidersHorizontal, ArrowUpRight, Upload } from 'lucide-react';
+import { TrendingUp, LogOut, SlidersHorizontal, ArrowUpRight, Upload } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { Spinner } from '../components/ui/Spinner';
 import { useAuth } from '../hooks/useAuth';
@@ -15,7 +15,6 @@ import { api } from '../services/api';
 import { formatPrice } from '../lib/menuUtils';
 import { sastTodayStartIso } from '../lib/businessDay';
 import { BRAND_NAME } from '../constants/api';
-import type { FloorState, LeaderboardRow, WaiterTask } from '../types/waiter';
 import styles from './OwnerDashboard.module.css';
 
 // ── response shapes (typing the existing endpoints; not re-deriving them) ──
@@ -24,8 +23,6 @@ interface Item { name: string; quantity: number; revenue: number; categoryType?:
 interface Hour { hour: number; count: number }
 interface Dow { dow: number; label: string; count: number; revenue: number }
 interface TrendPoint { date: string; revenue: number; orders: number }
-interface RatingRow { id: number; rating: number; comment: string; tableId: string; createdAt: string }
-interface Ratings { average: number; count: number; recent: RatingRow[] }
 interface TableRow { tableId: string; revenue: number; orderCount: number }
 interface Pairing { a: string; b: string; count: number; revenue: number }
 interface EngagementItem { menuItemId: number; name: string; views: number }
@@ -83,14 +80,10 @@ export function OwnerDashboard() {
   const [hours, setHours] = useState<Hour[]>([]);
   const [dow, setDow] = useState<Dow[]>([]);
   const [trend, setTrend] = useState<TrendPoint[]>([]);
-  const [ratings, setRatings] = useState<Ratings | null>(null);
   const [tables, setTables] = useState<TableRow[]>([]);
   const [drinkItems, setDrinkItems] = useState<Item[]>([]);
   const [dessertItems, setDessertItems] = useState<Item[]>([]);
   const [pairings, setPairings] = useState<Pairing[]>([]);
-  const [floor, setFloor] = useState<FloorState | null>(null);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
-  const [tasks, setTasks] = useState<WaiterTask[]>([]);
   const [engagement, setEngagement] = useState<Engagement | null>(null);
   const [importingCsv, setImportingCsv] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -99,8 +92,7 @@ export function OwnerDashboard() {
     setLoading(true);
     const { from, to, bucket } = rangeParams(r);
     const p = { from, to };
-    const leaderboardPeriod = r === 'today' ? 'today' : r === '7d' ? 'week' : 'month';
-    const [s, ti, bi, h, dw, tr, rt, tb, di, de, pr, fl, lb, tk, eg] = await Promise.all([
+    const [s, ti, bi, h, dw, tr, tb, di, de, pr, eg] = await Promise.all([
       api.getAnalyticsSummary(p).catch(() => null),
       // "Top/Bottom dishes" must never include drinks — excludeCategory pulls
       // a wider pool server-side and filters before slicing to the display limit.
@@ -109,16 +101,12 @@ export function OwnerDashboard() {
       api.getAnalyticsHours(p).catch(() => []),
       api.getAnalyticsDayOfWeek(p).catch(() => []),
       api.getAnalyticsTrend({ ...p, bucket }).catch(() => ({ bucket, points: [] })),
-      api.getRatings(p).catch(() => null),
       api.getAnalyticsTables(p).catch(() => []),
       // "Top drinks" subtitle promises wine + cocktails + beer + soft drinks —
       // WINE and DRINK are separate categoryType buckets, so both must be requested.
       api.getAnalyticsItems({ ...p, order: 'desc', category: 'WINE,DRINK', limit: 5 }).catch(() => []),
       api.getAnalyticsItems({ ...p, order: 'desc', category: 'DESSERT', limit: 5 }).catch(() => []),
       api.getAnalyticsPairings(p).catch(() => []),
-      api.getFloor().catch(() => null),
-      api.getWaiterLeaderboard({ period: leaderboardPeriod }).catch(() => ({ leaderboard: [] })),
-      api.getWaiterTasks({ status: 'open' }).catch(() => []),
       api.getEngagementSummary(p).catch(() => null),
     ]);
     setSummary(s as Summary | null);
@@ -127,14 +115,10 @@ export function OwnerDashboard() {
     setHours(h as Hour[]);
     setDow(dw as Dow[]);
     setTrend((tr as { points: TrendPoint[] })?.points || []);
-    setRatings(rt as Ratings | null);
     setTables(tb as TableRow[]);
     setDrinkItems(di as Item[]);
     setDessertItems(de as Item[]);
     setPairings(pr as Pairing[]);
-    setFloor(fl as FloorState | null);
-    setLeaderboard((lb as { leaderboard: LeaderboardRow[] })?.leaderboard || []);
-    setTasks(tk as WaiterTask[]);
     setEngagement(eg as Engagement | null);
     setLoading(false);
   }, []);
@@ -177,25 +161,6 @@ export function OwnerDashboard() {
 
   const covers = summary?.covers || 0;
   const avgPerCover = covers > 0 ? (summary!.revenue / covers) : 0;
-
-  // Live floor state — separate from the "Revenue" KPI above, which only counts
-  // completed (paid) orders. A busy floor with several tables mid-service is real
-  // signal even before those tables check out.
-  const occupiedTables = floor ? (floor.tableCount + floor.luxuryTableCount) - floor.counts.empty : 0;
-  const onFloorRevenue = floor ? floor.tables.reduce((s, t) => s + (t.spend || 0), 0) : 0;
-  // Completed-sales leaderboard first (real closed business); if nothing has
-  // been paid out yet this period (e.g. early in a busy shift), fall back to
-  // whoever has the most value on the floor right now — labeled differently
-  // so it's never mistaken for a completed sale.
-  const floorByWaiter = floor
-    ? floor.tables.reduce((m, t) => { if (t.waiter) m.set(t.waiter, (m.get(t.waiter) || 0) + (t.spend || 0)); return m; }, new Map<string, number>())
-    : new Map<string, number>();
-  const topFloorWaiter = [...floorByWaiter.entries()].sort((a, b) => b[1] - a[1])[0] || null;
-  const topWaiter = leaderboard[0]
-    ? { name: leaderboard[0].waiterName, value: leaderboard[0].salesDriven, inProgress: false }
-    : topFloorWaiter ? { name: topFloorWaiter[0], value: topFloorWaiter[1], inProgress: true } : null;
-  const today = new Date().toDateString();
-  const celebrationsToday = tasks.filter(t => t.type === 'birthday' && new Date(t.createdAt).toDateString() === today).length;
 
   // Video watch -> order conversion, aggregated across every dish's video.
   // Correlated by the guest's own browser session (see server comment on
@@ -246,14 +211,6 @@ export function OwnerDashboard() {
           <div className={styles.loading}><Spinner size={40} /></div>
         ) : (
           <>
-            {/* Right now — live floor state, independent of the completed-orders
-                KPIs below (those only count paid/history orders). */}
-            <section className={styles.kpiGrid}>
-              <Kpi value={floor ? String(occupiedTables) : '—'} label="Tables occupied now" sub={onFloorRevenue > 0 ? `${formatPrice(onFloorRevenue)} on the floor` : undefined} />
-              <Kpi value={String(celebrationsToday)} label="Celebrations today" hint={celebrationsToday > 0 ? undefined : 'none flagged yet'} />
-              <Kpi value={topWaiter ? topWaiter.name : '—'} label="Top waiter" sub={topWaiter ? `${formatPrice(topWaiter.value)}${topWaiter.inProgress ? ' in progress' : ''}` : undefined} />
-            </section>
-
             {/* KPI strip */}
             <section className={styles.kpiGrid}>
               <Kpi value={formatPrice(summary?.revenue || 0)} label="Revenue" />
@@ -409,45 +366,6 @@ export function OwnerDashboard() {
                   ))}
                 </div>
               ) : <Empty msg="No repeated pairings yet." />}
-            </Panel>
-
-            {/* Waiter leaderboard */}
-            <Panel title="Waiter performance" subtitle="Sales driven, this period">
-              {leaderboard.length > 0 ? (
-                <div className={styles.dishList}>
-                  {leaderboard.slice(0, 5).map(w => (
-                    <div key={w.waiterName} className={styles.dishRow}>
-                      <span className={styles.dishRank}>#{w.rank}</span>
-                      <span className={styles.dishName}>{w.waiterName}</span>
-                      <span className={styles.dishQty}>{w.tablesServed} table{w.tablesServed !== 1 ? 's' : ''}</span>
-                      <span className={styles.dishRev}>{formatPrice(w.salesDriven)}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : <Empty msg="No completed orders yet." />}
-            </Panel>
-
-            {/* Ratings */}
-            <Panel title="Guest ratings">
-              {ratings && ratings.count > 0 ? (
-                <div className={styles.ratings}>
-                  <div className={styles.ratingHead}>
-                    <span className={styles.ratingBig}>{ratings.average.toFixed(1)}</span>
-                    <span className={styles.ratingStars}>
-                      {[1, 2, 3, 4, 5].map(s => <Star key={s} size={15} fill={s <= Math.round(ratings.average) ? 'currentColor' : 'none'} />)}
-                    </span>
-                    <span className={styles.ratingCount}>{ratings.count} review{ratings.count !== 1 ? 's' : ''}</span>
-                  </div>
-                  {ratings.recent.filter(r => r.comment).slice(0, 5).map(r => (
-                    <div key={r.id} className={styles.ratingRow}>
-                      <span className={styles.ratingRowStars}>
-                        {[1, 2, 3, 4, 5].map(s => <Star key={s} size={11} fill={s <= r.rating ? 'currentColor' : 'none'} />)}
-                      </span>
-                      <p className={styles.ratingComment}>{r.comment}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : <Empty msg="No ratings in this period." />}
             </Panel>
 
             <Link to="/Admin" className={styles.fullLink}>Open full analytics & operations in the admin console <ArrowUpRight size={14} /></Link>
