@@ -586,7 +586,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
           <input
             ref={csvInputRef}
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,.xlsx,.xls,text/csv"
             style={{ display: 'none' }}
             onChange={e => {
               const file = e.target.files?.[0];
@@ -599,7 +599,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
             onClick={() => csvInputRef.current?.click()}
             disabled={importingCsv}
           >
-            <Upload size={14} /> {importingCsv ? 'Importing…' : 'Import order history (CSV)'}
+            <Upload size={14} /> {importingCsv ? 'Importing…' : 'Import order history (CSV/Excel)'}
           </button>
           <button className={styles.actionBtn} onClick={exportReportsCsv}><Download size={14} /> Export CSV</button>
         </>

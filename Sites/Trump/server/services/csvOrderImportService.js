@@ -1,19 +1,20 @@
 // Bulk historical-order import for the admin Reports tab. Lets an owner backfill
 // real past order data (from a POS export, a spreadsheet of takings, etc.) so
 // "most ordered dishes/drinks" and revenue reports read as a real restaurant
-// instead of empty, without waiting for the CSV column names Prisma happens to
-// use — headers are matched loosely against common aliases (item/dish/name,
-// qty/quantity, ...).
+// instead of empty, without waiting for the CSV/Excel column names Prisma
+// happens to use — headers are matched loosely against common aliases
+// (item/dish/name, qty/quantity, ...).
 //
-// Each CSV row becomes one OrderItem; rows are grouped into one Order per
+// Each row becomes one OrderItem; rows are grouped into one Order per
 // (table, order id) pair so a multi-item receipt still reports as a single
 // order rather than one per line. Writes go straight through
 // prismaOrderService.saveOrder with kind 'history', the same path
 // archiveTable() uses to settle a real order — so an imported row is
 // indistinguishable from a real completed sale to every existing analytics
 // query. Filenames are a hash of the group's own identity, so re-uploading the
-// same CSV twice updates the same rows instead of doubling them.
+// same file twice updates the same rows instead of doubling them.
 const crypto = require('crypto');
+const XLSX = require('xlsx');
 const { getPrisma } = require('./prismaClient');
 const { getCanonicalTableId, normalizeName } = require('../utils/helpers');
 
@@ -60,6 +61,20 @@ function parseCsv(text) {
   return rows.filter(r => r.some(cell => String(cell).trim() !== ''));
 }
 
+/** .xlsx / .xls -> the same array-of-rows shape parseCsv produces. Only the
+ * first sheet is read — a bulk order-history export is one table, not a
+ * workbook of them. */
+function parseXlsx(buffer) {
+  const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) return [];
+  const sheet = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+  return rows
+    .map(row => row.map(cell => (cell === null || cell === undefined ? '' : String(cell))))
+    .filter(r => r.some(cell => cell.trim() !== ''));
+}
+
 function normalizeHeader(cell) {
   return String(cell || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -104,13 +119,12 @@ function createCsvOrderImportService({ fileService, logger = null } = {}) {
     return priceByName;
   }
 
-  async function importCsv(text) {
+  async function importRows(rows) {
     const restaurantId = fileService?.prismaOrder?.restaurantId || 'trump';
-    const rows = parseCsv(text);
     if (rows.length < 2) {
       return {
         ordersCreated: 0, itemsImported: 0, skippedRows: 0,
-        errors: ['CSV needs a header row and at least one data row.'],
+        errors: ['File needs a header row and at least one data row.'],
       };
     }
 
@@ -203,7 +217,15 @@ function createCsvOrderImportService({ fileService, logger = null } = {}) {
     return { ordersCreated, itemsImported, skippedRows, errors: errors.slice(0, 25) };
   }
 
-  return { importCsv };
+  function importCsv(text) {
+    return importRows(parseCsv(text));
+  }
+
+  function importXlsx(buffer) {
+    return importRows(parseXlsx(buffer));
+  }
+
+  return { importCsv, importXlsx, importRows };
 }
 
 module.exports = { createCsvOrderImportService };

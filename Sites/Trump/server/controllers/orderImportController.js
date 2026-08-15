@@ -1,11 +1,21 @@
 const multer = require('multer');
 const { createCsvOrderImportService } = require('../services/csvOrderImportService');
 
-function isCsvUpload(file) {
+const XLSX_MIME_TYPES = new Set([
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+  'application/vnd.ms-excel', // legacy .xls (also sometimes sent for .csv — extension wins below)
+]);
+const CSV_MIME_TYPES = new Set(['text/csv', 'application/csv', 'text/plain']);
+
+/** Extension decides first (most reliable across browsers); mimetype is the fallback. */
+function detectFileType(file) {
+  const name = String(file.originalname || '').toLowerCase();
+  if (/\.(xlsx|xls)$/.test(name)) return 'xlsx';
+  if (/\.csv$/.test(name)) return 'csv';
   const mimeType = String(file.mimetype || '').toLowerCase();
-  const isCsvName = /\.csv$/i.test(file.originalname || '');
-  const isCsvMime = ['text/csv', 'application/vnd.ms-excel', 'application/csv', 'text/plain'].includes(mimeType);
-  return isCsvName || isCsvMime;
+  if (XLSX_MIME_TYPES.has(mimeType)) return 'xlsx';
+  if (CSV_MIME_TYPES.has(mimeType)) return 'csv';
+  return null;
 }
 
 function createOrderImportController({ fileService, logger = null } = {}) {
@@ -13,10 +23,10 @@ function createOrderImportController({ fileService, logger = null } = {}) {
 
   const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 2 * 1024 * 1024, files: 1 },
+    limits: { fileSize: 5 * 1024 * 1024, files: 1 },
     fileFilter(req, file, callback) {
-      if (!isCsvUpload(file)) {
-        const error = new Error('Only .csv files are accepted');
+      if (!detectFileType(file)) {
+        const error = new Error('Only .csv, .xlsx or .xls files are accepted');
         error.statusCode = 400;
         return callback(error);
       }
@@ -29,14 +39,16 @@ function createOrderImportController({ fileService, logger = null } = {}) {
 
     async importOrders(req, res) {
       if (!req.file) {
-        return res.status(400).json({ error: 'No CSV file uploaded' });
+        return res.status(400).json({ error: 'No file uploaded' });
       }
+      const type = detectFileType(req.file);
       try {
-        const text = req.file.buffer.toString('utf-8');
-        const result = await importService.importCsv(text);
+        const result = type === 'xlsx'
+          ? await importService.importXlsx(req.file.buffer)
+          : await importService.importCsv(req.file.buffer.toString('utf-8'));
         return res.json(result);
       } catch (error) {
-        logger?.error?.('csv_order_import_failed', { error: error.message });
+        logger?.error?.('order_import_failed', { error: error.message, type });
         return res.status(500).json({ error: 'Import failed', detail: error.message });
       }
     },

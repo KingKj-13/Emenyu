@@ -5,6 +5,13 @@
 // go straight through Node instead of a file-upload form.
 //
 // Usage: node scripts/import-order-history-csv.js <path-to-csv> [restaurantId]
+
+// Rows with a bare "YYYY-MM-DD HH:mm" date (no timezone) are parsed as LOCAL
+// time -- pin it to the restaurant's own timezone (same as server.js) so a
+// backfill run from a different machine doesn't shift every timestamp by
+// whatever offset that machine happens to default to.
+process.env.TZ = 'Africa/Johannesburg';
+
 const fs = require('fs');
 const path = require('path');
 

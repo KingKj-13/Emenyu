@@ -5,7 +5,7 @@
 // data the server already computes. Operational depth still lives in /Admin.
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, Star, LogOut, Sparkles, SlidersHorizontal, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, Star, LogOut, Sparkles, SlidersHorizontal, ArrowUpRight, Upload } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { Spinner } from '../components/ui/Spinner';
 import { useAuth } from '../hooks/useAuth';
@@ -30,6 +30,16 @@ interface RatingRow { id: number; rating: number; comment: string; tableId: stri
 interface Ratings { average: number; count: number; recent: RatingRow[] }
 interface TableRow { tableId: string; revenue: number; orderCount: number }
 interface Pairing { a: string; b: string; count: number; revenue: number }
+interface EngagementVideo { menuItemId: number; name: string; plays: number; avgWatchSec: number; totalWatchSec: number }
+interface Engagement {
+  totals: { byType: Record<string, number> };
+  mostWatchedVideos: EngagementVideo[];
+}
+
+function watchTime(sec: number): string {
+  if (!sec) return '—';
+  return sec >= 60 ? `${Math.floor(sec / 60)}m ${sec % 60}s` : `${sec}s`;
+}
 
 type RangeKey = 'today' | '7d' | '30d' | '90d';
 const RANGES: { key: RangeKey; label: string; days: number; bucket: 'day' | 'week' }[] = [
@@ -78,13 +88,16 @@ export function OwnerDashboard() {
   const [floor, setFloor] = useState<FloorState | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [tasks, setTasks] = useState<WaiterTask[]>([]);
+  const [engagement, setEngagement] = useState<Engagement | null>(null);
+  const [importingCsv, setImportingCsv] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (r: RangeKey) => {
     setLoading(true);
     const { from, to, bucket } = rangeParams(r);
     const p = { from, to };
     const leaderboardPeriod = r === 'today' ? 'today' : r === '7d' ? 'week' : 'month';
-    const [s, ti, bi, h, dw, tr, rt, ra, ri, tb, di, de, pr, fl, lb, tk] = await Promise.all([
+    const [s, ti, bi, h, dw, tr, rt, ra, ri, tb, di, de, pr, fl, lb, tk, eg] = await Promise.all([
       api.getAnalyticsSummary(p).catch(() => null),
       // "Top/Bottom dishes" must never include drinks — excludeCategory pulls
       // a wider pool server-side and filters before slicing to the display limit.
@@ -105,6 +118,7 @@ export function OwnerDashboard() {
       api.getFloor().catch(() => null),
       api.getWaiterLeaderboard({ period: leaderboardPeriod }).catch(() => ({ leaderboard: [] })),
       api.getWaiterTasks({ status: 'open' }).catch(() => []),
+      api.getEngagementSummary(p).catch(() => null),
     ]);
     setSummary(s as Summary | null);
     setTopItems(ti as Item[]);
@@ -122,8 +136,29 @@ export function OwnerDashboard() {
     setFloor(fl as FloorState | null);
     setLeaderboard((lb as { leaderboard: LeaderboardRow[] })?.leaderboard || []);
     setTasks(tk as WaiterTask[]);
+    setEngagement(eg as Engagement | null);
     setLoading(false);
   }, []);
+
+  async function handleImportOrdersCsv(file: File) {
+    setImportingCsv(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const result = await api.importOrdersCsv(formData);
+      const errorNote = result.errors.length ? `\n\n${result.errors.slice(0, 5).join('\n')}` : '';
+      alert(
+        `Imported ${result.ordersCreated} order${result.ordersCreated !== 1 ? 's' : ''} `
+        + `(${result.itemsImported} item${result.itemsImported !== 1 ? 's' : ''}).`
+        + (result.skippedRows ? ` ${result.skippedRows} row(s) skipped.` : '')
+        + errorNote
+      );
+      await load(range);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Import failed');
+    }
+    setImportingCsv(false);
+  }
 
   useEffect(() => { load(range); }, [range, load]);
 
@@ -182,6 +217,20 @@ export function OwnerDashboard() {
             <span className={styles.brandSub}>OWNER DASHBOARD</span>
           </div>
           <div className={styles.topActions}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls,text/csv"
+              style={{ display: 'none' }}
+              onChange={e => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) void handleImportOrdersCsv(file);
+              }}
+            />
+            <button className={styles.adminLink} onClick={() => fileInputRef.current?.click()} disabled={importingCsv}>
+              <Upload size={14} /> {importingCsv ? 'Importing…' : 'Import orders'}
+            </button>
             <Link to="/Admin" className={styles.adminLink}><SlidersHorizontal size={14} /> Admin console</Link>
             <button className={styles.signOut} onClick={logout}><LogOut size={14} /> Sign out</button>
           </div>
@@ -300,6 +349,33 @@ export function OwnerDashboard() {
                 <DishList rows={dessertItems} empty="No desserts sold yet." />
               </Panel>
             </div>
+
+            {/* Guest engagement — how much of a dish's video guests actually watch.
+                Full breakdown (plays, completion rate, per-dish table) lives in
+                Admin → Guest Engagement; this is the summary. */}
+            <Panel title="Video engagement" subtitle="Most-watched dish videos, by total watch time">
+              <div className={styles.kpiGrid}>
+                <Kpi value={String(engagement?.totals.byType.VIDEO_PLAY ?? 0)} label="Videos played" />
+                <Kpi value={String(engagement?.totals.byType.VIDEO_COMPLETE ?? 0)} label="Watched through" />
+                <Kpi
+                  value={engagement?.mostWatchedVideos[0] ? watchTime(engagement.mostWatchedVideos[0].avgWatchSec) : '—'}
+                  label="Top video, avg. watch"
+                  sub={engagement?.mostWatchedVideos[0]?.name}
+                />
+              </div>
+              {engagement?.mostWatchedVideos.length ? (
+                <div className={styles.dishList}>
+                  {engagement.mostWatchedVideos.slice(0, 5).map((v, i) => (
+                    <div key={`${v.menuItemId}-${v.name}`} className={styles.dishRow}>
+                      <span className={styles.dishRank}>#{i + 1}</span>
+                      <span className={styles.dishName}>{v.name || '—'}</span>
+                      <span className={styles.dishQty}>{v.plays} play{v.plays !== 1 ? 's' : ''}</span>
+                      <span className={styles.dishRev}>{watchTime(v.avgWatchSec)}/play</span>
+                    </div>
+                  ))}
+                </div>
+              ) : <Empty msg="No videos played in this period." />}
+            </Panel>
 
             {/* Highest-spending tables (full ranking) */}
             <Panel title="Highest-spending tables" subtitle="Completed orders, this period">
