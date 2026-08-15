@@ -56,6 +56,7 @@ export const ja: Messages = {
   'cut.from': '{cut}より',
   'cut.classically': '伝統的な調理',
   'cut.notOnMenu': '本日のメニューにはございません — 精肉室の在庫は係の者にお尋ねください。',
+  'cut.similarTo': 'この部位そのものではありませんが、{cut}が近く、本日のメニューにございます：',
   'cut.browseSteaks': 'すべてのステーキを見る',
   'cut.onTheMenu': '品',
   'cut.naming': '呼称',

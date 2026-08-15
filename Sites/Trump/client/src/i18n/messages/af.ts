@@ -58,6 +58,7 @@ export const af: Messages = {
   'cut.from': 'Van {cut}',
   'cut.classically': 'Klassiek',
   'cut.notOnMenu': 'Nie vanaand op die spyskaart nie — vra jou kelner wat die slaghuis het.',
+  'cut.similarTo': 'Nie presies hierdie sny nie, maar {cut} is soortgelyk, en dit is vanaand op die spyskaart:',
   'cut.browseSteaks': 'Sien elke steak',
   'cut.onTheMenu': 'op die spyskaart',
   'cut.naming': 'Benaming',

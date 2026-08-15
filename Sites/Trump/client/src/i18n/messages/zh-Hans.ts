@@ -57,6 +57,7 @@ export const zhHans: Messages = {
   'cut.from': '来自：{cut}',
   'cut.classically': '经典做法',
   'cut.notOnMenu': '今晚菜单暂无此部位 — 请询问服务员肉品坊的现货。',
+  'cut.similarTo': '虽非完全相同的部位，但{cut}与之相近，今晚菜单上有供应：',
   'cut.browseSteaks': '查看所有牛排',
   'cut.onTheMenu': '道菜品',
   'cut.naming': '命名方式',

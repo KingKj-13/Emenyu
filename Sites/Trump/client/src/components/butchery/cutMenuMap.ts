@@ -29,6 +29,15 @@ export interface CutMenuRule {
    *  (mince, patties, a bone-in steak that carries the lobe). Always labelled
    *  so it never reads as "this is that cut". */
   related?: CutRelatedRule;
+  /**
+   * Other primals a guest who liked THIS one would likely also like — similar
+   * texture, similar cooking method, not the same cut. Ordered nearest-first.
+   * Only consulted when tonight's menu has nothing from this cut AND no
+   * `related` group either — a real, if approximate, answer beats "ask your
+   * waiter" when one exists. The first candidate with something on the menu
+   * wins; the rest are never checked.
+   */
+  similarCuts?: string[];
 }
 
 export interface CutMenuMapping {
@@ -55,10 +64,12 @@ const STEAKHOUSE: CutMenuMapping = {
       // Ribeye in every grade, plus the tomahawk (a ribeye with the bone left
       // long) and the short ribs cut off the same section.
       match: [/\bribeye\b/i, /\btomahawk\b/i, /\bbeef ribs\b/i],
+      similarCuts: ['sirloin', 'fillet'],
     },
     sirloin: {
       // The strip loin itself, and the T-bone, whose larger lobe is strip.
       match: [/\bsirloin\b/i, /\bt-?bone\b/i],
+      similarCuts: ['rib', 'rump', 'fillet'],
     },
     fillet: {
       match: [/\bfillet\b/i],
@@ -66,9 +77,11 @@ const STEAKHOUSE: CutMenuMapping = {
         label: 'Carries a fillet lobe',
         match: [/\bt-?bone\b/i],
       },
+      similarCuts: ['sirloin', 'rib'],
     },
     rump: {
       match: [/\brump\b/i, /\bpicanha\b/i],
+      similarCuts: ['sirloin', 'silverside', 'topside'],
     },
     chuck: {
       // Chuckeye and Denver are both cut from the shoulder.
@@ -79,11 +92,13 @@ const STEAKHOUSE: CutMenuMapping = {
         // Poultry/veg patties obviously are not beef chuck.
         exclude: [/\bchicken\b|\bveg\b|\bhalloumi\b/i],
       },
+      similarCuts: ['brisket', 'neck', 'shin'],
     },
     silverside: {
       // Biltong is cured silverside — the one cut on this chart that South
       // African menus name by its product rather than its primal.
       match: [/\bbiltong\b/i, /\bsilverside\b/i],
+      similarCuts: ['topside', 'rump', 'thickflank'],
     },
     neck: {
       match: [/\bneck\b/i],
@@ -91,6 +106,7 @@ const STEAKHOUSE: CutMenuMapping = {
         label: 'Minced and slow-cooked here',
         match: [/\bbolognese\b/i, /\brag[uù]\b/i],
       },
+      similarCuts: ['shin', 'chuck', 'brisket'],
     },
     shin: {
       match: [/\bosso ?buco\b/i, /\bshin\b/i, /\bshank\b/i],
@@ -98,11 +114,12 @@ const STEAKHOUSE: CutMenuMapping = {
         label: 'Braised the same way',
         match: [/^\s*oxtail\s*$/i],
       },
+      similarCuts: ['neck', 'chuck', 'brisket'],
     },
-    brisket: { match: [/\bbrisket\b/i] },
-    thinflank: { match: [/\bflank steak\b/i, /\bthin flank\b/i] },
-    thickflank: { match: [/\bthick flank\b/i, /\bknuckle\b/i] },
-    topside: { match: [/\btopside\b/i] },
+    brisket: { match: [/\bbrisket\b/i], similarCuts: ['chuck', 'neck', 'shin'] },
+    thinflank: { match: [/\bflank steak\b/i, /\bthin flank\b/i], similarCuts: ['thickflank', 'silverside', 'rump'] },
+    thickflank: { match: [/\bthick flank\b/i, /\bknuckle\b/i], similarCuts: ['rump', 'silverside', 'topside'] },
+    topside: { match: [/\btopside\b/i], similarCuts: ['silverside', 'rump', 'thickflank'] },
   },
 };
 
@@ -120,9 +137,15 @@ export interface CutMenuMatch {
   primary: MenuItem[];
   /** Optional secondary group, only when the rule defines one and it matched. */
   related: { label: string; items: MenuItem[] } | null;
+  /**
+   * Set only when `primary` and `related` are both empty: the nearest
+   * `similarCuts` entry that DOES have something on tonight's menu, so the
+   * panel can say "not this cut, but here's Rump" instead of a dead end.
+   */
+  similar: { cutId: string; items: MenuItem[] } | null;
 }
 
-const EMPTY: CutMenuMatch = { primary: [], related: null };
+const EMPTY: CutMenuMatch = { primary: [], related: null, similar: null };
 
 function test(name: string, patterns: RegExp[]): boolean {
   return patterns.some(re => re.test(name));
@@ -190,6 +213,9 @@ export function matchCutItems(
     related: rule.related && relatedItems.length > 0
       ? { label: rule.related.label, items: relatedItems }
       : null,
+    // Filled in by buildCutMenuIndex, which alone has every cut's result to
+    // draw a fallback from — a single cut's own match can't see its siblings.
+    similar: null,
   };
 }
 
@@ -224,6 +250,24 @@ export function buildCutMenuIndex(
 ): Record<string, CutMenuMatch> {
   const index: Record<string, CutMenuMatch> = {};
   for (const id of cutIds) index[id] = matchCutItems(id, items, mapping, matchName);
+
+  // Second pass: a cut with nothing of its own (and no related group) borrows
+  // the nearest similarCuts entry that DOES have something tonight. Needs
+  // every cut resolved first, which is exactly what this function alone has.
+  for (const id of cutIds) {
+    const match = index[id];
+    if (match.primary.length > 0 || match.related) continue;
+    const candidates = mapping.rules[id]?.similarCuts;
+    if (!candidates) continue;
+    for (const candidateId of candidates) {
+      const candidate = index[candidateId];
+      if (candidate && candidate.primary.length > 0) {
+        index[id] = { ...match, similar: { cutId: candidateId, items: candidate.primary } };
+        break;
+      }
+    }
+  }
+
   return index;
 }
 

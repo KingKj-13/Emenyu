@@ -785,6 +785,7 @@ export function CowMeatSelector({
   /* ── render ──────────────────────────────────────────────────────────── */
   const match: CutMenuMatch | null = activeCut ? cutIndex[activeCut.id] ?? null : null;
   const copy = activeCut ? cutCopy(activeCut) : null;
+  const similarCut = match?.similar ? CUT_BY_ID.get(match.similar.cutId) ?? null : null;
   const previewCut = hoverCut ? CUT_BY_ID.get(hoverCut) ?? null : null;
   const captionCut = activeCut ?? previewCut;
   const plateSrc = `${assetBase}/cow.webp`;
@@ -973,6 +974,24 @@ export function CowMeatSelector({
                   {match.related.items.map((item, i) => (
                     <DishRow
                       key={`rel-${item.name}-${i}`}
+                      item={item}
+                      onOpen={onOpenItem}
+                    />
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Nothing genuinely from this primal tonight (and no related-dishes
+                group either) -- offer the nearest cut that DOES have something,
+                clearly labelled as a substitute, not this cut itself. */}
+            {match?.similar && similarCut && (
+              <div className={styles.field}>
+                <h3>{t('cut.similarTo', { cut: cutCopy(similarCut).name })}</h3>
+                <ul className={styles.dishList}>
+                  {match.similar.items.map((item, i) => (
+                    <DishRow
+                      key={`sim-${item.name}-${i}`}
                       item={item}
                       onOpen={onOpenItem}
                     />

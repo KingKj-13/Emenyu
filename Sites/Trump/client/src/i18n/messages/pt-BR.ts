@@ -58,6 +58,7 @@ export const ptBR: Messages = {
   'cut.from': 'De: {cut}',
   'cut.classically': 'Tradicionalmente',
   'cut.notOnMenu': 'Não está no cardápio hoje — pergunte ao garçom o que o açougue tem.',
+  'cut.similarTo': 'Não é exatamente este corte, mas {cut} é parecido e está no cardápio hoje:',
   'cut.browseSteaks': 'Ver todas as carnes',
   'cut.onTheMenu': 'no cardápio',
   'cut.naming': 'Denominação',

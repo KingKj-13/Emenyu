@@ -56,6 +56,7 @@ export const ru: Messages = {
   'cut.from': 'Из: {cut}',
   'cut.classically': 'Классически',
   'cut.notOnMenu': 'Сегодня этого нет в меню — спросите официанта, что есть в мясной лавке.',
+  'cut.similarTo': 'Это не совсем тот же отруб, но {cut} похож на него и есть сегодня в меню:',
   'cut.browseSteaks': 'Посмотреть все стейки',
   'cut.onTheMenu': 'в меню',
   'cut.naming': 'Наименование',

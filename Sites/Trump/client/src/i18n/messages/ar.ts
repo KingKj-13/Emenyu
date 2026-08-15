@@ -58,6 +58,7 @@ export const ar: Messages = {
   'cut.from': 'من: {cut}',
   'cut.classically': 'تقليدياً',
   'cut.notOnMenu': 'غير مدرجة في قائمة الليلة — اسأل النادل عمّا يتوفر في قسم اللحوم.',
+  'cut.similarTo': 'ليست هذه القطعة تحديدًا، لكن {cut} مشابهة لها، وهي ضمن قائمة الليلة:',
   'cut.browseSteaks': 'عرض جميع قطع اللحم',
   'cut.onTheMenu': 'في القائمة',
   'cut.naming': 'التسمية',

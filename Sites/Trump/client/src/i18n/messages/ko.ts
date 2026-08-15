@@ -56,6 +56,7 @@ export const ko: Messages = {
   'cut.from': '{cut}에서',
   'cut.classically': '전통적인 조리법',
   'cut.notOnMenu': '오늘 메뉴에는 없습니다 — 정육 코너 재고는 직원에게 문의해 주세요.',
+  'cut.similarTo': '정확히 이 부위는 아니지만 {cut}이(가) 비슷하며 오늘 메뉴에 있습니다:',
   'cut.browseSteaks': '모든 스테이크 보기',
   'cut.onTheMenu': '개 메뉴',
   'cut.naming': '명칭',

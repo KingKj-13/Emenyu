@@ -56,6 +56,7 @@ export const it: Messages = {
   'cut.from': 'Da: {cut}',
   'cut.classically': 'Tradizionalmente',
   'cut.notOnMenu': 'Non nel menu di stasera — chieda al cameriere cosa ha la macelleria.',
+  'cut.similarTo': 'Non esattamente questo taglio, ma {cut} è simile ed è nel menu di stasera:',
   'cut.browseSteaks': 'Vedi tutte le bistecche',
   'cut.onTheMenu': 'nel menu',
   'cut.naming': 'Denominazione',

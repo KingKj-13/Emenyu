@@ -106,5 +106,8 @@ export function serverCutToMatch(cut: ServerCut): CutMenuMatch {
   return {
     primary,
     related: related.length > 0 ? { label: relatedLabel || 'Also from this cut', items: related } : null,
+    // A curated cut is an explicit editorial choice — an empty one stays
+    // empty rather than being second-guessed with an automatic substitute.
+    similar: null,
   };
 }

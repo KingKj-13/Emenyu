@@ -56,6 +56,7 @@ export const hi: Messages = {
   'cut.from': '{cut} से',
   'cut.classically': 'पारंपरिक रूप से',
   'cut.notOnMenu': 'आज के मेन्यू में नहीं — मीट काउंटर में क्या उपलब्ध है, अपने वेटर से पूछें।',
+  'cut.similarTo': 'यह ठीक यही कट नहीं है, लेकिन {cut} इससे मिलता-जुलता है और आज के मेन्यू में है:',
   'cut.browseSteaks': 'सभी स्टेक देखें',
   'cut.onTheMenu': 'मेन्यू में',
   'cut.naming': 'नामकरण',

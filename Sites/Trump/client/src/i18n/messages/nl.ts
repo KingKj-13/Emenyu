@@ -56,6 +56,7 @@ export const nl: Messages = {
   'cut.from': 'Van: {cut}',
   'cut.classically': 'Klassiek',
   'cut.notOnMenu': 'Vanavond niet op de kaart — vraag uw ober wat de slagerij in huis heeft.',
+  'cut.similarTo': 'Niet precies dit stuk, maar {cut} is vergelijkbaar en staat vanavond op de kaart:',
   'cut.browseSteaks': 'Bekijk alle steaks',
   'cut.onTheMenu': 'op de kaart',
   'cut.naming': 'Benaming',

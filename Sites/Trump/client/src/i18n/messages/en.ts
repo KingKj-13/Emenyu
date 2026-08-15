@@ -70,6 +70,7 @@ export const en = {
   'cut.from': 'From {cut}',
   'cut.classically': 'Classically',
   'cut.notOnMenu': 'Not on tonight’s menu — ask your waiter what the butchery has in.',
+  'cut.similarTo': 'Not exactly this cut, but {cut} is similar, and it’s on tonight’s menu:',
   'cut.browseSteaks': 'See every steak',
   'cut.onTheMenu': 'on the menu',
   'cut.naming': 'Naming',
