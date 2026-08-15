@@ -1,0 +1,4 @@
+# raw assets live on the build machine, never in git
+images/
+*.pdf
+*.jpg

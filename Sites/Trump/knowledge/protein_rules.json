@@ -1,0 +1,257 @@
+{
+  "$schema": "emenu-v3-knowledge",
+  "domain": "protein_rules",
+  "source_files": [
+    "server/services/nlg/hospitalityKnowledge.js (cookingMethodFor())",
+    "server/services/heroPairings.js (CATEGORY_PROTEIN)",
+    "server/services/aiService.js (addFoodPairings -> foodRules)"
+  ],
+  "notes": [
+    "cookingMethodFor(item, tone) now takes a tone parameter (Phase A/B demo polish, 2026-07-10) and selects the matching key from cooking_method_phrases below, falling back to 'professional' if a tone key is missing -- each phrase group has genuinely distinct professional/friendly/luxury wording rather than one string repeated three times.",
+    "cookingMethodFor() checks rules in order and returns on first match (if/else-if chain) -- 'match_priority' reflects that exact order.",
+    "Before any protein/texture/course check, cookingMethodFor() first tests CONDIMENT_RE = /\\b(sauce|butter|dressing|dip|chutney|relish|glaze)\\b/ against the lowercased item name; if it matches, the function returns '' immediately (no cooking-method line for condiments/enhancements), regardless of the item's own protein/course tags.",
+    "typical_sides for each protein come from aiService.js addFoodPairings()'s foodRules array, matched on dish-name/searchText regex (not directly on the protein tag) -- captured verbatim as 'dish_regex' + 'keywords' per protein below.",
+    "Not every protein has a dedicated foodRules entry: lamb and game share cookingMethodFor()'s grilling logic with beef but have NO separate foodRules side-dish entry in aiService.js (no /lamb/ or /game/ regex exists in foodRules) -- typical_sides is empty for those two, flagged explicitly rather than invented."
+  ],
+  "category_protein_map": {
+    "source": "heroPairings.js CATEGORY_PROTEIN",
+    "description": "Maps a menu category name to the protein tag hero-dish matching is gated on, so e.g. a beef 'Fillet' hero pairing never lands on a seafood 'Kingklip Fillet'.",
+    "map": {
+      "Premium Steak": "beef",
+      "Wagyu": "beef",
+      "Oxtail & Beef Ribs": "beef",
+      "Venison & Game": "game",
+      "Lamb": "lamb",
+      "Pork & Ribs": "pork"
+    }
+  },
+  "proteins": [
+    {
+      "protein": "beef",
+      "match_priority": 4,
+      "cooking_style": {
+        "conditions_charred": { "protein_any_of": ["beef", "lamb", "game"], "flavour_includes": "charred" },
+        "conditions_default": { "protein_any_of": ["beef", "lamb", "game"] }
+      },
+      "cooking_method_phrases": {
+        "charred_variant": {
+          "professional": "char-grilled over the coals",
+          "friendly": "grilled right over the coals",
+          "luxury": "char-grilled over an open flame for that signature depth of flavour"
+        },
+        "default_variant": {
+          "professional": "grilled to order",
+          "friendly": "grilled just the way you like it",
+          "luxury": "grilled precisely to order, exactly as requested"
+        },
+        "fidelity_note": "tone-varied (2026-07-10) -- see notes[0]."
+      },
+      "typical_sides": {
+        "source": "aiService.js foodRules[\"Classic steak side\"]",
+        "dish_regex": "/tomahawk|wagyu|fillet|ribeye|rump|sirloin|steak|beef/",
+        "label": "Classic steak side",
+        "score": 90,
+        "keywords": ["chips", "fries", "onion rings", "mushroom sauce", "pepper sauce", "garlic bread"]
+      }
+    },
+    {
+      "protein": "lamb",
+      "match_priority": 4,
+      "cooking_style": {
+        "conditions_charred": { "protein_any_of": ["beef", "lamb", "game"], "flavour_includes": "charred" },
+        "conditions_default": { "protein_any_of": ["beef", "lamb", "game"] }
+      },
+      "cooking_method_phrases": {
+        "charred_variant": {
+          "professional": "char-grilled over the coals",
+          "friendly": "grilled right over the coals",
+          "luxury": "char-grilled over an open flame for that signature depth of flavour"
+        },
+        "default_variant": {
+          "professional": "grilled to order",
+          "friendly": "grilled just the way you like it",
+          "luxury": "grilled precisely to order, exactly as requested"
+        },
+        "fidelity_note": "tone-varied (2026-07-10) -- shares the exact same cookingMethodFor() branch as beef/game (grouped in one if-condition)."
+      },
+      "typical_sides": {
+        "source": "aiService.js foodRules",
+        "fidelity_note": "No dedicated foodRules entry exists for lamb (no /lamb/ regex in addFoodPairings()) -- left empty rather than invented. Lamb dishes only receive candidate sides indirectly if their name also matches another rule's regex (none do)."
+      }
+    },
+    {
+      "protein": "game",
+      "match_priority": 4,
+      "cooking_style": {
+        "conditions_charred": { "protein_any_of": ["beef", "lamb", "game"], "flavour_includes": "charred" },
+        "conditions_default": { "protein_any_of": ["beef", "lamb", "game"] }
+      },
+      "cooking_method_phrases": {
+        "charred_variant": {
+          "professional": "char-grilled over the coals",
+          "friendly": "grilled right over the coals",
+          "luxury": "char-grilled over an open flame for that signature depth of flavour"
+        },
+        "default_variant": {
+          "professional": "grilled to order",
+          "friendly": "grilled just the way you like it",
+          "luxury": "grilled precisely to order, exactly as requested"
+        },
+        "fidelity_note": "tone-varied (2026-07-10) -- shares the exact same cookingMethodFor() branch as beef/lamb (grouped in one if-condition)."
+      },
+      "typical_sides": {
+        "source": "aiService.js foodRules",
+        "fidelity_note": "No dedicated foodRules entry exists for game (no /game|venison/ regex in addFoodPairings()) -- left empty rather than invented."
+      }
+    },
+    {
+      "protein": "chicken",
+      "match_priority": 6,
+      "cooking_style": {
+        "conditions_smoky": { "protein_includes": "chicken", "flavour_includes": "smoky" },
+        "conditions_default": { "protein_includes": "chicken" }
+      },
+      "cooking_method_phrases": {
+        "smoky_variant": {
+          "professional": "flame-grilled",
+          "friendly": "grilled over an open flame",
+          "luxury": "flame-grilled for a beautifully smoky finish"
+        },
+        "default_variant": {
+          "professional": "grilled till the skin crisps up",
+          "friendly": "grilled till that skin gets nice and crispy",
+          "luxury": "grilled until the skin turns beautifully crisp"
+        },
+        "fidelity_note": "tone-varied (2026-07-10) -- see notes[0]."
+      },
+      "typical_sides": {
+        "source": "aiService.js foodRules[\"Pairs with chicken\"]",
+        "dish_regex": "/chicken/",
+        "label": "Pairs with chicken",
+        "score": 84,
+        "keywords": ["chips", "salad", "garlic bread", "coleslaw"]
+      }
+    },
+    {
+      "protein": "pork",
+      "match_priority": 8,
+      "cooking_style": {
+        "conditions_ribs": { "protein_includes": "pork", "name_matches": "/rib/" },
+        "conditions_default": "no cookingMethodFor() match unless texture_includes 'crispy' (see non_protein_rules.crispy) -- pork with no 'rib' in the name and no crispy texture returns ''"
+      },
+      "cooking_method_phrases": {
+        "ribs_variant": {
+          "professional": "slow-roasted till it falls off the bone",
+          "friendly": "slow-roasted till it's falling right off the bone",
+          "luxury": "slow-roasted for hours until it falls effortlessly from the bone"
+        },
+        "fidelity_note": "tone-varied (2026-07-10); this is the ONLY explicit pork phrase in cookingMethodFor() -- there is no generic pork fallback phrase distinct from the shared crispy-texture rule."
+      },
+      "typical_sides": {
+        "source": "aiService.js foodRules[\"Goes well together\"]",
+        "dish_regex": "/ribs|pork|chops/",
+        "label": "Goes well together",
+        "score": 86,
+        "keywords": ["chips", "coleslaw", "onion rings", "garlic bread"]
+      }
+    },
+    {
+      "protein": "seafood",
+      "match_priority": 2,
+      "cooking_style": {
+        "conditions_flaky": { "protein_includes": "seafood", "texture_includes": "flaky" },
+        "conditions_default": { "protein_includes": "seafood" }
+      },
+      "cooking_method_phrases": {
+        "flaky_variant": {
+          "professional": "pan-seared so it stays flaky",
+          "friendly": "pan-seared to keep it lovely and flaky",
+          "luxury": "pan-seared with precision to preserve its delicate, flaky texture"
+        },
+        "default_variant": {
+          "professional": "kept simple so the flavour stays clean",
+          "friendly": "cooked simply so the flavour really shines",
+          "luxury": "prepared with a light touch to let its natural flavour shine through"
+        },
+        "fidelity_note": "tone-varied (2026-07-10) -- see notes[0]."
+      },
+      "typical_sides": {
+        "source": "aiService.js foodRules[\"Goes great with seafood\"]",
+        "dish_regex": "/prawn|calamari|salmon|kingklip|hake|seafood/",
+        "label": "Goes great with seafood",
+        "score": 88,
+        "keywords": ["garlic bread", "chips", "greek salad", "tartare"]
+      }
+    }
+  ],
+  "non_protein_dish_type_rules": {
+    "fidelity_note": "These two foodRules entries are dish-name-regex based (not protein-tag based) -- included here for completeness since they live in the same foodRules array in addFoodPairings(), but they are not keyed by a protein.",
+    "entries": [
+      {
+        "dish_type": "burger",
+        "source": "aiService.js foodRules[\"Classic burger side\"]",
+        "dish_regex": "/burger/",
+        "label": "Classic burger side",
+        "score": 86,
+        "keywords": ["onion rings", "chips", "coleslaw"]
+      },
+      {
+        "dish_type": "pasta",
+        "source": "aiService.js foodRules[\"Perfect with pasta\"]",
+        "dish_regex": "/pasta/",
+        "label": "Perfect with pasta",
+        "score": 84,
+        "keywords": ["garlic bread", "salad", "bruschetta"]
+      }
+    ]
+  },
+  "non_protein_cooking_method_rules": {
+    "fidelity_note": "cookingMethodFor() also has course/texture-based branches that are not protein-specific -- captured here in source match order for completeness (they sit before/after/interleaved with the protein branches above; see match_priority for exact position).",
+    "entries": [
+      {
+        "id": "condiment-exclusion",
+        "match_priority": 0,
+        "conditions": { "name_matches": "/\\b(sauce|butter|dressing|dip|chutney|relish|glaze)\\b/" },
+        "phrase": "",
+        "description": "Condiments/enhancements never get a cooking-method line, even though they inherit their root category's course/protein tags elsewhere in the system."
+      },
+      {
+        "id": "sushi-sashimi",
+        "match_priority": 1,
+        "conditions": { "any_of": [{ "course": "SUSHI" }, { "name_matches": "/sashimi|sushi/" }] },
+        "phrase": "sliced fresh to order"
+      },
+      {
+        "id": "crispy-texture",
+        "match_priority": 9,
+        "conditions": { "texture_includes": "crispy" },
+        "phrase": "fried till properly crisp",
+        "description": "Fallback for any protein not already matched above (e.g. crispy pork with no 'rib' in the name, crispy chicken wings, etc.) -- fires after all protein-specific branches."
+      },
+      {
+        "id": "salad-course",
+        "match_priority": 10,
+        "conditions": { "course": "SALAD" },
+        "phrase": "tossed fresh"
+      },
+      {
+        "id": "dessert-cold",
+        "match_priority": 11,
+        "conditions": { "course": "DESSERT", "temperature": "cold" },
+        "phrase": "served well chilled"
+      },
+      {
+        "id": "dessert-default",
+        "match_priority": 12,
+        "conditions": { "course": "DESSERT" },
+        "phrase": "baked in-house"
+      },
+      {
+        "id": "no-match-fallback",
+        "match_priority": 13,
+        "conditions": "none of the above",
+        "phrase": ""
+      }
+    ]
+  }
+}

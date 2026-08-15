@@ -1,0 +1,36 @@
+{
+  "_meta": {
+    "title": "Recommendation Engine — Psychology Principles Already Implemented",
+    "purpose": "The engine was never explicitly designed against a persuasion/hospitality-psychology checklist, but several of its existing mechanisms already embody well-known principles implicitly. This documents which ones, grounded in the exact code that produces the effect, so the engine refactor builds on top of these rather than re-inventing them.",
+    "status": "already-enforced (all entries in this file describe code that runs today)",
+    "_active": false,
+    "_status": "REFERENCE ONLY — this FILE has no runtime consumer (nothing require()s/reads it). It documents mechanisms that already run in other code (guestAdjustedConfidence's favourite/VIP bumps, chef-first ordering, rotationService, marketBasket's social-proof copy) — the underlying behavior is real and live, but not because this file drives it."
+  },
+  "principles": [
+    {
+      "principle": "Personalization (Favourite Recall)",
+      "hospitality_example": "A returning guest who has previously ordered a particular wine, main, or dessert (or who has it among their top ordered items) sees that exact dish resurface with a meaningfully higher confidence score — the same instinct as a waiter who remembers a regular's usual order and leads with it rather than a generic pitch.",
+      "current_implementation": "server/services/recommendationScoring.js, guestAdjustedConfidence(): when guestIntel.present is true and normalizeName(item.name) matches one of favouriteNames(guestIntel) (guestIntel.favorites.wine / .main / .dessert, or any of guestIntel.topItems), confidence is boosted by +0.15, clamped to a maximum of 1.0 via clamp01()."
+    },
+    {
+      "principle": "Status Recognition (VIP Trust Bump)",
+      "hospitality_example": "A guest flagged as VIP or a recognized regular gets a small automatic vote of extra confidence on every recommendation shown to them, mirroring how an experienced host quietly extends a bit more trust and attentiveness to a known face without it being explicitly announced.",
+      "current_implementation": "server/services/recommendationScoring.js, guestAdjustedConfidence(): when guestIntel.vip is true (and the item is not already a favourite match, which takes precedence), confidence receives a flat +0.05 bump."
+    },
+    {
+      "principle": "Authority (Chef-First Ordering)",
+      "hospitality_example": "When the chef has personally curated a pairing for a dish, that pairing is presented ahead of anything the algorithm alone would surface — the same effect as a diner trusting 'the chef recommends this' far more readily than a generic upsell prompt, because the suggestion visibly carries the authority of an expert rather than a formula.",
+      "current_implementation": "server/services/aiService.js, recommend(): chef recommendations (sourced from chefRecs, per-item admin-authored pairings) are added as candidates with score = 1000 + priority — an order of magnitude above every algorithmic source (perfect-pairing rules score ~84-94, course-completion ~60-76, popularity-based fallback ~52+). Separately, recommendationScoring.js's baseConfidence() gives any candidate.chef === true a flat 0.92 confidence regardless of its raw score, and chef-tier candidates are explicitly kept in their own priority band during final re-ranking (\"chef recommendations keep their existing 'always wins' position — only the non-chef tail is re-ranked\")."
+    },
+    {
+      "principle": "Novelty / Repetition-Fatigue Avoidance",
+      "hospitality_example": "The same wine or side is not parroted to every table that orders the same steak — the engine varies which in-stock option leads, the way an attentive waiter naturally varies their go-to suggestions across tables and visits instead of running the identical script on repeat, which would otherwise make the recommendations feel canned.",
+      "current_implementation": "server/services/rotationService.js (createRotationService), invoked in aiService.js's recommend() via `this.rotation.rotate(candidates, payload)` immediately before category safety is applied. It performs priority-weighted, deterministic rotation across candidates that share a rotationGroup (e.g. multiple chef recs or hero-pairing bottles of the same varietal), so repeated visits or tables don't always see the identical top pick even though the underlying scoring hasn't changed."
+    },
+    {
+      "principle": "Social Proof (\"Tables Also Ordered\")",
+      "hospitality_example": "Telling a guest '6 tables also ordered this' leans on the same herd-validation instinct that makes a busy, visibly popular restaurant more appealing than an empty one — seeing that other diners independently chose the same pairing makes the suggestion feel lower-risk and more desirable, without the assistant having to argue for it directly.",
+      "current_implementation": "server/services/marketBasket.js, computeOrderedTogether(): builds a `countLabel` string of the exact form `${count} ${count === 1 ? 'table' : 'tables'} also ordered this`, where `count` is a real co-occurrence tally computed from actual order history (not a synthetic number). Surfaced to the waiter (not the customer) via aiService.js's orderedTogether(), which is explicitly documented as waiter-only, auth-gated, and never customer-facing."
+    }
+  ]
+}

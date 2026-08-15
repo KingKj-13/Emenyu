@@ -1,0 +1,559 @@
+#!/usr/bin/env node
+'use strict';
+// Seed the public "Demo Steakhouse" tenant — a fully isolated restaurantId
+// ('demo-steakhouse') sharing Trump's Postgres DB, used only by the public
+// sales/investor demo (emenyu.com/demo/menu, /demo/waiter, /demo/admin).
+// No restaurant-specific branding in any item/category name.
+//
+//   node scripts/seed-demo-restaurant.js            # dry run (preview)
+//   node scripts/seed-demo-restaurant.js --apply    # clear + recreate everything
+//   node scripts/seed-demo-restaurant.js --clear    # remove all demo-steakhouse rows
+//
+// Mirrors the existing precedent: seed-bundles.js (bundles), seed-chef-recommendations.js
+// (per-item recs, derived from seeded items rather than hand-listed), seed-demo-orders.js
+// (PrismaOrderService.saveOrder for historical + live orders), setup-wizard.js (table upsert).
+
+const path = require('path');
+const dotenv = require('dotenv');
+
+// An explicit DATABASE_URL already in the shell environment (e.g. pointing at
+// the demo tenant's own dedicated DB) must win over every file below — capture
+// it before any dotenv.config() call has a chance to touch process.env.
+const explicitDatabaseUrl = process.env.DATABASE_URL;
+
+dotenv.config({ path: path.resolve(__dirname, '..', '..', '..', '.env'), quiet: true });
+dotenv.config({ path: path.resolve(__dirname, '..', '.env'), quiet: true });
+// Local dev override: .env.local (gitignored) repoints DATABASE_URL at the local
+// database so this never touches prod unless explicitly pointed there. Skipped
+// entirely when the caller already passed DATABASE_URL explicitly.
+if (!explicitDatabaseUrl) {
+  dotenv.config({ path: path.resolve(__dirname, '..', '..', '..', '.env.local'), override: true, quiet: true });
+} else {
+  process.env.DATABASE_URL = explicitDatabaseUrl;
+}
+
+// Hard stop before touching anything: the three-levels-up '.env'/'.env.local'
+// paths above assume THIS repo's local layout (Sites/Trump/scripts, three
+// directories below the repo root that holds .env.local). Production's
+// flattened deploy layout (Emenyu/Trump/scripts) resolves those same paths to
+// somewhere that doesn't exist, so the fallback silently lands on TRUMP'S OWN
+// .env one level up instead — and this script would then seed/clear
+// 'demo-steakhouse' rows into Trump's real database. Caught live 2026-08-14:
+// exactly that happened on production (48 items / 625 view events / 44
+// orders written to `emenyu`, cleaned up after). This tenant-name check is
+// the actual guardrail — the path resolution above is left as-is (fixing it
+// to detect "flattened" vs "nested" layouts is more fragile than just
+// refusing to run against the wrong database).
+const resolvedDbUrl = process.env.DATABASE_URL || '';
+const resolvedDbName = (resolvedDbUrl.split('/').pop() || '').split('?')[0];
+if (!/demo/i.test(resolvedDbName)) {
+  console.error(
+    `Refusing to run: resolved DATABASE_URL points at database "${resolvedDbName || '(none)'}", ` +
+    `which doesn't look like a demo database. This script only ever writes/clears ` +
+    `restaurantId='demo-steakhouse' rows, but it writes them into WHATEVER database ` +
+    `DATABASE_URL resolves to — on the wrong database that means seeding demo rows ` +
+    `into a different tenant's real data.\n` +
+    `Pass the demo database explicitly, e.g.:\n` +
+    `  DATABASE_URL=postgresql://user:pass@host:5432/emenyu_demo node scripts/seed-demo-restaurant.js --apply`
+  );
+  process.exit(1);
+}
+console.log(`Target database: ${resolvedDbName}`);
+
+const { getPrisma } = require('../server/services/prismaClient');
+const { PrismaOrderService } = require('../server/services/prismaOrderService');
+const { getCategoryType } = require('../server/utils/helpers');
+
+const RESTAURANT_ID = 'demo-steakhouse';
+const APPLY = process.argv.includes('--apply');
+const CLEAR = process.argv.includes('--clear');
+
+function slugify(value) {
+  return String(value || '').toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+function normalizedName(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// ── Menu content — generic premium steakhouse, no restaurant-specific naming.
+// Item names for 15 dishes are chosen to EXACTLY match (case-insensitive) the
+// client's ITEM_VIDEO_MAP allowlist (client/src/lib/imageResolver.ts) — that's
+// how resolveVideo() decides which dishes get a real short clip; it's a pure
+// name lookup, not driven by any DB field. imagePath is stored WITHOUT a
+// leading slash (e.g. "Images/x.jpg") so resolveImage() prepends *this
+// build's* BASE_PATH (/demo) correctly — a leading-slash "/Trump/Images/..."
+// value would double-prefix to "/demo/Trump/Images/..." and 404.
+const CATEGORIES = [
+  {
+    title: 'Starters',
+    items: [
+      { name: 'Springbok Carpaccio', price: 125, description: 'Thinly sliced, parmesan, rocket, truffle oil.', allergens: 'Dairy', img: 'Images/springbok_carpaccio.jpg' },
+      { name: 'Calamari Tubes & Tentacles', price: 145, description: 'Lightly fried, lemon aioli.', allergens: 'Shellfish, Gluten', img: 'Images/garlic_lemon_calamari.jpg' },
+      { name: 'Fried Halloumi Fingers', price: 89, description: 'Crumbed, sweet chilli dip.', allergens: 'Dairy, Gluten', img: 'Images/fried_halloumi_fingers.jpg' },
+      { name: 'Beef Biltong Board', price: 135, description: 'Cured biltong, droëwors, mustard.', allergens: '', img: 'Images/beef_biltong.jpg' },
+      { name: 'Flash Pan Fried Chicken Livers', price: 99, description: 'Peri-peri butter, toasted ciabatta.', allergens: 'Gluten, Dairy', img: 'Images/flash_pan_fried_chicken_livers.jpg' },
+      { name: 'Chicken Trinchado', price: 125, description: 'Portuguese spiced chicken livers, chilli.', allergens: 'Gluten, Dairy', img: 'Images/chicken_trinchado.jpg' },
+      { name: 'Firecracker Chicken Wings (400g)', price: 155, description: 'Sticky chilli glaze, sesame.', allergens: '', img: 'Images/firecracker_chicken_wings_400g.jpg', popular: true },
+      { name: 'Boerewors & Chakalaka', price: 135, description: 'Chargrilled boerewors, spiced relish.', allergens: '', img: 'Images/boerewors_and_chakalaka.jpg' },
+    ]
+  },
+  {
+    title: 'Premium Steaks',
+    items: [
+      { name: 'Wagyu Ribeye 300g', price: 485, description: 'Full-blood Wagyu, chimichurri.', allergens: '', img: 'Images/wagyu_ribeye_300g.jpg', chefPick: true },
+      { name: 'Ribeye 380g', price: 365, description: 'Dry-aged, bone marrow butter.', allergens: 'Dairy', img: 'Images/ribeye_380g.jpg', popular: true },
+      { name: 'Tomahawk 900g (for two)', price: 950, description: 'Charcoal grilled, rock salt.', allergens: '', img: 'Images/tomahawk_850g_900g.jpg', chefPick: true },
+      { name: 'Fillet 260g', price: 395, description: 'Center-cut tenderloin, peppercorn sauce.', allergens: 'Dairy', img: 'Images/fillet_260g.jpg' },
+      { name: 'Sirloin 350g', price: 325, description: 'Grass-fed, garlic butter.', allergens: 'Dairy', img: 'Images/sirloin_350g.jpg' },
+      { name: 'T-Bone 500g', price: 445, description: 'Charcoal grilled, served with jus.', allergens: '', img: 'Images/t_bone_500g.jpg' },
+      { name: 'Beef Ribs (3 pce) ±1kg', price: 385, description: 'Slow-braised, sticky glaze.', allergens: '', img: 'Images/beef_ribs_3_pce_1kg.jpg' },
+      { name: 'Oxtail', price: 355, description: 'Slow-braised, red wine jus, gremolata.', allergens: '', img: 'Images/oxtail.jpg' },
+      { name: 'Mixed Grill', price: 425, description: 'Steak, boerewors, chop, rib — the lot.', allergens: '', img: 'Images/mixed_grill.jpg', popular: true },
+    ]
+  },
+  {
+    title: 'Seafood',
+    items: [
+      { name: 'Kingklip & Prawn', price: 325, description: 'Line-caught kingklip, garlic prawns, lemon butter.', allergens: 'Fish, Shellfish, Dairy', img: 'Images/kingklip_and_prawn.jpg' },
+      { name: 'Prawn and Calamari', price: 325, description: 'Garlic, chilli, white wine.', allergens: 'Shellfish, Gluten', img: 'Images/prawn_and_calamari.jpg' },
+      { name: 'Butter Garlic Prawns', price: 295, description: 'Sizzling pan, toasted bread.', allergens: 'Shellfish, Dairy, Gluten', img: 'Images/queen_prawns_3_s.jpg', popular: true },
+      { name: 'Seared Salmon', price: 310, description: 'Crispy skin, citrus beurre blanc.', allergens: 'Fish, Dairy', img: 'Images/seared_salmon.jpg' },
+    ]
+  },
+  {
+    title: 'Burgers',
+    items: [
+      { name: 'Classic Cheese Burger', price: 145, description: 'Beef patty, cheddar, house sauce.', allergens: 'Gluten, Dairy', img: 'Images/cheese_burger.jpg' },
+      { name: 'Bacon Cheeseburger', price: 165, description: 'Double beef, bacon, cheddar.', allergens: 'Gluten, Dairy', img: 'Images/bacon_and_cheese_burger.jpg', popular: true },
+      { name: 'BBQ Peri-Peri Beef Burger', price: 155, description: 'Smoky peri-peri glaze, onion rings.', allergens: 'Gluten, Dairy', img: 'Images/bbq_peri_peri_beef_burger.jpg' },
+      { name: 'Veg Burger', price: 135, description: 'Grilled vegetable patty, avo.', allergens: 'Gluten', img: 'Images/veg_burger.jpg' },
+      { name: 'Jalapeno Chilli and Cheese Burger', price: 175, description: 'Double beef, jalapeno, molten cheese.', allergens: 'Gluten, Dairy', img: 'Images/jalapeno_chilli_and_cheese_burger.jpg' },
+    ]
+  },
+  {
+    title: 'Pastas',
+    items: [
+      { name: 'Beef Fillet Pasta', price: 289, description: 'Tagliatelle, creamy peppercorn sauce.', allergens: 'Gluten, Dairy', img: 'Images/beef_fillet_pasta.jpg' },
+      { name: 'Chicken Alfredo', price: 245, description: 'Fettuccine, parmesan cream sauce.', allergens: 'Gluten, Dairy', img: 'Images/alfredo.jpg' },
+      { name: 'Seafood Pasta', price: 310, description: 'Prawns, calamari, tomato & chilli.', allergens: 'Shellfish, Gluten, Dairy', img: 'Images/seafood_pasta.jpg' },
+    ]
+  },
+  {
+    title: 'Sides',
+    items: [
+      { name: 'Steakhouse Chips', price: 55, description: 'Triple-cooked, rock salt.', allergens: '', img: 'Images/steakhouse_chips.jpg' },
+      { name: 'Creamed Spinach', price: 65, description: 'Nutmeg, parmesan.', allergens: 'Dairy', img: 'Images/creamed_spinach.jpg' },
+      { name: 'Mashed Potatoes', price: 55, description: 'Butter, cream.', allergens: 'Dairy', img: 'Images/mashed_potatoes.jpg' },
+      { name: 'Onion Rings', price: 60, description: 'Beer-battered, crispy.', allergens: 'Gluten', img: 'Images/onion_rings.jpg' },
+    ]
+  },
+  {
+    title: 'Desserts',
+    items: [
+      { name: 'Red Velvet Cake', price: 119, description: 'Cream cheese frosting, red velvet sponge.', allergens: 'Gluten, Dairy, Eggs', img: 'Images/red_velvet_cake.jpg', popular: true },
+      { name: 'Duo of Ice Cream', price: 89, description: "Chef's daily selection, two scoops.", allergens: 'Dairy', img: 'Images/duo_of_ice_cream.jpg' },
+      { name: 'Cape Malva Pudding', price: 95, description: 'Warm sponge, butterscotch sauce.', allergens: 'Gluten, Dairy, Eggs', img: 'Images/cape_malva_pudding.jpg' },
+      { name: 'Trio of Ice Cream', price: 99, description: "Chef's daily selection, three scoops.", allergens: 'Dairy', img: 'Images/trio_of_ice_cream.jpg' },
+      { name: 'Chocolate Brownie', price: 89, description: 'Warm, gooey centre, vanilla ice cream.', allergens: 'Gluten, Dairy, Eggs', img: 'Images/chocolate_brownie.jpg' },
+    ]
+  },
+  {
+    title: 'Red Wine',
+    items: [
+      { name: 'Cabernet Sauvignon', price: 225, description: 'Full-bodied, dark berry, oak.', allergens: 'Sulphites', img: 'Images/nederburg_wine_masters.jpg' },
+      { name: 'Shiraz', price: 245, description: 'Peppery, dark fruit, smooth tannin.', allergens: 'Sulphites', img: 'Images/la_motte_pierneef_syrah_viognier.jpg' },
+      { name: 'Merlot', price: 210, description: 'Soft, plum, easy-drinking.', allergens: 'Sulphites', img: 'Images/meerlust_red.jpg' },
+      { name: 'Pinotage', price: 230, description: 'South African classic, smoky red fruit.', allergens: 'Sulphites', img: 'Images/beyerskloof_reserve.jpg' },
+    ]
+  },
+  {
+    title: 'White Wine',
+    items: [
+      { name: 'Sauvignon Blanc', price: 195, description: 'Crisp, citrus, grassy notes.', allergens: 'Sulphites', img: 'Images/durbanville_hills_174.jpg' },
+      { name: 'Chardonnay', price: 210, description: 'Buttery, oaked, tropical fruit.', allergens: 'Sulphites', img: 'Images/boschendal_1685_194.jpg' },
+    ]
+  },
+  {
+    title: 'Cocktails',
+    items: [
+      { name: 'Cosmopolitan', price: 145, description: 'Vodka, triple sec, cranberry, lime.', allergens: '', img: 'Images/cosmopolitan.jpg' },
+      { name: 'Mojito', price: 135, description: 'White rum, mint, lime, soda.', allergens: '', img: 'Images/mojito.jpg' },
+      { name: 'Margarita', price: 140, description: 'Tequila, triple sec, lime.', allergens: '', img: 'Images/margarita.jpg' },
+      { name: 'Pina Colada', price: 150, description: 'White rum, coconut cream, pineapple.', allergens: 'Dairy', img: 'Images/pina_colada.jpg' },
+    ]
+  },
+];
+
+const GUESTS = [
+  { name: 'Naledi M.', phone: '+27821110001', vip: true, loyaltyTier: 'Gold', visitCount: 14, lifetimeSpend: 18400, avgSpend: 1314 },
+  { name: 'Sipho K.', phone: '+27821110002', vip: false, loyaltyTier: 'Silver', visitCount: 6, lifetimeSpend: 5200, avgSpend: 866 },
+  { name: 'Amara P.', phone: '+27821110003', vip: true, loyaltyTier: 'Gold', visitCount: 21, lifetimeSpend: 27300, avgSpend: 1300 },
+  { name: 'Liam R.', phone: '+27821110004', vip: false, loyaltyTier: '', visitCount: 2, lifetimeSpend: 1450, avgSpend: 725 },
+  { name: 'Zanele T.', phone: '+27821110005', vip: false, loyaltyTier: 'Silver', visitCount: 8, lifetimeSpend: 6900, avgSpend: 862 },
+];
+
+const TABLE_COUNT = 10;
+
+// Historical baskets for analytics / "ordered together" signal (kind='history').
+const HISTORY_BASKETS = [
+  { t: 'table2', w: 'Demo Waiter', cov: 2, days: 9, items: [{ n: 'Ribeye 380g' }, { n: 'Creamed Spinach' }, { n: 'Steakhouse Chips' }, { n: 'Cabernet Sauvignon' }] },
+  { t: 'table4', w: 'Demo Waiter', cov: 2, days: 8, items: [{ n: 'Ribeye 380g' }, { n: 'Mashed Potatoes' }, { n: 'Cabernet Sauvignon' }] },
+  { t: 'table6', w: 'Demo Waiter', cov: 4, days: 7, items: [{ n: 'Wagyu Ribeye 300g', q: 2 }, { n: 'Steakhouse Chips', q: 2 }, { n: 'Shiraz', q: 2 }] },
+  { t: 'table3', w: 'Demo Waiter', cov: 2, days: 6, items: [{ n: 'Tomahawk 900g (for two)' }, { n: 'Onion Rings' }, { n: 'Pinotage' }, { n: 'Red Velvet Cake' }] },
+  { t: 'table7', w: 'Demo Waiter', cov: 2, days: 5, items: [{ n: 'Butter Garlic Prawns' }, { n: 'Sauvignon Blanc' }] },
+  { t: 'table1', w: 'Demo Waiter', cov: 2, days: 4, items: [{ n: 'Prawn and Calamari' }, { n: 'Chardonnay' }] },
+  { t: 'table8', w: 'Demo Waiter', cov: 5, days: 3, items: [{ n: 'Bacon Cheeseburger', q: 3 }, { n: 'Classic Cheese Burger', q: 2 }, { n: 'Mojito', q: 3 }] },
+  { t: 'table5', w: 'Demo Waiter', cov: 2, days: 2, items: [{ n: 'Beef Fillet Pasta' }, { n: 'Merlot' }, { n: 'Cape Malva Pudding' }] },
+  { t: 'table9', w: 'Demo Waiter', cov: 3, days: 1, items: [{ n: 'Fillet 260g' }, { n: 'Sirloin 350g' }, { n: 'Steakhouse Chips' }, { n: 'Shiraz' }] },
+];
+
+// Live/in-progress orders so the waiter dashboard opens looking mid-service.
+const LIVE_ORDERS = [
+  { t: 'table2', w: 'Demo Waiter', cov: 2, items: [{ n: 'Wagyu Ribeye 300g' }, { n: 'Creamed Spinach' }, { n: 'Cabernet Sauvignon' }] },
+  { t: 'table5', w: 'Demo Waiter', cov: 4, items: [{ n: 'Tomahawk 900g (for two)' }, { n: 'Steakhouse Chips' }, { n: 'Pinotage', q: 2 }] },
+  { t: 'table7', w: 'Demo Waiter', cov: 2, items: [{ n: 'Seared Salmon' }, { n: 'Sauvignon Blanc' }] },
+];
+
+const r2 = n => Math.round(n * 100) / 100;
+
+async function main() {
+  const prisma = getPrisma();
+
+  if (CLEAR) {
+    // Order/ActiveCartState/WaiterAssignment reference Table with a RESTRICT
+    // foreign key — must be cleared before Table, not raced in parallel with it.
+    const assignments = await prisma.waiterAssignment.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+    const carts = await prisma.activeCartState.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+    const orders = await prisma.order.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+    const views = await prisma.viewEvent.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+    const [items, cats, bundles, recs, tables, guests] = await Promise.all([
+      prisma.menuItem.deleteMany({ where: { restaurantId: RESTAURANT_ID } }),
+      prisma.menuCategory.deleteMany({ where: { restaurantId: RESTAURANT_ID } }),
+      prisma.recommendationBundle.deleteMany({ where: { restaurantId: RESTAURANT_ID } }),
+      prisma.menuItemRecommendation.deleteMany({ where: { restaurantId: RESTAURANT_ID } }),
+      prisma.table.deleteMany({ where: { restaurantId: RESTAURANT_ID } }),
+      prisma.guest.deleteMany({ where: { restaurantId: RESTAURANT_ID } }),
+    ]);
+    console.log(`Cleared demo-steakhouse rows: ${items.count} items, ${cats.count} categories, ${bundles.count} bundles, ${recs.count} recs, ${tables.count} tables, ${guests.count} guests, ${orders.count} orders, ${assignments.count} assignments, ${carts.count} carts, ${views.count} view events.`);
+    await prisma.$disconnect();
+    process.exit(0);
+  }
+
+  const totalItems = CATEGORIES.reduce((n, c) => n + c.items.length, 0);
+  console.log(`Prepared ${CATEGORIES.length} categories / ${totalItems} items / ${GUESTS.length} guests / ${TABLE_COUNT} tables / ${HISTORY_BASKETS.length} historical orders / ${LIVE_ORDERS.length} live orders.`);
+
+  if (!APPLY) {
+    console.log('\nDry run. Re-run with --apply to write (idempotent — clears prior demo-steakhouse rows first), or --clear to remove everything.');
+    await prisma.$disconnect();
+    process.exit(0);
+  }
+
+  // Idempotent: wipe prior demo-steakhouse rows across every affected table, then recreate.
+  // Order/ActiveCartState/WaiterAssignment reference Table with a RESTRICT
+  // foreign key, so they must go first, not after.
+  await prisma.waiterAssignment.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+  await prisma.activeCartState.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+  await prisma.order.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+  await prisma.viewEvent.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+  await prisma.menuItem.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+  await prisma.menuCategory.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+  await prisma.recommendationBundle.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+  await prisma.menuItemRecommendation.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+  await prisma.table.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+  await prisma.guest.deleteMany({ where: { restaurantId: RESTAURANT_ID } });
+
+  // ── Categories + items ──────────────────────────────────────────────────────
+  const itemsByName = new Map(); // normalizedName -> { id, name, categoryTitle }
+  for (const [catIndex, cat] of CATEGORIES.entries()) {
+    const slug = slugify(cat.title);
+    const category = await prisma.menuCategory.create({
+      data: {
+        restaurantId: RESTAURANT_ID,
+        title: cat.title,
+        slug,
+        path: `${RESTAURANT_ID}/${String(catIndex + 1).padStart(3, '0')}-${slug}`,
+        sortOrder: catIndex,
+        visible: true,
+        courseType: getCategoryType(cat.title),
+      }
+    });
+
+    for (const [itemIndex, item] of cat.items.entries()) {
+      const created = await prisma.menuItem.create({
+        data: {
+          restaurantId: RESTAURANT_ID,
+          categoryId: category.id,
+          name: item.name,
+          normalizedName: normalizedName(item.name),
+          description: item.description || '',
+          price: item.price,
+          allergens: item.allergens || '',
+          imagePath: item.img || '',
+          videoPath: '',
+          visible: true,
+          available: true,
+          chefPick: Boolean(item.chefPick),
+          popular: Boolean(item.popular),
+          sortOrder: catIndex * 10000 + itemIndex,
+        }
+      });
+      itemsByName.set(created.normalizedName, { id: created.id, name: created.name, categoryTitle: cat.title });
+    }
+  }
+  console.log(`Created ${CATEGORIES.length} categories, ${itemsByName.size} items.`);
+
+  // ── Recommendation bundles (persona meal bundles) ───────────────────────────
+  const findItem = name => itemsByName.get(normalizedName(name));
+  const BUNDLES = [
+    { slug: 'steak', persona: 'The Steak Lover', icon: '🥩', description: 'Flame-grilled, unapologetic.', accent: '#a52b2d',
+      items: [{ course: 'Drink', n: 'Pina Colada' }, { course: 'Starter', n: 'Beef Biltong Board' }, { course: 'Main', n: 'Ribeye 380g' }, { course: 'Dessert', n: 'Red Velvet Cake' }] },
+    { slug: 'seafood', persona: 'The Seafood Lover', icon: '🦐', description: 'From the coast, line to plate.', accent: '#3a6e8f',
+      items: [{ course: 'Drink', n: 'Chardonnay' }, { course: 'Starter', n: 'Calamari Tubes & Tentacles' }, { course: 'Main', n: 'Kingklip & Prawn' }, { course: 'Dessert', n: 'Duo of Ice Cream' }] },
+    { slug: 'burger', persona: 'The Burger Lover', icon: '🍔', description: 'Casual and satisfying.', accent: '#b5651d',
+      items: [{ course: 'Drink', n: 'Mojito' }, { course: 'Starter', n: 'Fried Halloumi Fingers' }, { course: 'Main', n: 'Bacon Cheeseburger' }, { course: 'Dessert', n: 'Trio of Ice Cream' }] },
+    { slug: 'pasta', persona: 'The Pasta Lover', icon: '🍝', description: 'Comfort, twirled to perfection.', accent: '#5c7a4f',
+      items: [{ course: 'Drink', n: 'Sauvignon Blanc' }, { course: 'Starter', n: 'Springbok Carpaccio' }, { course: 'Main', n: 'Beef Fillet Pasta' }, { course: 'Dessert', n: 'Cape Malva Pudding' }] },
+  ];
+  for (const [i, b] of BUNDLES.entries()) {
+    const items = b.items.map(it => findItem(it.n)).map((found, idx) => ({
+      course: b.items[idx].course, itemName: found?.name || b.items[idx].n, itemId: found?.id || null,
+      price: found ? CATEGORIES.flatMap(c => c.items).find(x => x.name === found.name)?.price || 0 : 0, sortOrder: idx
+    }));
+    await prisma.recommendationBundle.create({
+      data: {
+        restaurantId: RESTAURANT_ID, createdBy: 'seed', slug: b.slug, persona: b.persona, icon: b.icon,
+        description: b.description, accent: b.accent, priority: 100, sortOrder: i, active: true,
+        items: { create: items }
+      }
+    });
+  }
+  console.log(`Created ${BUNDLES.length} recommendation bundles.`);
+
+  // ── Per-item chef recommendations, derived from the items just seeded ───────
+  const all = [...itemsByName.values()];
+  const find = re => all.filter(i => re.test(i.name.toLowerCase()));
+  const redWines = find(/cabernet|shiraz|merlot|pinotage/);
+  const whiteWines = find(/sauvignon blanc|chardonnay/);
+  const sides = find(/chips|spinach|mashed potatoes|onion rings/);
+  const desserts = find(/red velvet|malva|ice cream|brownie/);
+  const steaks = find(/wagyu|ribeye|tomahawk|fillet|sirloin|t-bone/);
+  const seafoods = find(/kingklip|prawn|salmon/).filter(i => !/linguine/.test(i.name.toLowerCase()));
+
+  const specs = [];
+  const addBeverages = (sourceId, targets, group, reason) =>
+    targets.forEach((t, idx) => specs.push({ sourceItemId: sourceId, targetItemId: t.id, recType: 'BEVERAGE', beverageKind: 'WINE', priority: 100 - idx * 10, rotationGroup: group, reason }));
+  const addOne = (sourceId, target, recType, reason) => {
+    if (target && target.id !== sourceId) specs.push({ sourceItemId: sourceId, targetItemId: target.id, recType, beverageKind: 'NONE', priority: 90, rotationGroup: '', reason });
+  };
+  steaks.forEach(s => {
+    addBeverages(s.id, redWines.slice(0, 3), `chef:${normalizedName(s.name)}:reds`, 'Bold red — built to stand up to grilled beef.');
+    addOne(s.id, sides[0], 'SIDE', 'A classic steakhouse side.');
+    addOne(s.id, desserts[0], 'DESSERT', 'The sweet finish guests remember.');
+  });
+  seafoods.forEach(s => {
+    addBeverages(s.id, whiteWines.slice(0, 3), `chef:${normalizedName(s.name)}:whites`, 'Crisp white — a classic match for seafood.');
+    addOne(s.id, desserts[1] || desserts[0], 'DESSERT', 'A refreshing way to finish.');
+  });
+  for (const sp of specs) {
+    await prisma.menuItemRecommendation.upsert({
+      where: { restaurantId_sourceItemId_targetItemId_recType: { restaurantId: RESTAURANT_ID, sourceItemId: sp.sourceItemId, targetItemId: sp.targetItemId, recType: sp.recType } },
+      create: { restaurantId: RESTAURANT_ID, createdBy: 'seed', ...sp },
+      update: { priority: sp.priority, beverageKind: sp.beverageKind, rotationGroup: sp.rotationGroup, reason: sp.reason, active: true }
+    });
+  }
+  console.log(`Created ${specs.length} chef recommendation rows.`);
+
+  // ── Tables ───────────────────────────────────────────────────────────────────
+  for (let n = 1; n <= TABLE_COUNT; n++) {
+    await prisma.table.upsert({
+      where: { restaurantId_tableId: { restaurantId: RESTAURANT_ID, tableId: `table${n}` } },
+      update: {},
+      create: { restaurantId: RESTAURANT_ID, tableId: `table${n}`, displayName: `Table ${n}` }
+    });
+  }
+  console.log(`Ensured ${TABLE_COUNT} tables.`);
+
+  // ── Guests ───────────────────────────────────────────────────────────────────
+  for (const g of GUESTS) {
+    await prisma.guest.create({
+      data: {
+        restaurantId: RESTAURANT_ID, name: g.name, phone: g.phone, vip: g.vip,
+        loyaltyTier: g.loyaltyTier || '', visitCount: g.visitCount, lifetimeSpend: g.lifetimeSpend,
+        avgSpend: g.avgSpend, lastVisitAt: new Date()
+      }
+    });
+  }
+  console.log(`Created ${GUESTS.length} guests.`);
+
+  // ── Historical + live orders (also upserts each Table to status='active') ──
+  const orderService = new PrismaOrderService({ restaurantId: RESTAURANT_ID });
+  const priceOf = name => CATEGORIES.flatMap(c => c.items).find(i => i.name === name)?.price || 0;
+  const buildOrder = (basket) => {
+    const items = basket.items.map(spec => {
+      const found = findItem(spec.n);
+      const name = found?.name || spec.n;
+      return { name, price: priceOf(name), qty: spec.q || 1, img: '', description: '' };
+    });
+    const subtotal = r2(items.reduce((s, it) => s + it.price * it.qty, 0));
+    const vat = r2(subtotal * 0.15);
+    const service = r2(subtotal * 0.05);
+    const total = r2(subtotal + vat + service);
+    return { items, subtotal, vat, service, total };
+  };
+
+  let seededHistory = 0;
+  for (let i = 0; i < HISTORY_BASKETS.length; i++) {
+    const b = HISTORY_BASKETS[i];
+    const built = buildOrder(b);
+    const ts = new Date();
+    ts.setDate(ts.getDate() - b.days);
+    ts.setHours(19 + (i % 3), 15 + ((i * 7) % 40), 0, 0);
+    const filename = `demo_seed_${b.t}_${ts.getTime()}_${i}.json`;
+    const order = {
+      table_number: b.t, waiterName: b.w, covers: b.cov, notes: '[DEMO] seeded basket',
+      demoSeed: true, timestamp: ts.toISOString(), items: built.items,
+      totals: { subtotal: built.subtotal, vat: built.vat, service: built.service, tip: 0, total: built.total }
+    };
+    const saved = await orderService.saveOrder(order, b.t, filename, 'history');
+    if (saved) seededHistory += 1;
+  }
+  console.log(`Seeded ${seededHistory} historical orders.`);
+
+  let seededLive = 0;
+  for (let i = 0; i < LIVE_ORDERS.length; i++) {
+    const b = LIVE_ORDERS[i];
+    const built = buildOrder(b);
+    const filename = `demo_seed_live_${b.t}_${Date.now()}_${i}.json`;
+    const order = {
+      table_number: b.t, waiterName: b.w, covers: b.cov, notes: '[DEMO] live order',
+      demoSeed: true, timestamp: new Date().toISOString(), items: built.items,
+      totals: { subtotal: built.subtotal, vat: built.vat, service: built.service, tip: 0, total: built.total }
+    };
+    const saved = await orderService.saveOrder(order, b.t, filename, 'orders');
+    if (saved) {
+      seededLive += 1;
+      await prisma.waiterAssignment.create({
+        data: { restaurantId: RESTAURANT_ID, tableId: b.t, waiterName: b.w, status: 'active', changeType: 'assign', assignedBy: 'seed' }
+      });
+    }
+  }
+  console.log(`Seeded ${seededLive} live orders + waiter assignments (tables now show occupied).`);
+
+  // ── Guest engagement (ViewEvent) + session-correlated orders ────────────────
+  // Simulates real browsing so the admin's Guest Engagement tab, and the video
+  // table's "Ordered after" conversion column, aren't empty on a fresh demo.
+  // Each simulated visit is one guest session: MENU_VIEW/ITEM_VIEW/CUT_VIEW/
+  // VIDEO_PLAY events, and — for a realistic subset, not all of them — an
+  // Order carrying the SAME sessionId (mirrors PremiumCartSheet.tsx's real
+  // getSessionId() call). That shared id, stored in Order.raw, is what lets
+  // viewAnalyticsService.getVideoConversions attribute a watch to an order
+  // with no schema change.
+  const VIDEO_ITEM_NAMES = [
+    'Springbok Carpaccio', 'Chicken Trinchado', 'Boerewors & Chakalaka',
+    'Wagyu Ribeye 300g', 'T-Bone 500g', 'Beef Ribs (3 pce) ±1kg', 'Oxtail', 'Mixed Grill',
+    'Kingklip & Prawn', 'Jalapeno Chilli and Cheese Burger', 'Seafood Pasta',
+    'Firecracker Chicken Wings (400g)', 'Cape Malva Pudding', 'Chocolate Brownie',
+    'Flash Pan Fried Chicken Livers',
+  ];
+  const LOCALES = ['en', 'fr', 'es', 'zh-Hans', 'de', 'af', 'ja', 'pt-BR'];
+  const DEVICE_TYPES = ['phone', 'phone', 'phone', 'tablet'];
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const pickSome = (arr, n) => {
+    const pool = [...arr];
+    const out = [];
+    while (out.length < n && pool.length > 0) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    return out;
+  };
+
+  const SESSION_COUNT = 60;
+  let seededEvents = 0;
+  let seededSessionOrders = 0;
+  const allItemRows = [...itemsByName.values()];
+  const videoItemRows = allItemRows.filter(i => VIDEO_ITEM_NAMES.includes(i.name));
+
+  for (let s = 0; s < SESSION_COUNT; s++) {
+    const sessId = `seed-${Date.now().toString(36)}-${s}-${Math.random().toString(36).slice(2, 8)}`;
+    const table = `table${1 + (s % TABLE_COUNT)}`;
+    const locale = Math.random() < 0.55 ? 'en' : pick(LOCALES);
+    const deviceType = pick(DEVICE_TYPES);
+    const visitStart = new Date();
+    visitStart.setDate(visitStart.getDate() - Math.floor(Math.random() * 14));
+    visitStart.setHours(17 + Math.floor(Math.random() * 6), Math.floor(Math.random() * 60), 0, 0);
+    let cursor = new Date(visitStart);
+    const advance = secs => { cursor = new Date(cursor.getTime() + secs * 1000); return new Date(cursor); };
+
+    const events = [];
+    const push = (eventType, extra = {}) => events.push({
+      restaurantId: RESTAURANT_ID, eventType, sessionId: sessId, locale, tableId: table, deviceType,
+      label: '', categoryName: '', dwellMs: null, positionSec: null, menuItemId: null, cutSlug: null,
+      createdAt: advance(2 + Math.random() * 6),
+      ...extra,
+    });
+
+    push('MENU_VIEW');
+    if (locale !== 'en') push('LANGUAGE_SELECT', { label: locale });
+
+    const viewedCount = 2 + Math.floor(Math.random() * 4);
+    const viewedPool = Math.random() < 0.7 && videoItemRows.length > 0
+      ? [...pickSome(videoItemRows, Math.min(2, videoItemRows.length)), ...pickSome(allItemRows, viewedCount)]
+      : pickSome(allItemRows, viewedCount);
+    const viewed = pickSome(viewedPool, Math.min(viewedCount, viewedPool.length));
+
+    for (const item of viewed) {
+      push('CATEGORY_VIEW', { categoryName: item.categoryTitle });
+      const dwellMs = 4000 + Math.floor(Math.random() * 22000);
+      push('ITEM_VIEW', { menuItemId: item.id, label: item.name, categoryName: item.categoryTitle, dwellMs });
+      if (VIDEO_ITEM_NAMES.includes(item.name) && Math.random() < 0.65) {
+        push('VIDEO_PLAY', { menuItemId: item.id, label: item.name });
+        if (Math.random() < 0.6) push('VIDEO_COMPLETE', { menuItemId: item.id, label: item.name, positionSec: 12 });
+      }
+    }
+
+    if (Math.random() < 0.3) {
+      const cut = pick(['rib', 'sirloin', 'fillet', 'rump', 'chuck']);
+      push('CUT_VIEW', { cutSlug: cut, label: cut.charAt(0).toUpperCase() + cut.slice(1) });
+    }
+    if (Math.random() < 0.15) push('SEARCH', { label: pick(['wagyu', 'wine', 'burger', 'gluten free']) });
+
+    seededEvents += events.length;
+    await prisma.viewEvent.createMany({ data: events });
+
+    // ~55% of visits convert into an order, carrying items THIS session
+    // actually viewed most of the time (a real conversion) — and sometimes
+    // something else entirely, since a real guest browsing steak and
+    // ordering a burger is still a real, non-video-driven visit.
+    if (Math.random() < 0.55 && viewed.length > 0) {
+      const basketItems = Math.random() < 0.75
+        ? pickSome(viewed, Math.min(1 + Math.floor(Math.random() * 2), viewed.length))
+        : pickSome(allItemRows, 1 + Math.floor(Math.random() * 2));
+      const items = basketItems.map(row => {
+        const priced = CATEGORIES.flatMap(c => c.items).find(x => x.name === row.name);
+        return { name: row.name, price: priced?.price || 0, qty: 1, img: '', description: '' };
+      });
+      const subtotal = r2(items.reduce((sum, it) => sum + it.price * it.qty, 0));
+      const vat = r2(subtotal * 0.15);
+      const service = r2(subtotal * 0.05);
+      const total = r2(subtotal + vat + service);
+      const orderTs = advance(60 + Math.random() * 300);
+      const filename = `demo_seed_session_${table}_${orderTs.getTime()}_${s}.json`;
+      const order = {
+        table_number: table, waiterName: '', covers: 1 + Math.floor(Math.random() * 3),
+        notes: '[DEMO] seeded guest session', demoSeed: true, sessionId: sessId,
+        timestamp: orderTs.toISOString(), items,
+        totals: { subtotal, vat, service, tip: 0, total },
+      };
+      const saved = await orderService.saveOrder(order, table, filename, 'history');
+      if (saved) seededSessionOrders += 1;
+    }
+  }
+  console.log(`Seeded ${seededEvents} view events and ${seededSessionOrders} session-correlated orders across ${SESSION_COUNT} simulated guest sessions.`);
+
+  if (typeof orderService.close === 'function') await orderService.close();
+  await prisma.$disconnect();
+  console.log('\nDemo Steakhouse seed complete.');
+}
+
+main().catch(error => {
+  console.error('Seed failed:', error.message);
+  process.exit(2);
+});

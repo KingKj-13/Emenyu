@@ -1,7 +1,9 @@
 // Waiter-AI API surface. Thin orchestration: deterministic services make every
 // decision; nlgService only phrases the result. Never blocks on the LLM.
 const { getPrisma } = require('../services/prismaClient');
-const { normalizeId, getCanonicalTableId } = require('../utils/helpers');
+const { normalizeId, getCanonicalTableId, normalizeName } = require('../utils/helpers');
+const { countAccepted } = require('../services/curatedDemoJourney');
+const { MESSAGES, ENJOYED_THRESHOLD } = require('../config/trumpDemoJourney');
 
 function quantity(item = {}) {
   return Number(item.qty || item.quantity || 1) || 1;
@@ -19,7 +21,9 @@ function createWaiterApiController(deps) {
     waiterAnalyticsService,
     serviceRecoveryService,
     floorService,
-    waiterWorkflowService
+    waiterWorkflowService,
+    rewardService,
+    aiEventService
   } = deps;
   const restaurantId = config?.restaurantId || 'trump';
   const KINDS = nlgService.KINDS;
@@ -72,9 +76,12 @@ function createWaiterApiController(deps) {
       const tableId = getCanonicalTableId(req.params.tableId);
       try {
         const cart = await buildTableCart(tableId);
-        const [guestIntel, opportunity, tableInfo] = await Promise.all([
-          guestService.getGuestIntel({ tableId }),
-          opportunityService.getOpportunity({ cart }),
+        // Phase 1 (Recommendation Brain): guestIntel feeds the opportunity's own
+        // recommend() call (favourite boost / allergy exclusion), so it must
+        // resolve before getOpportunity runs, not alongside it.
+        const guestIntel = await guestService.getGuestIntel({ tableId });
+        const [opportunity, tableInfo] = await Promise.all([
+          opportunityService.getOpportunity({ cart, guestIntel }),
           getTableInfo(tableId)
         ]);
         const pitch = await nlgService.phrase({
@@ -93,10 +100,8 @@ function createWaiterApiController(deps) {
       const { tableId, dishName, tone } = req.body || {};
       try {
         const cart = tableId ? await buildTableCart(tableId) : (req.body?.cart || []);
-        const [opportunity, guestIntel] = await Promise.all([
-          opportunityService.getOpportunity({ cart }),
-          tableId ? guestService.getGuestIntel({ tableId }) : Promise.resolve({ present: false })
-        ]);
+        const guestIntel = tableId ? await guestService.getGuestIntel({ tableId }) : { present: false };
+        const opportunity = await opportunityService.getOpportunity({ cart, guestIntel });
         const suggestion = opportunity.suggestedItem;
         const dish = dishName
           ? { name: dishName }
@@ -116,6 +121,8 @@ function createWaiterApiController(deps) {
           tableId: tableId ? getCanonicalTableId(tableId) : null,
           suggestion,
           expectedRevenue: opportunity.increase,
+          expectedValue: opportunity.expectedValue,
+          replacement: opportunity.replacement || null,
           successRate: Math.round((opportunity.probability || 0) * 100),
           sayToTable,
           whyItWorks,
@@ -194,6 +201,13 @@ function createWaiterApiController(deps) {
             value: Number(value) || 0
           }
         });
+        // An explicit waiter decline durably suppresses that item from
+        // re-suggesting at this table (recoMemory.recordDecline) — previously
+        // this only ever wrote an analytics row; nothing actually remembered
+        // the decline, so the same card could resurface on the next refetch.
+        if (accepted === false && tableId && suggestedItem) {
+          aiService?.recoMemory?.recordDecline(getCanonicalTableId(tableId), suggestedItem);
+        }
         res.json({ ok: true });
       } catch {
         res.status(200).json({ ok: false });
@@ -251,9 +265,37 @@ function createWaiterApiController(deps) {
 
     async analyzeChat(req, res) {
       try {
-        res.json(await waiterWorkflowService.analyzeMessage(req.body || {}));
+        const [ops, aiEvents] = await Promise.all([
+          waiterWorkflowService.analyzeMessage(req.body || {}),
+          aiEventService ? aiEventService.analyzeMessage(req.body || {}) : { events: [] }
+        ]);
+        res.json({ events: [...ops.events.map(t => ({ type: t.type, label: t.title, priority: t.priority })), ...aiEvents.events], tasks: ops.tasks, aiEvents: aiEvents.events });
       } catch {
-        res.json({ events: [], tasks: [] });
+        res.json({ events: [], tasks: [], aiEvents: [] });
+      }
+    },
+
+    async listAiEvents(req, res) {
+      try {
+        res.json(await aiEventService.listEvents({
+          status: req.query.status || 'open',
+          tableId: req.query.tableId || '',
+          eventType: req.query.eventType || '',
+          limit: req.query.limit || 100
+        }));
+      } catch {
+        res.json([]);
+      }
+    },
+
+    async resolveAiEvent(req, res) {
+      try {
+        res.json(await aiEventService.resolveEvent(req.params.id, {
+          status: req.body?.status || 'resolved',
+          actor: req.user?.username || 'staff'
+        }));
+      } catch {
+        res.status(500).json({ error: 'Failed to update AI event' });
       }
     },
 
@@ -344,6 +386,15 @@ function createWaiterApiController(deps) {
       try {
         const intel = await guestService.seatGuest(req.params.tableId, guestId);
         res.json({ ok: true, guestIntel: intel });
+        // Fire-and-forget: a real Guest record just got linked to a table —
+        // evaluate their stored profile (VIP/returning/high-value/dietary/
+        // allergy/milestone) into shared AI events. Response already sent
+        // above so this never delays the seat action.
+        if (aiEventService && guestId) {
+          guestService.getGuest(guestId)
+            .then(guest => aiEventService.evaluateGuestSeated(guest, req.params.tableId))
+            .catch(() => {});
+        }
       } catch {
         res.status(500).json({ error: 'Failed to seat guest' });
       }
@@ -365,6 +416,75 @@ function createWaiterApiController(deps) {
         res.json({ ok: true, tableId, covers });
       } catch {
         res.status(500).json({ error: 'Failed to set covers' });
+      }
+    },
+
+    // Mark a table's whole visit done: every currently-active order for the
+    // table moves to history (the exact same status transition kitchenController
+    // already performs per-order when food is marked "served" -- this just
+    // applies it to the whole table at once, from the waiter side) and the
+    // live cart is cleared. floorService then naturally reports the table as
+    // "empty" (no active orders, no cart) with no new status value invented.
+    async completeTable(req, res) {
+      const tableId = getCanonicalTableId(req.params.tableId);
+      const actor = resolveWaiter(req);
+      try {
+        const db = getPrisma();
+        const activeOrders = await db.order.findMany({
+          where: { restaurantId, tableId, status: 'active' },
+          select: { filename: true }
+        });
+
+        // Curated Demo Mode: Order Complete follow-up — a guest who accepted
+        // most of the curated journey's stage offers gets a thank-you; one
+        // who declined most gets "your next drink is on us" plus a one-time
+        // reward QR. Computed from the table's FULL visit (live cart + every
+        // active order), purely from which items ended up on the table —
+        // countAccepted() is stateless, so this needs no per-device lookup.
+        // Deliberately read BEFORE resetTableState()/order-history-move below
+        // touch anything.
+        try {
+          const liveSettings = await fileService.loadSettings();
+          const cartItems = liveSettings?.curatedDemoMode ? await buildTableCart(tableId) : [];
+          const cartNames = cartItems.map(item => normalizeName(item.name));
+          const { journey, accepted } = countAccepted(cartNames);
+          if (journey && rewardService) {
+            if (accepted >= ENJOYED_THRESHOLD) {
+              socketService.emitOrderCompleteFollowUp(tableId, { message: MESSAGES.chat.orderCompleteThankYou });
+            } else {
+              const reward = await rewardService.issue({ tableId, deviceId: '', reason: 'declined-recommendations' });
+              socketService.emitOrderCompleteFollowUp(tableId, {
+                message: MESSAGES.chat.orderCompleteMakeGood,
+                rewardCode: reward.code,
+                rewardExpiresAt: reward.expiresAt,
+                rewardInstructions: MESSAGES.chat.rewardRedeemInstructions
+              });
+            }
+          }
+        } catch {
+          // A missed Order Complete follow-up (thank-you/reward) must never
+          // block the actual table-completion flow below.
+        }
+
+        for (const order of activeOrders) {
+          await fileService.moveOrder('orders', 'history', order.filename, actor).catch(() => {});
+        }
+        // Bug fix (Priority 6 — Complete Order): this used to call
+        // fileService.saveTableCart directly, which persists the cleared cart
+        // but never tells anyone. The guest's own still-open tab kept showing
+        // their old cart until they manually refreshed, and any admin
+        // overrides for the table (e.g. a manager discount) survived into the
+        // next guest's sitting. resetTableState clears both AND broadcasts
+        // 'syncCart'/'adminOverride' to the table's room, so the guest's live
+        // session updates itself with no refresh needed.
+        await socketService.resetTableState(tableId, { preserveAdminOverrides: false }).catch(() => {});
+
+        socketService.emitOrderUpdated();
+        await socketService.emitTableHistory(tableId).catch(() => {});
+
+        res.json({ ok: true, tableId, completedOrders: activeOrders.length });
+      } catch {
+        res.status(500).json({ error: 'Failed to complete table' });
       }
     },
 

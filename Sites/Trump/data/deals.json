@@ -1,48 +1,33 @@
 [
   {
+    "title": "The Steakhouse Feast for Two",
     "items": [
-      {
-        "name": "Chicken lasagna",
-        "description": "Chicken",
-        "price": 135,
-        "calories": "600 kcal",
-        "allergens": "",
-        "spice": "",
-        "img": "Images/Chicken lasagna.jpg",
-        "video": "Video/Chicken lasagna.mp4",
-        "visible": true,
-        "main": "Main Meals Kirios Piata",
-        "sub": "Chicken Kota"
-      },
-      {
-        "name": "Beef Fillet",
-        "description": "300g Beef fillet, served with fresh-cut chips",
-        "price": 299,
-        "calories": "672 kcal",
-        "allergens": "Beef",
-        "spice": "",
-        "img": "Images/Beef fillet.jpg",
-        "video": "Video/Beef Fillet.mp4",
-        "visible": true,
-        "main": "Main Meals Kirios Piata",
-        "sub": "Meat Kreas"
-      },
-      {
-        "name": "Castle Lite (330ml)",
-        "description": "",
-        "price": 24,
-        "calories": "",
-        "allergens": "",
-        "spice": 0,
-        "imageVisible": true,
-        "videoVisible": false,
-        "img": "Images/Castle Lite (330ml).jpeg",
-        "video": "Video/Castle Lite (330ml).mp4",
-        "visible": true,
-        "main": "Beverages",
-        "sub": "Beers"
-      }
+      { "name": "TOMAHAWK (FRENCH CUT) 650g", "price": 649, "img": "Images/Tomahawk (French Cut) 650g.jpg" },
+      { "name": "STEAKHOUSE CHIPS", "price": 55 },
+      { "name": "CREAMED SPINACH", "price": 65 },
+      { "name": "DEATH BY CHOCOLATE CAKE", "price": 119 }
     ],
-    "price": 400
+    "price": 749,
+    "activeDays": [0, 1, 2, 3, 4, 5, 6]
+  },
+  {
+    "title": "Seafood Sundowner",
+    "items": [
+      { "name": "GARLIC LEMON CALAMARI", "price": 145 },
+      { "name": "6 QUEEN PRAWNS", "price": 309 },
+      { "name": "CAPE MALVA PUDDING", "price": 115 }
+    ],
+    "price": 489,
+    "activeDays": [4, 5, 6]
+  },
+  {
+    "title": "Date Night",
+    "items": [
+      { "name": "SPRINGBOK CARPACCIO", "price": 175 },
+      { "name": "FILLET 260g", "price": 329 },
+      { "name": "DEATH BY CHOCOLATE CAKE", "price": 119 }
+    ],
+    "price": 549,
+    "activeDays": [4, 5]
   }
 ]

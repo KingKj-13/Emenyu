@@ -1,0 +1,95 @@
+{
+  "states": [
+    {
+      "name": "STATE_WAITING_FOR_DRINK",
+      "description": "Guest has just been seated (or has ordered food but not yet a beverage); no wine, cocktail, beer, soft drink, or hot drink is in the cart. This is the entry point of the fixed hospitality sequence encoded in nextJourneyStage(): 'nothing selected -> a drink'.",
+      "guest_mindset": "orientation — settling in, browsing the menu, has not committed to a beverage yet",
+      "allowed_recommendation_types": ["drink"],
+      "forbidden_recommendation_types": ["food", "wine", "upgrade", "dessert", "coffee", "digestif"],
+      "next_states": ["STATE_FOOD_DECISION"],
+      "legacyMapping": {
+        "mealStage": "EMPTY",
+        "journeyStage": ["drink"],
+        "notes": "mealStage() only returns EMPTY when the cart is fully empty (cart.length === 0). nextJourneyStage() gates on !hasDrink alone, so a cart holding only a starter (no beverage) would still be 'drink' here even though mealStage() would already report OPENING — a real divergence between the two old machines that the unified model resolves in favour of the journey-stage (beverage-first) gate. 'drink' is restricted in practice to PRIMARY_BEVERAGES (WINE/COCKTAIL/BEER): recommendationRules.js's R3 ('beverage:secondary-headline') blocks a soft/hot drink from headlining while stage !== 'CLOSING', so coffee/soft drinks are not actually offerable this early even though they'd satisfy hasDrink."
+      }
+    },
+    {
+      "name": "STATE_FOOD_DECISION",
+      "description": "Guest has a beverage in the cart (wine, cocktail, or beer) and is choosing what to eat; no starter, main, or sushi item is in the cart yet.",
+      "guest_mindset": "decision-making — actively choosing a starter/main to pair with the drink already ordered",
+      "allowed_recommendation_types": ["food"],
+      "forbidden_recommendation_types": ["drink", "wine", "upgrade", "dessert", "coffee", "digestif"],
+      "next_states": ["STATE_DURING_MAIN"],
+      "legacyMapping": {
+        "mealStage": "OPENING",
+        "journeyStage": ["food"],
+        "notes": "nextJourneyStage() returns 'food' exactly when hasDrink && !hasFood, matching mealStage() OPENING (items present, no MAIN, no DESSERT). 'drink' is forbidden here (not just unneeded) because R1 caps beverages at maxBeverages (default 1) and R4 blocks recommending 'a beverage of a kind already on the table' — so once one primary beverage is in the cart, another is actively rejected, not merely skipped by the ladder."
+      }
+    },
+    {
+      "name": "STATE_DURING_MAIN",
+      "description": "Guest has ordered food (starter/main/sushi) and is now in the wine-pairing and premium-upgrade decision window that plays out while the main course is chosen/served. Internally this covers two ladder steps in nextJourneyStage(): 'food -> wine' then 'wine+main -> upgrade (once, never repeated)'.",
+      "guest_mindset": "decision-making — evaluating a wine pairing, then (once) a premium upgrade of an item already ordered",
+      "allowed_recommendation_types": ["wine", "upgrade"],
+      "forbidden_recommendation_types": ["drink", "food", "dessert", "coffee", "digestif"],
+      "next_states": ["STATE_DURING_MAIN", "STATE_POST_MAIN"],
+      "legacyMapping": {
+        "mealStage": "OPENING or MAIN",
+        "journeyStage": ["wine", "upgrade"],
+        "notes": "mealStage() is OPENING if only a starter/sushi is in the cart (no MAIN yet) or MAIN once a main course is added; nextJourneyStage() doesn't distinguish these, only gating on hasFood/hasWine/upgradeOffered. 'upgrade' is only reachable when upgradeAvailable && !upgradeOffered — the code's own 'once, never repeated' comment, driven by the same excludeNames session memory recommend() uses elsewhere. R5 forbids a second MAIN from the algorithm here (cartHasMain || mainsKept >= 1 -> 'stage:no-second-main'), so 'food' is a hard-blocked type, not just unscheduled by the ladder. Chef-authored candidates (candidate.chef === true) bypass the stage gate entirely and may still surface across any type/stage."
+      }
+    },
+    {
+      "name": "STATE_POST_MAIN",
+      "description": "Food, wine, and the (once-only) upgrade offer are all resolved; the table is between the main course and dessert. No dessert item is in the cart yet.",
+      "guest_mindset": "decision-making transitioning toward closure — deciding whether to continue to dessert",
+      "allowed_recommendation_types": ["dessert"],
+      "forbidden_recommendation_types": ["drink", "food", "wine", "upgrade", "coffee", "digestif"],
+      "next_states": ["STATE_DESSERT_EATING"],
+      "legacyMapping": {
+        "mealStage": "MAIN",
+        "journeyStage": ["dessert"],
+        "notes": "nextJourneyStage() reaches 'dessert' once hasDrink && hasFood && hasWine && (upgrade resolved) && !hasDessert — mealStage() still reports MAIN (a MAIN is in cart, no DESSERT yet). 'food' remains forbidden here for the same R5 no-second-main reason as STATE_DURING_MAIN."
+      }
+    },
+    {
+      "name": "STATE_DESSERT_EATING",
+      "description": "A dessert item is in the cart and (presumably) being eaten; the table has moved into the closing sequence. No coffee/hot beverage is in the cart yet.",
+      "guest_mindset": "closure — winding down the meal, deciding on a coffee to close",
+      "allowed_recommendation_types": ["coffee"],
+      "forbidden_recommendation_types": ["drink", "food", "wine", "upgrade", "dessert", "digestif"],
+      "next_states": ["STATE_COFFEE_EATING"],
+      "legacyMapping": {
+        "mealStage": "CLOSING",
+        "journeyStage": ["coffee"],
+        "notes": "mealStage() defines CLOSING as 'hasDessert' (dessert anywhere in the cart), exactly the entry condition for this state. Two concrete code rules only apply from here on: R5 explicitly blocks a STARTER once stage === 'CLOSING' ('stage:no-starter-at-closing'), and R7 caps desserts at one per recommendation set ('dedupe:extra-dessert'), so 'dessert' is forbidden as a repeat type, not merely unscheduled."
+      }
+    },
+    {
+      "name": "STATE_COFFEE_EATING",
+      "description": "Coffee/hot beverage has been ordered (classifier.beverageKind === 'HOT' on a cart item); the guest is finishing the meal and a digestif is the last possible offer.",
+      "guest_mindset": "closure — the meal is essentially finished; deciding whether to extend with a digestif",
+      "allowed_recommendation_types": ["digestif"],
+      "forbidden_recommendation_types": ["drink", "food", "wine", "upgrade", "dessert", "coffee"],
+      "next_states": ["STATE_COMPLETE"],
+      "legacyMapping": {
+        "mealStage": "CLOSING",
+        "journeyStage": ["digestif"],
+        "notes": "Still mealStage() CLOSING (dessert remains in cart); nextJourneyStage() advances to 'digestif' once hasCoffee is true. This is the one point where R3's normally-forbidden secondary/soft-or-hot beverage IS allowed to headline: R3 only blocks a non-primary beverage from headlining 'unless closing (a coffee/digestif with dessert is fine)' — i.e. coffee/digestif recommendations are only legal because stage === 'CLOSING'. A second coffee is blocked by R4 ('beverage:already-in-cart', same HOT kind already on the table)."
+      }
+    },
+    {
+      "name": "STATE_COMPLETE",
+      "description": "Drink, food, wine, upgrade (if available), dessert, coffee, and digestif have all been resolved (present in cart or no longer applicable). Nothing further should be recommended.",
+      "guest_mindset": "closure — meal fully complete, awaiting the check",
+      "allowed_recommendation_types": [],
+      "forbidden_recommendation_types": ["drink", "food", "wine", "upgrade", "dessert", "coffee", "digestif"],
+      "next_states": [],
+      "legacyMapping": {
+        "mealStage": "CLOSING",
+        "journeyStage": ["done"],
+        "notes": "Terminal state: nextJourneyStage() returns 'done' once hasDrink, hasFood, hasWine, the upgrade gate, hasDessert, hasCoffee, and hasDigestif are all satisfied. mealStage() has no distinct terminal value — it remains CLOSING (dessert is still in the cart) forever after, which is why 'done' has no mealStage() analogue of its own and simply inherits CLOSING."
+      }
+    }
+  ]
+}

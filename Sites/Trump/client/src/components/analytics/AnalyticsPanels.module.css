@@ -1,0 +1,110 @@
+/* Shared visual language for the AI Performance / Chef Intelligence / Customer
+   Journey admin tabs — matches AdminPage.module.css's Reports/Reco Analytics
+   tabs exactly (same tokens, same card/row/range-button shapes) so switching
+   between INSIGHT-group tabs never feels like a different app. */
+
+.head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: var(--space-3, 16px); flex-wrap: wrap; gap: var(--space-1, 8px);
+}
+.title { margin: 0; font-family: var(--font-heading); font-size: 19px; font-weight: 600; color: var(--color-cream); }
+
+.rangeBar { display: flex; gap: 6px; flex-wrap: wrap; }
+.rangeBtn {
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-sand);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+.rangeBtn:hover { border-color: rgba(var(--color-gold-rgb), 0.3); color: var(--color-cream); }
+.rangeBtnActive { border-color: var(--color-gold); color: var(--color-gold); background: rgba(var(--color-gold-rgb), 0.08); }
+
+.tileGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: var(--space-4, 24px);
+}
+.tile {
+  padding: 16px 18px;
+  background: rgba(var(--color-ink-rgb), 0.7);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.15);
+  border-radius: var(--radius-card);
+}
+.tileValue {
+  font-family: var(--font-heading);
+  font-size: 24px; font-weight: 700;
+  color: var(--color-gold);
+  margin-bottom: 4px;
+  line-height: var(--leading-tight, 1.15);
+}
+.tileLabel { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-sand); }
+.tileSub { font-size: 11px; color: var(--color-gold); margin-top: 2px; opacity: 0.85; }
+
+.twoUp { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: var(--space-4, 24px); }
+
+.section { background: rgba(var(--color-ink-rgb), 0.5); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: var(--radius-card); padding: 16px 18px; margin-bottom: var(--space-4, 24px); }
+.sectionTitle { margin: 0 0 2px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-gold); }
+.sectionSub { margin: 0 0 12px; font-size: 11.5px; color: var(--color-sand); opacity: 0.75; }
+
+.callout {
+  margin-bottom: var(--space-3, 16px); padding: 12px 14px; border-radius: var(--radius-card);
+  background: rgba(var(--color-gold-rgb), 0.08); border: 1px solid rgba(var(--color-gold-rgb), 0.25);
+  font-size: 13px; color: var(--color-cream);
+}
+.calloutLabel { color: var(--color-gold); font-weight: 700; }
+
+.list { display: flex; flex-direction: column; gap: 6px; }
+.row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.04); font-size: 13px; }
+.rowRank { width: 24px; font-size: 11px; color: var(--color-gold); font-weight: 700; flex-shrink: 0; }
+.rowName { flex: 1; color: var(--color-cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rowMeta { font-size: 11px; color: var(--color-sand); flex-shrink: 0; }
+.rowValue { font-size: 12px; color: var(--color-gold); font-weight: 600; flex-shrink: 0; }
+
+.tableWrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table thead tr { text-align: left; color: var(--color-sand); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+.table th, .table td { padding: 8px 10px; }
+.table tbody tr { border-top: 1px solid rgba(255, 255, 255, 0.04); }
+.tableRev { font-weight: 700; color: var(--color-gold); }
+
+.insight { padding: 10px 12px; border-radius: var(--radius-card); background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); }
+.insightTitle { font-size: 13px; color: var(--color-cream); }
+.insightDetail { font-size: 12px; color: var(--color-sand); opacity: 0.85; }
+.insightAction { font-size: 12px; color: var(--color-gold); margin-top: 2px; }
+
+.empty { padding: 24px 0; text-align: center; opacity: 0.5; font-size: 12.5px; color: var(--color-sand); }
+.loading { padding: 24px 0; text-align: center; opacity: 0.6; font-size: 13px; color: var(--color-sand); }
+
+.footnote { margin-top: var(--space-3, 16px); font-size: 11px; color: var(--color-sand); opacity: 0.65; font-style: italic; line-height: var(--leading-normal, 1.5); }
+
+.select {
+  padding: 6px 10px; border-radius: var(--radius-card); border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 13px; background: var(--color-panel, #081828); color: var(--color-cream);
+  cursor: pointer;
+}
+.select:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
+
+.metaRow { display: flex; gap: var(--space-3, 16px); flex-wrap: wrap; margin-bottom: var(--space-4, 24px); font-size: 13px; color: var(--color-cream); }
+.metaMuted { color: var(--color-sand); opacity: 0.85; }
+
+.timeline { display: flex; flex-direction: column; }
+.timelineStep { display: flex; gap: 12px; }
+.timelineRail { display: flex; flex-direction: column; align-items: center; }
+.timelineDot {
+  width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06); color: var(--color-sand);
+  transition: background var(--transition-fast, 140ms ease), color var(--transition-fast, 140ms ease);
+}
+.timelineDotDone { background: var(--color-gold); color: var(--color-ink, #040e1a); }
+.timelineLine { width: 2px; flex: 1; min-height: 18px; background: rgba(255, 255, 255, 0.08); }
+.timelineLineDone { background: var(--color-gold); }
+.timelineBody { padding-bottom: 18px; }
+.timelineLabel { font-size: 13.5px; font-weight: 700; color: var(--color-sand); }
+.timelineLabelDone { color: var(--color-cream); }
+.timelineDetail { font-size: 12px; color: var(--color-sand); opacity: 0.85; margin-top: 2px; }
+.timelineNote { font-size: 11px; color: var(--color-sand); opacity: 0.6; font-style: italic; margin-top: 2px; }

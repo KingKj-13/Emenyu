@@ -1,0 +1,95 @@
+/* The chart surface. Every colour resolves through a --cow-* variable so a
+   second tenant can retheme the whole thing from its page wrapper without
+   touching this file. Defaults track the Trump midnight/gold palette. */
+.plate {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1200 / 720;
+
+  --cow-hide: var(--paper-edge, #e7ddc9);
+  --cow-line: rgba(4, 14, 26, 0.82);
+  --cow-accent: var(--color-burgundy, #a52b2d);
+  --cow-accent-edge: rgba(var(--color-gold-rgb, 200, 165, 85), 0.85);
+}
+
+.plate > * {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.layer { overflow: visible; }
+
+/* The carcass. With a cut lifted it recedes but does not vanish — the red fill
+   and its own label stay lit, so the cut reads against a ghost of the animal
+   rather than against a diagram. */
+.cow {
+  object-fit: contain;
+  transition: opacity 300ms var(--ease-premium, ease);
+}
+
+.mend { fill: var(--cow-hide); transition: opacity 300ms var(--ease-premium, ease); }
+
+.isOpen .cow,
+.isOpen .mend { opacity: 0.28; }
+
+/* Traced outline — the fallback drawing if the plate never loads. */
+.silhouette { fill: var(--cow-hide); display: none; }
+.noPlate .silhouette { display: block; }
+.noPlate .cow { display: none; }
+
+/* One path per seam in its own layer: adjacent primals share edges, so
+   stroking the regions themselves would double every rule. */
+.seams {
+  fill: none;
+  stroke: var(--cow-line);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 300ms var(--ease-premium, ease);
+}
+.isOpen .seams { opacity: 0.24; }
+
+/* The selected primal, filled. Sits under the rules and the labels. */
+.fillLayer path {
+  fill: var(--cow-accent);
+  opacity: 0;
+  transition: opacity 220ms var(--ease-premium, ease);
+}
+.fillLayer path.fillOn { opacity: 1; }
+.fillLayer path.fillHover { opacity: 0.26; }
+
+/* Labels are set inside the animal, in the rule colour — the printed-chart
+   convention, and the reason narrow bands get a rotation. */
+.labels text {
+  fill: var(--cow-line);
+  font-family: var(--font-label, sans-serif);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+  transition: fill 200ms ease, opacity 300ms ease;
+}
+.isOpen .labels text { opacity: 0.2; }
+.isOpen .labels text.labelOn { opacity: 1; }
+.labels text.labelOn { fill: var(--cow-hide); }
+
+.regions path {
+  fill: transparent;
+  stroke: none;
+  cursor: pointer;
+  outline: none;
+  touch-action: manipulation;
+}
+.regions path:focus-visible {
+  stroke: var(--cow-accent-edge);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cow, .mend, .seams, .fillLayer path, .labels text { transition-duration: 1ms; }
+}

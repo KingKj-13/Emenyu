@@ -119,7 +119,7 @@
   transform-style: preserve-3d;
   z-index: 2;
   overflow: hidden;
-  border: 1px solid rgba(198, 162, 75, 0.62);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.62);
   padding: 0;
   background: #001724;
   opacity: 0;
@@ -249,7 +249,7 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  border: 1px solid rgba(198, 162, 75, 0.62);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.62);
   background: #001724;
   backface-visibility: hidden;
   box-shadow: 0 32px 88px rgba(0,0,0,0.48);
@@ -309,7 +309,7 @@
 .coverBack {
   display: grid;
   place-items: center;
-  border: 1px solid rgba(198, 162, 75, 0.58);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.58);
   background: linear-gradient(160deg, #00101a, #021d2c 65%, #00080d);
   transform: rotateY(180deg);
 }
@@ -331,7 +331,7 @@
   margin-top: -27px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(198, 162, 75, 0.72);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.72);
   color: var(--white);
   background: linear-gradient(145deg, #101010, #001724);
   box-shadow: 0 16px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.12);

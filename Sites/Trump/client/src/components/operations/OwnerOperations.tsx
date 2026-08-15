@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { opsApi } from '../../services/opsApi';
 import type { OpsSnapshot } from '../../types/operations';
+import { formatCurrency } from '../../lib/currency';
 
-const money = (n: number) => 'R' + (Math.round((n || 0) * 100) / 100).toLocaleString('en-ZA');
+const money = (n: number) => formatCurrency(n);
 
 // Phase 03B — Owner Operations dashboard. Renders the single operationsService
 // snapshot; no calculations are duplicated in React. Auto-refreshes every 30s.

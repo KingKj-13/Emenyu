@@ -1,9 +1,10 @@
 # Emenyu
 
-Multi-restaurant digital-menu & ordering platform. **Trump** is the production-grade
-site (React 19 SPA + modular Node/Express + PostgreSQL/Prisma + Socket.IO). Greek,
-Imli, and AlPescatore are legacy reference sites (monolithic Express + vanilla JS)
-and are **not** part of the production product.
+Digital-menu & ordering platform. **Trump** is the only active restaurant — a
+production-grade site (React 19 SPA + modular Node/Express + PostgreSQL/Prisma +
+Socket.IO). Three legacy reference sites (Greek, Imli, AlPescatore — monolithic
+Express + vanilla JS) were retired 2026-07-05; see `docs/project-progress/` for
+the retirement report.
 
 > Trump runs with **zero external AI providers** — recommendations and chat are
 > fully local and deterministic. See [docs/AI.md](docs/AI.md).
@@ -11,15 +12,13 @@ and are **not** part of the production product.
 ## Repository layout
 
 ```
-Sites/Trump/        Production site
+Sites/Trump/        Production site (only active restaurant)
   server/           Express app (controllers / routes / services / middleware)
   client/           React + TypeScript SPA (Vite)  → build output in client/dist (gitignored)
-  frontend/         Legacy vanilla-JS staff panels (served as HTML pages)
   Images/ Video/    Static menu media
 prisma/             Shared Prisma schema + migrations (Postgres)
 docs/               Living documentation (this set)
 docs/archive/       Historical point-in-time reports (not maintained)
-Sites/Greek|Imli|AlPescatore/   Legacy reference sites
 ```
 
 ## Quick start (Trump, local dev)

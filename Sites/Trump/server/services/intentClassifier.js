@@ -7,6 +7,8 @@
 // `tagScore()` is the pure scoring function shared by the engine and the
 // chat:validate harness, so matching is verifiable offline.
 
+const fs = require('fs');
+const path = require('path');
 const nlu = require('./chatbotNlu');
 
 const SPICE_RE = /\b(spicy|spice|spicey|hot|fiery|peri|peri-?peri|chilli|chili|firecracker|jalapeno|jalapeño|sriracha|heat)\b/;
@@ -26,13 +28,51 @@ const DIETARY_MAP = [
   ['vegetarian', /\b(vegetarian|veggie|meat-?free|no meat|without meat)\b/],
   ['gluten-free-able', /\b(gluten-?free|no gluten|coeliac|celiac)\b/],
 ];
-const OCCASION_MAP = [
-  ['celebration', /\b(celebrat|birthday|anniversary|engagement|graduation|promotion|special occasion)\b/],
-  ['sharing', /\b(football|soccer|rugby|the game|the match|watching|sports|to share|sharing|with friends|the boys|the lads|group)\b/],
-  ['date', /\b(date night|date|romantic|just the two|for two|impress)\b/],
-  ['quick', /\b(quick|fast|in a hurry|on the go|grab a|before a movie|quick bite)\b/],
-  ['group', /\b(big group|large group|whole table|group booking|platter for|for the whole)\b/],
-];
+
+// Phase 4 (Recommendation Engine V2): both occasion maps below are now loaded
+// from knowledge/occasion_rules.json (same regex patterns, same order — this
+// file's own coarseOccasionMap/occasions arrays were extracted verbatim from
+// these two maps, so knowledge/occasion_rules.json is now the single
+// authoritative source; these hardcoded arrays are gone, not just unused).
+// OCCASION_MAP: coarse bucket (celebration/sharing/date/quick/group) — keeps
+// driving the existing tag-match/archetype boost in aiService unchanged.
+// OCCASION_DETAIL_MAP (Phase 1, Recommendation Brain): finer-grained occasion
+// detection layered on top — slots.occasionDetail adds the specific occasion
+// for waiter scripts and follow-up questions. Order matters: more specific
+// occasions are checked before the generic "celebration" fallback.
+function loadOccasionMaps() {
+  try {
+    const file = path.join(__dirname, '..', '..', 'knowledge', 'occasion_rules.json');
+    const data = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    const coarse = (data.coarseOccasionMap || []).map(e => [e.key, new RegExp(e.pattern)]);
+    const detail = (data.occasions || []).map(e => [e.key, new RegExp(e.detectionPattern)]);
+    if (coarse.length && detail.length) return { coarse, detail };
+  } catch (error) {
+    // fall through to the hardcoded fallback below
+  }
+  // Fallback (only used if the knowledge file is missing/unreadable) — kept in
+  // sync with knowledge/occasion_rules.json, never the live source when present.
+  return {
+    coarse: [
+      ['celebration', /\b(celebrat|birthday|anniversary|engagement|graduation|promotion|special occasion)\b/],
+      ['sharing', /\b(football|soccer|rugby|the game|the match|watching|sports|to share|sharing|with friends|the boys|the lads|group)\b/],
+      ['date', /\b(date night|date|romantic|just the two|for two|impress)\b/],
+      ['quick', /\b(quick|fast|in a hurry|on the go|grab a|before a movie|quick bite)\b/],
+      ['group', /\b(big group|large group|whole table|group booking|platter for|for the whole)\b/]
+    ],
+    detail: [
+      ['birthday', /\b(birthday|bday|born day)\b/],
+      ['anniversary', /\b(anniversary|years together|wedding anniversary)\b/],
+      ['graduation', /\b(graduation|graduated|graduating|degree|diploma)\b/],
+      ['business_dinner', /\b(business dinner|client dinner|work dinner|colleagues|business meeting|client meeting|work function|corporate|with the team|the boss)\b/],
+      ['sports_night', /\b(football|soccer|rugby|cricket|the game|the match|world cup|watching the game|match night)\b/],
+      ['date', /\b(date night|date|romantic|just the two|for two|impress)\b/],
+      ['family_dinner', /\b(family dinner|with (my |the )?(family|kids|parents)|family gathering|family celebration)\b/],
+      ['celebration', /\b(celebrat|engagement|promotion|special occasion|milestone|achievement)\b/]
+    ]
+  };
+}
+const { coarse: OCCASION_MAP, detail: OCCASION_DETAIL_MAP } = loadOccasionMaps();
 
 const PAIRING_RE = /\b(pair|pairs|pairing|go with|goes with|with this|with my|wine for|drink for|what wine|what goes)\b/;
 const SWAP_RE = /\b(instead|rather have|swap|change to|actually)\b/;
@@ -42,7 +82,7 @@ const OFFTOPIC_RE = /\b(stock|share price|weather|the news|bitcoin|crypto|presid
 function classify(message) {
   const norm = nlu.normalize(message);
   const text = ` ${norm.normalized} `;
-  const slots = { proteinWanted: [], spice: false, body: null, dietary: [], occasion: null };
+  const slots = { proteinWanted: [], spice: false, body: null, dietary: [], occasion: null, occasionDetail: null };
 
   for (const [p, re] of PROTEIN_MAP) if (re.test(text)) slots.proteinWanted.push(p);
   if (SPICE_RE.test(text)) slots.spice = true;
@@ -50,6 +90,7 @@ function classify(message) {
   else if (HEARTY_RE.test(text)) slots.body = 'full';
   for (const [d, re] of DIETARY_MAP) if (re.test(text) && !slots.dietary.includes(d)) slots.dietary.push(d);
   for (const [o, re] of OCCASION_MAP) if (re.test(text)) { slots.occasion = o; break; }
+  for (const [o, re] of OCCASION_DETAIL_MAP) if (re.test(text)) { slots.occasionDetail = o; break; }
 
   // Precedence: swap → pairing → occasion → dietary → attribute → recommendation → info → off-topic.
   let type = 'none';

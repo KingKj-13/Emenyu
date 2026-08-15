@@ -1,0 +1,26 @@
+.wrap {
+  position: relative;
+  height: 100%;
+}
+
+.closeBtn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.3);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--color-cream);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  transition: border-color 160ms ease;
+}
+
+.closeBtn:hover {
+  border-color: rgba(var(--color-gold-rgb), 0.6);
+}

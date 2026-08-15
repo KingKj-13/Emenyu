@@ -13,6 +13,8 @@ function cartTotal(cart = []) {
 function createFloorService({ config }) {
   const restaurantId = config?.restaurantId || 'trump';
   const tableCount = config?.tableCount || 30;
+  const luxuryTableCount = config?.luxuryTableCount || 0;
+  const luxuryTableBase = config?.luxuryTableBase || 900;
 
   async function getFloorState() {
     const db = getPrisma();
@@ -58,9 +60,8 @@ function createFloorService({ config }) {
     const coversByTable = new Map(tables.map(t => [t.tableId, t.covers || 0]));
 
     const counts = { seated: 0, cooking: 0, ready: 0, empty: 0 };
-    const list = [];
 
-    for (let n = 1; n <= tableCount; n++) {
+    function buildTable(n, { isLuxury, displayName }) {
       const tableId = `table${n}`;
       const orders = ordersByTable.get(tableId);
       const cartState = cartByTable.get(tableId) || { cart: [], updatedAt: null };
@@ -82,10 +83,10 @@ function createFloorService({ config }) {
       else if (status === 'seated') counts.seated += 1;
       else counts.empty += 1;
 
-      list.push({
+      return {
         number: n,
         tableId,
-        displayName: `Table ${n}`,
+        displayName,
         status,
         spend,
         seatedMinutes,
@@ -93,11 +94,24 @@ function createFloorService({ config }) {
         guests: (coversByTable.get(tableId) || 0) || meta.guests || null,
         waiter: waiterByTable.get(tableId) || null,
         vip: Boolean(guest?.vip),
-        guestName: guest?.name || null
-      });
+        guestName: guest?.name || null,
+        isLuxury
+      };
     }
 
-    return { tableCount, counts, tables: list };
+    // Luxury tables always lead the list so the waiter UI can rely on this
+    // ordering directly; standard tables follow in numeric order.
+    const luxuryList = [];
+    for (let i = 1; i <= luxuryTableCount; i++) {
+      luxuryList.push(buildTable(luxuryTableBase + i, { isLuxury: true, displayName: `L${i}` }));
+    }
+    const standardList = [];
+    for (let n = 1; n <= tableCount; n++) {
+      standardList.push(buildTable(n, { isLuxury: false, displayName: `Table ${n}` }));
+    }
+    const list = [...luxuryList, ...standardList];
+
+    return { tableCount, luxuryTableCount, counts, tables: list };
   }
 
   return { getFloorState };

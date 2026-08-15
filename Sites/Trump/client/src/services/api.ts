@@ -1,8 +1,21 @@
 import { ENDPOINTS } from '../constants/api';
-import type { MenuData, ChefRec, ChefRecInput, RecommendationAnalytics, RecoInsightsResult, BundleAdmin, BundleInput } from '../types/menu';
-import type { PersonaOrder } from '../constants/recommendedOrders';
+import type { MenuData, ChefRec, ChefRecInput, RecommendationAnalytics, RecoInsightsResult, BundleAdmin, BundleInput, AppConfig } from '../types/menu';
 import type { LoginPayload, LoginResponse, AuthUser } from '../types/auth';
 import type { OrderPayload } from '../types/cart';
+
+/** PATCH / PUT / DELETE — postJson only covers POST. */
+async function sendJson<T>(url: string, method: 'PATCH' | 'PUT' | 'DELETE', body?: unknown): Promise<T> {
+  return fetchJson<T>(url, {
+    method,
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+function qs(params: Record<string, string | undefined>): string {
+  const entries = Object.entries(params).filter(([, v]) => v != null && v !== '');
+  return entries.length ? `?${new URLSearchParams(entries as [string, string][])}` : '';
+}
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, options);
@@ -21,9 +34,15 @@ function postJson<T>(url: string, payload: unknown): Promise<T> {
 }
 
 export const api = {
-  getMenu(): Promise<MenuData> {
-    return fetchJson<MenuData>(ENDPOINTS.menu);
-  },
+  // The server localizes menu CONTENT and falls back to English per field, so
+  // the client never needs a translation table of its own.
+  getMenu(locale?: string): Promise<MenuData> {
+    const url = locale && locale !== 'en'
+      ? `${ENDPOINTS.menu}?locale=${encodeURIComponent(locale)}`
+      : ENDPOINTS.menu;
+    return fetchJson<MenuData>(url);
+  }
+,
 
   getDeals() {
     return fetchJson<unknown[]>(ENDPOINTS.deals);
@@ -41,12 +60,25 @@ export const api = {
     return postJson<unknown>(ENDPOINTS.recommend, payload);
   },
 
+  // Curated Demo Mode
+  getSettings() {
+    return fetchJson<{ curatedDemoMode: boolean }>(ENDPOINTS.settings);
+  },
+
+  saveSettings(payload: { curatedDemoMode?: boolean }) {
+    return postJson<{ ok: boolean; settings: { curatedDemoMode: boolean } }>(ENDPOINTS.settings, payload);
+  },
+
+  redeemReward(code: string) {
+    return postJson<{ ok: boolean; reason?: string }>(ENDPOINTS.rewardRedeem(code), {});
+  },
+
   chat(payload: unknown) {
     return postJson<unknown>(ENDPOINTS.chat, payload);
   },
 
-  getConfig(): Promise<{ assistantName: string; brandName: string; waiterApkUrl?: string }> {
-    return fetchJson<{ assistantName: string; brandName: string; waiterApkUrl?: string }>(ENDPOINTS.config);
+  getConfig(): Promise<AppConfig> {
+    return fetchJson<AppConfig>(ENDPOINTS.config);
   },
 
   aiPairing(payload: unknown) {
@@ -119,7 +151,7 @@ export const api = {
   },
 
   deleteOrder(type: 'orders' | 'history', filename: string) {
-    return fetchJson<unknown>(`/Trump/delete/${type}/${filename}`, { method: 'DELETE' });
+    return fetchJson<unknown>(ENDPOINTS.deleteOrder(type, filename), { method: 'DELETE' });
   },
 
   waiterTableStatus(tableId: string) {
@@ -139,15 +171,15 @@ export const api = {
   },
 
   getRecommendationsAdmin() {
-    return fetchJson<unknown[]>(`/Trump/api/recommendations`);
+    return fetchJson<unknown[]>(ENDPOINTS.recommendationsAdmin);
   },
 
   saveRecommendations(data: unknown) {
-    return postJson<unknown>(`/Trump/api/recommendations`, data);
+    return postJson<unknown>(ENDPOINTS.recommendationsAdmin, data);
   },
 
   getChatHistory() {
-    return fetchJson<unknown[]>(`/Trump/api/chat-history`);
+    return fetchJson<unknown[]>(ENDPOINTS.chatHistory);
   },
 
   uploadFile(formData: FormData) {
@@ -157,8 +189,87 @@ export const api = {
     });
   },
 
+  importOrdersCsv(formData: FormData) {
+    return fetchJson<{ ordersCreated: number; itemsImported: number; skippedRows: number; errors: string[] }>(
+      ENDPOINTS.ordersImport,
+      { method: 'POST', body: formData }
+    );
+  },
+
   getAdminMenuItems() {
     return fetchJson<unknown[]>(ENDPOINTS.menuAdminItems);
+  },
+
+  // ── QR-menu redesign ────────────────────────────────────────────────────
+  getEngagementSummary(params: { from?: string; to?: string } = {}) {
+    return fetchJson<unknown>(`${ENDPOINTS.engagementSummary}${qs(params)}`);
+  },
+
+  getEngagementTimeline(params: { from?: string; to?: string } = {}) {
+    return fetchJson<unknown>(`${ENDPOINTS.engagementTimeline}${qs(params)}`);
+  },
+
+  getEngagementLeastViewed(params: { from?: string; to?: string } = {}) {
+    return fetchJson<unknown>(`${ENDPOINTS.engagementLeastViewed}${qs(params)}`);
+  },
+
+  getButcheryCuts(locale?: string) {
+    return fetchJson<{ locale: string; cuts: unknown[] }>(
+      locale && locale !== 'en' ? `${ENDPOINTS.butcheryCuts}?locale=${encodeURIComponent(locale)}` : ENDPOINTS.butcheryCuts
+    );
+  },
+
+  getItemGallery(id: number) {
+    return fetchJson<{ media: unknown[] }>(ENDPOINTS.itemGallery(id));
+  },
+
+  // ── owner content management ────────────────────────────────────────────
+  getAdminMedia(entityType: string, entityId: number) {
+    return fetchJson<{ media: unknown[] }>(`${ENDPOINTS.adminMedia}${qs({ entityType, entityId: String(entityId) })}`);
+  },
+
+  addAdminMedia(payload: Record<string, unknown>) {
+    return postJson<unknown>(ENDPOINTS.adminMedia, payload);
+  },
+
+  updateAdminMedia(id: number, patch: Record<string, unknown>) {
+    return sendJson<unknown>(ENDPOINTS.adminMediaItem(id), 'PATCH', patch);
+  },
+
+  reorderAdminMedia(payload: { entityType: string; entityId: number; ids: number[] }) {
+    return postJson<unknown>(ENDPOINTS.adminMediaReorder, payload);
+  },
+
+  deleteAdminMedia(id: number) {
+    return sendJson<unknown>(ENDPOINTS.adminMediaItem(id), 'DELETE');
+  },
+
+  getAdminTranslations(entityType: string, entityId: number) {
+    return fetchJson<{ translations: unknown[] }>(`${ENDPOINTS.adminTranslations}${qs({ entityType, entityId: String(entityId) })}`);
+  },
+
+  saveAdminTranslations(payload: Record<string, unknown>) {
+    return sendJson<unknown>(ENDPOINTS.adminTranslations, 'PUT', payload);
+  },
+
+  getTranslationCoverage() {
+    return fetchJson<unknown>(ENDPOINTS.adminTranslationCoverage);
+  },
+
+  getAdminCuts() {
+    return fetchJson<{ cuts: unknown[] }>(ENDPOINTS.adminCuts);
+  },
+
+  updateAdminCut(id: number, patch: Record<string, unknown>) {
+    return sendJson<unknown>(ENDPOINTS.adminCut(id), 'PATCH', patch);
+  },
+
+  linkAdminCutItem(id: number, payload: Record<string, unknown>) {
+    return postJson<unknown>(ENDPOINTS.adminCutItems(id), payload);
+  },
+
+  unlinkAdminCutItem(id: number, itemId: number) {
+    return sendJson<unknown>(ENDPOINTS.adminCutItem(id, itemId), 'DELETE');
   },
 
   getMenuCategories() {
@@ -243,7 +354,7 @@ export const api = {
 
   // Recommended-order bundles (Phase 5)
   getBundles() {
-    return fetchJson<PersonaOrder[]>(ENDPOINTS.bundles);
+    return fetchJson<unknown[]>(ENDPOINTS.bundles);
   },
 
   getBundlesAdmin() {
@@ -298,9 +409,24 @@ export const api = {
     return fetchJson<unknown>(`${ENDPOINTS.analyticsummary}?${q}`);
   },
 
-  getAnalyticsItems(params: { from?: string; to?: string; order?: 'asc' | 'desc' }) {
+  getAnalyticsItems(params: { from?: string; to?: string; order?: 'asc' | 'desc'; category?: string; excludeCategory?: string; limit?: number }) {
+    const q = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])
+    ).toString();
+    return fetchJson<{ name: string; quantity: number; revenue: number; categoryType: string }[]>(`${ENDPOINTS.analyticsItems}?${q}`);
+  },
+
+  getAnalyticsPairings(params: { from?: string; to?: string }) {
     const q = new URLSearchParams(params as Record<string, string>).toString();
-    return fetchJson<unknown[]>(`${ENDPOINTS.analyticsItems}?${q}`);
+    return fetchJson<{ a: string; b: string; count: number; revenue: number }[]>(`${ENDPOINTS.analyticsPairings}?${q}`);
+  },
+
+  getCustomerJourney(tableId: string) {
+    return fetchJson<{
+      tableId: string; found: boolean; status?: string; timestamp?: string; total?: number;
+      waiterName?: string; rating?: number | null; error?: string;
+      steps?: { key: string; label: string; done: boolean; items?: string[]; detail?: string }[];
+    }>(`${ENDPOINTS.analyticsJourney}?tableId=${encodeURIComponent(tableId)}`);
   },
 
   getAnalyticsTrend(params: { from?: string; to?: string; bucket?: 'day' | 'week' | 'month' }) {
@@ -380,7 +506,7 @@ export const api = {
     return postJson<import('../types/waiter').OrderedTogetherResponse>(ENDPOINTS.orderedTogether, payload);
   },
 
-  cartRecommendations(payload: { cart?: unknown[]; event?: string | null; reason?: string }) {
+  cartRecommendations(payload: { cart?: unknown[]; event?: string | null; reason?: string; mode?: 'standard' | 'luxury'; tableId?: string; skip?: boolean; declinedName?: string }) {
     return postJson<import('../types/waiter').CartRecResponse>(ENDPOINTS.cartRecommendations, payload);
   },
   sommelier(payload: { dish?: string; cart?: unknown[]; tone?: string }) {
@@ -413,8 +539,22 @@ export const api = {
   seatGuest(tableId: string, guestId: number) {
     return postJson<{ ok: boolean; guestIntel: import('../types/waiter').GuestIntel }>(ENDPOINTS.seatGuest(tableId), { guestId });
   },
+  getAiEvents(params: { status?: string; tableId?: string } = {}) {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return fetchJson<import('../types/waiter').AiEvent[]>(`${ENDPOINTS.aiEvents}${q ? `?${q}` : ''}`);
+  },
+  resolveAiEvent(id: number, status: string = 'resolved') {
+    return postJson<import('../types/waiter').AiEvent>(ENDPOINTS.resolveAiEvent(id), { status });
+  },
+  verifyTable(tableId: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return fetchJson<any>(ENDPOINTS.verifyTable(tableId));
+  },
   setTableCovers(tableId: string, covers: number) {
     return postJson<{ ok: boolean; tableId: string; covers: number }>(ENDPOINTS.tableCovers(tableId), { covers });
+  },
+  completeTable(tableId: string) {
+    return postJson<{ ok: boolean; tableId: string; completedOrders: number }>(ENDPOINTS.completeTable(tableId), {});
   },
   getWaiterTasks(params: { status?: string; tableId?: string; waiterName?: string } = {}) {
     const q = new URLSearchParams(params as Record<string, string>).toString();

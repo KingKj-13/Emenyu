@@ -56,7 +56,9 @@ function createOrderValidationService({ config, fileService, logger = null }) {
   const orderConfig = config.order;
 
   // Resolve a submitted table identifier to a canonical, in-range table id, or
-  // null when it does not name a real table (1..tableCount).
+  // null when it does not name a real table. Valid ranges are standard tables
+  // (1..tableCount) and luxury tables (luxuryTableBase+1..+luxuryTableCount),
+  // the same reserved high range floorService uses to mark luxury tables.
   function resolveTableId(rawTableId) {
     const canonical = getCanonicalTableId(rawTableId);
     const match = /^table(\d+)$/.exec(canonical);
@@ -65,7 +67,15 @@ function createOrderValidationService({ config, fileService, logger = null }) {
     }
 
     const number = Number(match[1]);
-    if (!Number.isInteger(number) || number < 1 || number > config.tableCount) {
+    if (!Number.isInteger(number)) {
+      return null;
+    }
+
+    const isStandard = number >= 1 && number <= config.tableCount;
+    const isLuxury = config.luxuryTableCount > 0 &&
+      number > config.luxuryTableBase &&
+      number <= config.luxuryTableBase + config.luxuryTableCount;
+    if (!isStandard && !isLuxury) {
       return null;
     }
 

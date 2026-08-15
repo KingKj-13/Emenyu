@@ -130,34 +130,6 @@ const EXTRA_DRINK_TERMS = [
 
 const DESSERT_TERMS = ['dessert', 'cake', 'ice cream', 'cheesecake', 'sweet', 'baklava', 'fondant'];
 
-// Trump-usable dish clips only. Everything Greek was removed; unmatched items
-// fall through to the category demo loops in demoVideoFor (steak-grill, seafood,
-// pasta, dessert), so the Greek video files are now unreferenced and purgeable.
-const LOCAL_OPTIMIZED_VIDEO_MAP: Record<string, string> = {
-  // Steak & beef
-  'beef tomahawk': 'Beef Tomahawk.mp4',
-  tomahawk: 'Beef Tomahawk.mp4',
-  'beef fillet': 'beef fillet.mp4',
-  'rump steak 200g': 'Rump Steak 200g.mp4',
-  'rump steak 300g': 'Rump Steak 300g.mp4',
-  'rump steak': 'Rump Steak 300g.mp4',
-  'beef strips': 'Beef Strips.mp4',
-  'beef fillet pasta': 'Beef Fillet Pasta.mp4',
-  // Lamb & pork
-  'crispy lamb chops': 'Crispy Lamb Chops.mp4',
-  'crispy chops lamb 300g': 'Crispy Chops Lamb 300g.mp4',
-  'crispy chops lamb 150g': 'Crispy Chops Lamb 150g.mp4',
-  'crispy pork chops': 'Crispy Pork Chops.mp4',
-  // Seafood
-  calamari: 'Calamari.mp4',
-  mussels: 'Mussels.mp4',
-  // Chicken & pasta
-  'chicken pasta': 'Chicken Pasta.mp4',
-  'chicken lasagna': 'Chicken lasagna.mp4',
-  'chicken lasagne': 'Chicken lasagna.mp4',
-  'chicken livers': 'Chicken Livers.mp4',
-};
-
 function mediaText(item: MenuItem): string {
   return [
     item.category,
@@ -196,27 +168,15 @@ export function isDrinkItem(item: MenuItem): boolean {
   return [...DRINK_TERMS, ...EXTRA_DRINK_TERMS].some(term => hasTerm(text, term));
 }
 
-const COCKTAIL_TERMS = [
-  'cocktail', 'cocktails', 'mojito', 'margarita', 'martini', 'negroni',
-  'cosmopolitan', 'old fashioned', 'whiskey sour', 'aperol spritz', 'long island'
-];
-
-export function isCocktailItem(item: MenuItem): boolean {
-  if (item.beverageKind) return item.beverageKind === 'COCKTAIL';
-  const text = classificationText(item);
-  return COCKTAIL_TERMS.some(term => hasTerm(text, term));
-}
-
 export function isDessertItem(item: MenuItem): boolean {
   if (item.categoryType) return item.categoryType === 'DESSERT';
   const text = classificationText(item);
   return DESSERT_TERMS.some(term => hasTerm(text, term));
 }
 
-export function isVideoEligible(item: MenuItem): boolean {
-  // Food is always eligible; among drinks, only cocktails get a video.
-  return !isDrinkItem(item) || isCocktailItem(item);
-}
+// Universal fallback — a file that actually exists in the current Images set
+// (the 2026-07 menu rework removed the old Tomahawk.jpg/Cheese Cake.jpg files).
+export const FALLBACK_IMAGE = `${BASE_PATH}/Images/trumps.jpg`;
 
 function demoImageFor(item: MenuItem): string {
   const text = mediaText(item);
@@ -229,45 +189,15 @@ function demoImageFor(item: MenuItem): string {
     }
   }
 
-  if (isDessertItem(item)) return `${BASE_PATH}/Images/Cheese Cake.jpg`;
-  return `${BASE_PATH}/Images/Tomahawk.jpg`;
-}
-
-function demoVideoFor(item: MenuItem): string | null {
-  if (!isVideoEligible(item)) return null;
-  // Cocktails: no per-drink clips exist, so use the cocktail demo loop.
-  if (isCocktailItem(item)) return `${BASE_PATH}/Video/demo/cocktail.mp4`;
-  const text = mediaText(item);
-  const compactName = String(item.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-
-  for (const [name, file] of Object.entries(LOCAL_OPTIMIZED_VIDEO_MAP)) {
-    const compactKey = name.replace(/[^a-z0-9]+/g, '');
-    if (compactName === compactKey || compactName.includes(compactKey) || compactKey.includes(compactName)) {
-      return `${BASE_PATH}/Video/${file}`;
-    }
-  }
-
-  if (isDessertItem(item)) return `${BASE_PATH}/Video/demo/dessert.mp4`;
-  if (/(pasta|spaghetti|linguine|bolognese|alfredo|pesto|noodle)/.test(text)) return `${BASE_PATH}/Video/demo/pasta.mp4`;
-  if (/(sushi|sashimi|maki|nigiri|roll|tempura|crispy rice|edamame|wasabi|poke)/.test(text)) {
-    return `${BASE_PATH}/Video/demo/seafood.mp4`;
-  }
-  if (/(seafood|prawn|shrimp|oyster|mussel|fish|salmon|kingklip|hake|sole|calamari|squid|line ?fish)/.test(text)) {
-    return `${BASE_PATH}/Video/demo/seafood.mp4`;
-  }
-  // Vegetarian / salads get the pasta demo loop (no Greek meze clip anymore).
-  if (/(vegetarian|veg |veggie|salad|caprese|halloumi|avocado|side)/.test(text)) {
-    return `${BASE_PATH}/Video/demo/pasta.mp4`;
-  }
-  if (/(steak|beef|fillet|sirloin|rump|rib|burger|lamb|pork|chop|grill|tomahawk|venison|game|oxtail|biltong|wors|chicken|trinchado)/.test(text)) {
-    return `${BASE_PATH}/Video/demo/steak-grill.mp4`;
-  }
-  return `${BASE_PATH}/Video/demo/steak-grill.mp4`;
+  return FALLBACK_IMAGE;
 }
 
 export function resolveImage(item: MenuItem): string {
   if (item.imageVisible === false) return '';
-  if (isDrinkItem(item)) return demoImageFor(item);
+  // Drinks with a real photo (wine bottles, cocktails — the 2026-07 menu set)
+  // use it like any other item; the curated drink-fallback map only serves
+  // items that have no explicit image.
+  if (isDrinkItem(item) && !(item.img && item.img.trim())) return demoImageFor(item);
 
   const raw = item.img;
   if (raw && raw.trim()) {
@@ -289,15 +219,55 @@ export function resolveImage(item: MenuItem): string {
   return demoImageFor(item);
 }
 
+// 300px card thumbnail for a resolved image URL. The one-off optimizer and the
+// upload pipeline both emit Images/thumbnails/<stem>.webp and
+// uploads/thumbnails/<stem>.webp next to every full-size asset; anything that
+// doesn't follow that layout just uses its full image. Callers should fall
+// back to resolveImage() output onError (thumbnails are derived, not
+// guaranteed).
+export function resolveThumbnail(item: MenuItem): string {
+  const full = resolveImage(item);
+  // BASE_PATH-driven (not a hardcoded "/Trump"/"trump" literal) so every tenant's
+  // thumbnails resolve correctly, not just Trump's.
+  const basePattern = BASE_PATH.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = full.match(new RegExp(`^(${basePattern}/(?:Images|uploads))/([^/]+)\\.(?:jpe?g|png|webp)$`, 'i'));
+  if (!match) return full;
+  const stem = match[2];
+  return `${match[1]}/thumbnails/${stem}.webp`;
+}
+
+// 2026-07 reshoot: exactly these 20 dishes got a dedicated short clip
+// (960x540, silent, faststart — see Sites/Trump/Video/menu-items/). This is a
+// name-keyed allowlist, not a shared/demo fallback map, so it's structurally
+// impossible for two menu items to end up pointing at the same clip. Every
+// other item still resolves to null and shows only its photo.
+const ITEM_VIDEO_MAP: Record<string, string> = {
+  'flash pan fried chicken livers': 'flash_pan_fried_chicken_livers.mp4',
+  'chicken trinchado': 'chicken_trinchado.mp4',
+  'springbok carpaccio': 'springbok_carpaccio.mp4',
+  'boerewors & chakalaka': 'boerewors_and_chakalaka.mp4',
+  'crispy rice': 'crispy_rice.mp4',
+  'trumps rainbow reloaded (10pc)': 'trumps_rainbow_reloaded_10pc.mp4',
+  'rock shrimp tempura roll (8pc)': 'rock_shrimp_tempura_roll_8pc.mp4',
+  'wagyu ribeye 300g': 'wagyu_ribeye_300g.mp4',
+  't-bone 500g': 't_bone_500g.mp4',
+  'beef ribs (3 pce) ±1kg': 'beef_ribs_3_pce_1kg.mp4',
+  'oxtail': 'oxtail.mp4',
+  'mixed grill': 'mixed_grill.mp4',
+  'kingklip & prawn': 'kingklip_and_prawn.mp4',
+  'jalapeno chilli and cheese burger': 'jalapeno_chilli_and_cheese_burger.mp4',
+  'seafood pasta': 'seafood_pasta.mp4',
+  'firecracker chicken wings (400g)': 'firecracker_chicken_wings_400g.mp4',
+  'cape malva pudding': 'cape_malva_pudding.mp4',
+  'chocolate brownie': 'chocolate_brownie.mp4',
+  'glenfiddich 12 year whisky sour': 'glenfiddich_12_year_whisky_sour.mp4',
+  'trumps': 'trumps_pinotage.mp4',
+};
+
 export function resolveVideo(item: MenuItem): string | null {
   if (item.videoVisible === false) return null;
-  if (!isVideoEligible(item)) return null;
-  if (!item.video?.trim()) return demoVideoFor(item);
-  const raw = item.video.trim();
-  if (/^https?:\/\//.test(raw) || raw.startsWith('data:') || raw.startsWith('blob:') || raw.startsWith('/uploads/')) return demoVideoFor(item);
-  if (raw.startsWith(`${BASE_PATH}/`)) return raw;
-  if (raw.startsWith('/')) return `${BASE_PATH}${raw}`;
-  return `${BASE_PATH}/${raw}`;
+  const file = ITEM_VIDEO_MAP[(item.name || '').trim().toLowerCase()];
+  return file ? `${BASE_PATH}/Video/menu-items/${file}` : null;
 }
 
 export function normalizeYouTubeId(value?: string): string {
@@ -322,20 +292,12 @@ export function normalizeYouTubeId(value?: string): string {
   return '';
 }
 
-export function resolveYouTubeEmbed(item: MenuItem, autoplay = false): string | null {
-  if (item.videoVisible === false || !isVideoEligible(item)) return null;
-  const id = normalizeYouTubeId(item.youtubeId);
-  if (!id) return null;
-  const params = new URLSearchParams({
-    rel: '0',
-    modestbranding: '1',
-    playsinline: '1'
-  });
-  if (autoplay) {
-    params.set('autoplay', '1');
-    params.set('mute', '1');
-  }
-  return `https://www.youtube.com/embed/${id}?${params.toString()}`;
+// Video has been removed from Trump entirely — no menu item ever gets a video
+// again, local or embedded (no item currently has a youtubeId set, but this
+// stays off unconditionally so setting one later can't silently reactivate
+// video playback).
+export function resolveYouTubeEmbed(_item: MenuItem, _autoplay = false): string | null {
+  return null;
 }
 
 export function resolveAssetPath(path: string): string {

@@ -1,0 +1,43 @@
+.wrap {
+  position: relative;
+  flex: none;
+}
+
+.trigger {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--p-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--p-sub);
+}
+
+.menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 220px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--p-bg);
+  border: 1px solid var(--p-line);
+  border-radius: 10px;
+  box-shadow: var(--p-shadow);
+  padding: 6px;
+}
+
+.item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  font-size: 12.5px;
+  border-radius: 6px;
+  color: var(--p-ink);
+}
+
+.item:hover {
+  background: var(--p-card);
+}

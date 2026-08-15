@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, memo } from 'react';
-import { Heart, Plus, Star, Sparkles, Wine } from 'lucide-react';
-import { resolveImage } from '../../lib/imageResolver';
-import { BASE_PATH } from '../../constants/api';
+import { Heart, Star, Sparkles, Wine, Video } from 'lucide-react';
+import { resolveImage, resolveThumbnail, resolveVideo, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
+import { useT } from '../../i18n';
+import { localizeAllergens } from '../../lib/allergens';
 import type { MenuItem } from '../../types/menu';
 import styles from './MenuCard.module.css';
 
@@ -10,21 +11,26 @@ interface MenuCardProps {
   item: MenuItem;
   isFavorite: boolean;
   onFavoriteToggle: (name: string) => void;
-  onAddToCart: (item: MenuItem) => void;
   onClick: (item: MenuItem) => void;
   onPairingClick?: (item: MenuItem) => void;
 }
 
 export const MenuCard = memo(function MenuCard({
-  item, isFavorite, onFavoriteToggle, onAddToCart, onClick, onPairingClick
+  item, isFavorite, onFavoriteToggle, onClick, onPairingClick
 }: MenuCardProps) {
-  const [imgError, setImgError] = useState(false);
+  const t = useT();
+  // Cards load the 300px thumbnail; if it's missing fall back to the full
+  // image, then to the brand fallback (step 0 → 1 → 2).
+  const [imgStep, setImgStep] = useState(0);
   const cardRef = useRef<HTMLElement | null>(null);
-  const imgSrc = imgError ? `${BASE_PATH}/Images/Tomahawk.jpg` : resolveImage(item);
+  const thumbSrc = resolveThumbnail(item);
+  const fullSrc = resolveImage(item);
+  const imgSrc = imgStep === 0 ? thumbSrc : imgStep === 1 && fullSrc !== thumbSrc ? fullSrc : FALLBACK_IMAGE;
   const soldOut = item.available === false;
+  const hasVideo = !!resolveVideo(item);
 
   useEffect(() => {
-    setImgError(false);
+    setImgStep(0);
   }, [item.name]);
 
   return (
@@ -44,13 +50,16 @@ export const MenuCard = memo(function MenuCard({
             alt={item.name}
             className={styles.image}
             loading="lazy"
-            onError={() => setImgError(true)}
+            decoding="async"
+            width={600}
+            height={400}
+            onError={() => setImgStep(step => (step < 2 ? step + 1 : step))}
           />
         )}
         <div className={styles.imageTint} />
         {soldOut && (
           <div className={styles.soldOutOverlay}>
-            <span className={styles.soldOutBadge}>Sold Out</span>
+            <span className={styles.soldOutBadge}>{t('menu.soldOut')}</span>
           </div>
         )}
         {!soldOut && item.chefPick && (
@@ -59,8 +68,8 @@ export const MenuCard = memo(function MenuCard({
           </span>
         )}
         {!soldOut && item.popular && (
-          <span className={styles.chipAi} aria-label="AI recommended item">
-            <Sparkles size={10} /> AI Recommend
+          <span className={styles.chipAi} aria-label="Guest favourite">
+            <Sparkles size={10} /> Guest Favourite
           </span>
         )}
         <button
@@ -80,30 +89,31 @@ export const MenuCard = memo(function MenuCard({
             <Wine size={13} />
           </button>
         )}
+        {!soldOut && hasVideo && (
+          <span className={styles.videoBadge} title="Video available" aria-hidden="true">
+            <Video size={11} />
+          </span>
+        )}
       </div>
 
       <div className={styles.body}>
-        <h3 className={styles.name}>
+        <h3 className={styles.name} dir="auto">
           {item.name}
           {item.chefPick && <span className={styles.goldDot} aria-hidden="true" />}
         </h3>
         {item.description && (
-          <p className={styles.desc}>{item.description}</p>
+          <p className={styles.desc} dir="auto">{item.description}</p>
         )}
+        {/* The "Add" button lived here. This menu does not take orders — the
+            card's job is now to invite a tap into the dish, where the photos,
+            video and description are. Sold-out state still shows, because a
+            guest deserves to know before they ask their waiter for it. */}
         <div className={styles.footer}>
           <span className={styles.price}>{formatPrice(item.price)}</span>
-          <button
-            className={styles.addBtn}
-            aria-label={soldOut ? `${item.name} is sold out` : `Add ${item.name} to cart`}
-            onClick={e => { e.stopPropagation(); if (!soldOut) onAddToCart(item); }}
-            disabled={soldOut}
-          >
-            <Plus size={16} />
-            <span>Add</span>
-          </button>
+          {soldOut && <span className={styles.soldOut}>{t('menu.unavailable')}</span>}
         </div>
         {item.allergens && (
-          <p className={styles.allergens}>{item.allergens}</p>
+          <p className={styles.allergens} dir="auto"><strong>{t('menu.contains')}</strong> {localizeAllergens(item.allergens, t)}</p>
         )}
       </div>
     </article>

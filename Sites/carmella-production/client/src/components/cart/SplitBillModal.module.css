@@ -1,0 +1,120 @@
+.modal {
+  padding: clamp(20px, 3vw, 30px);
+  color: var(--color-cream);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.header h3 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: clamp(18px, 2.4vw, 21px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.header button {
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-sand);
+  transition: background-color var(--transition-fast, 160ms ease), color var(--transition-fast, 160ms ease), transform var(--transition-fast, 160ms ease);
+}
+.header button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-cream);
+  transform: translateY(-1px);
+}
+.header button:active { transform: translateY(0) scale(0.94); }
+
+.emptyHint {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--color-sand);
+  font-size: 13px;
+}
+
+.groups { display: flex; flex-direction: column; gap: 12px; }
+
+.groupRow {
+  padding: 14px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 255, 255, 0.02);
+  transition: background-color var(--transition-fast, 160ms ease), box-shadow var(--transition-fast, 160ms ease);
+}
+.groupRow:hover {
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: var(--shadow-xs);
+}
+
+.groupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.groupLabel {
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+
+.groupTotal {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-cream);
+}
+
+.groupBreakdown {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--color-sand);
+  opacity: 0.85;
+}
+
+.grandRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: rgba(var(--color-gold-rgb), 0.07);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.2);
+  border-radius: var(--radius-md);
+  font-family: var(--font-heading);
+  font-size: clamp(17px, 2.2vw, 19px);
+  font-weight: 700;
+  color: var(--color-gold);
+}
+
+.note {
+  margin: 14px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-sand);
+  opacity: 0.75;
+  text-align: center;
+}
+
+/* Tablet/desktop: use the extra width for a two-up grid of per-guest cards
+   instead of one long single column when the table has several devices. */
+@media (min-width: 640px) {
+  .groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+  }
+}

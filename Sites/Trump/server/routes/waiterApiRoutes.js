@@ -1,10 +1,9 @@
 // Waiter-AI API routes. All require a floor role. Follows the project's
-// multi-alias path convention (/api/..., /Trump/api/..., /trump/api/...).
-function alias(path) {
-  return [`/api/${path}`, `/Trump/api/${path}`, `/trump/api/${path}`];
-}
+// multi-alias path convention (/api/..., <publicBasePath>/api/..., lower-cased).
+const { tenantPaths } = require('../utils/helpers');
 
-function registerWaiterApiRoutes(app, controllers, auth) {
+function registerWaiterApiRoutes(app, config, controllers, auth) {
+  const alias = path => tenantPaths(config, `/api/${path}`);
   const waiterAuth = auth.requireRoles(['owner', 'manager', 'waiter']);
   const c = controllers.waiterApi;
 
@@ -29,6 +28,10 @@ function registerWaiterApiRoutes(app, controllers, auth) {
   app.post(alias('waiter/birthday-request'), waiterAuth, c.requestBirthdayApproval);
   app.post(alias('waiter/birthday-approval/:id'), auth.requireRoles(['owner', 'manager']), c.approveBirthday);
 
+  // AI Shared Event System — single source of truth read by both admin and waiter.
+  app.get(alias('ai-events'), waiterAuth, c.listAiEvents);
+  app.post(alias('ai-events/:id/resolve'), waiterAuth, c.resolveAiEvent);
+
   // Performance / leaderboard / shift report
   app.get(alias('waiter/me/performance'), waiterAuth, c.getMyPerformance);
   app.get(alias('waiter/me/shift-report'), waiterAuth, c.getMyShiftReport);
@@ -40,6 +43,7 @@ function registerWaiterApiRoutes(app, controllers, auth) {
   app.get(alias('guests/:id'), waiterAuth, c.getGuest);
   app.post(alias('waiter/table/:tableId/seat-guest'), waiterAuth, c.seatGuest);
   app.post(alias('waiter/table/:tableId/covers'), waiterAuth, c.setTableCovers);
+  app.post(alias('waiter/table/:tableId/complete'), waiterAuth, c.completeTable);
 
   // NLG status (handy for verifying template vs LLM mode)
   app.get(alias('waiter/nlg-status'), waiterAuth, c.nlgStatus);

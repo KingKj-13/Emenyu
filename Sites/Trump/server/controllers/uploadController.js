@@ -1,4 +1,5 @@
 const multer = require('multer');
+const fs = require('fs');
 const path = require('path');
 
 const MIME_EXTENSION_MAP = new Map([
@@ -9,6 +10,21 @@ const MIME_EXTENSION_MAP = new Map([
   ['video/mp4', new Set(['.mp4'])],
   ['video/webm', new Set(['.webm'])]
 ]);
+
+// Optimized-output settings — mirrors mediaEnrichmentService (sharp + webp ~q80)
+// and scripts/optimize-images-oneoff.js so all menu media meets the same bar.
+const FULL_WIDTH = 1600;
+const THUMB_WIDTH = 300;
+const WEBP_QUALITY = 80;
+const THUMB_QUALITY = 75;
+
+function loadSharp() {
+  try {
+    return require('sharp');
+  } catch {
+    return null;
+  }
+}
 
 function safeUploadName(originalName = '') {
   const extension = path.extname(originalName).toLowerCase();
@@ -38,7 +54,17 @@ function isAllowedUpload(file, config) {
   return Boolean(allowedForMime && allowedForMime.has(extension));
 }
 
-function createUploadController(config) {
+// Animated GIFs are passed through raw (re-encoding would drop frames); every
+// other image is resized + converted to WebP with a 300px card thumbnail.
+function isOptimizableImage(mimeType) {
+  return ['image/jpeg', 'image/png', 'image/webp'].includes(String(mimeType || '').toLowerCase());
+}
+
+function createUploadController(config, { logger = null } = {}) {
+  const sharp = loadSharp();
+  const thumbnailsDir = path.join(config.directories.uploads, 'thumbnails');
+  fs.mkdirSync(thumbnailsDir, { recursive: true });
+
   const storage = multer.diskStorage({
     destination(req, file, callback) {
       callback(null, config.directories.uploads);
@@ -65,17 +91,67 @@ function createUploadController(config) {
     }
   });
 
+  async function optimizeImage(file) {
+    const rawPath = file.path;
+    const stem = path.basename(file.filename, path.extname(file.filename));
+    const webpName = `${stem}.webp`;
+    const webpPath = path.join(config.directories.uploads, webpName);
+    const thumbPath = path.join(thumbnailsDir, webpName);
+
+    // Write to .tmp then rename so a half-written file is never served, and so
+    // a .webp upload never streams into its own read path.
+    const base = sharp(rawPath, { failOn: 'none' }).rotate();
+    await base
+      .clone()
+      .resize({ width: FULL_WIDTH, withoutEnlargement: true })
+      .webp({ quality: WEBP_QUALITY })
+      .toFile(`${webpPath}.tmp`);
+    await base
+      .clone()
+      .resize({ width: THUMB_WIDTH, withoutEnlargement: true })
+      .webp({ quality: THUMB_QUALITY })
+      .toFile(`${thumbPath}.tmp`);
+
+    for (const out of [webpPath, thumbPath]) {
+      await fs.promises.rm(out, { force: true });
+      await fs.promises.rename(`${out}.tmp`, out);
+    }
+
+    if (path.resolve(rawPath) !== path.resolve(webpPath)) {
+      await fs.promises.rm(rawPath, { force: true }).catch(() => {});
+    }
+
+    return webpName;
+  }
+
   return {
     middleware: upload.single('mediaFile'),
 
-    uploadMedia(req, res) {
+    async uploadMedia(req, res) {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
+      let filename = req.file.filename;
+      let mimeType = req.file.mimetype;
+
+      if (isOptimizableImage(req.file.mimetype)) {
+        if (sharp) {
+          try {
+            filename = await optimizeImage(req.file);
+            mimeType = 'image/webp';
+          } catch (error) {
+            // Never fail the upload over optimization — serve the raw file.
+            logger?.warn?.('upload_image_optimize_failed', { file: req.file.filename, error: error.message });
+          }
+        } else {
+          logger?.warn?.('upload_image_optimize_skipped', { file: req.file.filename, reason: 'sharp unavailable' });
+        }
+      }
+
       return res.json({
-        filePath: `${config.publicBasePath}/uploads/${req.file.filename}`,
-        type: req.file.mimetype
+        filePath: `${config.publicBasePath}/uploads/${filename}`,
+        type: mimeType
       });
     }
   };

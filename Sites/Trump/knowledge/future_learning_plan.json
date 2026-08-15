@@ -1,0 +1,98 @@
+{
+  "_meta": {
+    "title": "Recommendation Engine — Learning / Analytics: Implemented vs Planned",
+    "purpose": "What recommendationEventService.js (storage) + recommendationAnalytics.js (pure aggregation) + recommendationInsights.js (owner-facing insights) ALREADY track today, versus what the spec wants that doesn't exist yet — each planned item includes how it could be layered onto the existing RecommendationEvent pipeline rather than building a parallel system.",
+    "_active": false,
+    "_status": "REFERENCE ONLY — this FILE has no runtime consumer. The 'implemented' section documents real, live code (recommendationEventService.js/recommendationAnalytics.js/recommendationInsights.js all run today, independent of this file); the 'planned' section is a forward-looking roadmap per the spec's own 'design for adaptation even if not implemented initially' guidance, not something any code reads.",
+    "pipeline_today": "recommendationEventService.js writes/reads RecommendationEvent rows (Postgres primary, JSON-fallback per the repo's hybrid-persistence convention). recommendationAnalytics.js's aggregate(events, filters) is a pure function that turns a raw event array into the dashboard payload — no I/O, fully offline-testable. recommendationInsights.js's generate() turns that analytics payload (+ health + chef recs + menu items) into ranked, actionable owner insights."
+  },
+  "implemented": [
+    {
+      "id": "acceptance-rate",
+      "description": "Acceptance % per item/source/rotation-group/bundle — accepted events divided by impressions.",
+      "where": "recommendationAnalytics.js withRates(): acceptanceRate = rate(tally.accepted, tally.impressions), surfaced on every tally (totals, byItem, bySource, byRotationGroup, byBundle)."
+    },
+    {
+      "id": "dismissal-rate",
+      "description": "Decline/dismissal % — dismissed events divided by impressions.",
+      "where": "recommendationAnalytics.js withRates(): dismissalRate = rate(tally.dismissed, tally.impressions)."
+    },
+    {
+      "id": "click-rate",
+      "description": "Click-through % — click events divided by impressions.",
+      "where": "recommendationAnalytics.js withRates(): clickRate = rate(tally.clicks, tally.impressions)."
+    },
+    {
+      "id": "conversion-rate",
+      "description": "Shown-to-ordered conversion % — ordered events divided by impressions.",
+      "where": "recommendationAnalytics.js withRates(): conversionRate = rate(tally.ordered, tally.impressions)."
+    },
+    {
+      "id": "revenue-per-accepted-suggestion",
+      "description": "Revenue attributed to accepted recommendations, plus a Phase-5 efficiency metric (accepted revenue per impression).",
+      "where": "recommendationAnalytics.js bump(): tally.revenue accumulates Number(ev.value) on every 'accepted' event; withRates() also derives revenuePerImpression = revenue / impressions (\"Phase 5: revenue efficiency\"), and a separate revenueOrdered accumulator for 'ordered' events."
+    },
+    {
+      "id": "per-item-tallies",
+      "description": "Full impression/click/accept/dismiss/order/revenue tally per distinct recommended item name, plus ranked boards: topShown, topClicked, topConverting (min-impression gated), topRevenue, and underperforming (lowest acceptance among sufficiently-shown items).",
+      "where": "recommendationAnalytics.js aggregate(): byItem Map keyed by ev.recommendedName, exposed as `items` and the ranked *topX* / `underperforming` arrays."
+    },
+    {
+      "id": "per-source-tallies",
+      "description": "Tally broken down by recommendation source (chef, hero pairing, tag-match, popularity fallback, etc).",
+      "where": "recommendationAnalytics.js aggregate(): bySource Map keyed by ev.source."
+    },
+    {
+      "id": "per-rotation-group-tallies",
+      "description": "Tally broken down by rotationGroup, so a set of rotating candidates can be evaluated as a cohort.",
+      "where": "recommendationAnalytics.js aggregate(): byGroup Map keyed by ev.rotationGroup (only when present on the event)."
+    },
+    {
+      "id": "per-bundle-attribution",
+      "description": "Phase 5 bundle-level attribution — tally for bundle-sourced recommendations, keyed by the bundle/persona name.",
+      "where": "recommendationAnalytics.js aggregate(): byBundle Map, populated when ev.source === 'bundle' && ev.originatingName is set (\"Phase 5: bundle-level attribution. Bundle events carry source \\\"bundle\\\" and the persona in originatingName.\")."
+    },
+    {
+      "id": "dead-recommendation-insight",
+      "description": "Owner-facing insight flagging an item with enough exposure but near-zero acceptance, with a suggested action.",
+      "where": "recommendationInsights.js generate(): loops analytics.items, flags any item where impressions >= DEFAULTS.deadMinImpressions (20) and acceptanceRate <= DEFAULTS.deadMaxAcceptance (0.05) as a 'high' severity dead_recommendation insight (\"Re-pair this item, refresh its reason, or retire the recommendation.\")."
+    },
+    {
+      "id": "poor-rotation-group-insight",
+      "description": "Owner-facing insight flagging an entire rotation group converting poorly as a cohort.",
+      "where": "recommendationInsights.js generate(): loops analytics.byRotationGroup, flags any group where impressions >= DEFAULTS.poorRotationMinImpressions (20) and acceptanceRate <= DEFAULTS.poorRotationMaxAcceptance (0.05) as a 'medium' severity poor_rotation_group insight."
+    },
+    {
+      "id": "broken-reference-health-issues",
+      "description": "Detection of chef recommendations pointing at disabled, deleted, or orphaned menu items.",
+      "where": "recommendationInsights.js generate(): surfaces health.issues with code disabled_target / orphaned_source / missing_target as 'high' severity insights with a repair action."
+    },
+    {
+      "id": "missing-pairing-insight",
+      "description": "Owner-facing insight listing main-course items that have no chef recommendation authored for them at all.",
+      "where": "recommendationInsights.js generate(): cross-references (chefRecs active sourceItemIds) against all visible/available MAIN items, listing up to DEFAULTS.missingPairingLimit (5) uncovered mains as 'medium' severity missing_pairing insights."
+    }
+  ],
+  "planned": [
+    {
+      "id": "avg-spend-per-guest-before-after-upsell",
+      "description": "Average guest/table spend before a recommendation was accepted versus the final spend after — the direct revenue-lift metric the acceptance/revenue numbers today only approximate indirectly.",
+      "how_to_add": "Tag each RecommendationEvent row (at write time, in recommendationEventService.js) with the cart subtotal at the moment of the 'impression'/'accepted' event, then join to the table/order's final total at close (already available via the Order model). A new aggregation function alongside recommendationAnalytics.js's aggregate() could group by sessionId/tableId and compute avg(pre-suggestion subtotal) vs avg(final total) for sessions that had at least one accepted recommendation, reusing the existing event stream rather than a new data model."
+    },
+    {
+      "id": "pairing-success-feedback-correlation",
+      "description": "Correlating which pairings convert well against actual guest feedback/ratings (not just the accept/dismiss/order behavioral proxy used today).",
+      "how_to_add": "Requires a guest-feedback signal that doesn't exist yet (see guest-sentiment-capture below). Once available, join future GuestFeedback rows to RecommendationEvent rows via the shared sessionId/tableId, and add a new pure function (e.g. in a new recommendationFeedback.js, mirroring recommendationAnalytics.js's style) that correlates acceptanceRate/ordered outcomes against feedback scores per item/source, surfaced as a new insight type in recommendationInsights.js."
+    },
+    {
+      "id": "guest-sentiment-capture",
+      "description": "Qualitative guest reaction to recommendations (not just the binary accepted/dismissed/ignored signals currently captured).",
+      "how_to_add": "Needs a genuinely new signal source — options include a lightweight post-recommendation thumbs up/down captured as a new RecommendationEvent eventType (extending recommendationAnalytics.js's EVENT_TYPES array), a post-meal micro-survey, or a sentiment classifier run over the existing chat() transcript already logged via appendChatLog() in aiService.js. Whichever source is chosen, it should still land in the SAME RecommendationEvent table (new eventType or a sibling `sentiment` column) so it composes with the existing aggregate()/generate() pipeline instead of requiring a parallel analytics system."
+    },
+    {
+      "id": "restaurant-manual-overrides",
+      "description": "An explicit, auditable record of when a restaurant manually overrode the algorithm's output (always-show / never-show an item, or a manual weight/priority override), distinguished from ordinary algorithmic recommendations for analytics purposes.",
+      "how_to_add": "The admin-facing knobs that are closest today — chef recommendation priority/active flags, and Phase-5 bundle authoring — are curation, not a logged 'override' distinct from normal operation. Adding this would mean: (1) a new `manualOverride` boolean/reason field on the chef-rec or a new override record, (2) recommend() in aiService.js checking it before/after scoring and tagging any resulting candidate with source: 'manual-override' (reusing the existing `source` tally dimension recommendationAnalytics.js already breaks results down by, via bySource), so override impact becomes visible in the exact same dashboard without a new reporting surface."
+    }
+  ]
+}

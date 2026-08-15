@@ -3,15 +3,14 @@
 const { getPrisma } = require('./prismaClient');
 const { getCanonicalTableId } = require('../utils/helpers');
 
+// Service-recovery text patterns (complaint/refund) — operational issues, not
+// guest-context signals, so they stay here as plain WaiterTasks rather than
+// moving into the AI Event taxonomy (see aiEventService.js, which now owns
+// birthday/anniversary/allergy/vip/dietary-style detection and calls
+// createTask() below to keep this same waiter-inbox UI working unchanged).
 const EVENT_PATTERNS = [
-  { type: 'birthday', label: 'Birthday Detected', priority: 1, test: /\b(birthday|bday|born day)\b/i },
-  { type: 'anniversary', label: 'Anniversary Detected', priority: 2, test: /\b(anniversary|years together|wedding anniversary)\b/i },
-  { type: 'allergy', label: 'Allergy Alert', priority: 1, test: /\b(allergy|allergic|nuts|shellfish|gluten|dairy)\b/i },
   { type: 'complaint', label: 'Complaint Detected', priority: 1, test: /\b(cold|late|waited|angry|unhappy|complain|refund|wrong order|bad service)\b/i },
-  { type: 'refund', label: 'Refund Request', priority: 1, test: /\b(refund|money back|remove this|take it off)\b/i },
-  { type: 'vip', label: 'VIP Guest', priority: 2, test: /\b(vip|regular|owner knows|celebrity|important guest)\b/i },
-  { type: 'vegetarian', label: 'Vegetarian Guest', priority: 3, test: /\b(vegetarian|no meat)\b/i },
-  { type: 'vegan', label: 'Vegan Guest', priority: 3, test: /\b(vegan|plant based|plant-based)\b/i }
+  { type: 'refund', label: 'Refund Request', priority: 1, test: /\b(refund|money back|remove this|take it off)\b/i }
 ];
 
 function createWaiterWorkflowService({ config, socketService = null }) {

@@ -7,7 +7,7 @@ const { getPrisma } = require('../services/prismaClient');
 // (new → served) and no going backwards (ready → preparing).
 const STATUS_FLOW = { new: 'preparing', preparing: 'ready', ready: 'served' };
 
-function createKitchenController({ config, fileService, socketService }) {
+function createKitchenController({ config, fileService, socketService, notificationService }) {
   return {
     async getOrders(req, res) {
       try {
@@ -63,6 +63,18 @@ function createKitchenController({ config, fileService, socketService }) {
         });
 
         socketService.emitKitchenStatusUpdate(order.id, order.tableId, kitchenStatus, order);
+
+        if (kitchenStatus === 'ready') {
+          const displayTable = String(order.tableId || '').replace(/^table/i, 'Table ').toUpperCase();
+          notificationService?.notify({
+            source: 'system',
+            title: `${displayTable} order ready`,
+            body: `${displayTable}'s order is ready to serve.`,
+            priority: 2,
+            recipientRole: 'waiter',
+            tableId: order.tableId
+          });
+        }
 
         if (kitchenStatus === 'served') {
           const actor = req.user?.username || 'kitchen';

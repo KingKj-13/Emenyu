@@ -1,0 +1,31 @@
+{
+  "_source": "Extracted verbatim from server/services/reasonComposer.js (fallback(), dessertNarrative()), server/services/marketBasket.js (whyFromTags), server/services/opportunityService.js (actionLabel), and server/services/aiService.js (addCourseCompletions' upgrade-stage reason). These are the never-blank / category-aware defaults used only when no chef-authored or hero-pairing reason exists.",
+  "_active": false,
+  "_status": "REFERENCE ONLY — not loaded by any runtime code. Templates from 4 different source functions were flattened into one array by useCase, and the useCase key collides across sources (three different 'dessert' entries with different placeholder shapes, for example) — wiring this back into all 4 original call sites unambiguously would need a reshape, not a mechanical load, so it was left as documentation rather than force a lookup that could silently pick the wrong entry. reasonComposer.js/marketBasket.js/opportunityService.js/aiService.js remain the live sources.",
+  "templates": [
+    { "useCase": "wine", "pattern": "A confident pour alongside {source}." },
+    { "useCase": "drink", "pattern": "A great glass to lift {source}." },
+    { "useCase": "dessert", "pattern": "The sweet finish for {source}." },
+    { "useCase": "starter", "pattern": "A light way to open before {source}." },
+    { "useCase": "default", "pattern": "A natural match for {source}." },
+
+    { "useCase": "dessert", "pattern": "You've chosen {source.name} and a {cartWine.name} — {target.name} keeps things light rather than heavy after the {source.name}." },
+    { "useCase": "dessert", "pattern": "You've chosen {source.name} and a {cartWine.name} — {target.name} is a properly rich way to close out the {source.name} and {cartWine.name}." },
+
+    { "useCase": "pairing", "pattern": "echoes the {flavourLabel} on the {anchor.name}" },
+    { "useCase": "pairing", "pattern": "the {drinkType} most tables pour alongside" },
+    { "useCase": "dessert", "pattern": "the sweet finish guests keep adding" },
+    { "useCase": "pairing", "pattern": "the side that rounds out the plate" },
+    { "useCase": "pairing", "pattern": "brings {flavour} to the table" },
+    { "useCase": "default", "pattern": "a frequent companion on the bill" },
+
+    { "useCase": "action_label", "pattern": "Pour a premium red" },
+    { "useCase": "action_label", "pattern": "Offer a digestif" },
+    { "useCase": "action_label", "pattern": "Suggest a drink" },
+    { "useCase": "action_label", "pattern": "Offer dessert" },
+    { "useCase": "action_label", "pattern": "Add a starter" },
+    { "useCase": "action_label", "pattern": "Suggest a side" },
+
+    { "useCase": "upgrade", "pattern": "If you'd like something even more memorable, I'd suggest the {upgrade.to} — {upgrade.note}." }
+  ]
+}

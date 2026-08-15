@@ -18,10 +18,26 @@ class SocketService {
     this.io = null;
     this.tableMemory = {};
     this.connectedWaiters = {};
+    // Device Awareness (Curated Demo Mode): tableId -> Map(deviceId -> {label,
+    // joinedAt}). Every QR scan/table join gets a stable, human-readable
+    // "Guest N" label for that table's visit, sequenced by join order —
+    // consumed by the shared-cart-by-device UI and split-bill-by-device.
+    // In-memory only (Trump runs PM2 in fork mode, single instance — same
+    // accepted pattern as tableMemory/connectedWaiters above); cleared on
+    // table reset so a new visit starts a fresh roster.
+    this.tableDevices = new Map();
     // Listeners notified when menu / recommendation / order data mutates. Used by
     // aiService to drop its reco caches immediately so owner edits show without
     // waiting out the cache TTL. Independent of socket connectivity.
     this._dataChangeListeners = [];
+    // notificationService is constructed after SocketService (it needs a live
+    // socketService to emit through) — wired in via this setter once it exists,
+    // rather than a constructor param, to avoid the circular dependency.
+    this.notifications = null;
+  }
+
+  setNotificationService(notificationService) {
+    this.notifications = notificationService;
   }
 
   // Register a callback fired on every menu/recommendation/order mutation. The
@@ -240,14 +256,53 @@ class SocketService {
       await this.fileService.saveTableAdminOverrides(cleanId, []);
     }
 
+    // A fresh visit gets a fresh guest roster — otherwise the next party
+    // seated here would inherit the previous party's "Guest 1"/"Guest 2" labels.
+    this.tableDevices.delete(cleanId);
+
     if (options.emit !== false) {
       this.emitTableCart(tableId, []);
       if (!preserveAdminOverrides) {
         this.emitAdminOverride(tableId, []);
       }
+      this.emitTableDevices(tableId);
     }
 
     return state;
+  }
+
+  // ─── Device Awareness (Curated Demo Mode) ────────────────────────────────────
+
+  // First join for a (tableId, deviceId) pair mints the next sequential
+  // "Guest N" label for that table's visit; later joins (reconnect/refresh)
+  // return the same label. Not persisted across a server restart — same
+  // ephemeral-per-visit tradeoff as tableMemory/connectedWaiters above.
+  getOrAssignDeviceLabel(tableId, deviceId) {
+    const cleanId = getCanonicalTableId(tableId);
+    if (!this.tableDevices.has(cleanId)) {
+      this.tableDevices.set(cleanId, new Map());
+    }
+    const devices = this.tableDevices.get(cleanId);
+    if (!devices.has(deviceId)) {
+      devices.set(deviceId, { label: `Guest ${devices.size + 1}`, joinedAt: Date.now() });
+    }
+    return devices.get(deviceId);
+  }
+
+  getTableDevices(tableId) {
+    const cleanId = getCanonicalTableId(tableId);
+    const devices = this.tableDevices.get(cleanId);
+    if (!devices) return [];
+    return [...devices.entries()].map(([deviceId, info]) => ({ deviceId, label: info.label, joinedAt: info.joinedAt }));
+  }
+
+  emitTableDevices(tableId) {
+    if (!this.io) return;
+    this.io.to(this.getTableRooms(tableId)).emit('tableDevices', {
+      restaurantId: this.config.restaurantId,
+      tableId: normalizeId(tableId),
+      devices: this.getTableDevices(tableId)
+    });
   }
 
   // ─── Emit helpers ─────────────────────────────────────────────────────────────
@@ -329,6 +384,27 @@ class SocketService {
     }
   }
 
+  // Curated Demo Mode + future live-flippable settings — broadcast so every
+  // open customer/waiter/admin tab picks up the change instantly, no restart.
+  emitSettingsUpdated(settings) {
+    if (this.io) {
+      this.io.emit('settingsUpdated', settings || {});
+    }
+  }
+
+  // Curated Demo Mode: the Order Complete chatbot follow-up (thank-you, or
+  // "your next drink is on us" + reward QR) — pushed to the table's room so
+  // ChatPanel.tsx can append it even though the guest didn't ask anything
+  // (chat is normally request/response only).
+  emitOrderCompleteFollowUp(tableId, payload) {
+    if (!this.io) return;
+    this.io.to(this.getTableRooms(tableId)).emit('orderCompleteFollowUp', {
+      restaurantId: this.config.restaurantId,
+      tableId: normalizeId(tableId),
+      ...payload
+    });
+  }
+
   emitRecommendationUpdated() {
     this._notifyDataChange('recommendations');
     if (this.io) {
@@ -350,7 +426,7 @@ class SocketService {
     }
     const tableId = order?.table_number || order?.tableId || '';
     if (tableId) {
-      pushService.notifyNewOrder(this.config.restaurantId, tableId).catch(() => {});
+      pushService.notifyNewOrder(this.config.restaurantId, tableId, this.config.publicBasePath).catch(() => {});
     }
   }
 
@@ -370,7 +446,7 @@ class SocketService {
       .to(this.getTableRooms(tableId))
       .emit('kitchenStatusUpdate', payload);
     if (kitchenStatus === 'ready') {
-      pushService.notifyOrderReady(this.config.restaurantId, tableId).catch(() => {});
+      pushService.notifyOrderReady(this.config.restaurantId, tableId, this.config.publicBasePath).catch(() => {});
     }
   }
 
@@ -388,6 +464,60 @@ class SocketService {
     if (this.io) {
       this.io.emit('newChatLog', log);
     }
+  }
+
+  // AI Shared Event System — one structured event (birthday, VIP, allergy,
+  // large group, ...) pushed to both admin and waiter simultaneously, so
+  // they render from the same payload instead of each surface re-deriving it.
+  emitAiEvent(event) {
+    if (!this.io) return;
+    this.io.to(this.getAdminRoom()).to(this.getWaiterRoom()).emit('aiEventCreated', {
+      restaurantId: this.config.restaurantId,
+      event
+    });
+  }
+
+  emitAiEventUpdated(event) {
+    if (!this.io) return;
+    this.io.to(this.getAdminRoom()).to(this.getWaiterRoom()).emit('aiEventUpdated', {
+      restaurantId: this.config.restaurantId,
+      event
+    });
+  }
+
+  // Server-initiated "guest wants the bill" pulse — same wire shape as a real
+  // callWaiter ring (handleCallWaiter) so waiter/admin UIs need no special
+  // casing, but callable directly (no socket) for staff-side/automated flows
+  // that aren't a guest device pressing the call button.
+  emitBillRequested(tableId) {
+    if (!this.io) return;
+    const cleanId = normalizeId(tableId);
+    const displayTable = cleanId.replace(/^table/i, 'Table ').toUpperCase();
+    const timestamp = new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+
+    this.io.to(this.getWaiterRoom()).emit('incomingWaiterCall', {
+      restaurantId: this.config.restaurantId,
+      tableId: cleanId,
+      displayTable,
+      message: `${displayTable} would like the bill.`,
+      timestamp
+    });
+    this.io.to(this.getAdminRoom()).emit('waiterCallAlert', {
+      restaurantId: this.config.restaurantId,
+      tableId: cleanId,
+      displayTable,
+      message: `${displayTable} has asked for the bill.`,
+      type: 'incoming',
+      timestamp
+    });
+    this.notifications?.notify({
+      source: 'waiter_call',
+      title: `${displayTable} wants the bill`,
+      body: `${displayTable} has asked for the bill.`,
+      priority: 1,
+      recipientRole: 'waiter',
+      tableId: cleanId
+    });
   }
 
   // Phase 04B — live delivery of a Notification row to the right staff. Mirrors the
@@ -516,10 +646,28 @@ class SocketService {
     // Remember this table so the guest may control only this cart (see
     // socketCanControlTable). Staff are not constrained by this set.
     socket.data.tables.add(getCanonicalTableId(cleanId));
-    const state = await this.getTableState(cleanId);
-    this.emitCartToSocket(socket, cleanId, state.cart);
-    await this.emitHistoryToSocket(socket, cleanId);
-    this.emitAdminOverrideToSocket(socket, cleanId, state.adminOverrides);
+
+    // Device Awareness: every QR scan/table join carries the browser's stable
+    // deviceId (storage.ts's getDeviceIdentity) — assign/recall this table
+    // visit's "Guest N" label for it and let the whole table room (including
+    // any waiter viewing this table) know the current guest roster.
+    if (payload.deviceId) {
+      const identity = this.getOrAssignDeviceLabel(cleanId, payload.deviceId);
+      socket.emit('deviceIdentity', { deviceId: payload.deviceId, ...identity });
+      this.emitTableDevices(cleanId);
+    }
+
+    // Fires on every phone connect/reconnect/refresh — a transient DB/file
+    // read error here must not become an unhandled rejection that takes down
+    // every table's connection (same reasoning as handleUpdateCart below).
+    try {
+      const state = await this.getTableState(cleanId);
+      this.emitCartToSocket(socket, cleanId, state.cart);
+      await this.emitHistoryToSocket(socket, cleanId);
+      this.emitAdminOverrideToSocket(socket, cleanId, state.adminOverrides);
+    } catch (error) {
+      this.logger?.warn?.('socket_join_table_failed', { tableId: cleanId, error });
+    }
   }
 
   async handleJoinAsWaiter(socket, payload = {}) {
@@ -612,7 +760,7 @@ class SocketService {
       message: `${displayTable} is calling you.`,
       timestamp
     });
-    pushService.notifyCallWaiter(this.config.restaurantId, cleanId).catch(() => {});
+    pushService.notifyCallWaiter(this.config.restaurantId, cleanId, this.config.publicBasePath).catch(() => {});
 
     this.io.to(this.getAdminRoom()).emit('waiterCallAlert', {
       restaurantId: this.config.restaurantId,
@@ -621,6 +769,15 @@ class SocketService {
       message: `${displayTable} has called for a waiter.`,
       type: 'incoming',
       timestamp
+    });
+
+    this.notifications?.notify({
+      source: 'waiter_call',
+      title: `${displayTable} is calling`,
+      body: `${displayTable} has called for a waiter.`,
+      priority: 1,
+      recipientRole: 'waiter',
+      tableId: cleanId
     });
   }
 
@@ -681,7 +838,11 @@ class SocketService {
       return this.denySocket(socket, 'fetchHistory', payload);
     }
 
-    await this.emitHistoryToSocket(socket, payload.tableId);
+    try {
+      await this.emitHistoryToSocket(socket, payload.tableId);
+    } catch (error) {
+      this.logger?.warn?.('socket_fetch_history_failed', { tableId: payload.tableId, error });
+    }
   }
 
   async handleUpdateCart(socket, payload = {}) {
@@ -721,7 +882,11 @@ class SocketService {
       return;
     }
 
-    await this.setTableAdminOverrides(payload.tableId, payload.overrides, { emit: true });
+    try {
+      await this.setTableAdminOverrides(payload.tableId, payload.overrides, { emit: true });
+    } catch (error) {
+      this.logger?.warn?.('socket_update_admin_overrides_failed', { tableId: payload.tableId, error });
+    }
   }
 
   async handleAdminResetTable(socket, payload = {}) {
@@ -740,16 +905,20 @@ class SocketService {
     const cleanId = normalizeId(payload.tableId);
     const preserveOverrides = payload.preserveAdminOverrides !== false;
 
-    await this.resetTableState(cleanId, {
-      preserveAdminOverrides: preserveOverrides,
-      emit: true
-    });
+    try {
+      await this.resetTableState(cleanId, {
+        preserveAdminOverrides: preserveOverrides,
+        emit: true
+      });
 
-    this.logger?.info('socket_admin_reset_table', {
-      tableId: cleanId,
-      preserveAdminOverrides: preserveOverrides,
-      actor: socket.data.user?.username || 'admin'
-    });
+      this.logger?.info('socket_admin_reset_table', {
+        tableId: cleanId,
+        preserveAdminOverrides: preserveOverrides,
+        actor: socket.data.user?.username || 'admin'
+      });
+    } catch (error) {
+      this.logger?.warn?.('socket_admin_reset_table_failed', { tableId: cleanId, error });
+    }
   }
 
   async handleDisconnect(socket) {

@@ -33,6 +33,18 @@ function check(name, pass, detail) { results.push({ section, name, pass: !!pass,
   check('"whats good here" → recommendation', cls('whats good here').type === 'recommendation');
   check('"wats gud" → recommendation (typo)', cls('wats gud').type === 'recommendation');
 
+  // Phase 1 (Recommendation Brain): finer occasionDetail alongside the coarse
+  // occasion bucket above — the bucket must stay unchanged (existing tag-match/
+  // archetype consumers depend on it), occasionDetail is additive.
+  check('"it\'s her birthday tonight" → occasion=celebration (unchanged) + occasionDetail=birthday', cls("it's her birthday tonight").slots.occasion === 'celebration' && cls("it's her birthday tonight").slots.occasionDetail === 'birthday');
+  check('"our wedding anniversary" → occasionDetail=anniversary', cls('our wedding anniversary').slots.occasionDetail === 'anniversary');
+  check('"just graduated, celebrating" → occasionDetail=graduation', cls('just graduated, celebrating').slots.occasionDetail === 'graduation');
+  check('"a client dinner tonight" → occasionDetail=business_dinner', cls('a client dinner tonight').slots.occasionDetail === 'business_dinner');
+  check('"watching the rugby" → occasionDetail=sports_night', cls('watching the rugby').slots.occasionDetail === 'sports_night');
+  check('"date night for two" → occasionDetail=date', cls('date night for two').slots.occasionDetail === 'date');
+  check('"just an engagement party" → occasionDetail=celebration (generic fallback)', cls('just an engagement party').slots.occasionDetail === 'celebration');
+  check('no occasion words → occasionDetail is null', cls('something spicy please').slots.occasionDetail === null);
+
   // ── 2. Tag scoring (pure, against metadata.tags) ────────────────────────────
   group('2. Tag scoring (intent slots × item tags)');
   const spicy = { kind: 'FOOD', course: 'MAIN', spice: 2, richness: 1, protein: ['chicken'], occasion: ['sharing'] };
@@ -86,6 +98,30 @@ function check(name, pass, detail) { results.push({ section, name, pass: !!pass,
   const cartCtx = chatSession.build([], fixtureCtx, [{ name: 'SEARED SALMON' }]);
   check('cart item becomes the anchor', cartCtx.anchorDish && cartCtx.anchorDish.name === 'SEARED SALMON', `anchor=${cartCtx.anchorDish && cartCtx.anchorDish.name}`);
 
+  // ── 4b. Phase 1: "one suggestion at a time, wait if ignored" (stateless) ────
+  group('4b. Recommendation Brain — ignored-suggestion cooldown (derived from history)');
+  const ignoredHistory = [
+    { role: 'user', content: "what's good here" },
+    { role: 'assistant', content: 'I would steer you toward the SEARED SALMON.' },
+    { role: 'user', content: 'actually tell me about your hours' },
+  ];
+  const ignoredCtx = chatSession.build(ignoredHistory, fixtureCtx, []);
+  check('an ignored suggestion (not added, guest moved on) is flagged', ignoredCtx.ignoredNames.includes('SEARED SALMON'), `ignoredNames=${JSON.stringify(ignoredCtx.ignoredNames)}`);
+
+  const acceptedHistory = [
+    { role: 'user', content: "what's good here" },
+    { role: 'assistant', content: 'I would steer you toward the SEARED SALMON.' },
+  ];
+  const acceptedCtx = chatSession.build(acceptedHistory, fixtureCtx, [{ name: 'SEARED SALMON' }]);
+  check('a suggestion the guest added to cart is NOT flagged as ignored', !acceptedCtx.ignoredNames.includes('SEARED SALMON'), `ignoredNames=${JSON.stringify(acceptedCtx.ignoredNames)}`);
+
+  const midTurnHistory = [
+    { role: 'user', content: "what's good here" },
+    { role: 'assistant', content: 'I would steer you toward the SEARED SALMON.' },
+  ];
+  const midTurnCtx = chatSession.build(midTurnHistory, fixtureCtx, []);
+  check('no newer user message yet (still mid-turn) -> nothing flagged as ignored', midTurnCtx.ignoredNames.length === 0, `ignoredNames=${JSON.stringify(midTurnCtx.ignoredNames)}`);
+
   // ── 5. Phase 3C: authored hero pairings (Commit A) ──────────────────────────
   group('5. Authored hero pairings');
   const { createHeroPairings } = require('../server/services/heroPairings');
@@ -102,6 +138,30 @@ function check(name, pass, detail) { results.push({ section, name, pass: !!pass,
   const composerH = createReasonComposer({ heroPairings: stubHero });
   check('reasonComposer: hero tier beats chef reason', (await composerH.pairingReason({ name: 'HeroCab', categoryType: 'WINE', reason: 'chef line' }, { name: 'RIBEYE 380g' })) === 'HERO LINE');
   check('reasonComposer: falls to chef when no hero', (await composerH.pairingReason({ name: 'Other', categoryType: 'WINE', reason: 'chef line' }, { name: 'RIBEYE 380g' })) === 'chef line');
+
+  // ── 6. Recommendation Brain V2 — narrative composition (dish notes, upgrades, multi-anchor) ──
+  group('6. Recommendation Brain V2 — sommelier narrative + multi-anchor dessert reasoning');
+  const realComposer = createReasonComposer({ heroPairings: heroSvc });
+  const ribeyeTarget = { name: 'RIBEYE 380g', categoryType: 'MAIN', tags: { protein: ['beef'] } };
+  const cabSource = { name: 'Durbanville Hills Cabernet', category: 'CABERNET SAUVIGNON', categoryType: 'WINE' };
+  const ribeyeNarrative = await realComposer.pairingReason(ribeyeTarget, cabSource);
+  check('V2: wine-added-first direction resolves the hero pairing (not just dish-first)', /firm tannin|backbone/i.test(ribeyeNarrative), `got="${ribeyeNarrative}"`);
+  check('V2: narrative includes the dish story clause', /cut in-house/i.test(ribeyeNarrative), `got="${ribeyeNarrative}"`);
+  check('V2: narrative includes a real premium-upgrade nudge (Wagyu Ribeye, a real menu item)', /Wagyu Ribeye/.test(ribeyeNarrative), `got="${ribeyeNarrative}"`);
+
+  const cheesecakeTarget = { name: 'Lemon Cheesecake', categoryType: 'DESSERT', tags: { richness: 1 } };
+  const pastaSource = { name: 'Seafood Pasta', categoryType: 'MAIN' };
+  const sauvBlancWine = { name: 'Sauvignon Blanc', categoryType: 'WINE' };
+  const dessertNarrative = await realComposer.pairingReason(cheesecakeTarget, pastaSource, { cartWine: sauvBlancWine });
+  check('V2: dessert reason references BOTH cart anchors (dish AND wine)', /Seafood Pasta/.test(dessertNarrative) && /Sauvignon Blanc/.test(dessertNarrative), `got="${dessertNarrative}"`);
+  check('V2: light dessert (richness<=1) framed as "light rather than heavy"', /light rather than heavy/i.test(dessertNarrative), `got="${dessertNarrative}"`);
+
+  const chocCakeTarget = { name: 'Death By Chocolate Cake', categoryType: 'DESSERT', tags: { richness: 3 } };
+  const richDessertNarrative = await realComposer.pairingReason(chocCakeTarget, pastaSource, { cartWine: sauvBlancWine });
+  check('V2: rich dessert (richness=3) framed as properly rich, not "light"', /properly rich/i.test(richDessertNarrative) && !/light rather than heavy/i.test(richDessertNarrative), `got="${richDessertNarrative}"`);
+
+  const noWineNarrative = await realComposer.pairingReason(cheesecakeTarget, pastaSource, {});
+  check('V2: no dessert multi-anchor line when there is no cart wine (falls through normally)', !/You've chosen/.test(noWineNarrative), `got="${noWineNarrative}"`);
 
   // ── Report ──────────────────────────────────────────────────────────────────
   const failed = results.filter(r => !r.pass);

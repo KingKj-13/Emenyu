@@ -5,16 +5,30 @@
 // thumbnails — NON-DESTRUCTIVELY (writes to an `optimized/` subfolder; never touches
 // originals). Default action is a COVERAGE REPORT (what exists, what's oversized).
 //
-//   node scripts/media-optimize.js                      # coverage report only
+//   node scripts/media-optimize.js                      # coverage report only (this tenant)
 //   node scripts/media-optimize.js --optimize           # + optimize images & videos
 //   node scripts/media-optimize.js --optimize --limit 5 # optimize first 5 of each (sample)
+//   node scripts/media-optimize.js --dir ../../Carmella --optimize --restaurant-id carmella
+//                                                        # run against another tenant's
+//                                                        # Images/Video dirs (--dir is
+//                                                        # relative to this scripts/ folder)
+//                                                        # — same tool, no per-tenant
+//                                                        # duplicate script.
 //
 // Requires ffmpeg on PATH.
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const ROOT = path.resolve(__dirname, '..');
+const dirFlagIndex = process.argv.indexOf('--dir');
+const ROOT = dirFlagIndex > -1
+  ? path.resolve(__dirname, process.argv[dirFlagIndex + 1])
+  : path.resolve(__dirname, '..');
+const restaurantIdFlagIndex = process.argv.indexOf('--restaurant-id');
+const RESTAURANT_ID = restaurantIdFlagIndex > -1
+  ? process.argv[restaurantIdFlagIndex + 1]
+  : (process.env.TRUMP_RESTAURANT_ID || 'trump');
+require('dotenv').config({ path: path.join(ROOT, '.env'), quiet: true });
 const IMG = path.join(ROOT, 'Images');
 const VID = path.join(ROOT, 'Video');
 const IMG_MAX_W = 1200, THUMB_W = 300, IMG_WARN_BYTES = 500 * 1024, VIDEO_CRF = 28;
@@ -39,12 +53,14 @@ function coverage() {
 
 async function menuMediaCheck() {
   // Validate every menu item resolves to SOME usable image (explicit or fallback).
+  // The Prisma client always lives under Trump's own server/ tree regardless of
+  // which tenant's Images/Video dir this run is pointed at (--dir).
   try {
-    const { getPrisma } = require(path.join(ROOT, 'server', 'services', 'prismaClient'));
-    const items = await getPrisma().menuItem.findMany({ where: { restaurantId: process.env.TRUMP_RESTAURANT_ID || 'trump' }, select: { name: true } });
+    const { getPrisma } = require(path.resolve(__dirname, '..', 'server', 'services', 'prismaClient'));
+    const items = await getPrisma().menuItem.findMany({ where: { restaurantId: RESTAURANT_ID }, select: { name: true, imagePath: true } });
     const haveFallback = fs.existsSync(path.join(IMG, 'Tomahawk.jpg'));
-    console.log(`  menu items : ${items.length}; image fallback present: ${haveFallback ? 'yes (Tomahawk.jpg)' : 'NO — add a fallback image!'}`);
-    console.log(`  → every item renders an image (explicit match or keyword/category fallback via imageResolver).`);
+    const explicitCount = items.filter(i => i.imagePath).length;
+    console.log(`  menu items : ${items.length} (restaurantId=${RESTAURANT_ID}); ${explicitCount} with an explicit imagePath; fallback present: ${haveFallback ? 'yes (Tomahawk.jpg)' : 'no (tenant relies on explicit imagePath / its own resolver fallback)'}`);
     await getPrisma().$disconnect();
   } catch (e) { console.log(`  menu items : (DB unavailable — ${e.message})`); }
 }

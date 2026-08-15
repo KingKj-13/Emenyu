@@ -1,0 +1,118 @@
+/* Carmella — tenant-scoped design tokens. Every selector here is scoped
+   under [data-tenant="carmella-production"], set once at boot in main.tsx
+   from the VITE_RESTAURANT_ID build constant — this file has zero effect on
+   any other tenant's build.
+
+   Component CSS across the app already consumes the semantic --color-*
+   names (not literal hex), so re-pointing those names to Carmella's palette
+   re-skins every shared component automatically.
+
+   STEP 2/10 — one Day/Night VISUAL theme, driven by [data-theme="day"|"night"]
+   on <html> (see ThemeContext.tsx). This only ever changes these CSS custom
+   properties — it must never filter/hide menu items or categories, and the
+   Admin panel deliberately uses the SAME [data-theme] value as the customer
+   menu (no separate "always dark" admin override) so the two can never show
+   different themes at once. */
+
+/* `html[data-tenant=...]` (element + attribute), not bare `[data-tenant=...]`:
+   :root and a bare attribute selector have IDENTICAL specificity (0,0,1,0), so
+   whichever rule comes later in the cascade wins regardless of "intent" — and
+   since this file is @imported at the TOP of index.css (before :root), a bare
+   attribute selector here was silently LOSING to :root's values every time.
+   Adding the `html` type selector raises specificity to (0,0,1,1), which
+   reliably beats :root's (0,0,1,0) regardless of source order. */
+html[data-tenant='carmella-production'] {
+  /* body's own background (index.css) is a literal gradient, not a --color-*
+     token — override the whole property here for the light mode rather than
+     leaving Trump's navy/blue/red gradient showing through. */
+  --body-background: radial-gradient(ellipse at 30% 0%, rgba(201, 169, 106, 0.10), transparent 55%), #F7F2E8;
+
+  /* ── Day palette (default) ── */
+  --color-ink:          #F7F2E8; /* cream-paper: base surface */
+  --color-ink-rgb:      247, 242, 232;
+  --color-coal:         #FBF7EF; /* paper-light: raised surface */
+  --color-panel:        #FFFDF8;
+  --color-panel-soft:   #FFFFFF;
+  --color-glass:        rgba(23, 36, 23, 0.06);
+  --color-glass-strong: rgba(23, 36, 23, 0.12);
+  --color-cream:        #172417; /* gaspard-green: primary text */
+  --color-sand:         #3F4F3F; /* deep-moss-adjacent: secondary text */
+  --color-gold:         #C9A96A; /* brief's --gold */
+  --color-gold-soft:    #B08D57; /* brief's --brass */
+  --color-gold-dim:     rgba(176, 141, 87, 0.5);
+  --color-gold-rgb:     176, 141, 87;
+  --color-burgundy:     #8C3B2E; /* error/danger — deliberately NOT terracotta (reserved, see below) */
+  --color-line:         rgba(176, 141, 87, 0.22);
+  /* Modal/popup backdrop. Darkened (was 0.55, read as "too transparent" —
+     the popup wasn't clearly the focus of the screen) — kept as a color tied
+     to the day palette rather than a flat black so it still reads as
+     "Carmella", just unambiguously dark now. */
+  --color-overlay:      rgba(10, 16, 10, 0.82);
+
+  /* Reserved exclusively for "Gaspard is speaking" AI-suggestion UI — never a
+     generic accent. */
+  --color-gaspard-accent: #B65C33;
+
+  --font-heading: 'Fraunces', 'Cormorant Garamond', Georgia, serif;
+  --font-body:    'Inter', Manrope, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-label:   'Inter', Manrope, sans-serif;
+  /* Reserved for the Home page's hero tagline only -- a decorative flourish,
+     never body copy (script faces hurt readability at paragraph length). */
+  --font-script:  'Alex Brush', cursive;
+
+  /* ── Shape & elevation — luxury boutique-café polish. Deliberately NOT a
+     colour change: same neutral black shadow hue as the shared Trump scale
+     in index.css, just softer opacity and a rounder radius scale. Trump's
+     own --shadow-* values (up to 0.76 opacity) are tuned for its permanently
+     dark navy surface, where a strong black shadow reads as normal depth;
+     against Carmella's light Day cream that same strength read as harsh
+     smudges, not elegance. --radius-card was 4px (Trump's sharp/formal
+     corner) — MenuPage's own .slideCard already carried a `16px` fallback
+     for this exact token in anticipation of this change, so 16px here isn't
+     a new number, it's the one already implied elsewhere in the codebase. */
+  --radius-card: 16px;
+  --radius-xs:   6px;
+  --radius-sm:   10px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
+  --shadow-xs:    0 4px 14px rgba(0, 0, 0, 0.10);
+  --shadow-sm:    0 12px 32px rgba(0, 0, 0, 0.12);
+  --shadow-soft:  0 20px 48px rgba(0, 0, 0, 0.14);
+  --shadow-lift:  0 28px 64px rgba(0, 0, 0, 0.16);
+  --shadow-modal: 0 36px 90px rgba(0, 0, 0, 0.22);
+
+  /* Legacy pre-semantic tokens (mostly "light icon/text on a dark chip") —
+     predate the --color-* naming but still consumed directly by a handful of
+     components (Header's icon buttons, Button, LandingPage). */
+  --white: #172417;
+  --muted: rgba(23, 36, 23, 0.72);
+  /* Media-placeholder background (ItemModal) — kept deliberately dark
+     regardless of day/night, matching the "photo loads over a dark backdrop"
+     pattern. */
+  --blue-black: #1B2A1C;
+}
+
+/* Night: the one dark mode. */
+html[data-tenant='carmella-production'][data-theme='night'] {
+  --body-background:
+    radial-gradient(ellipse at 30% 0%,   rgba(217, 160, 91, 0.16), transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(182, 92, 51, 0.08), transparent 40%),
+    #141F17;
+  --color-ink:          #141F17;
+  --color-ink-rgb:      20, 31, 23;
+  --color-coal:         #172417;
+  --color-panel:        #1B2A1C;
+  --color-panel-soft:   #1F301F;
+  --color-glass:        rgba(217, 160, 91, 0.06);
+  --color-glass-strong: rgba(0, 0, 0, 0.4);
+  --color-cream:        #F7F2E8;
+  --color-sand:         #C9B99A;
+  --color-gold:         #D9A05B; /* golden-amber */
+  --color-gold-soft:    #E4B67C;
+  --color-gold-dim:     rgba(217, 160, 91, 0.5);
+  --color-gold-rgb:     217, 160, 91;
+  --color-overlay:      rgba(0, 0, 0, 0.82);
+  /* Dark mode again — restore the "light icon on dark chip" assumption. */
+  --white: #F7F2E8;
+  --muted: rgba(247, 242, 232, 0.72);
+}

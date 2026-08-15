@@ -6,6 +6,7 @@ import { Sparkles } from 'lucide-react';
 import { RecommendationCard, type RecommendationItem } from './RecommendationCard';
 import { planJourney } from './journey';
 import { ASSISTANT_NAME } from '../../constants/config';
+import { useT } from '../../i18n';
 import type { MenuItem } from '../../types/menu';
 import styles from './RecommendationJourney.module.css';
 
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function RecommendationJourney({ item, pool, onOpenItem, assistantName = ASSISTANT_NAME }: Props) {
+  const t = useT();
   const { slots, narrative, leftovers } = planJourney(item, pool);
 
   // Lead with the 3-slot journey, then let any extra recommendations continue in
@@ -27,12 +29,14 @@ export function RecommendationJourney({ item, pool, onOpenItem, assistantName = 
   if (!cards.some(c => !c.youChoice)) return null;
 
   return (
-    <section className={styles.journey} aria-label={`${assistantName} recommends`}>
+    <section className={styles.journey} aria-label={t('dish.sommelier')}>
       <div className={styles.header}>
         <Sparkles size={13} className={styles.icon} />
-        <span className={styles.heading}>{assistantName.toUpperCase()} RECOMMENDS</span>
+        {/* The wine-glass mark is part of the assistant's identity, not a word,
+            so it survives translation; the sentence around it does not. */}
+        <span className={styles.heading}>{t('dish.sommelier').toUpperCase()}</span>
       </div>
-      {narrative && <p className={styles.narrative}>{narrative}</p>}
+      {narrative && <p className={styles.narrative}>{t(narrative.key, narrative.params)}</p>}
       <div className={styles.row} data-noswipe>
         {cards.map((s, i) => (
           <RecommendationCard
@@ -40,7 +44,7 @@ export function RecommendationJourney({ item, pool, onOpenItem, assistantName = 
             variant="journey"
             playable
             item={s.rec}
-            slotLabel={s.slotLabel}
+            slotLabel={s.slotLabelKey ? t(s.slotLabelKey) : s.slotLabel}
             youChoice={s.youChoice}
             onOpen={s.youChoice ? undefined : () => onOpenItem(s.rec)}
           />

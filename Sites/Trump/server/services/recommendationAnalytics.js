@@ -34,6 +34,8 @@ function sanitizeEvent(raw = {}) {
     originatingName: clampStr(raw.originatingName, 160),
     rotationGroup: clampStr(raw.rotationGroup, 80),
     sessionId: clampStr(raw.sessionId, 80),
+    deviceId: clampStr(raw.deviceId, 80),
+    tableId: clampStr(raw.tableId, 40),
     mode: MODES.includes(String(raw.mode)) ? String(raw.mode) : 'customer',
     chef: raw.chef === true || raw.chef === 'true',
     value: Number.isFinite(Number(raw.value)) ? Math.max(0, Number(raw.value)) : 0,

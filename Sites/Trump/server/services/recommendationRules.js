@@ -84,9 +84,15 @@ function createRecommendationRules({ config = {}, logger = null } = {}) {
       const chef = cand.chef === true;
       let reason = null;
 
-      if (enforceStage && !chef) {
-        // R5: no starter once the table is closing (dessert in cart).
-        if (type === 'STARTER' && stage === 'CLOSING') reason = 'stage:no-starter-at-closing';
+      // Phase 1 (Recommendation Brain) Replacement Logic applies here too: a
+      // premium-upgrade candidate (cand.isReplacement === true) swaps the main
+      // already in the cart rather than adding a second one, so R5 shouldn't
+      // block it — same bypass pattern as the beverage rules below.
+      const isMainReplacement = cand.isReplacement === true;
+      if (enforceStage && !chef && !isMainReplacement) {
+        // R5: no starter once the table is closing (dessert in cart), or once a
+        // main is already in the cart (mid-meal — a starter reads as "too late").
+        if (type === 'STARTER' && (stage === 'CLOSING' || stage === 'MAIN')) reason = 'stage:no-starter-past-first-course';
         // R5: no second main from the algorithm when the cart already has a main,
         // and never two mains in one rec set.
         else if (type === 'MAIN' && (cartHasMain || mainsKept >= 1)) reason = 'stage:no-second-main';
@@ -94,19 +100,41 @@ function createRecommendationRules({ config = {}, logger = null } = {}) {
 
       if (!reason && isBeverage) {
         const kind = bevKindOf(cand, type);
-        // R4: don't recommend a beverage of a kind already on the table.
-        if (cartKinds.has(kind)) reason = 'beverage:already-in-cart';
-        // R1/R3: total beverage cap.
-        else if (beveragesKept >= maxBeverages) reason = 'beverage:max-reached';
+        // Phase 1 (Recommendation Brain) — Replacement Logic: a candidate the
+        // engine has identified as a same-role UPGRADE of something already in
+        // the cart (cand.isReplacement === true, set by aiService.recommend()
+        // via recommendationScoring.findReplacementTarget) swaps the existing
+        // pour rather than adding a second one. Only R4 ("already in cart") and
+        // R1's cap-COUNTING treat it specially — R2 (never wine+cocktail) and R3
+        // (no secondary headline) are ALWAYS enforced, replacement or not, since
+        // those protect what ends up on the table, not how it got there.
+        const isReplacement = cand.isReplacement === true;
+        // R4: don't recommend a beverage of a kind already on the table — unless
+        // it's an upgrade replacement of that exact kind. Always enforced (chef
+        // or not) — a chef pairing still shouldn't duplicate what's on the table.
+        if (cartKinds.has(kind) && !isReplacement) reason = 'beverage:already-in-cart';
+        // R1: total beverage cap (a replacement doesn't consume a cap slot).
+        // Bypassed for chef candidates — per the "chef recommendations always
+        // win" invariant (see recommend()'s chef-tier comment), a curated
+        // pairing list (e.g. Carmella's cappuccino+juice for one dish) is the
+        // authoritative diversity decision, not the algorithmic cap's job to
+        // second-guess.
+        else if (!chef && !isReplacement && beveragesKept >= maxBeverages) reason = 'beverage:max-reached';
         // R2 + one-primary: only one primary beverage; never wine+cocktail.
+        // Always enforced — two competing primary pours is a table-setting
+        // problem regardless of source.
         else if (PRIMARY_BEVERAGES.has(kind) && primaryKept) reason = 'beverage:second-primary';
-        // R3: a soft/hot beverage must not headline (no primary yet) unless closing
-        //     (a coffee/digestif with dessert is fine); water never headlines.
-        else if (!PRIMARY_BEVERAGES.has(kind) && !primaryKept && stage !== 'CLOSING') reason = 'beverage:secondary-headline';
-        else if (kind === 'SOFT' && isWaterish(cand.item) && !primaryKept && stage !== 'CLOSING') reason = 'beverage:water-headline';
+        // R3: a soft/hot beverage must not headline (no primary yet) unless
+        // closing (a coffee/digestif with dessert is fine); water never
+        // headlines. This is a steakhouse-style upsell heuristic ("lead with
+        // wine, not coffee") that does not generalize to every tenant (a café
+        // pairing a croissant with a cappuccino is exactly right) — bypassed
+        // for chef candidates for the same reason as R1.
+        else if (!chef && !PRIMARY_BEVERAGES.has(kind) && !primaryKept && stage !== 'CLOSING') reason = 'beverage:secondary-headline';
+        else if (!chef && kind === 'SOFT' && isWaterish(cand.item) && !primaryKept && stage !== 'CLOSING') reason = 'beverage:water-headline';
 
         if (!reason) {
-          beveragesKept += 1;
+          if (!isReplacement) beveragesKept += 1;
           if (PRIMARY_BEVERAGES.has(kind)) primaryKept = true;
         }
       }

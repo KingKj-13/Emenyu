@@ -1,4 +1,5 @@
 import type { Chapter } from '../types/menu';
+import { MAINS_CATEGORY_TITLE, PASTAS_CATEGORY_TITLE } from './api';
 
 export const FOOD_CHAPTERS: Chapter[] = [
   { key: 'starters',  title: 'To Start',               apiKey: 'Starters',              subs: ['SMALL PLATES'] },
@@ -6,7 +7,7 @@ export const FOOD_CHAPTERS: Chapter[] = [
   { key: 'salads',    title: 'Bespoke Salads',            apiKey: 'Salads',                subs: null },
   { key: 'sushi',     title: 'Sushi & Sashimi',           apiKey: 'Sushi',                 subs: null },
   { key: 'seafood',   title: 'Signature Seafood',         apiKey: 'Signature Seafood',     subs: null },
-  { key: 'steaks',    title: 'Trumps Premium Steaks',     apiKey: 'Trumps Premium Steaks', subs: null },
+  { key: 'steaks',    title: MAINS_CATEGORY_TITLE,        apiKey: MAINS_CATEGORY_TITLE,    subs: null },
   { key: 'pork',      title: 'Pork & Ribs',               apiKey: 'Pork & Ribs',           subs: null },
   { key: 'lamb',      title: 'Lamb',                      apiKey: 'Lamb',                  subs: null },
   { key: 'venison',   title: 'Venison & Game',            apiKey: 'Venison & Game',        subs: null },
@@ -15,7 +16,7 @@ export const FOOD_CHAPTERS: Chapter[] = [
   { key: 'platters',  title: 'Signature Platters',        apiKey: 'Signature Combos',      subs: ['TRUMPS SIGNATURE PLATTERS'] },
   { key: 'burgers',   title: 'Gourmet Burgers',           apiKey: 'Burgers',               subs: null },
   { key: 'chicken',   title: 'Chicken Dishes',            apiKey: 'Chicken Dishes',        subs: null },
-  { key: 'pastas',    title: 'Trumps Pastas',             apiKey: 'Pastas',                subs: null },
+  { key: 'pastas',    title: PASTAS_CATEGORY_TITLE,       apiKey: 'Pastas',                subs: null },
   { key: 'veg',       title: 'Vegetarian',                apiKey: 'Vegetarian',            subs: null },
   { key: 'sides',     title: 'Sides & Extras',            apiKey: 'Sides',                 subs: null },
   { key: 'dessert',   title: 'Dessert & Cakes',           apiKey: 'Dessert',               subs: null },

@@ -4,7 +4,7 @@
   overflow: hidden;               /* phone-fit: the opening never scrolls */
   background:
     radial-gradient(120% 60% at 50% -10%, rgba(40, 30, 20, 0.30), transparent 60%),
-    #0a0a0b;
+    var(--color-ink);
   display: flex;
   justify-content: center;
 }
@@ -18,6 +18,11 @@
   padding: calc(16px + env(safe-area-inset-top)) 18px calc(12px + env(safe-area-inset-bottom));
 }
 
+@keyframes landingRise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ───────── Header ───────── */
 .header {
   display: flex;
@@ -25,6 +30,7 @@
   align-items: center;
   text-align: center;
   margin-bottom: 14px;
+  animation: landingRise 0.5s var(--ease-premium) both;
 }
 
 .monogram {
@@ -60,19 +66,18 @@
   line-height: 0.98;
   letter-spacing: 0.01em;
   color: var(--color-gold-soft);
-  text-shadow: 0 2px 30px rgba(200, 165, 85, 0.18);
+  text-shadow: 0 2px 30px rgba(var(--color-gold-rgb), 0.18);
 }
 
 .brandSub {
   margin-top: 6px;
   font-family: var(--font-heading);
-  font-size: clamp(15px, 4.6vw, 17px);
+  font-size: clamp(12px, 4.6vw, 17px);
   font-weight: 600;
   letter-spacing: 0.32em;
   text-transform: uppercase;
   color: var(--color-gold);
   padding-left: 0.32em; /* optically centre the letter-spaced caps */
-  white-space: nowrap;
 }
 
 .pill {
@@ -81,7 +86,7 @@
   gap: 9px;
   margin-top: 12px;
   padding: 8px 18px;
-  border: 1px solid rgba(200, 165, 85, 0.32);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.32);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.02);
   font-family: var(--font-label);
@@ -117,14 +122,16 @@
   flex-direction: column;
   justify-content: flex-end;
   min-height: 0;
-  padding: 16px;
+  padding: 13px 14px;
   text-align: left;
   border: 1px solid rgba(231, 221, 201, 0.08);
   border-radius: 18px;
-  background: linear-gradient(180deg, #141416 0%, #0c0c0e 100%);
-  color: #fff;
+  background: linear-gradient(180deg, var(--color-panel-soft) 0%, var(--color-panel) 100%);
+  color: var(--color-cream);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
   transition: transform var(--transition-med), border-color var(--transition-med), box-shadow var(--transition-med);
+  animation: landingRise 0.5s var(--ease-premium) both;
+  animation-delay: calc(80ms + var(--stagger, 0) * 45ms);
 }
 
 
@@ -140,10 +147,18 @@
 }
 
 .icon {
-  position: relative;
-  width: 24px;
-  height: 24px;
-  margin-bottom: auto;
+  /* Priority 1 (demo blocker pass 2) — taken out of flow deliberately: as an
+     in-flow child (with margin-bottom:auto pushing the label/sub group down)
+     it claimed a fixed slice of the tile's already-tight vertical budget even
+     though it's purely decorative and always sits in the same top-left spot.
+     Absolute positioning anchors it to .tile's padding box (top:0/left:0
+     lands exactly where the padding used to inset it in flow), freeing that
+     height for the bottom-anchored label/subtitle stack, which needs it more. */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 19px;
+  height: 19px;
   color: var(--color-gold);
 }
 .icon svg { width: 100%; height: 100%; display: block; }
@@ -152,25 +167,60 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .tileLabel {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: clamp(20px, 6vw, 25px);
-  line-height: 1.04;
+  /* Priority 1 (demo blocker pass 2) — was clamp(20px,6vw,25px)/line-height
+     1.04. At that size, [icon + 2-line label + gap + subtitle + tile padding]
+     is taller than what a .tile's 1fr grid row actually resolves to on most
+     real phone viewport heights (confirmed via Playwright across 8 realistic
+     Android/iOS heights — the label's own top edge sat above the tile's
+     clipped boundary in nearly every case, not just the shortest ones this
+     was originally tuned against). Trimmed here, and the icon/tile
+     padding/tileText gap alongside it, so 2 lines always fit within the
+     tile's actual rendered height instead of relying on the max-height
+     breakpoints below to compact things after the fact. */
+  font-size: clamp(16.5px, 5vw, 20px);
+  line-height: 1.0;
   letter-spacing: 0.005em;
-  color: #fff;
+  color: var(--color-cream);
+  /* Reserve 2 lines' worth of height and bottom-align the text inside it, so a
+     one-line title (e.g. "Wine") sits its subtitle at the same Y as a title
+     that wraps to two lines (e.g. "Sushi & Sashimi") instead of drifting. */
+  min-height: 2em;
+  display: flex;
+  align-items: flex-end;
+}
+
+/* Bug: on a real phone's actual available height (shorter than any viewport
+   this was designed/tested against), .tile's fixed 1fr grid row can end up
+   shorter than [icon + gap + label + gap + sub] needs. Since .tile bottom-
+   aligns that whole stack and clips overflow, a label long enough to wrap to
+   3 lines ("The Gaspard Cellar", "The Global Table") pushed its own top edge
+   above the tile's clipped boundary -- the label vanished entirely while the
+   subtitle (last, bottom-anchored) stayed visible. Capping every label to a
+   hard 2-line clamp (matching the 2-line height already reserved above)
+   means no label can ever need more room than the tile already accounts
+   for, regardless of how short the tile ends up. On the two titles this
+   actually affects, the second line ellipsizes ("The Gaspard Cellar" keeps
+   both words at every width tested) rather than vanishing outright. */
+.tileLabelText {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .tileSub {
   font-family: var(--font-body);
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.52);
+  color: var(--muted);
 }
 
-.tile:hover { transform: translateY(-2px); border-color: rgba(200, 165, 85, 0.28); box-shadow: 0 22px 54px rgba(0, 0, 0, 0.55); }
+.tile:hover { transform: translateY(-2px); border-color: rgba(var(--color-gold-rgb), 0.28); box-shadow: 0 22px 54px rgba(0, 0, 0, 0.55); }
 .tile:active { transform: translateY(0); }
 
 /* ───────── Full-menu CTA ───────── */
@@ -186,14 +236,16 @@
   padding: 14px 20px;
   text-align: left;
   flex: none;
-  border: 1px solid rgba(200, 165, 85, 0.40);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.40);
   border-radius: 18px;
   background:
-    radial-gradient(120% 180% at 100% 50%, rgba(200, 165, 85, 0.14), transparent 60%),
-    linear-gradient(180deg, #14110a 0%, #0c0b08 100%);
+    radial-gradient(120% 180% at 100% 50%, rgba(var(--color-gold-rgb), 0.14), transparent 60%),
+    linear-gradient(180deg, var(--color-panel-soft) 0%, var(--color-panel) 100%);
   transition: transform var(--transition-med), border-color var(--transition-med);
+  animation: landingRise 0.5s var(--ease-premium) both;
+  animation-delay: 40ms;
 }
-.cta:hover { transform: translateY(-2px); border-color: rgba(200, 165, 85, 0.62); }
+.cta:hover { transform: translateY(-2px); border-color: rgba(var(--color-gold-rgb), 0.62); }
 .cta:active { transform: translateY(0); }
 
 .ctaText { display: flex; flex-direction: column; gap: 4px; }
@@ -201,14 +253,14 @@
 .ctaTitle {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 25px;
-  color: #fff;
+  font-size: clamp(20px, 6vw, 25px);
+  color: var(--color-cream);
 }
 
 .ctaSub {
   font-family: var(--font-body);
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.52);
+  color: var(--muted);
 }
 
 .ctaArrow {
@@ -220,7 +272,7 @@
   border-radius: 50%;
   background: linear-gradient(160deg, var(--color-gold-soft), var(--color-gold));
   color: #1a1206;
-  box-shadow: 0 6px 18px rgba(200, 165, 85, 0.35);
+  box-shadow: 0 6px 18px rgba(var(--color-gold-rgb), 0.35);
 }
 .ctaArrow svg { width: 22px; height: 22px; }
 
@@ -229,21 +281,47 @@
   margin: 10px 0 0;
   text-align: center;
   flex: none;
+  animation: landingRise 0.5s var(--ease-premium) both;
+  animation-delay: 360ms;
 }
 
 .butchery {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-family: var(--font-label);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(200, 165, 85, 0.6);
+  color: var(--color-gold);
+  opacity: 0.85;
   text-decoration: none;
 }
-.butchery:hover { color: var(--color-gold); }
+.butchery:hover { opacity: 1; }
 
-@media (max-height: 680px) {
+/* Priority 1 (demo blocker pass 2) — most real Android phones with the
+   Chrome URL bar visible land in this 680-780px dead zone: taller than the
+   old single 680px breakpoint (so it never fired) but still short enough
+   that the tile grid's 1fr rows came out shorter than a 2-line label needs.
+   A lighter first compaction pass here (trim header, no subtitle loss yet)
+   buys back just enough of the grid's share of the fixed viewport. */
+@media (max-height: 780px) {
+  .header { margin-bottom: 10px; }
+  .cta { margin-bottom: 9px; }
+}
+
+@media (max-height: 730px) {
   .brand { font-size: clamp(34px, 11vw, 44px); }
   .monogram { width: 40px; height: 40px; font-size: 19px; margin-bottom: 7px; }
   .tileSub { display: none; }   /* tightest phones: keep labels, drop sublines */
+}
+
+/* Short/landscape viewports: also compact the CTA and tiles, not just the
+   header, so the fixed no-scroll layout never clips the bottom row. */
+@media (max-height: 560px) {
+  .cta { padding: 10px 16px; margin-bottom: 8px; }
+  .ctaArrow { width: 40px; height: 40px; }
+  .tile { padding: 11px; }
+  .footer { margin-top: 6px; }
 }

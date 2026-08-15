@@ -6,6 +6,7 @@
 // (on add), trackOrdered (at checkout), and markShown/flushDismissed (to record
 // "shown but never acted on" as a dismissal when a surface closes).
 import { ENDPOINTS } from '../constants/api';
+import { getDeviceIdentity, getStoredTable } from '../services/storage';
 
 export type RecoEventType = 'impression' | 'click' | 'accepted' | 'dismissed' | 'ordered';
 export type RecoMode = 'customer' | 'waiter';
@@ -37,6 +38,11 @@ interface RecoEvent {
   originatingName?: string;
   rotationGroup?: string;
   sessionId: string;
+  // Device-aware recommendations: sourced from the same persistent per-browser
+  // identity used for cart-ownership tagging (storage.ts), so events can be
+  // sliced per device/table independent of the analytics-only sessionId above.
+  deviceId: string;
+  tableId: string;
   mode: RecoMode;
   chef?: boolean;
   value?: number;
@@ -54,6 +60,14 @@ function sessionId(): string {
       localStorage.setItem(SID_KEY, id);
     }
     return id;
+  } catch {
+    return 'anon';
+  }
+}
+
+function deviceId(): string {
+  try {
+    return getDeviceIdentity().deviceId || 'anon';
   } catch {
     return 'anon';
   }
@@ -104,6 +118,8 @@ function baseEvent(type: RecoEventType, item: RecoItemLike, ctx: RecoContext): R
     originatingName: ctx.originatingName,
     rotationGroup: item.rotationGroup,
     sessionId: sessionId(),
+    deviceId: deviceId(),
+    tableId: getStoredTable(),
     mode: ctx.mode,
     chef: item.chef === true,
     value: Number(item.price) || 0
@@ -209,6 +225,8 @@ export function trackOrdered(cartItemNames: string[]): void {
       recommendedName: rec.name,
       rotationGroup: rec.rotationGroup,
       sessionId: sid,
+      deviceId: deviceId(),
+      tableId: getStoredTable(),
       mode: rec.mode,
       chef: rec.chef,
       value: rec.value

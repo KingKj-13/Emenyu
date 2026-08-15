@@ -72,7 +72,7 @@
 
 .clearBtn {
   padding: 8px 20px;
-  border: 1px solid rgba(198,162,75,0.4);
+  border: 1px solid rgba(var(--color-gold-rgb),0.4);
   border-radius: var(--radius-pill);
   background: transparent;
   color: var(--color-gold);
@@ -81,7 +81,7 @@
   cursor: pointer;
   transition: background 160ms ease;
 }
-.clearBtn:hover { background: rgba(198,162,75,0.1); }
+.clearBtn:hover { background: rgba(var(--color-gold-rgb),0.1); }
 
 .statusBar {
   position: fixed;
@@ -90,8 +90,8 @@
   transform: translateX(-50%);
   z-index: 120;
   width: min(calc(100vw - 32px), 520px);
-  background: rgba(0, 15, 24, 0.92);
-  border: 1px solid rgba(198,162,75,0.3);
+  background: rgba(var(--color-ink-rgb), 0.92);
+  border: 1px solid rgba(var(--color-gold-rgb),0.3);
   border-radius: 14px;
   padding: 12px 16px;
   -webkit-backdrop-filter: blur(12px);
@@ -128,7 +128,7 @@
   right: -50%;
   width: 100%;
   height: 1px;
-  background: rgba(198,162,75,0.2);
+  background: rgba(var(--color-gold-rgb),0.2);
 }
 
 .statusStep:last-child::after { display: none; }
@@ -160,8 +160,8 @@
 
 .ratingModal {
   width: min(100%, 380px);
-  background: rgba(4, 20, 32, 0.97);
-  border: 1px solid rgba(198,162,75,0.3);
+  background: rgba(var(--color-ink-rgb), 0.97);
+  border: 1px solid rgba(var(--color-gold-rgb),0.3);
   border-radius: 16px;
   padding: 22px 22px 18px;
 }
@@ -173,6 +173,7 @@
 }
 
 .ratingThanks {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
   font-size: 17px; font-weight: 700; color: var(--color-cream);
   text-align: center; padding: 8px 0;
 }
@@ -180,7 +181,9 @@
 .ratingStars { display: flex; justify-content: center; gap: 8px; margin-bottom: 14px; }
 
 .ratingStar {
-  font-size: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: rgba(255,255,255,0.2);
   background: none; border: none;
   cursor: pointer;
@@ -199,7 +202,7 @@
   color: var(--color-cream); font-size: 13px;
   resize: none; margin-bottom: 14px;
 }
-.ratingComment:focus { outline: none; border-color: rgba(198,162,75,0.4); }
+.ratingComment:focus:not(:focus-visible) { border-color: rgba(var(--color-gold-rgb),0.4); }
 
 .ratingActions { display: flex; gap: 8px; }
 
@@ -227,3 +230,4 @@
   color: var(--color-cream);
   padding: 4px 0;
 }
+

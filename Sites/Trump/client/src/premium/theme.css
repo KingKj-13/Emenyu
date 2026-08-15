@@ -1,0 +1,147 @@
+/* Premium (Demo tenant only) design tokens — extracted from the Maison
+   Lumière reference and translated into Trump's own brand: warm ivory in
+   place of stark cream, Trump's real brand red (#a52b2d, see index.css
+   --red) used only as a sparing accent, muted brass in place of bright
+   showroom gold. Everything here lives under .premiumRoot, never :root —
+   Trump's own build never loads this file's class, so nothing here can ever
+   affect Trump's real theme. Fonts are NOT re-declared: Cormorant Garamond
+   and Manrope are already loaded by index.html for every tenant. */
+
+.premiumRoot {
+  --p-bg: #faf6ec;
+  --p-paper: #f3ede0;
+  --p-card: #eee6d2;
+  --p-ink: #221e18;
+  --p-sub: #6b6355;
+  --p-faint: #9a9184;
+  --p-line: rgba(34, 30, 24, 0.14);
+  --p-line2: rgba(34, 30, 24, 0.08);
+  --p-brass: #8a7440;
+  --p-brass-soft: rgba(138, 116, 64, 0.42);
+  --p-accent: #ac9260;
+  --p-nav: #201c16;
+  --p-navtext: #f5efe0;
+  --p-red: #a52b2d;
+  --p-scrim: rgba(20, 17, 12, 0.52);
+  --p-shadow: 0 -18px 48px rgba(20, 17, 12, 0.2);
+  --p-radius-sheet: 16px 16px 0 0;
+
+  --p-serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --p-sans: 'Manrope', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* A handful of Trump-authored components (the butchery chart, the
+     language switcher) are reused here verbatim rather than forked, and are
+     styled entirely through Trump's own --color-* tokens, not the --p-*
+     system above. Redefining those names here — cascading to every
+     descendant, including position:fixed ones like LanguageMenu's dropdown,
+     since CSS custom properties inherit through the DOM tree regardless of
+     layout — retints them into the premium palette for free, with zero
+     effect on premium's own components (none of which read --color-*).
+     Dark ink maps to the SAME --p-nav/--p-navtext pairing the bottom nav
+     already uses, so a reused component reads as "the deliberate dark
+     accent," not a leftover Trump navy. */
+  --color-ink: var(--p-nav);
+  --color-ink-rgb: 32, 28, 22;
+  --color-cream: var(--p-navtext);
+  --color-sand: #c4b8a0;
+  --color-gold: var(--p-brass);
+  --color-gold-soft: var(--p-accent);
+  --color-gold-rgb: 138, 116, 64;
+  --color-gold-dim: rgba(138, 116, 64, 0.6);
+  --color-burgundy: var(--p-red);
+  --color-line: rgba(138, 116, 64, 0.18);
+  --color-glass-strong: rgba(32, 28, 22, 0.94);
+  --color-danger-text: #fca5a5;
+
+  position: relative;
+  min-height: 100dvh;
+  background: var(--p-bg);
+  color: var(--p-ink);
+  font-family: var(--p-sans);
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* :where(.premiumRoot) keeps every rule below at the lowest possible
+   specificity (the bare element/attribute selector only) — otherwise
+   ".premiumRoot button" (a class + a type selector) outranks a single
+   CSS-module class like ".cta", and a component's own background/border/
+   padding would lose to this reset regardless of source order. Every
+   component below sets its own background/border/padding explicitly, so
+   this reset only needs to neutralize the browser default once, at the
+   bottom of the cascade. */
+:where(.premiumRoot) * { box-sizing: border-box; }
+:where(.premiumRoot) img, :where(.premiumRoot) video { display: block; max-width: 100%; }
+:where(.premiumRoot) button { font: inherit; cursor: pointer; background: none; border: none; padding: 0; color: inherit; }
+:where(.premiumRoot) input { font: inherit; }
+
+:where(.premiumRoot) button,
+:where(.premiumRoot) a,
+:where(.premiumRoot) [role='button'] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.premiumRoot ::-webkit-scrollbar { display: none; }
+.premiumRoot { scrollbar-width: none; }
+
+@keyframes pKen {
+  0% { transform: scale(1.02); }
+  100% { transform: scale(1.12); }
+}
+
+@keyframes pRise {
+  0% { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes pFade {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .premiumRoot *, .premiumRoot *::before, .premiumRoot *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/* ── Shared editorial primitives, reused across every premium screen ── */
+
+.eyebrow {
+  font-family: var(--p-sans);
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  color: var(--p-brass);
+  text-transform: uppercase;
+}
+
+.serifDisplay {
+  font-family: var(--p-serif);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.serifQuote {
+  font-family: var(--p-serif);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.hairline {
+  height: 1px;
+  background: var(--p-line2);
+}
+
+.pillButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--p-line);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}

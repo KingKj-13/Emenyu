@@ -1,0 +1,42 @@
+{
+  "$schema": "emenu-v3-knowledge",
+  "domain": "coffee_pairings",
+  "source_files": [
+    "server/services/nlg/hospitalityKnowledge.js (RULES array)"
+  ],
+  "notes": [
+    "In hospitalityKnowledge.js these entries use drinkType 'hot' (which covers coffee/espresso/cappuccino/irish coffee-type hot drinks generically, not a distinct 'coffee' tag) -- captured here as drinkType: 'hot' to stay faithful to the source condition.",
+    "conditions objects are literal restatements of RULES[].match(d, w) from hospitalityKnowledge.js, where d = dish.tags and w = drink.tags.",
+    "phrases.*.text values are copied verbatim from RULES[].clauses[tone].",
+    "'hot-dessert' is also cross-referenced (duplicated) in dessert_pairings.json since it is gated on d.course === 'DESSERT'; that duplication is intentional per the requested file split, not an error.",
+    "aiService.js's 'Sweet finish pairing' rule (dessert -> irish coffee/espresso/whisky/cognac) DOES include hot-drink keywords (irish coffee, espresso), but per the task instructions that entire aiService rule is filed under dessert_pairings.json only, not duplicated here."
+  ],
+  "entries": [
+    {
+      "id": "hot-dessert",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "hot", "course": "DESSERT" },
+      "recommended_style": "hot drink (coffee/espresso-type)",
+      "principle": "classic way to finish a meal: a hot drink alongside dessert",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["A hot drink alongside dessert is the classic way to finish the meal."],
+        "friendly": ["A coffee with dessert is the classic move, always works."],
+        "luxury": ["A hot pour alongside dessert is the traditional, and still the best, way to close the meal."]
+      }
+    },
+    {
+      "id": "hot-general",
+      "source": "hospitalityKnowledge.js RULES",
+      "conditions": { "drinkType": "hot" },
+      "recommended_style": "hot drink (coffee/espresso-type)",
+      "principle": "rounds off the meal well once the plate is cleared, independent of dessert",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["A hot drink rounds off the meal well once the plate is cleared."],
+        "friendly": ["Good one to have once the plate's cleared, rounds things off nicely."],
+        "luxury": ["A fitting way to round off the meal once the table is cleared."]
+      }
+    }
+  ]
+}

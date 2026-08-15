@@ -1,0 +1,111 @@
+.row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--p-line2);
+}
+
+.thumb {
+  width: 46px;
+  height: 46px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex: none;
+}
+
+.thumbPh {
+  width: 46px;
+  height: 46px;
+  border-radius: 4px;
+  border: 1px solid var(--p-line2);
+  flex: none;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-family: var(--p-serif);
+  font-size: 15px;
+  display: block;
+}
+
+.guestLabel {
+  display: inline-block;
+  margin-top: 3px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--p-brass);
+  border: 1px solid var(--p-brass-soft);
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+
+.price {
+  display: block;
+  font-size: 11.5px;
+  color: var(--p-faint);
+  margin-top: 3px;
+}
+
+.noteInput {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  border: none;
+  border-bottom: 1px solid var(--p-line2);
+  background: transparent;
+  font-family: var(--p-serif);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--p-ink);
+  padding: 4px 0;
+}
+
+.noteInput::placeholder {
+  color: var(--p-faint);
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex: none;
+}
+
+.qty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--p-line);
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
+.qtyBtn {
+  width: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--p-sub);
+}
+
+.qtyVal {
+  font-size: 12.5px;
+  min-width: 10px;
+  text-align: center;
+}
+
+.subtotal {
+  font-family: var(--p-serif);
+  font-size: 14px;
+}
+
+.removeBtn {
+  color: var(--p-faint);
+}

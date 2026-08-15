@@ -75,30 +75,30 @@ module.exports = {
     await db.pushSubscription.deleteMany({ where: { endpoint } }).catch(() => {});
   },
 
-  async notifyNewOrder(restaurantId, tableId) {
+  async notifyNewOrder(restaurantId, tableId, publicBasePath = '/Trump') {
     await sendToRole(restaurantId, ['owner', 'manager', 'waiter'], {
       title: 'New Order',
       body: `New order from ${tableId.replace(/^table/, 'Table ')}`,
       tag: `order-${tableId}`,
-      url: '/Trump/Waiter'
+      url: `${publicBasePath}/Waiter`
     });
   },
 
-  async notifyOrderReady(restaurantId, tableId) {
+  async notifyOrderReady(restaurantId, tableId, publicBasePath = '/Trump') {
     await sendToRole(restaurantId, ['owner', 'manager', 'waiter'], {
       title: 'Order Ready',
       body: `Order for ${tableId.replace(/^table/, 'Table ')} is ready to serve`,
       tag: `ready-${tableId}`,
-      url: '/Trump/Waiter'
+      url: `${publicBasePath}/Waiter`
     });
   },
 
-  async notifyCallWaiter(restaurantId, tableId) {
+  async notifyCallWaiter(restaurantId, tableId, publicBasePath = '/Trump') {
     await sendToRole(restaurantId, ['owner', 'manager', 'waiter'], {
       title: 'Waiter Requested',
       body: `${tableId.replace(/^table/, 'Table ')} is calling for service`,
       tag: `call-${tableId}`,
-      url: '/Trump/Waiter'
+      url: `${publicBasePath}/Waiter`
     });
   }
 };

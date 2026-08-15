@@ -1,0 +1,149 @@
+const { isWithinSchedule } = require('../utils/schedule');
+const { effectivePrice } = require('../services/prismaMenuService');
+
+const BADGES = new Set(['NEW', 'SPECIAL', '10% OFF', '20% OFF', 'LIMITED', 'CHEF SPECIAL']);
+
+function toPublic(row, itemsById) {
+  const itemIds = Array.isArray(row.itemIds) ? row.itemIds : [];
+  const items = itemsById ? itemIds.map(id => itemsById.get(id)).filter(Boolean) : itemIds;
+  // Original/savings are always derived from LIVE item prices (never
+  // snapshotted), matching Special's and ComboSpecial's own convention --
+  // only meaningful when this Promotion has an explicit combo price set
+  // (dealPrice), i.e. it's a priced bundle rather than just a showcase.
+  const originalPrice = Array.isArray(items) ? items.reduce((s, i) => s + (i.price || 0), 0) : 0;
+  const savings = row.dealPrice != null ? Math.max(0, originalPrice - row.dealPrice) : null;
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    bannerImage: row.bannerImage,
+    badge: row.badge,
+    dealPrice: row.dealPrice ?? null,
+    originalPrice,
+    savings,
+    isDealOfDay: row.isDealOfDay,
+    startDate: row.startDate,
+    endDate: row.endDate,
+    startTime: row.startTime,
+    endTime: row.endTime,
+    items
+  };
+}
+
+function sanitize(body = {}, { partial = false } = {}) {
+  const out = {};
+  if (!partial || body.title !== undefined) {
+    const title = String(body.title || '').trim();
+    if (!title) return { error: 'title is required' };
+    out.title = title;
+  }
+  if (body.description !== undefined) out.description = String(body.description || '');
+  if (body.bannerImage !== undefined) out.bannerImage = String(body.bannerImage || '');
+  if (body.badge !== undefined) {
+    const badge = String(body.badge || '');
+    if (badge && !BADGES.has(badge)) {
+      return { error: `badge must be one of: ${[...BADGES].join(', ')}` };
+    }
+    out.badge = badge;
+  }
+  if (body.itemIds !== undefined) {
+    out.itemIds = Array.isArray(body.itemIds) ? body.itemIds.map(Number).filter(Number.isInteger) : [];
+  }
+  if (body.dealPrice !== undefined) {
+    out.dealPrice = body.dealPrice === null || body.dealPrice === '' ? null : Number(body.dealPrice);
+  }
+  if (body.startDate !== undefined) out.startDate = body.startDate ? new Date(body.startDate) : null;
+  if (body.endDate !== undefined) out.endDate = body.endDate ? new Date(body.endDate) : null;
+  if (body.startTime !== undefined) out.startTime = String(body.startTime || '');
+  if (body.endTime !== undefined) out.endTime = String(body.endTime || '');
+  if (body.active !== undefined) out.active = Boolean(body.active);
+  return { value: out };
+}
+
+function createPromotionController({ getPrisma, socketService }) {
+  async function resolveItemsById(prisma, rows) {
+    const ids = [...new Set(rows.flatMap(row => (Array.isArray(row.itemIds) ? row.itemIds : [])))];
+    if (ids.length === 0) return new Map();
+    const items = await prisma.menuItem.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true, price: true, imagePath: true, variants: { select: { price: true, isAddon: true } } }
+    });
+    return new Map(items.map(item => [item.id, { id: item.id, name: item.name, price: effectivePrice(item), img: item.imagePath }]));
+  }
+
+  return {
+    // Public — Deal of the Day, only what's live right now.
+    async listActive(req, res) {
+      const prisma = getPrisma();
+      const rows = (await prisma.promotion.findMany({ where: { active: true }, orderBy: { createdAt: 'desc' } }))
+        .filter(row => isWithinSchedule(row));
+      const itemsById = await resolveItemsById(prisma, rows);
+      res.json(rows.map(row => toPublic(row, itemsById)));
+    },
+
+    // Admin — every promotion regardless of schedule, with its computed live status.
+    async listAll(req, res) {
+      const prisma = getPrisma();
+      const rows = await prisma.promotion.findMany({ orderBy: { createdAt: 'desc' } });
+      const itemsById = await resolveItemsById(prisma, rows);
+      res.json(rows.map(row => ({ ...toPublic(row, itemsById), active: row.active, isLiveNow: row.active && isWithinSchedule(row) })));
+    },
+
+    async create(req, res) {
+      const parsed = sanitize(req.body, { partial: false });
+      if (parsed.error) return res.status(400).json({ error: parsed.error });
+      const prisma = getPrisma();
+      const created = await prisma.promotion.create({ data: parsed.value });
+      socketService?.emitPromotionsUpdated();
+      res.status(201).json({ ok: true, promotion: created });
+    },
+
+    async update(req, res) {
+      const parsed = sanitize(req.body, { partial: true });
+      if (parsed.error) return res.status(400).json({ error: parsed.error });
+      const prisma = getPrisma();
+      const result = await prisma.promotion.updateMany({ where: { id: Number(req.params.id) }, data: parsed.value });
+      if (result.count === 0) return res.status(404).json({ error: 'Promotion not found' });
+      const updated = await prisma.promotion.findUnique({ where: { id: Number(req.params.id) } });
+      socketService?.emitPromotionsUpdated();
+      res.json({ ok: true, promotion: updated });
+    },
+
+    async remove(req, res) {
+      const prisma = getPrisma();
+      const result = await prisma.promotion.deleteMany({ where: { id: Number(req.params.id) } });
+      if (result.count === 0) return res.status(404).json({ error: 'Promotion not found' });
+      socketService?.emitPromotionsUpdated();
+      res.json({ ok: true });
+    },
+
+    // Only one Promotion may be the featured Deal-of-the-Day hero at a time --
+    // enforced here, transactionally, rather than through the generic
+    // update() path, so no caller can set isDealOfDay=true without the
+    // guaranteed side effect of clearing it off every other row. Passing
+    // isDealOfDay:false just un-sets this one (leaving no Deal of the Day).
+    async setDealOfDay(req, res) {
+      const id = Number(req.params.id);
+      const makeItTheDeal = req.body?.isDealOfDay !== false;
+      const prisma = getPrisma();
+      const target = await prisma.promotion.findUnique({ where: { id } });
+      if (!target) return res.status(404).json({ error: 'Promotion not found' });
+
+      // "Set as Deal of the Day" means "make this visible right now" -- a
+      // promotion could previously be flagged isDealOfDay=true while still
+      // `active:false` (e.g. deactivated after being featured, or never
+      // activated in the first place), silently vanishing from the Menu page
+      // with no visible error. Forcing active:true here closes that trap;
+      // un-setting isDealOfDay never touches `active`, since that's a
+      // legitimate independent kill-switch the admin may still want on.
+      await prisma.$transaction([
+        prisma.promotion.updateMany({ where: { isDealOfDay: true }, data: { isDealOfDay: false } }),
+        ...(makeItTheDeal ? [prisma.promotion.update({ where: { id }, data: { isDealOfDay: true, active: true } })] : [])
+      ]);
+      socketService?.emitPromotionsUpdated();
+      res.json({ ok: true });
+    }
+  };
+}
+
+module.exports = { createPromotionController, BADGES };

@@ -4,9 +4,9 @@
 .journey {
   margin-bottom: 16px;
   padding: 12px;
-  border: 1px solid rgba(198, 162, 75, 0.18);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.18);
   border-radius: 10px;
-  background: rgba(198, 162, 75, 0.04);
+  background: rgba(var(--color-gold-rgb), 0.04);
 }
 
 .header {
@@ -15,13 +15,17 @@
   gap: 6px;
   margin-bottom: 8px;
 }
-.icon { color: var(--color-gold, #c6a24b); flex-shrink: 0; }
+/* "Gaspard is speaking" here — reserved terracotta where the tenant defines
+   it (Carmella), falling back to the regular gold accent for tenants that
+   don't (Trump/Demo never set --color-gaspard-accent, so this is a no-op
+   there). See emenyu-carmella/CLAUDE.md hard rule 4 and FUTURE_ROADMAP.md. */
+.icon { color: var(--color-gaspard-accent, var(--color-gold)); flex-shrink: 0; }
 .heading {
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-gold, #c6a24b);
+  color: var(--color-gaspard-accent, var(--color-gold));
 }
 
 .narrative {

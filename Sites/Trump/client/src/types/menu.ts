@@ -1,11 +1,42 @@
+// Two different tag shapes exist across tenants' real data. Trump's is this
+// structured object, written by scripts/enrich-menu-tags.js (server sends it
+// via metadata spread — see prismaMenuService.js's dbItemToJson): `protein`
+// is derived with a name-keyword fallback even when `allergens` is empty,
+// and `dietary` normalizes allergens tokens into values like
+// "contains-gluten"/"contains-egg"/"contains-nuts"/"vegan"/"vegetarian".
+// Carmella's is a flat array of plain category strings instead (e.g.
+// `["seafood","spicy"]`, `["vegetarian"]`, `["alcohol"]`) — see
+// tagList()/menuUtils.ts, which normalizes either shape for filtering.
+export interface MenuItemTags {
+  protein?: string[];
+  dietary?: string[];
+  flavour?: string[];
+  texture?: string[];
+}
+
+export type MenuItemTagsField = MenuItemTags | string[];
+
+export interface MenuItemVariant {
+  dbId?: number;
+  name: string;
+  price: number;
+  img?: string;
+  isAddon?: boolean;
+}
+
 export interface MenuItem {
   id?: string;
   dbId?: number;
   name: string;
   price: number;
   description?: string;
+  // Narrative copy (Carmella's "story" lines) and a short display subtitle.
+  // Optional/empty for tenants that don't use them (e.g. Trump).
+  story?: string;
+  subtitle?: string;
   calories?: string;
   allergens?: string;
+  tags?: MenuItemTagsField;
   spice?: string;
   img?: string;
   video?: string;
@@ -14,6 +45,9 @@ export interface MenuItem {
   videoVisible?: boolean;
   visible?: boolean;
   available?: boolean;
+  // Three-state superset of `available` (available | ask | unavailable) — see
+  // ARCHITECTURE_DECISIONS.md AD-002. Falls back to `available` when absent.
+  availability?: 'available' | 'ask' | 'unavailable';
   chefPick?: boolean;
   popular?: boolean;
   types?: string;
@@ -23,6 +57,9 @@ export interface MenuItem {
   // consumes these instead of re-deriving the category locally.
   categoryType?: string;
   beverageKind?: string;
+  // Multi-choice items (e.g. Carmella's "Amy's Choice"). Absent/empty for
+  // single-price items.
+  variants?: MenuItemVariant[];
 }
 
 // Chef-controlled per-item recommendation (Phase 3, Task 8 owner controls).
@@ -156,7 +193,14 @@ export interface MenuSubSection {
 export interface MenuCategory {
   visible?: boolean;
   items?: MenuItem[];
-  [subKey: string]: MenuSubSection | MenuItem[] | boolean | undefined;
+  // Chapter narrative opener (Carmella's "chapters"); absent for tenants
+  // whose categories don't carry one.
+  intro?: string;
+  // Stable chapter slug (e.g. "morning-pages") — absent for tenants without
+  // the chapter/day-part engine. Lets the Day/Night filter match a category
+  // against a DayPart's leadChapters without depending on its display title.
+  slug?: string;
+  [subKey: string]: MenuSubSection | MenuItem[] | boolean | string | undefined;
 }
 
 export interface MenuData {
@@ -164,14 +208,50 @@ export interface MenuData {
 }
 
 export interface MenuSection {
+  /** The English title. Stays English on purpose: it is the key the tab bar,
+   *  the scroll anchors, the analytics events and `?section=` deep links all
+   *  match on. Never render it directly — render `displayTitle ?? title`. */
   title: string;
+  /** The title in the guest's language, supplied by `GET /api/menu?locale=`.
+   *  Absent for English and for any category with no translation yet. */
+  displayTitle?: string;
+  // Chapter narrative opener (Carmella's "chapters"); absent for tenants
+  // whose categories don't carry one.
+  intro?: string;
   items: MenuItem[];
-  subSections: { title: string; items: MenuItem[] }[];
+  subSections: { title: string; displayTitle?: string; items: MenuItem[] }[];
 }
 
 export interface Deal {
   items: MenuItem[];
   price: number;
+}
+
+// Carmella's day-part engine (see ARCHITECTURE_DECISIONS.md AD-004). Absent
+// from GET /api/config for tenants with no DayPart rows (Trump, Demo).
+export interface DayPart {
+  slug: string;
+  name: string;
+  from: string;
+  to: string;
+  greeting: string;
+  leadChapters: string[];
+  gaspardChips: string[];
+  suggestStrip: { itemId: string; line: string; attachId: string | null } | null;
+}
+
+export interface AppConfig {
+  assistantName: string;
+  assistantPersona?: string;
+  brandName: string;
+  waiterApkUrl?: string;
+  waiterLatestVersion?: string;
+  currentDayPart?: DayPart;
+  // All configured day-parts (not just the currently-active one) — needed to
+  // compute the Day/Night menu toggle's chapter sets across day-parts other
+  // than whichever one the server clock currently resolves to. Absent for
+  // tenants with no day-part engine (Trump, Demo), same as currentDayPart.
+  dayParts?: DayPart[];
 }
 
 export interface ChatSuggestionItem {
@@ -184,7 +264,21 @@ export interface ChatSuggestionItem {
   category?: string;
   subcategory?: string;
   categoryType?: string;
+  beverageKind?: string;
   source_title?: string;
+  // Phase 3 (Dining Concierge) -- same fields cartRecommendations()/recommend()
+  // already return; the chat card can now show WHY and offer Replace/Premium.
+  reason?: string;
+  chef?: boolean;
+  // Curated Demo Mode (server/services/curatedDemoJourney.js) — true only for
+  // a pick from the hand-designed demo journeys; gates the chat card's Skip
+  // button (ChatPanel.tsx's skipFromChat).
+  curated?: boolean;
+  rotationGroup?: string;
+  confidence?: number;
+  expectedValue?: number;
+  netRevenueIncrease?: number;
+  replacement?: { name: string; previousPrice: number } | null;
 }
 
 export interface ChatResponse {

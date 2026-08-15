@@ -1,0 +1,92 @@
+/* The banner that opens the meat chapter. Landscape tablet gets the animal
+   beside the copy; portrait stacks it above. */
+.teaser {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.15fr) minmax(0, 1fr);
+  gap: clamp(16px, 3vw, 40px);
+  align-items: center;
+  margin: 0 0 var(--space-4);
+  padding: clamp(16px, 2.2vw, 28px);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(ellipse 60% 90% at 22% 50%, rgba(var(--color-gold-rgb), 0.09), transparent 70%),
+    linear-gradient(120deg, rgba(13, 34, 54, 0.78), rgba(4, 14, 26, 0.62));
+  box-shadow: var(--shadow-xs);
+}
+
+.chart { position: relative; min-width: 0; }
+
+.hint {
+  margin: 6px 0 0;
+  text-align: center;
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-gold-dim);
+  min-height: 1.2em;
+}
+
+.copy { min-width: 0; }
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+
+.title {
+  margin: 0 0 10px;
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.06;
+  color: var(--color-cream);
+}
+
+.body {
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  line-height: 1.66;
+  color: rgba(247, 251, 255, 0.78);
+  max-width: 46ch;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 18px;
+  background: rgba(var(--color-gold-rgb), 0.1);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.42);
+  border-radius: var(--radius-sm);
+  color: var(--color-gold);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 1;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+.cta:hover {
+  background: var(--color-gold);
+  border-color: var(--color-gold);
+  color: var(--color-ink);
+}
+
+@media (max-width: 760px) {
+  .teaser {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    text-align: center;
+  }
+  .chart { max-width: 420px; margin-inline: auto; }
+  .body { margin-inline: auto; }
+}

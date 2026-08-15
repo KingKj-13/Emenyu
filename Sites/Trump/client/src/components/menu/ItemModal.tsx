@@ -1,12 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Heart, Plus, Minus, ShoppingCart, ChevronLeft } from 'lucide-react';
+import { X, Heart, ChevronLeft, Flame, ConciergeBell, Beef } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
-import { resolveImage, resolveVideo, resolveYouTubeEmbed } from '../../lib/imageResolver';
-import { BASE_PATH } from '../../constants/api';
+import { resolveImage, resolveVideo, resolveYouTubeEmbed, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
+import { useT, useI18n } from '../../i18n';
+import { resolveCutCopy } from '../../i18n/butchery';
+import type { CutDefinition } from '../butchery/cutCatalog';
+import { localizeAllergens } from '../../lib/allergens';
+import { track, startDwell } from '../../lib/engagement';
+import { useVideoEngagement } from '../../hooks/useVideoEngagement';
+import { ItemGallery } from './ItemGallery';
 import { api } from '../../services/api';
+import { useMenuData } from '../../context/MenuContext';
+import { normalizeName } from '../../lib/menuUtils';
 import type { MenuItem } from '../../types/menu';
 import type { RecommendationItem } from '../reco/RecommendationCard';
 import { RecommendationJourney } from '../reco/RecommendationJourney';
@@ -19,12 +27,12 @@ interface ItemModalProps {
   onClose: () => void;
   isFavorite: boolean;
   onFavoriteToggle: (name: string) => void;
-  onAddToCart: (item: MenuItem, qty: number, note: string) => void;
   onRequestItem?: (name: string) => void;
   onOpenItem?: (item: MenuItem) => void;
-  onAddSuggestion?: (item: MenuItem) => void;
   canGoBack?: boolean;
   onBack?: () => void;
+  cutInfo?: { cut: CutDefinition; relation: 'primary' | 'related'; relatedLabel?: string } | null;
+  onViewCut?: (cutId: string) => void;
 }
 
 interface PairingItem {
@@ -44,7 +52,16 @@ interface PairingResult {
   pairings?: PairingItem[];
 }
 
+// The stored `spice` field is a raw chili-emoji string (🌶️ / 🌶️🌶️ / 🌶️🌶️🌶️),
+// not a formatted label — map it to a level word instead of rendering emoji.
+const SPICE_KEYS = ['', 'spice.mild', 'spice.medium', 'spice.hot'] as const;
+function spiceLevelKey(spice: string): 'spice.mild' | 'spice.medium' | 'spice.hot' | 'spice.spiced' {
+  const count = (spice.match(/🌶/gu) || []).length;
+  return SPICE_KEYS[Math.min(count, SPICE_KEYS.length - 1)] || 'spice.spiced';
+}
+
 function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?: (name: string) => void }) {
+  const { activeItemNames } = useMenuData();
   const [pool, setPool] = useState<RecommendationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const pairCtx: RecoContext = { mode: 'customer', source: 'pairing', originatingName: item.name };
@@ -67,7 +84,11 @@ function ItemPairings({ item, onRequestItem }: { item: MenuItem; onRequestItem?:
           if (!key || seen.has(key)) return false;
           seen.add(key);
           return true;
-        });
+        // The pairing endpoint has no idea about the Day/Night toggle (it's a
+        // server-side lookup over the full catalog) -- drop anything outside
+        // the currently active menu so a Night-mode guest never gets steered
+        // toward a breakfast pairing that isn't even orderable right now.
+        }).filter(p => !activeItemNames || activeItemNames.has(normalizeName(p.name)));
         setPool(deduped);
         if (deduped.length) {
           trackImpressions(deduped, pairCtx);
@@ -101,15 +122,33 @@ export function ItemModal({
   onClose,
   isFavorite,
   onFavoriteToggle,
-  onAddToCart,
   onRequestItem,
   onOpenItem,
-  onAddSuggestion,
   canGoBack = false,
   onBack,
+  cutInfo = null,
+  onViewCut,
 }: ItemModalProps) {
-  const [qty, setQty] = useState(1);
-  const [note, setNote] = useState('');
+  const t = useT();
+  const { locale } = useI18n();
+
+  const video = useVideoEngagement(item?.dbId, item?.name ?? '');
+
+  // How long a dish detail stayed open is the closest thing a menu without a
+  // cart has to "interest". Emitted on close so the duration is real.
+  useEffect(() => {
+    if (!open || !item) return;
+    video.reset();
+    const stop = startDwell({
+      eventType: 'ITEM_VIEW',
+      menuItemId: item.dbId ?? null,
+      label: item.name,
+      categoryName: item.category || '',
+    });
+    return stop;
+  }, [open, item?.dbId, item?.name]);
+  const [selectedVariantName, setSelectedVariantName] = useState<string | null>(null);
+  const [selectedAddonNames, setSelectedAddonNames] = useState<string[]>([]);
   const [imgError, setImgError] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [playMedia, setPlayMedia] = useState(false);
@@ -127,6 +166,9 @@ export function ItemModal({
     setVideoReady(false);
     setImgError(false);
     setVideoError(false);
+    const baseVariants = (item.variants || []).filter(v => !v.isAddon);
+    setSelectedVariantName(baseVariants[0]?.name ?? null);
+    setSelectedAddonNames([]);
     const timer = window.setTimeout(() => setPlayMedia(true), 3000);
     return () => window.clearTimeout(timer);
   }, [open, item?.name]);
@@ -138,15 +180,24 @@ export function ItemModal({
 
   if (!item) return null;
 
-  const imgSrc = imgError ? `${BASE_PATH}/Images/Tomahawk.jpg` : resolveImage(item);
+  const imgSrc = imgError ? FALLBACK_IMAGE : resolveImage(item);
   const videoSrc = videoError ? null : resolveVideo(item);
   const youtubeSrc = videoError ? null : resolveYouTubeEmbed(item, playMedia);
 
-  function handleAdd() {
-    onAddToCart(item!, qty, note);
-    setQty(1);
-    setNote('');
-    onClose();
+  const baseVariants = (item.variants || []).filter(v => !v.isAddon);
+  const addonVariants = (item.variants || []).filter(v => v.isAddon);
+  const selectedVariant = baseVariants.find(v => v.name === selectedVariantName) ?? null;
+  const selectedAddons = addonVariants.filter(a => selectedAddonNames.includes(a.name));
+  const effectivePrice = (selectedVariant ? selectedVariant.price : item.price)
+    + selectedAddons.reduce((sum, a) => sum + a.price, 0);
+  const effectiveName = selectedVariant
+    ? [item.name, selectedVariant.name, ...selectedAddons.map(a => a.name)].join(' — ')
+    : item.name;
+
+  function toggleAddon(name: string) {
+    setSelectedAddonNames(current =>
+      current.includes(name) ? current.filter(n => n !== name) : [...current, name]
+    );
   }
 
   function handleTouchStart(e: React.TouchEvent) {
@@ -185,9 +236,7 @@ export function ItemModal({
     setSwipeX(0);
     touchStartRef.current = null;
     swipeActiveRef.current = false;
-    if (finalSwipe > SWIPE_THRESHOLD) {
-      handleAdd();
-    } else if (finalSwipe < -SWIPE_THRESHOLD) {
+    if (finalSwipe < -SWIPE_THRESHOLD) {
       if (canGoBack && onBack) onBack();
       else onClose();
     }
@@ -200,7 +249,6 @@ export function ItemModal({
   }
 
   const swipeProgress = Math.min(1, Math.abs(swipeX) / SWIPE_THRESHOLD);
-  const isRightSwipe = swipeX > 20;
   const isLeftSwipe = swipeX < -20;
 
   return (
@@ -218,8 +266,13 @@ export function ItemModal({
           touchAction: 'pan-y',
         }}
       >
+        <div className={styles.body}>
         <div className={styles.media}>
-          {videoSrc ? (
+          {videoSrc && playMedia ? (
+            // Poster-first, same as RecommendationCard/WaiterPage: the <video> tag
+            // (and the network request it triggers) doesn't exist in the DOM at all
+            // until the 3s dwell timer has already elapsed — before that, guests see
+            // only the plain photo below, identical to an item with no video.
             <>
               <video
                 ref={videoRef}
@@ -230,12 +283,14 @@ export function ItemModal({
                 className={styles.videoLayer}
                 onCanPlay={() => setVideoReady(true)}
                 onError={() => setVideoError(true)}
+                onPlaying={video.onPlaying}
+                onTimeUpdate={video.onTimeUpdate}
               />
               {imgSrc && (
                 <img
                   src={imgSrc}
                   alt={item.name}
-                  className={`${styles.imageOverlay}${playMedia && videoReady ? ` ${styles.imageOverlayHidden}` : ''}`}
+                  className={`${styles.imageOverlay}${videoReady ? ` ${styles.imageOverlayHidden}` : ''}`}
                   onError={() => setImgError(true)}
                 />
               )}
@@ -275,27 +330,81 @@ export function ItemModal({
           </button>
         </div>
 
-        <div className={styles.body}>
-          {item.available === false && (
+        <div className={styles.bodyContent}>
+          {(item.available === false || item.availability === 'unavailable') && (
             <div className={styles.unavailableBanner}>
-              Currently unavailable
+              Sold Out
+            </div>
+          )}
+          {item.availability === 'ask' && item.available !== false && (
+            <div className={styles.unavailableBanner}>
+              Please ask your host — subject to availability today
             </div>
           )}
 
           <div className={styles.chips}>
             {item.chefPick && <Badge variant="gold">Chef Recommends</Badge>}
-            {item.popular && <Badge variant="purple">AI Recommend</Badge>}
-            {item.spice && <Badge variant="muted">{item.spice}</Badge>}
+            {item.popular && <Badge variant="gold">Guest Favourite</Badge>}
+            {item.spice && <Badge variant="muted"><Flame size={11} /> {t(spiceLevelKey(item.spice))}</Badge>}
           </div>
 
-          <h2 className={styles.name}>{item.name}</h2>
-          <p className={styles.price}>{formatPrice(item.price)}</p>
+          {cutInfo && (
+            <button
+              type="button"
+              className={styles.cutLink}
+              onClick={() => onViewCut?.(cutInfo.cut.id)}
+              disabled={!onViewCut}
+            >
+              <Beef size={13} />
+              {cutInfo.relation === 'related'
+                ? `${cutInfo.relatedLabel} — ${resolveCutCopy(cutInfo.cut, locale, 'za').name}`
+                : t('cut.from', { cut: resolveCutCopy(cutInfo.cut, locale, 'za').name })}
+            </button>
+          )}
 
-          {item.description ? <p className={styles.description}>{item.description}</p> : null}
+          <h2 className={styles.name} dir="auto">{item.name}</h2>
+          {item.subtitle ? <p className={styles.description} dir="auto">{item.subtitle}</p> : null}
+          <p className={styles.price}>{formatPrice(effectivePrice)}</p>
+
+          {item.story ? <p className={styles.story}>{item.story}</p> : null}
+          {item.description ? <p className={styles.description} dir="auto">{item.description}</p> : null}
+
+          {baseVariants.length > 0 && (
+            <div className={styles.variantGroup} role="radiogroup" aria-label="Choose an option">
+              {baseVariants.map(variant => (
+                <label key={variant.name} className={styles.variantOption}>
+                  <input
+                    type="radio"
+                    name="variant"
+                    checked={selectedVariantName === variant.name}
+                    onChange={() => setSelectedVariantName(variant.name)}
+                  />
+                  <span>{variant.name}</span>
+                  <span className={styles.variantPrice}>{formatPrice(variant.price)}</span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          {addonVariants.length > 0 && (
+            <div className={styles.variantGroup} aria-label="Add extras">
+              {addonVariants.map(addon => (
+                <label key={addon.name} className={styles.variantOption}>
+                  <input
+                    type="checkbox"
+                    checked={selectedAddonNames.includes(addon.name)}
+                    onChange={() => toggleAddon(addon.name)}
+                  />
+                  <span>+ {addon.name}</span>
+                  <span className={styles.variantPrice}>+{formatPrice(addon.price)}</span>
+                </label>
+              ))}
+            </div>
+          )}
 
           {item.allergens && (
             <p className={styles.allergens}>
-              <strong>Contains:</strong> {item.allergens}
+              <strong>{t('menu.contains')}</strong> {localizeAllergens(item.allergens, t)}
             </p>
           )}
 
@@ -304,54 +413,43 @@ export function ItemModal({
           )}
 
           {open && <ItemPairings item={item} onRequestItem={onRequestItem} />}
-
-          <div className={styles.actions}>
-            <div className={styles.qtyRow}>
-              <button
-                className={styles.qtyBtn}
-                onClick={() => setQty(q => Math.max(1, q - 1))}
-                aria-label="Decrease quantity"
-              >
-                <Minus size={16} />
-              </button>
-              <span className={styles.qtyValue} aria-live="polite">{qty}</span>
-              <button
-                className={styles.qtyBtn}
-                onClick={() => setQty(q => q + 1)}
-                aria-label="Increase quantity"
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-
-            <textarea
-              className={styles.noteInput}
-              data-noswipe
-              placeholder="Special requests or dietary notes…"
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              rows={2}
-              aria-label="Special notes for this item"
-            />
-
-            <button
-              className={styles.addBtn}
-              onClick={handleAdd}
-              disabled={item.available === false}
-              aria-label={item.available === false ? `${item.name} is currently unavailable` : `Add ${qty} ${item.name} to cart`}
-            >
-              <ShoppingCart size={18} />
-              {item.available === false ? 'Unavailable' : `Add ${qty > 1 ? `${qty} × ` : ''}${formatPrice(item.price * qty)}`}
-            </button>
-          </div>
+          {item.dbId != null && <ItemGallery menuItemId={item.dbId} itemName={item.name} />}
+        </div>
         </div>
 
-        {isRightSwipe && (
-          <div className={styles.swipeHintRight} style={{ opacity: swipeProgress }}>
-            <ShoppingCart size={36} />
-            <span>Add to Cart</span>
+        {/* Moved out of .body (Bug #3 fix): .actions used to be the last child
+            INSIDE the scrollable .body, sticky-pinned to the bottom of the
+            modal's scroll viewport. ItemPairings loads asynchronously (an API
+            call) and can insert ~300px of real content well after the initial
+            layout settles -- since sticky elements don't reserve/vacate space
+            the way normal flow does, the already-"stuck" actions bar ended up
+            visually overlapping the freshly-loaded recommendation cards (and,
+            depending on a given dish's text length, whatever else happened to
+            fall in that same screen region). Now .actions is a true flex
+            sibling of .body, outside the scrollable region entirely (see the
+            .modal/.body/.actions rewrite in ItemModal.module.css) -- it can no
+            longer overlap anything, sticky or not.
+
+            .media now lives INSIDE .body (sticky-pinned to its top) rather
+            than beside it -- see the .media comment in ItemModal.module.css
+            for why: relying on .body being the one that scrolls turned out to
+            be fragile on mobile, so .media pins to whichever of .body/.panel
+            actually ends up scrolling instead. */}
+        {/* The quantity stepper, the special-requests box and the
+            "Add to cart" button used to sit here. This menu does not take
+            orders: the guest reads, then speaks to their waiter, which is the
+            hospitality the restaurant is built on. What replaces them is the
+            price and a plain statement of how to order. */}
+        <div className={styles.actions}>
+          <div className={styles.orderHint}>
+            <ConciergeBell size={17} aria-hidden />
+            <span>{t('dish.orderHint')}</span>
           </div>
-        )}
+          <span className={styles.priceTag}>
+            {item.available === false ? t('menu.unavailable') : formatPrice(effectivePrice)}
+          </span>
+        </div>
+
         {isLeftSwipe && (
           <div className={styles.swipeHintLeft} style={{ opacity: swipeProgress }}>
             <ChevronLeft size={36} />

@@ -1,0 +1,54 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 16px;
+}
+
+/* Same background/border/radius/shadow tokens as the loaded MenuCard so
+   swapping skeleton -> real card never "pops". */
+.card {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(160deg, var(--color-panel-soft), var(--color-panel));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+
+.image { aspect-ratio: 3/2; display: block; flex-shrink: 0; }
+
+/* Padding must match MenuCard.module.css's .body exactly (desktop + the
+   480px breakpoint) or the real card would jump size when it replaces this
+   placeholder. */
+.body {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 16px 18px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.priceSkeleton { width: 58px; }
+.btnSkeleton { width: 92px; flex-shrink: 0; }
+
+@media (max-width: 480px) {
+  .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .body { padding: 13px 13px 14px; }
+
+  .footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .priceSkeleton,
+  .btnSkeleton { width: 100%; }
+}

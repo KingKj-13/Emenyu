@@ -13,7 +13,10 @@ export interface ShiftRow {
   assignedTables?: unknown;
   ordersHandled: number;
   revenueHandled: number;
-  responseMetrics?: { tasksResolved?: number } | null;
+  // Phase 2 (Waiter Experience) — tipsHandled lives inside responseMetrics
+  // (a Json column) rather than as its own DB column, so it survives both the
+  // live view and the ended-shift summary without a schema change.
+  responseMetrics?: { tasksResolved?: number; tipsHandled?: number } | null;
 }
 
 export interface ShiftStatus {
@@ -21,7 +24,8 @@ export interface ShiftStatus {
   shift?: ShiftRow;
   ordersHandled?: number;
   revenueHandled?: number;
-  responseMetrics?: { tasksResolved?: number };
+  tipsHandled?: number;
+  responseMetrics?: { tasksResolved?: number; tipsHandled?: number };
 }
 
 export interface OwnershipRow {

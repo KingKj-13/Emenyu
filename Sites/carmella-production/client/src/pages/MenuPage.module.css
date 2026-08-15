@@ -1,0 +1,404 @@
+.addedToast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 16px);
+  z-index: 1200;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(160deg, var(--color-gold-soft, #e2c880), var(--color-gold, #c8a555));
+  color: #1a1206;
+  font-weight: 700;
+  font-size: 13.5px;
+  box-shadow: var(--shadow-lift);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-med), transform var(--transition-med);
+}
+.addedToastShow { opacity: 1; transform: translate(-50%, 0); }
+.addedCheck {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(26, 18, 6, 0.85);
+  color: var(--color-gold-soft, #e2c880);
+  font-size: 11px;
+}
+
+.content {
+  /* Was header-h + 90px to clear the old FIXED tab bar's own height; the tab
+     bar is sticky-in-flow now (see CategoryTabBar.module.css), so only the
+     fixed header itself needs reserving here. Side padding grows generously
+     at wide viewports rather than stretching a mobile column edge-to-edge. */
+  padding: var(--header-h) clamp(16px, 4.5vw, 64px) 120px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 50vh;
+  color: var(--color-sand);
+  text-align: center;
+  padding: 32px;
+}
+
+.errorDetail { font-size: 12px; opacity: 0.6; }
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 80px 32px;
+  color: var(--color-sand);
+}
+
+.clearBtn {
+  padding: 8px 20px;
+  border: 1px solid rgba(var(--color-gold-rgb),0.4);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-gold);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.clearBtn:hover { background: rgba(var(--color-gold-rgb),0.1); }
+
+.promoBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+.promoCard {
+  padding: 11px 15px;
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.4);
+  background: rgba(var(--color-gold-rgb), 0.08);
+  box-shadow: var(--shadow-xs);
+  color: var(--color-cream);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.promoBadge {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-gold);
+  color: #1a1206;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.promoDesc {
+  color: var(--color-sand);
+}
+
+/* ───────── Promotional hub wrapper — one flex column with a single gap
+   controls the rhythm between "Now Serving", Deal of the Day, Combo Offers,
+   Happy Hour and Promotions, instead of each block carrying its own
+   one-off bottom margin. Children below keep margin:0 and rely on this. */
+.promoHub {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 4vw, 36px);
+  margin-bottom: clamp(28px, 4vw, 44px);
+}
+
+/* ───────── "Now Serving" meal-period indicator ───────── */
+.nowServing {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.3);
+  background: rgba(var(--color-gold-rgb), 0.06);
+  color: var(--color-gold);
+  font-family: var(--font-label);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.nowServingHours {
+  color: var(--color-sand);
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* ───────── Deal of the Day / Combo Offers -- horizontal sliding card strips
+   (left-right swipe, not a wrapping grid), matching the same strip/card
+   pattern used elsewhere on the platform for curated bundles. ───────── */
+.stripSection {
+  margin-bottom: 0;
+}
+
+.stripTitle {
+  margin: 0 0 14px;
+  font-family: var(--font-heading);
+  font-size: clamp(20px, 2.6vw, 28px);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--color-cream);
+}
+
+.cardStrip {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  padding: 4px 4px 18px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.cardStrip::-webkit-scrollbar { display: none; }
+.stripEndSpacer { flex: 0 0 2px; }
+
+.slideCard {
+  scroll-snap-align: start;
+  flex: 0 0 min(300px, 82vw);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card, 16px);
+  background: linear-gradient(180deg, var(--color-panel-soft) 0%, var(--color-panel) 100%);
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-med), box-shadow var(--transition-med), border-color var(--transition-med);
+}
+.slideCard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lift);
+  border-color: rgba(var(--color-gold-rgb), 0.3);
+}
+.slideCard:active {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-xs);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+@media (min-width: 900px) {
+  .cardStrip { gap: 18px; }
+  .slideCard { flex: 0 0 min(340px, 30vw); }
+
+  /* A strip holding exactly one card (Deal of the Day, most days) shouldn't
+     sit at the mobile-derived 340px width with a large empty void beside it
+     on a wide desktop row -- grow it into a genuine single "hero" card
+     instead. Combo Offers (always several cards) is unaffected. */
+  .cardStrip:has(> .slideCard:only-of-type) .slideCard {
+    flex: 0 0 min(560px, 46vw);
+  }
+}
+
+.slideCardHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px 10px;
+}
+
+.slideCardIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(var(--color-gold-rgb), 0.14);
+  color: var(--color-gold);
+}
+
+.slideCardHeadText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.slideCardPersona {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-cream);
+}
+
+.slideCardBlurb {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--color-sand);
+  opacity: 0.9;
+}
+
+.slideCardBadge {
+  flex: none;
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-gold);
+  color: #1a1206;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.slideCardItems {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 12px;
+}
+
+.slideCardItemRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border-radius: var(--radius-xs);
+}
+
+.slideCardItemThumb {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-xs);
+  object-fit: cover;
+}
+
+.slideCardItemName {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--color-cream);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slideCardItemPrice {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--color-sand);
+  opacity: 0.8;
+}
+
+.slideCardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px 16px;
+  margin-top: auto;
+  border-top: 1px solid var(--color-line);
+}
+
+.slideCardTotalWrap { display: flex; flex-direction: column; }
+
+.slideCardTotalLabel {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-sand);
+}
+
+.slideCardTotal {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-gold);
+}
+
+.slideCardSavings {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(120, 200, 140, 0.16);
+  border: 1px solid rgba(120, 200, 140, 0.38);
+  color: #6fbf8a;
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ───────── Happy Hour banner ───────── */
+.happyHourBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 0;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: rgba(var(--color-gold-rgb), 0.08);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.35);
+  box-shadow: var(--shadow-xs);
+}
+
+.happyHourHeading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-heading);
+  font-size: 15px;
+  color: var(--color-cream);
+}
+
+.happyHourIcon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(var(--color-gold-rgb), 0.16);
+  color: var(--color-gold);
+}
+
+/* Each active happy hour gets its own titled row -- name on the left,
+   discount on the right -- instead of every name being folded into one
+   run-on sentence when more than one is active at a time. */
+.happyHourRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(var(--color-gold-rgb), 0.18);
+  font-size: 13px;
+}
+
+.happyHourRow:first-of-type { border-top: none; padding-top: 0; }
+
+.happyHourRow strong {
+  color: var(--color-cream);
+  font-weight: 700;
+}
+
+.happyHourRow span {
+  color: var(--color-gold);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .slideCard { flex-basis: min(280px, 84vw); }
+}

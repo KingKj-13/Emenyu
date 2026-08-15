@@ -15,6 +15,10 @@ export interface PersonaOrder {
   blurb: string;
   accent: string;
   courses: OrderCourse[];
+  // Which day-part this bundle belongs to (e.g. "morning"/"midday"/"golden")
+  // — drives the Day/Night menu toggle's bundle filtering. Absent/empty for
+  // tenants without the day-part engine, where it's simply never filtered on.
+  daypart?: string;
 }
 
 export const RECOMMENDED_ORDERS: PersonaOrder[] = [
@@ -38,7 +42,7 @@ export const RECOMMENDED_ORDERS: PersonaOrder[] = [
     blurb: 'Flame-grilled, dry-aged, unapologetic.',
     accent: '#a52b2d',
     courses: [
-      { course: 'Drink', name: 'TRUMPS', price: 225 },
+      { course: 'Drink', name: 'House Old Fashioned', price: 225 },
       { course: 'Starter', name: 'BEEF BILTONG', price: 155 },
       { course: 'Main', name: 'RIBEYE 380g', price: 369 },
       { course: 'Dessert', name: 'DEATH BY CHOCOLATE CAKE', price: 119 },

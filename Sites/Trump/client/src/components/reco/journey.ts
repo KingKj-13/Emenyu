@@ -11,6 +11,12 @@ import type { RecommendationItem } from './RecommendationCard';
 
 export type Course = 'STARTER' | 'MAIN' | 'DESSERT' | 'DRINK' | 'WINE' | 'SIDE' | 'OTHER';
 
+// The 3 planned slots are unbounded elsewhere in the pipeline, but the
+// "extras beyond 3 continue in the scroll row" leftovers had no cap at all —
+// the one path in the recommendation system with no budget ceiling. Matches
+// the ~4-item cap every other recommendation surface already enforces.
+const MAX_JOURNEY_LEFTOVERS = 4;
+
 type Classifiable = {
   name: string;
   description?: string;
@@ -31,8 +37,22 @@ const COURSE_LABELS: Record<Course, string> = {
   OTHER: 'Dish',
 };
 
+/** Message key per course, so the slot chips read in the guest's language.
+ *  SIDE and OTHER have no key of their own and fall back to the English. */
+const COURSE_KEYS: Partial<Record<Course, MessageKey>> = {
+  STARTER: 'reco.course.starter',
+  MAIN: 'reco.course.main',
+  DESSERT: 'reco.course.dessert',
+  DRINK: 'reco.course.drink',
+  WINE: 'reco.course.drink',
+};
+
 export function courseLabel(course: Course): string {
   return COURSE_LABELS[course];
+}
+
+export function courseLabelKey(course: Course): MessageKey | null {
+  return COURSE_KEYS[course] ?? null;
 }
 
 function norm(value: string): string {
@@ -71,15 +91,25 @@ export function prettyName(name: string): string {
   return value.toLowerCase().replace(/\b([a-z])/g, (_, c: string) => c.toUpperCase());
 }
 
+import type { MessageKey } from '../../i18n/messages/en';
+
+/** A narrative as a message key plus its dish-name slots, so the sentence can
+ *  be reordered by the translator instead of concatenated here. */
+export interface JourneyNarrative {
+  key: MessageKey;
+  params?: Record<string, string>;
+}
+
 export interface JourneySlot {
   rec: RecommendationItem;
   slotLabel: string;
+  slotLabelKey: MessageKey | null;
   youChoice: boolean;
 }
 
 export interface JourneyPlan {
   slots: JourneySlot[];
-  narrative: string;
+  narrative: JourneyNarrative;
   // Recommendations the engine returned beyond the 3-slot journey. They continue
   // in the same horizontal row so nothing the engine produced is ever dropped.
   leftovers: JourneySlot[];
@@ -102,7 +132,7 @@ export function planJourney(current: MenuItem, pool: RecommendationItem[]): Jour
   };
 
   const slot = (rec: RecommendationItem | null): JourneySlot | null =>
-    rec ? { rec, slotLabel: courseLabel(courseOf(rec)), youChoice: false } : null;
+    rec ? { rec, slotLabel: courseLabel(courseOf(rec)), slotLabelKey: courseLabelKey(courseOf(rec)), youChoice: false } : null;
 
   const thisRec: RecommendationItem = {
     name: current.name,
@@ -114,11 +144,11 @@ export function planJourney(current: MenuItem, pool: RecommendationItem[]): Jour
     video: current.video,
     reason: current.description,
   };
-  const thisSlot: JourneySlot = { rec: thisRec, slotLabel: courseLabel(curCourse), youChoice: true };
+  const thisSlot: JourneySlot = { rec: thisRec, slotLabel: courseLabel(curCourse), slotLabelKey: courseLabelKey(curCourse), youChoice: true };
 
   const pn = prettyName;
   let order: (JourneySlot | null)[];
-  let narrative: string;
+  let narrative: JourneyNarrative;
 
   switch (curCourse) {
     case 'STARTER': {
@@ -126,10 +156,10 @@ export function planJourney(current: MenuItem, pool: RecommendationItem[]): Jour
       const after = take(['MAIN']);
       order = [slot(before), thisSlot, slot(after)];
       narrative = after
-        ? `Many guests begin with our ${pn(current.name)} before enjoying the ${pn(after.name)}.`
+        ? { key: 'journey.starterThenMain', params: { a: pn(current.name), b: pn(after.name) } }
         : before
-          ? `Start with our ${pn(current.name)} alongside a ${pn(before.name)}.`
-          : `A refined way to begin the evening.`;
+          ? { key: 'journey.starterWithDrink', params: { a: pn(current.name), b: pn(before.name) } }
+          : { key: 'journey.starterOnly' };
       break;
     }
     case 'MAIN': {
@@ -137,12 +167,12 @@ export function planJourney(current: MenuItem, pool: RecommendationItem[]): Jour
       const after = take(['DESSERT', 'DRINK', 'WINE']);
       order = [slot(before), thisSlot, slot(after)];
       narrative = before && after
-        ? `Pair your ${pn(current.name)} with our ${pn(before.name)}, then finish with the ${pn(after.name)}.`
+        ? { key: 'journey.mainBoth', params: { a: pn(current.name), b: pn(before.name), c: pn(after.name) } }
         : before
-          ? `Our ${pn(current.name)} pairs beautifully with our ${pn(before.name)}.`
+          ? { key: 'journey.mainBefore', params: { a: pn(current.name), b: pn(before.name) } }
           : after
-            ? `Enjoy our ${pn(current.name)}, then finish with the ${pn(after.name)}.`
-            : `Our signature ${pn(current.name)} — the heart of the table.`;
+            ? { key: 'journey.mainAfter', params: { a: pn(current.name), b: pn(after.name) } }
+            : { key: 'journey.mainOnly', params: { a: pn(current.name) } };
       break;
     }
     case 'DRINK':
@@ -151,10 +181,10 @@ export function planJourney(current: MenuItem, pool: RecommendationItem[]): Jour
       const c2 = take(['STARTER', 'MAIN', 'DESSERT', 'SIDE']);
       order = [thisSlot, slot(c1), slot(c2)];
       narrative = c1 && c2
-        ? `Our ${pn(current.name)} pairs beautifully with the ${pn(c1.name)} and the ${pn(c2.name)}.`
+        ? { key: 'journey.drinkTwo', params: { a: pn(current.name), b: pn(c1.name), c: pn(c2.name) } }
         : c1
-          ? `Our ${pn(current.name)} pairs beautifully with the ${pn(c1.name)}.`
-          : `A standout pour from our list.`;
+          ? { key: 'journey.drinkOne', params: { a: pn(current.name), b: pn(c1.name) } }
+          : { key: 'journey.drinkOnly' };
       break;
     }
     case 'DESSERT': {
@@ -162,8 +192,10 @@ export function planJourney(current: MenuItem, pool: RecommendationItem[]): Jour
       const sip = take(['DRINK', 'WINE']);
       order = [slot(main), slot(sip), thisSlot];
       narrative = main
-        ? `After our ${pn(main.name)}, finish the evening with our ${pn(current.name)}${sip ? `, alongside a ${pn(sip.name)}` : ''}.`
-        : `Finish the evening on a sweet note with our ${pn(current.name)}.`;
+        ? (sip
+          ? { key: 'journey.dessertAfterWithSip', params: { a: pn(main.name), b: pn(current.name), c: pn(sip.name) } }
+          : { key: 'journey.dessertAfter', params: { a: pn(main.name), b: pn(current.name) } })
+        : { key: 'journey.dessertOnly', params: { a: pn(current.name) } };
       break;
     }
     default: { // SIDE / OTHER
@@ -171,14 +203,15 @@ export function planJourney(current: MenuItem, pool: RecommendationItem[]): Jour
       const after = take(['DRINK', 'WINE', 'STARTER', 'DESSERT']);
       order = [slot(before), thisSlot, slot(after)];
       narrative = before
-        ? `Our ${pn(current.name)} is the perfect companion to the ${pn(before.name)}.`
-        : `A delicious addition to the table.`;
+        ? { key: 'journey.sideWith', params: { a: pn(current.name), b: pn(before.name) } }
+        : { key: 'journey.sideOnly' };
     }
   }
 
   const slots = order.filter((s): s is JourneySlot => s !== null);
   const leftovers = avail
     .filter(cand => !used.has(cand))
-    .map((rec): JourneySlot => ({ rec, slotLabel: courseLabel(courseOf(rec)), youChoice: false }));
+    .slice(0, MAX_JOURNEY_LEFTOVERS)
+    .map((rec): JourneySlot => ({ rec, slotLabel: courseLabel(courseOf(rec)), slotLabelKey: courseLabelKey(courseOf(rec)), youChoice: false }));
   return { slots, narrative, leftovers };
 }

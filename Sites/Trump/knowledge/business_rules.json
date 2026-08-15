@@ -1,0 +1,178 @@
+{
+  "_meta": {
+    "title": "Recommendation Engine — Business Rules (R1-R7 + Spec Gaps)",
+    "purpose": "Canonical list of the category-safety rules the recommendation engine enforces today (source: server/services/recommendationRules.js applyCategorySafety()), plus the additional hospitality rules the product spec calls for that are NOT yet implemented in code. Entries are grounded in the actual reason-code strings the engine emits when it drops a candidate.",
+    "source_of_truth_for_already_enforced": "Sites/Trump/server/services/recommendationRules.js",
+    "status_values": {
+      "already-enforced": "This exact rule runs today in production code and can be observed via the drop-reason strings applyCategorySafety() logs (reco_safety_dropped).",
+      "already-enforced-elsewhere": "The rule is real and runs today, but not inside recommendationRules.js — it lives in a different module (called out per-entry).",
+      "gap-to-implement": "The spec requires this rule; nothing in the current codebase enforces it. Net-new work for the engine refactor."
+    }
+  },
+  "rules": [
+    {
+      "id": "beverage:max-reached",
+      "rule_code": "R1",
+      "status": "already-enforced",
+      "description": "One primary beverage (wine, cocktail, or beer) max per recommendation set. A candidate is dropped once the number of non-replacement beverages already kept in this recommendation batch reaches the configured cap.",
+      "scope": "Applies to WINE and DRINK candidates only; a same-kind UPGRADE replacement (candidate.isReplacement === true) does not consume a cap slot, so trading up an existing pour is never blocked by this rule.",
+      "reason": "Inline comment: \"R1/R3: total beverage cap (a replacement doesn't consume a cap slot).\" Threshold is config.reco.maxBeverages, defaulting to 1 (maxBeverages = Number.isFinite(rcfg.maxBeverages) ? rcfg.maxBeverages : 1).",
+      "location": "recommendationRules.js applyCategorySafety(), beveragesKept >= maxBeverages branch"
+    },
+    {
+      "id": "beverage:second-primary",
+      "rule_code": "R2",
+      "status": "already-enforced",
+      "description": "Never recommend a second primary beverage of a different kind once one is already queued in this set — i.e. never wine + cocktail (or any two of WINE/COCKTAIL/BEER) together.",
+      "scope": "Applies to any candidate whose beverageKind is in PRIMARY_BEVERAGES = {WINE, COCKTAIL, BEER}. Enforced unconditionally — replacement or not — because, per the code's own comment, this rule protects what ends up on the table, not how it got there.",
+      "reason": "Inline comment: \"R2 + one-primary: only one primary beverage; never wine+cocktail.\"",
+      "location": "recommendationRules.js applyCategorySafety(), PRIMARY_BEVERAGES.has(kind) && primaryKept branch"
+    },
+    {
+      "id": "beverage:secondary-headline",
+      "rule_code": "R3",
+      "status": "already-enforced",
+      "description": "A secondary beverage (soft drink or hot drink) must never headline a recommendation set while no primary beverage has been offered yet.",
+      "scope": "Blocked only when stage !== 'CLOSING' and no primary beverage has been kept yet in this set; a coffee/digestif alongside dessert at the CLOSING stage is explicitly fine.",
+      "reason": "Inline comment: \"R3: a soft/hot beverage must not headline (no primary yet) unless closing (a coffee/digestif with dessert is fine); water never headlines.\"",
+      "location": "recommendationRules.js applyCategorySafety(), !PRIMARY_BEVERAGES.has(kind) && !primaryKept && stage !== 'CLOSING' branch"
+    },
+    {
+      "id": "beverage:water-headline",
+      "rule_code": "R3",
+      "status": "already-enforced",
+      "description": "Water must never be recommended as the sole headline beverage.",
+      "scope": "Triggers when the candidate's name matches /\\bwater\\b/i (isWaterish), its beverageKind resolves to SOFT, no primary beverage has been kept yet, and stage !== 'CLOSING'. Same rule family as R3's secondary-headline check, isolated to water specifically.",
+      "reason": "Same R3 inline comment as beverage:secondary-headline; water is treated as the extreme case of a secondary beverage that can never headline.",
+      "location": "recommendationRules.js applyCategorySafety(), kind === 'SOFT' && isWaterish(cand.item) branch"
+    },
+    {
+      "id": "beverage:already-in-cart",
+      "rule_code": "R4",
+      "status": "already-enforced",
+      "description": "Never recommend a beverage of a kind (WINE, or a specific DRINK beverageKind) already present in the cart.",
+      "scope": "Bypassed when the candidate is an upgrade REPLACEMENT of that exact kind (cand.isReplacement === true, set by aiService.recommend() via recommendationScoring.findReplacementTarget) — a same-kind swap is allowed, a same-kind addition is not.",
+      "reason": "Inline comment: \"R4: don't recommend a beverage of a kind already on the table — unless it's an upgrade replacement of that exact kind.\" This is the Phase 1 Recommendation Brain replacement-logic bypass.",
+      "location": "recommendationRules.js applyCategorySafety(), cartKinds.has(kind) && !isReplacement branch"
+    },
+    {
+      "id": "stage:no-starter-at-closing",
+      "rule_code": "R5",
+      "status": "already-enforced",
+      "description": "No starter once the table is closing (a dessert is already in the cart).",
+      "scope": "Bypassed for chef-authored candidates (candidate.chef === true — a chef may intentionally pair across stages) and for main-course replacement candidates (cand.isReplacement === true). enforceStage must also be on (config.reco.enforceStage !== false, default on).",
+      "reason": "Inline comment: \"R5: no starter once the table is closing (dessert in cart).\"",
+      "location": "recommendationRules.js applyCategorySafety(), type === 'STARTER' && stage === 'CLOSING' branch"
+    },
+    {
+      "id": "stage:no-second-main",
+      "rule_code": "R5",
+      "status": "already-enforced",
+      "description": "No second main course from the algorithm once the cart already has a main, and never two mains within one recommendation set.",
+      "scope": "Same chef/replacement bypass as stage:no-starter-at-closing. Triggers when cartHasMain (stage is MAIN or CLOSING) OR mainsKept >= 1 within the current pass.",
+      "reason": "Inline comment: \"R5: no second main from the algorithm when the cart already has a main, and never two mains in one rec set.\"",
+      "location": "recommendationRules.js applyCategorySafety(), type === 'MAIN' && (cartHasMain || mainsKept >= 1) branch"
+    },
+    {
+      "id": "dedupe:extra-dessert",
+      "rule_code": "R7",
+      "status": "already-enforced",
+      "description": "Cap desserts at one per recommendation set — never surface two dessert candidates in the same batch.",
+      "scope": "Applies to any candidate of type DESSERT once dessertsKept has already reached 1 in this pass. Not bypassed for chef candidates (unlike R5's starter/main checks, this counter is applied unconditionally after the stage-gate block).",
+      "reason": "Inline comment: \"R7: cap desserts at one per set.\"",
+      "location": "recommendationRules.js applyCategorySafety(), dessertsKept >= 1 branch"
+    },
+    {
+      "id": "dedupe:duplicate-item-by-name",
+      "rule_code": "R6",
+      "status": "already-enforced-elsewhere",
+      "description": "Never recommend the same menu item twice within one recommend() call (dedupe by identity/role).",
+      "scope": "The file header groups 'R6/R7 dedupe by role' together, but only R7 (extra-dessert cap) has a literal drop-reason string inside recommendationRules.js. R6's actual duplicate-prevention is a `seen` Set built in aiService.js's recommend(): addCandidate() checks normalizeName(item.name) against `seen` (pre-seeded with cart item names + excludeNames) and silently skips anything already present, before candidates ever reach applyCategorySafety().",
+      "reason": "No inline comment in recommendationRules.js names this explicitly as R6 — inferred from the file's own header comment listing 'R6/R7 dedupe by role' as a pair, cross-referenced against the only other duplicate-prevention mechanism in the pipeline.",
+      "location": "aiService.js recommend(), addCandidate()'s `seen` Set (NOT in recommendationRules.js)"
+    },
+    {
+      "id": "structural:tannin-clashes-with-oily-fish",
+      "status": "implemented",
+      "description": "Never recommend a full-bodied red wine alongside an oily fish dish already in the cart (spec 2.2.1: tannic reds clash with oily fish, creating metallic flavours).",
+      "scope": "Applies to WINE candidates where tags.drinkType === 'red' and tags.body === 'full', when the cart contains an item whose name matches the oily-fish pattern. Bypassed for chef-authored candidates (candidate.chef === true), matching R1-R7's chef bypass pattern.",
+      "reason": "Sommelier principle (spec section 2.2.1, 'Tannin and oily fish'): high-acid, low-tannin whites are preferred over tannic reds with oily fish — the metallic clash is a real, named structural conflict, not a style preference.",
+      "oilyFishPattern": "salmon|mackerel|sardine|trout|tuna",
+      "_consumer": "server/services/candidateFilterPipeline.js reads oilyFishPattern from businessRules.ruleById('structural:tannin-clashes-with-oily-fish') — this is the live, authoritative pattern, not a separately-hardcoded regex."
+    },
+    {
+      "id": "value:never-downsell",
+      "status": "gap-to-implement",
+      "description": "Never recommend a same-role replacement that is CHEAPER than the item it replaces, unless the guest has explicitly asked for something more affordable or lighter.",
+      "scope": "Would apply to any candidate where scoring.findReplacementTarget() resolves a replacementTarget and netRevenueIncrease(candidatePrice, replacementTarget) is negative — i.e. the swap is a downgrade, not an upgrade.",
+      "reason": "A recommendation engine whose entire replacement mechanism is framed as an 'upgrade' (see recommendationScoring.js header: 'a same-role swap counts only the price delta') should never silently suggest a cheaper alternative as if it were the same kind of move — that erodes trust and check size alike, unless the guest has signaled they want value.",
+      "gap_detail": "Confirmed gap: recommendationScoring.js's netRevenueIncrease() computes price - replacementTarget.price with no floor or sign check, and nothing in recommendationRules.js or aiService.js filters out a negative-delta replacement candidate before it's surfaced."
+    },
+    {
+      "id": "value:on-request-only",
+      "status": "gap-to-implement",
+      "description": "Only surface cheaper/value-tier alternatives when the guest has explicitly asked for something more affordable, lighter, or budget-conscious — never proactively downsell.",
+      "scope": "Would gate any value-tier candidate behind an explicit guest signal (e.g. an intent slot like budget/value, analogous to the existing 'light'/'lighter' adjective handling in aiService.js's scoreSearch()) rather than letting it surface from popularity/course-completion scoring alone.",
+      "reason": "Proactively pushing a cheaper item can read as presumptuous or as the restaurant discouraging a guest from spending — value suggestions should be reactive to a stated guest need, not an algorithmic default.",
+      "gap_detail": "Confirmed gap: aiService.js's scoreSearch() has a 'light/lighter/healthy/fresh/delicate' adjective boost (score += 14 toward salads/starters, score -= 14 away from heavier dishes), which is about lightness of the dish, not its price — there is no price-tier-aware filter and no guard limiting value-tier suggestions to only-on-request."
+    },
+    {
+      "id": "stage:no-dessert-before-mains",
+      "status": "gap-to-implement",
+      "description": "Never recommend a dessert before a main course has been ordered (distinct from the existing R5 'no starter at closing' rule, which governs the opposite direction — blocking starters once dessert is already in the cart).",
+      "scope": "Would apply to DESSERT-type candidates while mealStage(cart) is EMPTY or OPENING (no MAIN in the cart yet) — a genuinely new stage-gate condition, not a relabeling of an existing one.",
+      "reason": "A dessert offered before the table has even ordered a main reads as the algorithm not tracking the meal's arc — hospitality convention is dessert closes a meal, it doesn't open or interrupt one.",
+      "gap_detail": "CONFIRMED TRUE GAP, not already covered by R5. R5 (stage:no-starter-at-closing / stage:no-second-main) only fires on STARTER-at-CLOSING and a second MAIN — it never inspects DESSERT candidates against the absence of a MAIN. The only dessert-specific rule in recommendationRules.js is R7 (dedupe:extra-dessert, capping desserts at one per set), which applies at every stage including EMPTY/OPENING. So today a dessert candidate CAN be recommended before any main is in the cart, as long as no other dessert has already been kept in the same batch — R5 and R7 do not compose to block this."
+    },
+    {
+      "id": "beverage:no-new-wine-after-coffee",
+      "status": "gap-to-implement",
+      "description": "Never recommend a new wine once coffee has been ordered — once the table has moved to coffee, the wine-pairing window has closed.",
+      "scope": "Would apply to WINE-type candidates once the cart contains a HOT beverageKind item (coffee/espresso/etc, the same signal recommendationScoring.js's nextJourneyStage() already reads via `hasCoffee = items.some(it => classifier.beverageKind(it) === 'HOT')`).",
+      "reason": "Coffee is the hospitality signal that the table is winding the meal down toward the bill — pushing a new wine at that point works against the meal's natural arc and can feel like an ill-timed upsell.",
+      "gap_detail": "Confirmed gap: mealStage() in recommendationRules.js only has four stages (EMPTY/OPENING/MAIN/CLOSING) driven by MAIN/DESSERT presence — it has no concept of a HOT/coffee-driven stage at all, so nothing blocks a WINE candidate once coffee is in the cart. recommendationScoring.js's nextJourneyStage() DOES track hasCoffee, but only to decide the single 'next best stage to suggest' for its own (currently unused-for-filtering) journey sequencing — it is not wired into applyCategorySafety() as a hard block."
+    },
+    {
+      "id": "timing:never-interrupt-to-upsell",
+      "status": "implemented",
+      "description": "Never surface a proactive suggestion while the guest is mid-conversation about something else (e.g. mid-order, asking a question, or actively engaged with a different topic) — wait for a natural pause.",
+      "scope": "Would need a conversational-state signal (e.g. 'is this turn answering a direct question vs. an open invitation for suggestions') gating whether recommend()'s output is surfaced proactively at all, independent of what candidates it generates.",
+      "reason": "Suggestions dropped into the middle of an unrelated exchange feel like an interruption, which is the single fastest way to make an AI assistant feel like a sales bot rather than a host — timing matters as much as content.",
+      "gap_detail": "Phase 4: implemented for the one concrete branch that violated it — aiService.chat()'s knowledgeAnswer branch (hours/policy/allergen questions) no longer attaches suggestions. Not a general conversational-timing model across every branch (see suppressForIntentTypes below for exactly which intent types this covers).",
+      "suppressForIntentTypes": ["info", "offtopic"],
+      "_consumer": "server/services/businessRules.js's shouldSuppressProactive(intentType) reads suppressForIntentTypes directly — this array is the live, authoritative config, not documentation of a hardcoded set."
+    },
+    {
+      "id": "utterance:max-one-upgrade-plus-one-pairing",
+      "status": "gap-to-implement",
+      "description": "Within a single reply/utterance, never offer more than one premium upgrade AND one pairing suggestion at the same time — keep each conversational turn to a single clear ask.",
+      "scope": "Would cap the composition of a single chat()/recommend() response's suggestion set by TYPE (at most one isReplacement-flagged upgrade, at most one net-new pairing) rather than by raw count.",
+      "reason": "Stacking multiple asks in one breath (an upgrade AND a new pairing AND something else) overwhelms the guest and reads as a hard sell rather than an attentive suggestion — one clear idea per turn is how a real waiter paces a table.",
+      "gap_detail": "Confirmed gap: recommend()'s recommendationLimit is bounded by count only (Math.min(8, Math.max(3, payload.limit || cart.length || 4))) with no distinction between how many of the returned candidates are upgrade-replacements versus fresh pairings — a set of 4 could include 2+ replacement candidates and 2+ net-new pairings simultaneously."
+    },
+    {
+      "id": "utterance:max-3-unrelated-items",
+      "status": "gap-to-implement",
+      "description": "Never present more than 3 unrelated items to a guest at once — a burst of unrelated suggestions reads as a scattergun menu dump, not a curated recommendation.",
+      "scope": "Would cap or group the candidate list by relatedness (shared course/anchor dish/rotationGroup) so a reply either tells one coherent story (e.g. a 3-course build-out) or trims to <=3 genuinely unrelated picks.",
+      "reason": "More than a small number of unrelated suggestions at once stops feeling like guidance and starts feeling like the algorithm hedging its bets — a confident host narrows the choice, they don't widen it.",
+      "gap_detail": "Confirmed gap: recommend()'s default/max limit is 4-8 items (recommendationLimit = Math.min(8, Math.max(3, ...))) with no relatedness clustering — e.g. a bare 'what's good' can return up to 4 candidates spanning entirely different categories (wine, main, dessert, starter) with no cap keyed to how related they are to one another."
+    },
+    {
+      "id": "consistency:no-contradicting-previous-recommendations",
+      "status": "gap-to-implement",
+      "description": "Never contradict a recommendation already made earlier in the same conversation (e.g. steering toward seafood after already steering the guest toward red meat, without an explicit reason like a stated dietary change or swap request).",
+      "scope": "Would need to track the THEME/DIRECTION of prior suggestions this session (not just which exact item names were shown, which excludeNames/session.ignoredNames already covers) and penalize or block a candidate that contradicts that established direction absent an explicit guest-driven swap intent.",
+      "reason": "A guest who's been steered toward a hearty red-meat pairing, then a few turns later steered toward a light seafood dish with no stated reason, experiences the assistant as inconsistent and untrustworthy — consistency of narrative matters as much as any single recommendation's quality.",
+      "gap_detail": "Confirmed gap: chatSession.js / session.ignoredNames only remembers which specific item NAMES were suggested-and-ignored last turn (used to exclude them from re-suggestion) — there is no tracking of the semantic direction/theme of prior suggestions, so nothing prevents two consecutive turns from recommending contradictory dish profiles. The only theme-consistency mechanism that exists is buildSwapReply(), which is triggered by an EXPLICIT guest swap intent, not something the engine self-polices."
+    },
+    {
+      "id": "copy:no-robotic-templatey-lines",
+      "status": "gap-to-implement",
+      "description": "Recommendation copy must never read as an obviously templated, robotic fill-in-the-blank line — it should sound like an attentive human host, varied across turns and guests.",
+      "scope": "Would apply to every surface that generates reason/script text: reasonComposer.js's pairingReason(), nlgService.js's phrase(), and the raw fallback strings in aiService.js (e.g. cartRecommendations()'s fallbackScript template literal).",
+      "reason": "Even accurate, on-topic copy can undercut trust if it's obviously the same mad-lib every time — hospitality language should feel bespoke to the moment, not assembled from a fixed template a guest can pattern-match after a few exchanges.",
+      "gap_detail": "Partial mitigation exists but no enforcement: reasonComposer.js/nlgService.js/heroPairings.js already provide authored, varied copy for hero-tier dishes (see project_recommendation_brain_v2_narrative note), and there IS a 'never blank' fallback chain. But the literal fallback strings are still fixed templates (e.g. aiService.js cartRecommendations()'s `I see you have the ${from} — many guests pair it with our ${r.name}.${why}` and buildSuggestionReply()'s `${prefix} ${names.join(', ')}. Tap a dish card and I can help you build the rest of the table.`), and there is no automated check (e.g. a repetition/n-gram detector across a session) that flags or varies a line a guest has already heard."
+    }
+  ]
+}

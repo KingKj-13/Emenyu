@@ -1,0 +1,103 @@
+/* Sticky, not fixed: the promotional hub (Deal of the Day/Specials/Happy
+   Hour/Promotions) now renders above this in the Menu page's normal flow,
+   so this bar should appear in its natural place after that content, then
+   pin under the header once scrolled to -- not overlay the promo hub from
+   the very top of the page. */
+.bar {
+  position: sticky;
+  top: var(--header-h);
+  z-index: var(--z-tabs);
+  /* Full-bleed edge-to-edge despite living inside MenuPage's padded,
+     max-width-constrained .content -- matches the old fixed bar's own
+     left:0/right:0 span (independent of .content's own width) exactly. */
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  background: rgba(var(--color-ink-rgb), 0.92);
+  border-bottom: 1px solid rgba(var(--color-gold-rgb), 0.14);
+  box-shadow: var(--shadow-xs);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.strip {
+  display: flex;
+  gap: 5px;
+  padding: 6px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.strip::-webkit-scrollbar { display: none; }
+
+.pill {
+  flex-shrink: 0;
+  padding: 6px 15px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  /* Unselected tabs must still read as tappable, not disabled. */
+  color: var(--color-sand);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.pill:hover {
+  color: var(--color-cream);
+  border-color: rgba(var(--color-gold-rgb), 0.25);
+  background: rgba(var(--color-gold-rgb), 0.05);
+}
+
+.pillActive {
+  color: var(--color-gold);
+  border-color: rgba(var(--color-gold-rgb), 0.5);
+  background: rgba(var(--color-gold-rgb), 0.1);
+}
+
+/* Top-level 4-group row */
+.groupStrip {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px 0;
+}
+
+.groupPill {
+  flex: 1 1 0;
+  padding: 9px 6px;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.18);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.03);
+  /* Unselected tabs must still read as tappable, not disabled. */
+  color: var(--color-sand);
+  font-family: var(--font-heading, inherit);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.groupPill:hover {
+  color: var(--color-cream);
+  border-color: rgba(var(--color-gold-rgb), 0.4);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-xs);
+}
+
+.groupPill:active { transform: translateY(0); }
+
+.groupActive {
+  color: #1a1206;
+  border-color: transparent;
+  background: linear-gradient(160deg, var(--color-gold-soft, #e3c980), var(--color-gold));
+  box-shadow: 0 4px 14px rgba(var(--color-gold-rgb), 0.3), var(--shadow-xs);
+}
+
+.groupActive:hover { transform: none; }
+
+/* the sub-row sits a touch tighter under the group row */
+.groupStrip + .strip { padding-top: 7px; }

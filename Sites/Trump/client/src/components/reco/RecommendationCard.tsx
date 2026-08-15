@@ -3,8 +3,8 @@
 // layout; colours use guest tokens with hardcoded gold/cream fallbacks so the card
 // also looks right inside the waiter theme.
 import { useState } from 'react';
-import { Plus, Sparkles, Play } from 'lucide-react';
-import { resolveImage, resolveAssetPath, resolveVideo } from '../../lib/imageResolver';
+import { Plus, Sparkles, Play, Repeat, Crown, SkipForward } from 'lucide-react';
+import { resolveThumbnail, resolveVideo, FALLBACK_IMAGE } from '../../lib/imageResolver';
 import { formatPrice } from '../../lib/menuUtils';
 import type { MenuItem } from '../../types/menu';
 import styles from './RecommendationCard.module.css';
@@ -20,8 +20,19 @@ export interface RecommendationItem {
   source_title?: string;
   reason?: string;
   chef?: boolean;
+  // Curated Demo Mode (server/services/curatedDemoJourney.js): true only for
+  // a pick surfaced by the hand-designed demo journeys — gates the Skip
+  // button below, since Skip/alternatives only make sense for a curated pick
+  // (the algorithmic engine has no "next alternative" concept to advance to).
+  curated?: boolean;
   rotationGroup?: string;
   dbId?: number;
+  // Phase 1 (Recommendation Brain) — not yet rendered by this card (no UI
+  // redesign this phase); typed here so callers can read them without `any`.
+  confidence?: number;
+  expectedValue?: number;
+  netRevenueIncrease?: number;
+  replacement?: { name: string; previousPrice: number } | null;
 }
 
 interface Props {
@@ -37,9 +48,30 @@ interface Props {
   slotLabel?: string;   // course label shown top-left, data-driven (e.g. "Starter")
   youChoice?: boolean;  // marks the dish whose modal is currently open
   playable?: boolean;   // poster-first, tap-to-play video (never autoplays/eager-loads)
+  // Phase 3 (Dining Concierge) — "Replace X" swaps a same-role item already in
+  // the cart (Phase 1 Replacement Logic: item.replacement) instead of adding a
+  // second one. Only passed by callers that trust the replacement is a genuine
+  // same-course swap (e.g. the wine list, or an explicit premium-upgrade
+  // candidate) — never rendered from item.replacement alone.
+  onReplace?: () => void;
+  premium?: boolean; // "Premium" badge (e.g. the Wagyu upgrade nudge)
+  large?: boolean;   // bigger image/text for a single-card context (e.g. chat, one card at a time)
+  // Curated Demo Mode: "not this one, show the next alternative" — only ever
+  // rendered when item.curated is true (see RecommendationItem.curated above).
+  onSkip?: () => void;
+  skipLabel?: string;
 }
 
-const FALLBACK_IMAGE = resolveAssetPath('Images/Tomahawk.jpg');
+// Phase 5 (AI Concierge): a natural-language stand-in for the raw confidence
+// number the engine returns — never show a percentage or score to a guest.
+// Deliberately says nothing for lower-confidence picks rather than
+// editorializing them as unsure; the reason text still carries the "why".
+function confidenceLabel(confidence?: number): string | null {
+  if (typeof confidence !== 'number') return null;
+  if (confidence >= 0.85) return 'A confident pick';
+  if (confidence >= 0.65) return 'Recommended';
+  return null;
+}
 
 // A RecommendationItem carries only the fields the engine returns; project it onto
 // the MenuItem shape the image/video resolvers expect (categoryType drives both the
@@ -57,9 +89,12 @@ function asMenuItem(item: RecommendationItem): MenuItem {
   } as MenuItem;
 }
 
+// Every variant (compact 66px, detailed/waiter 84-92px, journey/large 190px)
+// is a thumbnail-sized slot — resolveThumbnail() already handles both an
+// explicit item.img and the demo-fallback path, so one call covers both of
+// imageFor()'s old branches without ever shipping the full-res source.
 function imageFor(item: RecommendationItem): string {
-  if (item.img && item.img.trim()) return resolveAssetPath(item.img);
-  return resolveImage(asMenuItem(item));
+  return resolveThumbnail(asMenuItem(item));
 }
 
 export function RecommendationCard({
@@ -74,11 +109,24 @@ export function RecommendationCard({
   slotLabel,
   youChoice,
   playable,
+  onReplace,
+  premium,
+  large,
+  onSkip,
+  skipLabel = 'Skip',
 }: Props) {
   const [playing, setPlaying] = useState(false);
   const src = imageFor(item);
   const price = Number(item.price) || 0;
   const reason = (showReason || variant !== 'compact') ? item.reason : '';
+  // Phase 5 (AI Concierge): "expected additional value" naturally maps to the
+  // price delta of an upgrade/replacement (the whole point of the uplift pill)
+  // — auto-derive it from the engine's own netRevenueIncrease when a caller
+  // hasn't passed an explicit uplift, so every replace-style card gets one
+  // without every call site needing to compute/pass it themselves.
+  const resolvedUplift = typeof uplift === 'number' ? uplift
+    : (item.replacement && typeof item.netRevenueIncrease === 'number' && item.netRevenueIncrease > 0 ? item.netRevenueIncrease : undefined);
+  const confidenceText = (showReason || variant !== 'compact') ? confidenceLabel(item.confidence) : null;
   // Poster-first: resolve the video only to decide whether to offer a play button.
   // The <video> element is mounted (and the file requested) ONLY after a tap.
   const videoSrc = playable ? resolveVideo(asMenuItem(item)) : null;
@@ -153,7 +201,26 @@ export function RecommendationCard({
           <div className={styles.jInfo}>{infoBody}</div>
         )}
 
-        {onAdd && price > 0 && (
+        {onAdd && price > 0 && item.curated && onSkip ? (
+          <div className={styles.jActions}>
+            <button
+              type="button"
+              className={styles.jAddBtn}
+              aria-label={`Add ${item.name}`}
+              onClick={e => { e.stopPropagation(); onAdd(); }}
+            >
+              <Plus size={15} /><span>{addLabel}</span>
+            </button>
+            <button
+              type="button"
+              className={styles.jSkipBtn}
+              aria-label={`Skip ${item.name}`}
+              onClick={e => { e.stopPropagation(); onSkip(); }}
+            >
+              <SkipForward size={14} /><span>{skipLabel}</span>
+            </button>
+          </div>
+        ) : onAdd && price > 0 && (
           <button
             type="button"
             className={styles.jAddBtn}
@@ -168,10 +235,16 @@ export function RecommendationCard({
   }
 
   // ── Existing variants (compact / detailed / waiter) — unchanged ──
-  const tagText = item.chef ? "Chef's pick" : item.source_title;
+  // source_title is a candidate-generation rule label ("People also ordered",
+  // "Goes well together"...), not sommelier copy — on ~98% of cards (everything
+  // that isn't chef-authored) it read as generic marketing text sitting right
+  // above the actual composed reason. Chef's pick stays; the rule-name label
+  // for everything else doesn't add anything the reason text below it doesn't
+  // already say better.
+  const tagText = item.chef ? "Chef's pick" : undefined;
 
   return (
-    <div className={`${styles.card} ${styles[variant]} ${item.chef ? styles.chef : ''}`}>
+    <div className={`${styles.card} ${styles[variant]} ${item.chef ? styles.chef : ''} ${large ? styles.large : ''}`}>
       <button type="button" className={styles.main} onClick={onOpen} aria-label={`View ${item.name}`}>
         {src ? (
           <img
@@ -190,22 +263,55 @@ export function RecommendationCard({
           <div className={styles.imgPh} />
         )}
         <div className={styles.info}>
-          {tagText && (
+          {(tagText || premium) && (
             <span className={styles.tag}>
               {item.chef && <Sparkles size={10} className={styles.tagIcon} />}
               {tagText}
+              {premium && <span className={styles.premiumTag}><Crown size={10} className={styles.tagIcon} />Premium</span>}
             </span>
           )}
           <span className={styles.name}>{item.name}</span>
           {reason && <span className={styles.reason}>{reason}</span>}
+          {confidenceText && <span className={styles.confidence}>{confidenceText}</span>}
           <span className={styles.bottomRow}>
             {price > 0 && <span className={styles.price}>{formatPrice(price)}</span>}
-            {typeof uplift === 'number' && uplift > 0 && <span className={styles.uplift}>+{formatPrice(uplift)}</span>}
+            {typeof resolvedUplift === 'number' && resolvedUplift > 0 && <span className={styles.uplift}>+{formatPrice(resolvedUplift)}</span>}
           </span>
           {note && <span className={styles.note}>“{note}”</span>}
         </div>
       </button>
-      {onAdd && price > 0 && (
+      {onReplace && item.replacement && price > 0 ? (
+        <button
+          type="button"
+          className={styles.addBtn}
+          aria-label={`Replace ${item.replacement.name} with ${item.name}`}
+          onClick={e => { e.stopPropagation(); onReplace(); }}
+        >
+          <Repeat size={variant === 'compact' ? 12 : 15} />
+          {variant !== 'compact' && <span>Replace</span>}
+        </button>
+      ) : onAdd && price > 0 && item.curated && onSkip ? (
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.addBtn}
+            aria-label={`Add ${item.name}`}
+            onClick={e => { e.stopPropagation(); onAdd(); }}
+          >
+            <Plus size={variant === 'compact' ? 12 : 15} />
+            {variant !== 'compact' && <span>{addLabel}</span>}
+          </button>
+          <button
+            type="button"
+            className={styles.skipBtn}
+            aria-label={`Skip ${item.name}`}
+            onClick={e => { e.stopPropagation(); onSkip(); }}
+          >
+            <SkipForward size={variant === 'compact' ? 12 : 15} />
+            {variant !== 'compact' && <span>{skipLabel}</span>}
+          </button>
+        </div>
+      ) : onAdd && price > 0 && (
         <button
           type="button"
           className={styles.addBtn}

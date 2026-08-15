@@ -28,6 +28,7 @@
     "chat:validate": "node scripts/chat-validate.js",
     "reco:health": "node scripts/reco-health.js",
     "reco:health:test": "node scripts/reco-health.js --selftest",
+    "demo:validate": "node scripts/curated-demo-validate.js",
     "reco:verify:live": "node scripts/reco-verify-live.js",
     "reco:validate:phase5": "node scripts/phase5-validate.js",
     "reco:bench": "node scripts/reco-bench.js",
@@ -52,8 +53,10 @@
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.1.0",
     "multer": "^2.0.2",
+    "sharp": "^0.33.5",
     "socket.io": "^4.8.1",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "xlsx": "^0.18.5"
   },
   "overrides": {
     "ws": "8.20.1"

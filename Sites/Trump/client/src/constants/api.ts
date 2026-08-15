@@ -1,7 +1,24 @@
-export const BASE_PATH = '/Trump';
-export const API_PREFIX = '/Trump';
-export const RESTAURANT_ID = 'trump';
-export const SOCKET_PATH = '/Trump/socket.io';
+// Build-time overrides let the exact same client bundle be rebuilt once more
+// for the public "Demo Steakhouse" tenant (VITE_BASE_PATH=/demo etc. — see
+// Sites/Demo/), while Trump's own default build is byte-identical to before.
+export const BASE_PATH = import.meta.env.VITE_BASE_PATH || '/Trump';
+export const API_PREFIX = BASE_PATH;
+export const RESTAURANT_ID = import.meta.env.VITE_RESTAURANT_ID || 'trump';
+export const SOCKET_PATH = `${BASE_PATH}/socket.io`;
+export const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+export const BRAND_NAME = import.meta.env.VITE_BRAND_NAME || 'Trump';
+// LandingPage's h1 has always read "Trumps" (its own stylized form, distinct
+// from the "Trump" used elsewhere) — same override, different Trump-default,
+// so a demo build sets VITE_BRAND_NAME once and both render identically.
+export const LANDING_BRAND_NAME = import.meta.env.VITE_BRAND_NAME || 'Trumps';
+export const BRAND_TAGLINE = import.meta.env.VITE_BRAND_TAGLINE || 'Prime Grillhouse';
+export const QR_BASE = import.meta.env.VITE_QR_BASE || 'https://emenyu.com/Trump';
+// The one menu category whose *apiKey* (not just display label) is brand-prefixed
+// in the live Trump data — everything downstream (landing-page deep links, the
+// chapter list's category filter, the icon map) must key off the same value a
+// given tenant's real MenuCategory.title uses. Defaults preserve Trump exactly.
+export const MAINS_CATEGORY_TITLE = import.meta.env.VITE_MAINS_CATEGORY_TITLE || 'Trumps Premium Steaks';
+export const PASTAS_CATEGORY_TITLE = import.meta.env.VITE_PASTAS_CATEGORY_TITLE || 'Trumps Pastas';
 
 export const ENDPOINTS = {
   menu: `${API_PREFIX}/api/menu`,
@@ -20,9 +37,18 @@ export const ENDPOINTS = {
   complete: `${API_PREFIX}/complete`,
   incomplete: `${API_PREFIX}/incomplete`,
   upload: `${API_PREFIX}/api/upload`,
+  ordersImport: `${API_PREFIX}/api/admin/orders/import`,
   waiterTableStatus: (tableId: string) => `${API_PREFIX}/api/waiter/table/${tableId}/status`,
   waiterAddItems: `${API_PREFIX}/api/waiter/add-items`,
   waiterArchiveTable: `${API_PREFIX}/api/waiter/archive-table`,
+  // Priority 8 (demo polish) — these 3 were hand-typed as literal "/Trump/..."
+  // strings in api.ts instead of going through API_PREFIX like everything
+  // else here, so any non-Trump tenant calling them (Carmella's Admin "Chat
+  // Logs"/"Chef Recs" pages, in particular) hit Trump's own endpoints, not
+  // its own tenant's.
+  deleteOrder: (type: 'orders' | 'history', filename: string) => `${API_PREFIX}/delete/${type}/${filename}`,
+  recommendationsAdmin: `${API_PREFIX}/api/recommendations`,
+  chatHistory: `${API_PREFIX}/api/chat-history`,
   menuAdminItems: `${API_PREFIX}/api/menu/items`,
   menuCategories: `${API_PREFIX}/api/menu/categories`,
   menuItemAvailability: (id: number) => `${API_PREFIX}/api/menu/items/${id}/availability`,
@@ -43,9 +69,30 @@ export const ENDPOINTS = {
   analyticsHours: `${API_PREFIX}/api/analytics/hours`,
   analyticsTrend: `${API_PREFIX}/api/analytics/trend`,
   analyticsDayOfWeek: `${API_PREFIX}/api/analytics/day-of-week`,
+  analyticsPairings: `${API_PREFIX}/api/analytics/pairings`,
+  analyticsJourney: `${API_PREFIX}/api/analytics/journey`,
   analyticsRecommendations: `${API_PREFIX}/api/analytics/recommendations`,
   analyticsRecommendationsInsights: `${API_PREFIX}/api/analytics/recommendations/insights`,
   recoEvents: `${API_PREFIX}/api/reco/events`,
+  // QR-menu redesign — guest engagement (anonymous) and the reports built on it
+  engagement: `${API_PREFIX}/api/engagement`,
+  engagementSummary: `${API_PREFIX}/api/analytics/engagement`,
+  engagementTimeline: `${API_PREFIX}/api/analytics/engagement/timeline`,
+  engagementLeastViewed: `${API_PREFIX}/api/analytics/engagement/least-viewed`,
+  butcheryCuts: `${API_PREFIX}/api/butchery/cuts`,
+  itemGallery: (id: number) => `${API_PREFIX}/api/menu/items/${id}/gallery`,
+  locales: `${API_PREFIX}/api/locales`,
+  // Owner content management (media galleries, translations, butchery cuts)
+  adminContentFields: `${API_PREFIX}/api/admin/content/fields`,
+  adminMedia: `${API_PREFIX}/api/admin/content/media`,
+  adminMediaItem: (id: number) => `${API_PREFIX}/api/admin/content/media/${id}`,
+  adminMediaReorder: `${API_PREFIX}/api/admin/content/media/reorder`,
+  adminTranslations: `${API_PREFIX}/api/admin/content/translations`,
+  adminTranslationCoverage: `${API_PREFIX}/api/admin/content/translations/coverage`,
+  adminCuts: `${API_PREFIX}/api/admin/content/cuts`,
+  adminCut: (id: number) => `${API_PREFIX}/api/admin/content/cuts/${id}`,
+  adminCutItems: (id: number) => `${API_PREFIX}/api/admin/content/cuts/${id}/items`,
+  adminCutItem: (id: number, itemId: number) => `${API_PREFIX}/api/admin/content/cuts/${id}/items/${itemId}`,
   adminTableCarts: `${API_PREFIX}/api/admin/tables/carts`,
   reservations: `${API_PREFIX}/api/reservations`,
   ratings: `${API_PREFIX}/api/ratings`,
@@ -67,7 +114,11 @@ export const ENDPOINTS = {
   guests: `${API_PREFIX}/api/guests`,
   guest: (id: number) => `${API_PREFIX}/api/guests/${id}`,
   seatGuest: (tableId: string) => `${API_PREFIX}/api/waiter/table/${tableId}/seat-guest`,
+  aiEvents: `${API_PREFIX}/api/ai-events`,
+  resolveAiEvent: (id: number) => `${API_PREFIX}/api/ai-events/${id}/resolve`,
+  verifyTable: (tableId: string) => `${API_PREFIX}/api/admin/verify/${tableId}`,
   tableCovers: (tableId: string) => `${API_PREFIX}/api/waiter/table/${tableId}/covers`,
+  completeTable: (tableId: string) => `${API_PREFIX}/api/waiter/table/${tableId}/complete`,
   nlgStatus: `${API_PREFIX}/api/waiter/nlg-status`,
   waiterTasks: `${API_PREFIX}/api/waiter/tasks`,
   waiterTaskAck: (id: number | string) => `${API_PREFIX}/api/waiter/tasks/${id}/ack`,
@@ -96,4 +147,7 @@ export const ENDPOINTS = {
   notificationsAckAll: `${API_PREFIX}/api/notifications/ack-all`,
   ownerOperations: `${API_PREFIX}/api/owner/operations`,
   auditTrail: `${API_PREFIX}/api/audit`,
+  // Curated Demo Mode
+  settings: `${API_PREFIX}/api/settings`,
+  rewardRedeem: (code: string) => `${API_PREFIX}/api/rewards/${encodeURIComponent(code)}/redeem`,
 } as const;

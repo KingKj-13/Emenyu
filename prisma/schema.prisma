@@ -30,6 +30,7 @@ model MenuCategory {
   title        String
   slug         String
   path         String         @unique
+  intro        String         @default("")
   parentId     Int?
   parent       MenuCategory?  @relation("MenuCategoryChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children     MenuCategory[] @relation("MenuCategoryChildren")
@@ -55,6 +56,8 @@ model MenuItem {
   name           String
   normalizedName String
   description    String       @default("")
+  story          String       @default("")
+  subtitle       String       @default("")
   price          Float        @default(0)
   calories       String       @default("")
   allergens      String       @default("")
@@ -66,11 +69,19 @@ model MenuItem {
   videoVisible   Boolean      @default(true)
   visible        Boolean      @default(true)
   available      Boolean      @default(true)
+  // Superset of `available` for tenants that need a third "ask the kitchen"
+  // state (e.g. Carmella's Gaspard persona). Trump's admin UI keeps using the
+  // boolean; new UIs should read/write this instead.
+  availability   String       @default("available")   // available | ask | unavailable
   chefPick       Boolean      @default(false)
   popular        Boolean      @default(false)
   sourceTitle    String       @default("")
   sortOrder      Int          @default(0)
   metadata       Json?
+  variants       MenuItemVariant[]
+  // QR-menu redesign: which butchery primals this dish is cut from. Back-relation
+  // only — no column is added to MenuItem itself.
+  cowCuts        CowCutItem[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -80,6 +91,47 @@ model MenuItem {
   @@index([available])
   @@index([chefPick])
   @@index([popular])
+}
+
+// Carmella: multi-choice items (e.g. "Amy's Choice": Plain / Ham & cheese /
+// Extra mushroom addon). isAddon marks a variant as an add-on to the base
+// item's price rather than an alternative to it.
+model MenuItemVariant {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("trump")
+  itemId       Int
+  item         MenuItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  name         String
+  price        Float    @default(0)
+  imagePath    String   @default("")
+  isAddon      Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([restaurantId, itemId, sortOrder])
+}
+
+// Carmella: time-windowed content (greeting, lead chapters, suggestion strip,
+// chat chips) that reorders/reskins the menu by time of day. Net-new — Trump
+// has no analog today.
+model DayPart {
+  id            Int      @id @default(autoincrement())
+  restaurantId  String   @default("trump")
+  slug          String
+  name          String
+  fromTime      String                    // "HH:MM", restaurant-local time
+  toTime        String
+  greeting      String   @default("")
+  leadChapters  Json?
+  gaspardChips  Json?
+  suggestStrip  Json?
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([restaurantId, slug])
+  @@index([restaurantId, sortOrder])
 }
 
 model FeaturedItem {
@@ -118,6 +170,9 @@ model Recommendation {
 // MenuItem.id (scalar, FK-constrained in SQL). recType + beverageKind drive the
 // category-safety layer; priority/active/season/rotationGroup drive ordering and
 // rotation; reason is the chef's one-line note shown on the recommendation card.
+// Carmella: curatorial item-to-item pairings (carmella-menu-data.json's
+// `pairings` map) reuse this model with recType="PAIRING" and `reason` as the
+// pairing note — no schema change needed (see ARCHITECTURE_DECISIONS.md AD-002).
 model MenuItemRecommendation {
   id            Int       @id @default(autoincrement())
   restaurantId  String    @default("trump")
@@ -379,6 +434,11 @@ model RecommendationEvent {
   originatingName   String   @default("")
   rotationGroup     String   @default("")
   sessionId         String   @default("")
+  // Device-aware recommendations: which guest device/table this event came
+  // from (client/src/services/storage.ts identities), alongside the existing
+  // analytics-only sessionId — lets reporting slice by device/table too.
+  deviceId          String   @default("")
+  tableId           String   @default("")
   mode              String   @default("customer")        // customer | waiter
   chef              Boolean  @default(false)
   value             Float    @default(0)                 // item price — revenue attribution on accepted/ordered
@@ -388,6 +448,7 @@ model RecommendationEvent {
   @@index([restaurantId, recommendedName])
   @@index([restaurantId, rotationGroup])
   @@index([restaurantId, source])
+  @@index([restaurantId, deviceId])
 }
 
 // Phase 5: database-backed recommended-order bundles — the menu "Not sure what to
@@ -405,6 +466,10 @@ model RecommendationBundle {
   priority      Int                        @default(100)
   rotationGroup String                     @default("")
   sortOrder     Int                        @default(0)
+  // Carmella: a fixed all-in price that may differ from summing item prices
+  // (null = fall back to summing items, Trump's current behavior).
+  total         Float?
+  daypart       String                     @default("")   // "" = all day parts
   items         RecommendationBundleItem[]
   createdBy     String                     @default("system")
   createdAt     DateTime                   @default(now())
@@ -412,6 +477,7 @@ model RecommendationBundle {
 
   @@index([restaurantId, active, priority])
   @@index([restaurantId, rotationGroup])
+  @@index([restaurantId, daypart])
 }
 
 model RecommendationBundleItem {
@@ -554,4 +620,242 @@ model Device {
 
   @@index([username, revokedAt])
   @@index([restaurantId, username])
+}
+
+// Curated Demo Mode — one-time-redemption "make-good" reward QR (Order
+// Complete flow: a guest who declined most curated recommendations gets
+// "your next drink is on us" instead of a thank-you). Same shape as
+// Device.refreshTokenHash above: only a hash of the signed secret is stored,
+// never the secret itself — redemption is a single atomic conditional
+// update (status: 'issued' -> 'redeemed'), which is what makes it provably
+// one-time-use even under a concurrent double-scan (see rewardService.js).
+model RewardCode {
+  id           Int       @id @default(autoincrement())
+  restaurantId String    @default("trump")
+  tableId      String    @default("")
+  deviceId     String    @default("")
+  codeHash     String    @unique
+  status       String    @default("issued") // issued | redeemed | expired | revoked
+  reason       String    @default("")       // e.g. "declined-recommendations"
+  issuedAt     DateTime  @default(now())
+  expiresAt    DateTime
+  redeemedAt   DateTime?
+  redeemedBy   String    @default("")       // staff username who redeemed it
+
+  @@index([restaurantId, deviceId])
+  @@index([restaurantId, status])
+}
+
+// AI Shared Event System — the single structured record for anything the
+// deterministic AI layer (chat-text pattern detection, guest-seating, order
+// composition) notices, so admin/waiter/analytics all read the same row
+// instead of each surface re-deriving its own interpretation. See
+// server/services/aiEventService.js for the event taxonomy and detection
+// rules; a linked WaiterTask (waiterTaskId) keeps the existing waiter
+// task-inbox UI working unchanged — this table is additive, not a
+// replacement for WaiterTask.
+model AiEvent {
+  id                     Int       @id @default(autoincrement())
+  restaurantId           String    @default("trump")
+  eventType              String    // birthday | anniversary | vip | returning_guest | high_value |
+                                    // wine_recommendation | upsell_opportunity | dietary_restriction | allergy |
+                                    // business_meeting | date_night | proposal | promotion_celebration |
+                                    // family_dinner | large_group | milestone
+  guestId                Int?
+  tableId                String    @default("")
+  waiterName             String    @default("")
+  priority               Int       @default(3)   // 1=urgent .. 3=low, same convention as WaiterTask.priority
+  confidence             Float     @default(1)   // 0..1 — deterministic rules, not ML; see aiEventService for how each type sets this
+  recommendedAction      String    @default("")
+  suggestedWaiterMessage String    @default("")
+  suggestedManagerAction String    @default("")
+  status                 String    @default("open") // open | acknowledged | resolved | dismissed
+  source                 String    @default("system") // chat | guest_seated | order_placed | system
+  payload                Json?
+  waiterTaskId           Int?
+  createdAt              DateTime  @default(now())
+  acknowledgedAt         DateTime?
+  resolvedAt             DateTime?
+
+  @@index([restaurantId, status, priority, createdAt])
+  @@index([restaurantId, tableId, status])
+  @@index([restaurantId, eventType])
+  @@index([restaurantId, guestId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// QR-MENU REDESIGN (2026-08-08) — additive only.
+//
+// Nothing above this line was modified: no column dropped, renamed or
+// retyped, no table removed. The redesign turns Trump from an ordering system
+// into a premium multilingual digital menu, and everything it needs is new
+// storage:
+//
+//   Translation   one row per (entity, locale, field) — NOT a duplicated menu
+//   MediaAsset    many photos/videos per item or cut, ordered, one featured
+//   CowCut        the butchery chart's primals, owned by the restaurant
+//   CowCutItem    which menu items are cut from which primal
+//   ViewEvent     anonymous guest engagement, the basis of admin analytics
+//
+// Existing order/waiter/guest tables are deliberately left in place. The new
+// product stops writing to them; it does not destroy what they hold.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Localized text for any entity, one row per field per locale.
+///
+/// Deliberately polymorphic rather than per-table translation columns: 14
+/// locales x 5 translatable fields would otherwise mean 70 columns on
+/// MenuItem alone, and adding the 15th language would be a migration. Here a
+/// new language is a new row and needs no schema change at all.
+///
+/// English is never stored here — the base row on MenuItem/MenuCategory IS the
+/// English source of truth and the fallback whenever a translation is missing.
+model Translation {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("trump")
+  entityType   String   // MENU_ITEM | MENU_CATEGORY | COW_CUT
+  entityId     Int
+  /// BCP-47, lowercase: af de fr nl it es pt-br zh-hans ja ko hi ru ar
+  locale       String
+  field        String   // name | description | story | subtitle | intro | texture
+  value        String
+  /// human | machine | imported — lets the admin panel flag unreviewed text
+  source       String   @default("human")
+  reviewed     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([entityType, entityId, locale, field])
+  @@index([restaurantId, locale])
+  @@index([entityType, entityId])
+}
+
+/// A photo or video attached to a menu item or a cow cut.
+///
+/// MenuItem.imagePath/videoPath stay exactly as they are — they remain the
+/// single "primary" media and every existing screen keeps working untouched.
+/// This table is the gallery on top of them, which is what the client asked
+/// for ("significantly more videos and photos").
+model MediaAsset {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("trump")
+  entityType   String   // MENU_ITEM | MENU_CATEGORY | COW_CUT
+  entityId     Int
+  kind         String   // IMAGE | VIDEO
+  /// Path relative to the tenant base (e.g. /Images/rump.webp) or absolute URL
+  url          String
+  /// Still frame for a video, or a smaller variant for an image
+  posterUrl    String   @default("")
+  alt          String   @default("")
+  caption      String   @default("")
+  width        Int?
+  height       Int?
+  /// Video length in seconds, when known — used for completion-rate analytics
+  durationSec  Int?
+  sortOrder    Int      @default(0)
+  /// Exactly one featured asset per entity is the intended convention; the
+  /// admin UI enforces it rather than the database, so re-ordering never fails
+  /// mid-transaction.
+  featured     Boolean  @default(false)
+  visible      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([restaurantId, entityType, entityId, sortOrder])
+  @@index([restaurantId, kind])
+}
+
+/// A primal cut on the butchery chart.
+///
+/// The chart's geometry (SVG paths, label placement) stays in the client — it
+/// is presentation, not data. What lives here is everything the restaurant
+/// should be able to edit without a deploy: names, copy, which menu items come
+/// off the cut, and the media attached to it.
+model CowCut {
+  id           Int          @id @default(autoincrement())
+  restaurantId String       @default("trump")
+  /// Matches the client catalogue's cut id: rib, sirloin, fillet, rump, chuck,
+  /// brisket, shin, neck, thinflank, thickflank, topside, silverside
+  slug         String
+  name         String
+  /// The other convention's name for the same anatomy (US vs ZA butchery)
+  altName      String       @default("")
+  description  String       @default("")
+  texture      String       @default("")
+  /// Cooking methods this cut suits — shown as chips
+  bestFor      String[]     @default([])
+  sortOrder    Int          @default(0)
+  active       Boolean      @default(true)
+  items        CowCutItem[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([restaurantId, slug])
+  @@index([restaurantId, active, sortOrder])
+}
+
+/// Which menu items come off which primal.
+///
+/// Replaces the client-side name-matching rules with real, editable data. The
+/// regex rules remain in the client as the seed/fallback for a restaurant that
+/// has not curated its mapping yet.
+model CowCutItem {
+  id         Int      @id @default(autoincrement())
+  cutId      Int
+  cut        CowCut   @relation(fields: [cutId], references: [id], onDelete: Cascade)
+  menuItemId Int
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  /// PRIMARY = genuinely this cut. RELATED = made from it (mince, a bone-in
+  /// steak carrying the lobe) and always shown under its own heading.
+  matchType  String   @default("PRIMARY")
+  /// Heading for RELATED groups, e.g. "Ground for our patties"
+  label      String   @default("")
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@unique([cutId, menuItemId])
+  @@index([menuItemId])
+}
+
+/// One anonymous guest interaction.
+///
+/// No account, no name, no IP: `sessionId` is a random id minted in the
+/// browser for one sitting, and that is the only identifier stored. It answers
+/// "which steak is looked at most", "which cuts get explored", "which
+/// languages are actually used" without knowing who anyone is.
+model ViewEvent {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("trump")
+  /// MENU_VIEW | CATEGORY_VIEW | ITEM_VIEW | CUT_VIEW | VIDEO_PLAY |
+  /// VIDEO_PROGRESS | VIDEO_COMPLETE | PHOTO_VIEW | LANGUAGE_SELECT | SEARCH
+  eventType    String
+  /// Random per-sitting id from the client. Not a user id.
+  sessionId    String
+  /// BCP-47 locale active when the event fired — drives language distribution
+  locale       String   @default("en")
+  menuItemId   Int?
+  categoryId   Int?
+  /// CowCut.slug, denormalized so cut analytics survive a cut being re-seeded
+  cutSlug      String?
+  /// Which table's QR was scanned. Room-level, not person-level.
+  tableId      String   @default("")
+  /// Item names/categories at event time, so reports stay readable even if the
+  /// menu is later edited or an item is deleted.
+  label        String   @default("")
+  categoryName String   @default("")
+  /// Milliseconds the item detail stayed open; null when not measured
+  dwellMs      Int?
+  /// Video position in seconds for VIDEO_PROGRESS/VIDEO_COMPLETE
+  positionSec  Int?
+  /// phone | tablet | desktop — coarse form factor only
+  deviceType   String   @default("")
+  meta         Json?
+  createdAt    DateTime @default(now())
+
+  @@index([restaurantId, createdAt])
+  @@index([restaurantId, eventType, createdAt])
+  @@index([restaurantId, menuItemId, createdAt])
+  @@index([restaurantId, cutSlug, createdAt])
+  @@index([restaurantId, locale, createdAt])
+  @@index([sessionId])
 }

@@ -1,0 +1,80 @@
+.wrap { margin: 0 0 var(--space-3); }
+
+.title {
+  margin: 0 0 8px;
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-gold-dim);
+}
+
+.strip {
+  list-style: none;
+  margin: 0;
+  padding: 2px 2px 6px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.strip::-webkit-scrollbar { display: none; }
+.strip li { flex: 0 0 auto; }
+
+.thumb {
+  position: relative;
+  display: block;
+  width: 84px;
+  height: 62px;
+  padding: 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: rgba(var(--color-ink-rgb), 0.5);
+  transition: border-color var(--transition-fast);
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb:hover { border-color: rgba(var(--color-gold-rgb), 0.5); }
+.thumbOn { border-color: var(--color-gold); }
+
+.play {
+  position: absolute;
+  inset-block-end: 4px;
+  inset-inline-end: 4px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-xs);
+  background: rgba(var(--color-ink-rgb), 0.78);
+  color: var(--color-gold);
+}
+
+/* No poster to sit over -- center the badge on the plain dark tile instead
+   of leaving it pinned to a corner of empty space. */
+.playCenter {
+  inset: 0;
+  inset-block-end: auto;
+  inset-inline-end: auto;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  background: transparent;
+}
+
+.viewer { margin: 10px 0 0; }
+.viewer img, .viewer video {
+  width: 100%;
+  max-height: 46vh;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  background: rgba(var(--color-ink-rgb), 0.6);
+}
+.viewer figcaption {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}

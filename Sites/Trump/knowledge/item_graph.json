@@ -1,0 +1,2096 @@
+{
+  "meta": {
+    "source": "trump_hero_pairings.json (pairings/upgrades/sauceUpgrades) + server/services/recommendationScoring.js (nextJourneyStage course order)",
+    "note": "STATIC edges only. \"shares_context_with\" edges (computed live from order history via marketBasket.js / computeOrderedTogether) are intentionally NOT included here — those stay computed at runtime, not authored.",
+    "_consumer": "LIVE — server/services/itemGraph.js loads this file and is called from aiService.js's aiPairing() (the secondOrder response field, ItemModal/PairingModal's per-item pairing lookup).",
+    "_derivation_honesty": "pairs_with edges are a faithful copy of trump_hero_pairings.json's pairings array (heroPairings.js's own core dishFor/preferredVarietals/reasonFor/bottlesOfVarietal matching logic was judged too heavily depended-upon by exact-string chat-validate.js assertions to safely re-point at this file's edge-list shape this phase — trump_hero_pairings.json remains authoritative for that specific lookup). upgrade_of/add_on_to edges are likewise a copy of the SAME content knowledge/upgrade_rules.json now authoritatively serves to heroPairings.upgradeFor()/sauceUpgradeFor(). This file exists as a graph-shaped READ VIEW for traversal (itemGraph.js's edgesFor/secondOrder), not as an independently-authored third copy — if the underlying pairing/upgrade content ever changes, update trump_hero_pairings.json and knowledge/upgrade_rules.json; this file would need regenerating from them (not yet automated).",
+    "edgeTypeCounts": {
+      "pairs_with": 199,
+      "upgrade_of": 5,
+      "add_on_to": 6,
+      "follows": 4
+    }
+  },
+  "edges": [
+    {
+      "type": "pairs_with",
+      "source": "Fillet",
+      "target": "Merlot",
+      "note": "The fillet is the gentlest cut on the menu, so it takes a gentle wine — soft, plummy Merlot lets that delicate tenderness lead instead of fighting it.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "gentleness"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Fillet",
+      "target": "Pinot Noir",
+      "note": "Silky meets silky — Pinot Noir's light red-cherry elegance flatters the fillet without ever weighing it down.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "elegance"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Fillet",
+      "target": "Pinotage",
+      "note": "A softer Pinotage brings just enough dark fruit to frame the fillet's subtle flavour — a homegrown match the cellar's proud of.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "strong",
+      "axis": "local-restraint"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Sirloin",
+      "target": "Shiraz",
+      "note": "Sirloin carries a robust, open flavour, and Shiraz answers it with black pepper and dark fruit that lean straight into the char.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "spice-echo"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Sirloin",
+      "target": "Malbec",
+      "note": "Lean and savoury, the sirloin loves Malbec's plush plum and velvet tannin — fruit to round out the cut's bolder edge.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "fruit-balance"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Sirloin",
+      "target": "Merlot",
+      "note": "When you want the sirloin easy-going, Merlot's ripe plum and supple finish keep everything smooth.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "strong",
+      "axis": "smoothness"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Ribeye",
+      "target": "Cabernet Sauvignon",
+      "note": "Marbled and char-grilled, the ribeye wants a wine with backbone — Cabernet's firm tannin and blackcurrant depth stand right up to all that richness.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "fat-and-tannin"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Ribeye",
+      "target": "Shiraz",
+      "note": "Bold beef, bold wine — Shiraz brings blackberry and a peppery kick that matches the ribeye's intensity bite for bite.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "intensity-match"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Ribeye",
+      "target": "Malbec",
+      "note": "Malbec's smoky, generous fruit wraps around the ribeye's marbling like it was made for it.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "smoke-and-fat"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Rump",
+      "target": "Cabernet Sauvignon",
+      "note": "That rich line of fat through the rump needs structure to cut it, and Cabernet's grip and dark fruit do exactly that.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "richness-cut"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Rump",
+      "target": "Shiraz",
+      "note": "Juicy and full-flavoured, the rump meets its match in Shiraz's spice and depth.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "depth"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Rump",
+      "target": "Red Blend",
+      "note": "A Bordeaux-style blend gives the rump layers — cassis, cedar, fine tannin — to match its rich, juicy character.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "complexity"
+    },
+    {
+      "type": "pairs_with",
+      "source": "T-Bone",
+      "target": "Red Blend",
+      "note": "Two cuts on one bone — tender fillet and marbled sirloin — so a blend that does it all, dark fruit and firm structure together, covers both sides of the plate.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "two-in-one"
+    },
+    {
+      "type": "pairs_with",
+      "source": "T-Bone",
+      "target": "Cabernet Sauvignon",
+      "note": "The marbled sirloin side calls the shots here — Cabernet's tannin and blackcurrant keep pace with every bite.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "structure"
+    },
+    {
+      "type": "pairs_with",
+      "source": "T-Bone",
+      "target": "Shiraz",
+      "note": "Shiraz's pepper and dark fruit lean into the char on both sides of the bone.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "char"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Tomahawk",
+      "target": "Malbec",
+      "note": "A showpiece cut wants a generous wine — plush, smoky Malbec is big enough to meet every charred, beefy edge.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "scale-match"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Tomahawk",
+      "target": "Cabernet Sauvignon",
+      "note": "All that aged, beefy intensity calls for Cabernet's power and grip — a heavyweight for a heavyweight.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "power"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Tomahawk",
+      "target": "Shiraz",
+      "note": "Shiraz brings the spice and dark-fruit weight to stand beside the tomahawk's bold flavour.",
+      "category": "Premium Steak",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "weight"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Wagyu Ribeye",
+      "target": "Cabernet Sauvignon",
+      "note": "Wagyu marbling is pure richness, so it needs a wine that won't fold — Cabernet's firm tannin slices clean through the buttery fat.",
+      "category": "Wagyu",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "fat-cut"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Wagyu Fillet",
+      "target": "Pinot Noir",
+      "note": "Rich but delicate, the Wagyu fillet shines with a silky Pinot Noir that lifts without overpowering.",
+      "category": "Wagyu",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "finesse"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Wagyu Sirloin",
+      "target": "Shiraz",
+      "note": "The Wagyu sirloin's deep flavour and Shiraz's peppery dark fruit are a match of equals.",
+      "category": "Wagyu",
+      "drinkType": "red",
+      "tier": "strong",
+      "axis": "equals"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Wagyu Rump",
+      "target": "Red Blend",
+      "note": "Intense marbling meets a layered blend — cedar, cassis and structure to carry the Wagyu's richness.",
+      "category": "Wagyu",
+      "drinkType": "red",
+      "tier": "strong",
+      "axis": "layers"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Ostrich Fillet",
+      "target": "Pinot Noir",
+      "note": "Ostrich is lean, dark and faintly sweet, so it pairs best with a lighter red — Pinot Noir's red-cherry brightness suits it far better than anything heavy.",
+      "category": "Venison & Game",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "lean-needs-light"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Ostrich Fillet",
+      "target": "Merlot",
+      "note": "If you'd rather something rounder, Merlot's soft plum keeps the lean ostrich juicy and easy.",
+      "category": "Venison & Game",
+      "drinkType": "red",
+      "tier": "strong",
+      "axis": "roundness"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Kudu",
+      "target": "Pinotage",
+      "note": "Kudu's gamey, earthy character finds a soulmate in Pinotage, whose smoky dark-fruit depth echoes the wild edge.",
+      "category": "Venison & Game",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "earth-and-smoke"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Springbok",
+      "target": "Shiraz",
+      "note": "Lean and earthy springbok loves Shiraz's black pepper and plum — spice to lift the subtle, gamey sweetness.",
+      "category": "Venison & Game",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "pepper-lift"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Lamb Chops",
+      "target": "Shiraz",
+      "note": "Lamb and Shiraz are old friends — the wine's peppery spice echoes the char while its dark fruit lifts the chop's natural sweetness.",
+      "category": "Lamb",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "spice-and-sweet"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Lamb Chops",
+      "target": "Cabernet Sauvignon",
+      "note": "For a firmer match, Cabernet's tannin cuts through the lamb's richness and leaves the palate clean.",
+      "category": "Lamb",
+      "drinkType": "red",
+      "tier": "strong",
+      "axis": "cut"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Lamb Rump",
+      "target": "Pinotage",
+      "note": "The lamb rump's bold, aged flavour meets Pinotage's smoke and dark fruit — rich, earthy, unmistakably South African.",
+      "category": "Lamb",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "local-richness"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Lamb Shank",
+      "target": "Red Blend",
+      "note": "Slow-braised in red wine, the shank wants that same depth back on the table — a full red blend echoes the braise and stands up to the falling-off-the-bone richness.",
+      "category": "Lamb",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "braise-echo"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Pork Chops",
+      "target": "Chenin Blanc",
+      "note": "Pork and a touch of sweetness belong together — off-dry Chenin's apple-and-honey fruit cuts the fat and flatters the chop.",
+      "category": "Pork & Ribs",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "fat-cut-white"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Pork Tomahawk",
+      "target": "Pinotage",
+      "note": "This marbled pork showpiece can take a light red — Pinotage's smoky fruit matches the bbq baste without overwhelming the meat.",
+      "category": "Pork & Ribs",
+      "drinkType": "red",
+      "tier": "strong",
+      "axis": "bbq-and-smoke"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Eisbein",
+      "target": "Chenin Blanc",
+      "note": "Crackling skin, rich meat and apple sauce — a crisp, off-dry Chenin cuts straight through and keeps every bite bright.",
+      "category": "Pork & Ribs",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "richness-cut"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Full Rack Pork Loin Ribs",
+      "target": "Shiraz",
+      "note": "Sticky, smoky bbq ribs love Shiraz — dark fruit and pepper to match the glaze's sweet-savoury char.",
+      "category": "Pork & Ribs",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "bbq-match"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Full Rack Pork Loin Ribs",
+      "target": "Castle Lager",
+      "note": "Sometimes sticky ribs just want an ice-cold draught — Castle's crisp, clean bite resets the palate between every messy mouthful.",
+      "category": "Pork & Ribs",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "cold-reset"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Oxtail",
+      "target": "Red Blend",
+      "note": "Braised slow in red wine and onion, oxtail wants that richness mirrored — a deep red blend echoes the sauce and matches the melting, savoury meat.",
+      "category": "Oxtail & Beef Ribs",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "braise-mirror"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Beef Ribs",
+      "target": "Shiraz",
+      "note": "Slow-cooked and bbq-finished, these ribs meet Shiraz's smoky dark fruit head-on.",
+      "category": "Oxtail & Beef Ribs",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "smoke-match"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Beef Ribs",
+      "target": "Castle Lager",
+      "note": "Big, sticky beef ribs and a cold draught — crisp beer to cut the richness and keep you going.",
+      "category": "Oxtail & Beef Ribs",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "cut-and-cold"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Garlic Lemon Calamari",
+      "target": "Sauvignon Blanc",
+      "note": "Crisp calamari, crisper wine — Sauvignon Blanc's zippy citrus cuts the garlic butter and brightens every bite.",
+      "category": "Starter",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "acid-lift"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Queen Prawns",
+      "target": "Sauvignon Blanc",
+      "note": "Grilled prawns with peri-peri and lemon garlic want a zesty white — Sauvignon Blanc's bright acidity cools the spice and lifts the sweetness of the prawn.",
+      "category": "Starter",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "acid-and-spice"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Mussels",
+      "target": "Chardonnay",
+      "note": "Steamed in white wine, the mussels echo beautifully into a Chardonnay — its soft citrus and gentle weight mirror the creamy broth.",
+      "category": "Starter",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "sauce-echo"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Mussels",
+      "target": "Sauvignon Blanc",
+      "note": "For something brighter, Sauvignon Blanc's crisp acidity slices through the creamy white-wine sauce.",
+      "category": "Starter",
+      "drinkType": "white",
+      "tier": "strong",
+      "axis": "acid-cut"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Garlic Snails",
+      "target": "Chardonnay",
+      "note": "Rich, creamy garlic snails meet a buttery Chardonnay — richness matched with richness, balanced by a thread of citrus.",
+      "category": "Starter",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "richness-match"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Springbok Carpaccio",
+      "target": "Cap Classique",
+      "note": "Delicate raw springbok with rocket and parmesan calls for bubbles — Cap Classique's crisp acidity and fine fizz keep every paper-thin slice fresh.",
+      "category": "Starter",
+      "drinkType": "sparkling",
+      "tier": "hero",
+      "axis": "delicacy-and-bubbles"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Springbok Carpaccio",
+      "target": "Champagne",
+      "note": "For a celebration, Champagne — its bright, biscuity sparkle is the perfect foil to the lean, savoury carpaccio.",
+      "category": "Starter",
+      "drinkType": "sparkling",
+      "tier": "strong",
+      "axis": "celebration"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Flash Pan Fried Chicken Livers",
+      "target": "Rose",
+      "note": "Peri-peri livers run hot and rich, so a chilled Rosé works a treat — its strawberry fruit and cool freshness tame the spice.",
+      "category": "Starter",
+      "drinkType": "rose",
+      "tier": "hero",
+      "axis": "spice-cool"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Chicken Trinchado",
+      "target": "Rose",
+      "note": "Sizzled in peri-peri, the trinchado wants something fruity and cold — Rosé's bright berry calms the heat.",
+      "category": "Starter",
+      "drinkType": "rose",
+      "tier": "strong",
+      "axis": "heat-calm"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Firecracker Chicken Wings",
+      "target": "Castle Lager",
+      "note": "Sweet, sticky, spicy wings and an ice-cold Castle — the crisp draught is the classic cooldown for all that heat and glaze.",
+      "category": "Starter",
+      "drinkType": "beer",
+      "tier": "hero",
+      "axis": "spice-and-cold"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Firecracker Chicken Wings",
+      "target": "Savanna Dry",
+      "note": "For a little fruit, a cold Savanna cider cuts the peri-peri and matches the sweet bbq glaze.",
+      "category": "Starter",
+      "drinkType": "cider",
+      "tier": "strong",
+      "axis": "cider-cut"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Boerewors & Chakalaka",
+      "target": "Pinotage",
+      "note": "Spicy boerewors and smoky Pinotage are a born-and-bred South African pairing — earthy, soulful, and made for each other.",
+      "category": "Starter",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "local-soulmate"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Fried Halloumi Fingers",
+      "target": "Sauvignon Blanc",
+      "note": "Salty, golden halloumi with sweet chilli wants a crisp white — Sauvignon Blanc's acidity cuts the richness and lifts the sweet-spicy dip.",
+      "category": "Starter",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "acid-and-salt"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Beef Biltong",
+      "target": "Pinotage",
+      "note": "Our own biltong and a glass of Pinotage — dark fruit and smoke beside salty, spiced beef, the way it's meant to be.",
+      "category": "Starter",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "local-classic"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Greek Salad",
+      "target": "Sauvignon Blanc",
+      "note": "Fresh tomato, feta and olives sing alongside a cool Sauvignon Blanc — crisp, herbaceous, and bright as the salad itself.",
+      "category": "Salad",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "freshness-match"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Halloumi Salad",
+      "target": "Sauvignon Blanc",
+      "note": "Zesty lime, salty halloumi and a crisp white — Sauvignon Blanc keeps the whole bowl fresh and lifted.",
+      "category": "Salad",
+      "drinkType": "white",
+      "tier": "strong",
+      "axis": "zest"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Caprese & Avocado Salad",
+      "target": "Chardonnay",
+      "note": "Creamy avocado and mozzarella meet a softly textured Chardonnay — gentle weight to match, citrus to keep it light.",
+      "category": "Salad",
+      "drinkType": "white",
+      "tier": "strong",
+      "axis": "creamy-match"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Trumps Char Grilled Chicken",
+      "target": "Chenin Blanc",
+      "note": "Grilled chicken over crisp greens pairs easily with Chenin's apple-fresh fruit — light, clean, and easy-drinking.",
+      "category": "Salad",
+      "drinkType": "white",
+      "tier": "strong",
+      "axis": "easy"
+    },
+    {
+      "type": "pairs_with",
+      "source": "BBQ / Peri-Peri Beef Burger",
+      "target": "Castle Lager",
+      "note": "A proper steakhouse burger and an ice-cold draught — no fuss, just a crisp Castle to match the char.",
+      "category": "Burger",
+      "drinkType": "beer",
+      "tier": "hero",
+      "axis": "casual-classic"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Cheese Burger",
+      "target": "Merlot",
+      "note": "If you'd rather wine, Merlot's soft plum and easy tannin suit the juicy beef and melted cheddar.",
+      "category": "Burger",
+      "drinkType": "red",
+      "tier": "strong",
+      "axis": "juicy-soft"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Jalapeno Chilli And Cheese Burger",
+      "target": "Castle Lite",
+      "note": "Jalapeño heat and sriracha mayo call for cold and crisp — a light draught cools the burn without getting in the way.",
+      "category": "Burger",
+      "drinkType": "beer",
+      "tier": "hero",
+      "axis": "heat-cool"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Bacon And Cheese Burger",
+      "target": "Shiraz",
+      "note": "Smoky bacon and rich cheese stand up to Shiraz's pepper and dark fruit.",
+      "category": "Burger",
+      "drinkType": "red",
+      "tier": "strong",
+      "axis": "smoke-match"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Half Chicken",
+      "target": "Chenin Blanc",
+      "note": "Flame-grilled peri-peri chicken loves an off-dry Chenin — a touch of sweetness to balance the spice and keep it juicy.",
+      "category": "Chicken",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "spice-balance"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Mushroom Sauce Chicken Breast",
+      "target": "Chardonnay",
+      "note": "Creamy mushroom sauce and a buttery, lightly oaked Chardonnay are a natural pair — earthy richness on both sides.",
+      "category": "Chicken",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "creamy-earthy"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Full Chicken",
+      "target": "Rose",
+      "note": "An easy, crowd-pleasing bird wants an easy, crowd-pleasing Rosé — fresh berry fruit that suits the whole table.",
+      "category": "Chicken",
+      "drinkType": "rose",
+      "tier": "strong",
+      "axis": "easygoing"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Seafood Pasta",
+      "target": "Sauvignon Blanc",
+      "note": "Prawns, calamari and mussels in a light sauce want a bright, coastal white — Sauvignon Blanc's citrus and acidity lift the whole plate.",
+      "category": "Pasta",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "coastal-lift"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Seafood Pasta",
+      "target": "Chenin Blanc",
+      "note": "Chenin's apple-fresh fruit and gentle weight are another lovely lift for the seafood and cream.",
+      "category": "Pasta",
+      "drinkType": "white",
+      "tier": "strong",
+      "axis": "gentle-lift"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Beef Fillet Pasta",
+      "target": "Merlot",
+      "note": "Tender fillet strips in napolitana meet Merlot's ripe plum — soft fruit to match the gentle beef and tomato.",
+      "category": "Pasta",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "soft-tomato"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Spaghetti Bolognese",
+      "target": "Red Blend",
+      "note": "Rich, slow-simmered mince and a savoury red blend — dark fruit and herbs that echo the napolitana.",
+      "category": "Pasta",
+      "drinkType": "red",
+      "tier": "strong",
+      "axis": "savoury-echo"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Creamy Basil Pesto & Mushroom",
+      "target": "Chardonnay",
+      "note": "Earthy mushrooms in a creamy pesto sauce find their match in a soft, citrusy Chardonnay.",
+      "category": "Pasta",
+      "drinkType": "white",
+      "tier": "strong",
+      "axis": "creamy-veg"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Death By Chocolate Cake",
+      "target": "Ferreira Ruby Port",
+      "note": "Dark, dense chocolate wants a sweet, fortified red — a ruby port's plummy richness meets the ganache without losing its footing.",
+      "category": "Dessert",
+      "drinkType": "fortified",
+      "tier": "hero",
+      "axis": "sweet-match"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Death By Chocolate Cake",
+      "target": "Pinotage",
+      "note": "For something unexpected, a bold Pinotage — its dark fruit and faint smoke flatter the bitter cocoa.",
+      "category": "Dessert",
+      "drinkType": "red",
+      "tier": "strong",
+      "axis": "cocoa-and-fruit"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Cape Malva Pudding",
+      "target": "Amarula",
+      "note": "Warm, caramelly malva and creamy Amarula are a South African comfort classic — sweet, rich and made to finish a meal.",
+      "category": "Dessert",
+      "drinkType": "fortified",
+      "tier": "hero",
+      "axis": "local-dessert"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Red Velvet Cake",
+      "target": "Cap Classique",
+      "note": "A touch of sweetness and sparkle — an off-dry bubbly lifts the creamy frosting and keeps the cake from feeling heavy.",
+      "category": "Dessert",
+      "drinkType": "sparkling",
+      "tier": "strong",
+      "axis": "sweet-sparkle"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Chocolate Brownie",
+      "target": "Ferreira Tawny Port",
+      "note": "Warm nutty brownie and a tawny port — caramel, nuts and dried fruit, a perfect cosy finish.",
+      "category": "Dessert",
+      "drinkType": "fortified",
+      "tier": "strong",
+      "axis": "nutty-match"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Grilled Baby Calamari",
+      "target": "Sauvignon Blanc",
+      "note": "The lemon garlic sauce needs freshness, so a bright white keeps the calamari light and clean while a pilsner or gin and tonic keeps the finish crisp.",
+      "category": "Chef Set Starter",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Grilled Baby Calamari",
+      "target": "Pilsner",
+      "note": "The lemon garlic sauce needs freshness, so a bright white keeps the calamari light and clean while a pilsner or gin and tonic keeps the finish crisp.",
+      "category": "Chef Set Starter",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Filleted Chicken Breasts",
+      "target": "Chardonnay",
+      "note": "Chicken is versatile, so the best pairing is something balanced enough to follow the sauce without overpowering the meat.",
+      "category": "Chef Set Main",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Filleted Chicken Breasts",
+      "target": "Lager",
+      "note": "Chicken is versatile, so the best pairing is something balanced enough to follow the sauce without overpowering the meat.",
+      "category": "Chef Set Main",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Malva Pudding Served with Vanilla Ice Cream",
+      "target": "Moscato",
+      "note": "This dessert is rich and sweet, so the pairing should either match the softness of the pudding or add a darker roasted contrast.",
+      "category": "Chef Set Dessert",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Malva Pudding Served with Vanilla Ice Cream",
+      "target": "Stout",
+      "note": "This dessert is rich and sweet, so the pairing should either match the softness of the pudding or add a darker roasted contrast.",
+      "category": "Chef Set Dessert",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Ice Cream with Chocolate Sauce",
+      "target": "Moscato",
+      "note": "The pairing works best when it either mirrors the sweetness or brings enough richness to stand next to the chocolate.",
+      "category": "Chef Set Dessert",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Ice Cream with Chocolate Sauce",
+      "target": "Stout",
+      "note": "The pairing works best when it either mirrors the sweetness or brings enough richness to stand next to the chocolate.",
+      "category": "Chef Set Dessert",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Caprese & Avo Salad",
+      "target": "Sauvignon Blanc",
+      "note": "Tomato, basil and balsamic work best with a pairing that stays bright and aromatic and keeps the salad feeling fresh.",
+      "category": "Premium Set Starter",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Caprese & Avo Salad",
+      "target": "Light Lager",
+      "note": "Tomato, basil and balsamic work best with a pairing that stays bright and aromatic and keeps the salad feeling fresh.",
+      "category": "Premium Set Starter",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Sashimi",
+      "target": "Sauvignon Blanc",
+      "note": "A clean, delicate dish like sashimi needs a pairing with precision and freshness so the fish stays the focus.",
+      "category": "Premium Set Starter",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Sashimi",
+      "target": "Pilsner",
+      "note": "A clean, delicate dish like sashimi needs a pairing with precision and freshness so the fish stays the focus.",
+      "category": "Premium Set Starter",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Filleted Kingklip",
+      "target": "Sauvignon Blanc",
+      "note": "Kingklip is delicate, so the pairing should stay clean and sharp and let the fish lead the dish.",
+      "category": "Premium Set Main",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Filleted Kingklip",
+      "target": "Light Lager",
+      "note": "Kingklip is delicate, so the pairing should stay clean and sharp and let the fish lead the dish.",
+      "category": "Premium Set Main",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Pork Ribs",
+      "target": "Shiraz",
+      "note": "Pork ribs bring sweetness, smoke and richness, so they need a pairing with enough body and spice to keep up.",
+      "category": "Premium Set Main",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Pork Ribs",
+      "target": "Amber Lager",
+      "note": "Pork ribs bring sweetness, smoke and richness, so they need a pairing with enough body and spice to keep up.",
+      "category": "Premium Set Main",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Ostrich Medallions",
+      "target": "Pinot Noir",
+      "note": "Ostrich is lean with a slightly sweet edge, so a lighter red or crisp drink keeps it elegant and balanced.",
+      "category": "Premium Set Main",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Ostrich Medallions",
+      "target": "Crisp Lager",
+      "note": "Ostrich is lean with a slightly sweet edge, so a lighter red or crisp drink keeps it elegant and balanced.",
+      "category": "Premium Set Main",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Veg Dish of the Day",
+      "target": "Sauvignon Blanc",
+      "note": "Vegetable-led dishes generally work best with bright, uncomplicated pairings that keep the plate lively.",
+      "category": "Premium Set Main",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Veg Dish of the Day",
+      "target": "Light Lager",
+      "note": "Vegetable-led dishes generally work best with bright, uncomplicated pairings that keep the plate lively.",
+      "category": "Premium Set Main",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Tempura Chicken",
+      "target": "Chardonnay",
+      "note": "Crunchy fried chicken and spicy mayo need a drink that can cut through richness and keep the mouth feeling fresh.",
+      "category": "Starter",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Tempura Chicken",
+      "target": "Lager",
+      "note": "Crunchy fried chicken and spicy mayo need a drink that can cut through richness and keep the mouth feeling fresh.",
+      "category": "Starter",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Tempura Prawn",
+      "target": "Sauvignon Blanc",
+      "note": "Tempura prawn needs acidity and lift so the batter stays crisp on the palate and the prawn still tastes delicate.",
+      "category": "Starter",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Tempura Prawn",
+      "target": "Pilsner",
+      "note": "Tempura prawn needs acidity and lift so the batter stays crisp on the palate and the prawn still tastes delicate.",
+      "category": "Starter",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Tempura Biltong",
+      "target": "Pinotage",
+      "note": "This is bold and savoury, so it needs an equally confident pairing that can handle the meat and the frying.",
+      "category": "Starter",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Tempura Biltong",
+      "target": "Strong Lager",
+      "note": "This is bold and savoury, so it needs an equally confident pairing that can handle the meat and the frying.",
+      "category": "Starter",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Trumps Salad",
+      "target": "Chardonnay",
+      "note": "The creamy Caesar profile wants a pairing with freshness but also enough roundness to match the dressing.",
+      "category": "Salad",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Trumps Salad",
+      "target": "Pilsner",
+      "note": "The creamy Caesar profile wants a pairing with freshness but also enough roundness to match the dressing.",
+      "category": "Salad",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Crispy Rice",
+      "target": "Sauvignon Blanc",
+      "note": "Because there is crisp texture, seafood and spicy mayo together, the pairing needs acidity and a very clean finish.",
+      "category": "Sushi",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Crispy Rice",
+      "target": "Pilsner",
+      "note": "Because there is crisp texture, seafood and spicy mayo together, the pairing needs acidity and a very clean finish.",
+      "category": "Sushi",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Roses",
+      "target": "Sauvignon Blanc",
+      "note": "A delicate salmon preparation works best with a light, precise pairing that does not crowd the fish.",
+      "category": "Sushi",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Roses",
+      "target": "Pilsner",
+      "note": "A delicate salmon preparation works best with a light, precise pairing that does not crowd the fish.",
+      "category": "Sushi",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "California Roll",
+      "target": "Sauvignon Blanc",
+      "note": "This is a softer, lighter sushi style, so the pairing should stay crisp and low-interference.",
+      "category": "Sushi",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "California Roll",
+      "target": "Pilsner",
+      "note": "This is a softer, lighter sushi style, so the pairing should stay crisp and low-interference.",
+      "category": "Sushi",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Rainbow Roll",
+      "target": "Sauvignon Blanc",
+      "note": "Because the flavours are layered but still delicate, the drink should refresh the palate rather than dominate it.",
+      "category": "Sushi",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Rainbow Roll",
+      "target": "Pilsner",
+      "note": "Because the flavours are layered but still delicate, the drink should refresh the palate rather than dominate it.",
+      "category": "Sushi",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Dragon Roll",
+      "target": "Sauvignon Blanc",
+      "note": "The richness of tempura and mayo needs acidity and a crisp finish to keep the roll feeling balanced.",
+      "category": "Sushi",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Dragon Roll",
+      "target": "Pilsner",
+      "note": "The richness of tempura and mayo needs acidity and a crisp finish to keep the roll feeling balanced.",
+      "category": "Sushi",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Rock Shrimp Tempura Roll",
+      "target": "Sauvignon Blanc",
+      "note": "The pairing needs to clean the palate after each bite so the tempura and mayo do not overwhelm the fish.",
+      "category": "Sushi",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Rock Shrimp Tempura Roll",
+      "target": "Pilsner",
+      "note": "The pairing needs to clean the palate after each bite so the tempura and mayo do not overwhelm the fish.",
+      "category": "Sushi",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Trumps Rainbow Reloaded",
+      "target": "Sauvignon Blanc",
+      "note": "This is a richer sushi build, so a bright pairing helps hold together the sweetness, salt and creaminess.",
+      "category": "Sushi",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Trumps Rainbow Reloaded",
+      "target": "Pilsner",
+      "note": "This is a richer sushi build, so a bright pairing helps hold together the sweetness, salt and creaminess.",
+      "category": "Sushi",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Trumps California Rainbow Reloaded",
+      "target": "Sauvignon Blanc",
+      "note": "The extra tempura and sweet mayo call for a pairing that cuts cleanly through the richness.",
+      "category": "Sushi",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Trumps California Rainbow Reloaded",
+      "target": "Pilsner",
+      "note": "The extra tempura and sweet mayo call for a pairing that cuts cleanly through the richness.",
+      "category": "Sushi",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Trumps Salmon Sashimi",
+      "target": "Sauvignon Blanc",
+      "note": "A clean sashimi dish needs a pairing that is precise, crisp and subtle enough to leave the fish in front.",
+      "category": "Sashimi",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Trumps Salmon Sashimi",
+      "target": "Pilsner",
+      "note": "A clean sashimi dish needs a pairing that is precise, crisp and subtle enough to leave the fish in front.",
+      "category": "Sashimi",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "New Style Sashimi",
+      "target": "Sauvignon Blanc",
+      "note": "The yuzu and ginger bring brightness, so a crisp pairing keeps the flavours clear and energetic.",
+      "category": "Sashimi",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "New Style Sashimi",
+      "target": "Pilsner",
+      "note": "The yuzu and ginger bring brightness, so a crisp pairing keeps the flavours clear and energetic.",
+      "category": "Sashimi",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Jalapeno Salmon Sashimi",
+      "target": "Sauvignon Blanc",
+      "note": "The heat and citrus need a fresh pairing that cools the palate without dulling the sharp flavours.",
+      "category": "Sashimi",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Jalapeno Salmon Sashimi",
+      "target": "Pilsner",
+      "note": "The heat and citrus need a fresh pairing that cools the palate without dulling the sharp flavours.",
+      "category": "Sashimi",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Seared Salmon",
+      "target": "Pinot Noir",
+      "note": "Salmon has enough richness to handle a softer red, but the pairing still needs freshness to balance the glaze and mayo.",
+      "category": "Seafood",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Seared Salmon",
+      "target": "Lager",
+      "note": "Salmon has enough richness to handle a softer red, but the pairing still needs freshness to balance the glaze and mayo.",
+      "category": "Seafood",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Hake & Calamari",
+      "target": "Sauvignon Blanc",
+      "note": "A mixed seafood dish needs something crisp and versatile enough to work across both fish and calamari.",
+      "category": "Seafood",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Hake & Calamari",
+      "target": "Pilsner",
+      "note": "A mixed seafood dish needs something crisp and versatile enough to work across both fish and calamari.",
+      "category": "Seafood",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Falklands Calamari",
+      "target": "Sauvignon Blanc",
+      "note": "Light seafood and lemon garlic naturally suit a pairing with acidity and a clean finish.",
+      "category": "Seafood",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Falklands Calamari",
+      "target": "Pilsner",
+      "note": "Light seafood and lemon garlic naturally suit a pairing with acidity and a clean finish.",
+      "category": "Seafood",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Prawn & Calamari",
+      "target": "Sauvignon Blanc",
+      "note": "Because the plate moves between sweetness and spice, the pairing needs to stay bright and flexible.",
+      "category": "Seafood",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Prawn & Calamari",
+      "target": "Pilsner",
+      "note": "Because the plate moves between sweetness and spice, the pairing needs to stay bright and flexible.",
+      "category": "Seafood",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Hake & Prawn",
+      "target": "Sauvignon Blanc",
+      "note": "This dish benefits from a classic crisp pairing that keeps the seafood tasting fresh from start to finish.",
+      "category": "Seafood",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Hake & Prawn",
+      "target": "Pilsner",
+      "note": "This dish benefits from a classic crisp pairing that keeps the seafood tasting fresh from start to finish.",
+      "category": "Seafood",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Kingklip & Prawn",
+      "target": "Sauvignon Blanc",
+      "note": "The fish is delicate and the prawns are sweet, so a fresh, high-acid drink keeps both elements in balance.",
+      "category": "Seafood",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Kingklip & Prawn",
+      "target": "Pilsner",
+      "note": "The fish is delicate and the prawns are sweet, so a fresh, high-acid drink keeps both elements in balance.",
+      "category": "Seafood",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Hake Platter for 1",
+      "target": "Sauvignon Blanc",
+      "note": "A seafood platter needs one clean, all-round pairing that can move comfortably across every bite.",
+      "category": "Seafood",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Hake Platter for 1",
+      "target": "Pilsner",
+      "note": "A seafood platter needs one clean, all-round pairing that can move comfortably across every bite.",
+      "category": "Seafood",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Grilled Hake",
+      "target": "Sauvignon Blanc",
+      "note": "Hake is light and flaky, so the pairing should stay clean and let the fish remain the hero.",
+      "category": "Seafood",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Grilled Hake",
+      "target": "Light Lager",
+      "note": "Hake is light and flaky, so the pairing should stay clean and let the fish remain the hero.",
+      "category": "Seafood",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Chuckeye 350g Wagyu",
+      "target": "Malbec",
+      "note": "Chuckeye has deep beef character and serious richness, so it wants a pairing with muscle and smoothness.",
+      "category": "Wagyu",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Chuckeye 350g Wagyu",
+      "target": "Strong Lager",
+      "note": "Chuckeye has deep beef character and serious richness, so it wants a pairing with muscle and smoothness.",
+      "category": "Wagyu",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Denver 350g Wagyu",
+      "target": "Malbec",
+      "note": "Denver cut brings flavour and marbling together, so a broad, smooth pairing suits it best.",
+      "category": "Wagyu",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Denver 350g Wagyu",
+      "target": "Strong Lager",
+      "note": "Denver cut brings flavour and marbling together, so a broad, smooth pairing suits it best.",
+      "category": "Wagyu",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Mixed Grill",
+      "target": "Cabernet Sauvignon",
+      "note": "A mixed grill is all about meat and fire, so a bigger, more structured pairing makes the whole plate feel cohesive.",
+      "category": "Combo",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Mixed Grill",
+      "target": "Strong Lager",
+      "note": "A mixed grill is all about meat and fire, so a bigger, more structured pairing makes the whole plate feel cohesive.",
+      "category": "Combo",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Prime Steak & Prawns",
+      "target": "Cabernet Sauvignon",
+      "note": "Surf and turf needs a pairing that respects the steak while still staying lively enough for the prawns.",
+      "category": "Combo",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Prime Steak & Prawns",
+      "target": "Lager",
+      "note": "Surf and turf needs a pairing that respects the steak while still staying lively enough for the prawns.",
+      "category": "Combo",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "The King, Queen Platter",
+      "target": "Sauvignon Blanc",
+      "note": "A seafood platter needs one bright, crisp pairing that keeps every element feeling fresh from start to finish.",
+      "category": "Platter",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "The King, Queen Platter",
+      "target": "Pilsner",
+      "note": "A seafood platter needs one bright, crisp pairing that keeps every element feeling fresh from start to finish.",
+      "category": "Platter",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "BBQ / Peri-Peri Chicken Burger",
+      "target": "Chardonnay",
+      "note": "Chicken burgers work best with a brighter, easier pairing that keeps the spice and glaze from becoming too rich.",
+      "category": "Burger",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "BBQ / Peri-Peri Chicken Burger",
+      "target": "Lager",
+      "note": "Chicken burgers work best with a brighter, easier pairing that keeps the spice and glaze from becoming too rich.",
+      "category": "Burger",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Bacon and Chicken Burger",
+      "target": "Chardonnay",
+      "note": "The bacon and cheddar add salt and richness, so the drink needs freshness with enough weight to keep the burger balanced.",
+      "category": "Burger",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Bacon and Chicken Burger",
+      "target": "Lager",
+      "note": "The bacon and cheddar add salt and richness, so the drink needs freshness with enough weight to keep the burger balanced.",
+      "category": "Burger",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Chicken Breast",
+      "target": "Chardonnay",
+      "note": "A straightforward grilled chicken dish works best with a pairing that is fresh, adaptable and easy to drink.",
+      "category": "Chicken",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Chicken Breast",
+      "target": "Lager",
+      "note": "A straightforward grilled chicken dish works best with a pairing that is fresh, adaptable and easy to drink.",
+      "category": "Chicken",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Chicken Pasta",
+      "target": "Chardonnay",
+      "note": "This pasta sits between creamy, herby and lightly spicy, so the pairing should stay balanced and flexible.",
+      "category": "Pasta",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Chicken Pasta",
+      "target": "Pilsner",
+      "note": "This pasta sits between creamy, herby and lightly spicy, so the pairing should stay balanced and flexible.",
+      "category": "Pasta",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Alfredo",
+      "target": "Chardonnay",
+      "note": "A creamy Alfredo-style sauce needs freshness in the glass to stop the plate from feeling too rich.",
+      "category": "Pasta",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Alfredo",
+      "target": "Pilsner",
+      "note": "A creamy Alfredo-style sauce needs freshness in the glass to stop the plate from feeling too rich.",
+      "category": "Pasta",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Veg Burger",
+      "target": "Sauvignon Blanc",
+      "note": "The tomato chilli jam and lighter patty need a pairing that stays bright and energetic.",
+      "category": "Vegetarian",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Veg Burger",
+      "target": "Lager",
+      "note": "The tomato chilli jam and lighter patty need a pairing that stays bright and energetic.",
+      "category": "Vegetarian",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Veg Platter",
+      "target": "Sauvignon Blanc",
+      "note": "A mixed vegetarian plate works best with a clean, refreshing pairing that can move across different textures.",
+      "category": "Vegetarian",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Veg Platter",
+      "target": "Lager",
+      "note": "A mixed vegetarian plate works best with a clean, refreshing pairing that can move across different textures.",
+      "category": "Vegetarian",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Halloumi Burger",
+      "target": "Sauvignon Blanc",
+      "note": "Halloumi is salty and rich, so the pairing must cut through it and keep the burger feeling lively.",
+      "category": "Vegetarian",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Halloumi Burger",
+      "target": "Lager",
+      "note": "Halloumi is salty and rich, so the pairing must cut through it and keep the burger feeling lively.",
+      "category": "Vegetarian",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Mashed Potatoes",
+      "target": "Chardonnay",
+      "note": "Creamy mash works best with a pairing that keeps the meal from becoming too heavy on the palate.",
+      "category": "Side",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Mashed Potatoes",
+      "target": "Lager",
+      "note": "Creamy mash works best with a pairing that keeps the meal from becoming too heavy on the palate.",
+      "category": "Side",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Creamed Spinach",
+      "target": "Chardonnay",
+      "note": "The creaminess needs freshness and a clean finish to stop the side from weighing down the plate.",
+      "category": "Side",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Creamed Spinach",
+      "target": "Light Lager",
+      "note": "The creaminess needs freshness and a clean finish to stop the side from weighing down the plate.",
+      "category": "Side",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Onion Rings",
+      "target": "Sauvignon Blanc",
+      "note": "Fried sides need acidity and freshness so the crunch stays appealing rather than greasy.",
+      "category": "Side",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Onion Rings",
+      "target": "Lager",
+      "note": "Fried sides need acidity and freshness so the crunch stays appealing rather than greasy.",
+      "category": "Side",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Steakhouse Chips",
+      "target": "Sauvignon Blanc",
+      "note": "A crisp, refreshing drink is the natural partner for chips because it cuts through the salt and fried finish.",
+      "category": "Side",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Steakhouse Chips",
+      "target": "Lager",
+      "note": "A crisp, refreshing drink is the natural partner for chips because it cuts through the salt and fried finish.",
+      "category": "Side",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Sauteed Mushrooms with Fresh Herbs",
+      "target": "Pinot Noir",
+      "note": "Earthy mushrooms like a drink with a little savoury depth rather than something too bright or sweet.",
+      "category": "Side",
+      "drinkType": "red",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Sauteed Mushrooms with Fresh Herbs",
+      "target": "Amber Lager",
+      "note": "Earthy mushrooms like a drink with a little savoury depth rather than something too bright or sweet.",
+      "category": "Side",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Savoury Rice",
+      "target": "Chenin Blanc",
+      "note": "Rice is neutral enough to like a simple, clean pairing that does not crowd the main meal.",
+      "category": "Side",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Savoury Rice",
+      "target": "Light Lager",
+      "note": "Rice is neutral enough to like a simple, clean pairing that does not crowd the main meal.",
+      "category": "Side",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Sweet Pumpkin",
+      "target": "Chenin Blanc",
+      "note": "The natural sweetness of pumpkin works well with a pairing that stays fresh and slightly aromatic.",
+      "category": "Side",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Sweet Pumpkin",
+      "target": "Light Lager",
+      "note": "The natural sweetness of pumpkin works well with a pairing that stays fresh and slightly aromatic.",
+      "category": "Side",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Tomato & Onion Salad",
+      "target": "Sauvignon Blanc",
+      "note": "A bright, acidic side wants an equally bright pairing to keep the freshness front and centre.",
+      "category": "Side",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Tomato & Onion Salad",
+      "target": "Light Lager",
+      "note": "A bright, acidic side wants an equally bright pairing to keep the freshness front and centre.",
+      "category": "Side",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Steamed Potatoes & Sour Cream",
+      "target": "Chardonnay",
+      "note": "The sour cream adds richness, so the pairing should clean up the palate and keep the side feeling light.",
+      "category": "Side",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Steamed Potatoes & Sour Cream",
+      "target": "Light Lager",
+      "note": "The sour cream adds richness, so the pairing should clean up the palate and keep the side feeling light.",
+      "category": "Side",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Tomato and Avo Salad",
+      "target": "Sauvignon Blanc",
+      "note": "Avocado adds creaminess, so the drink needs enough acidity to keep the salad feeling sharp and fresh.",
+      "category": "Side",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Tomato and Avo Salad",
+      "target": "Light Lager",
+      "note": "Avocado adds creaminess, so the drink needs enough acidity to keep the salad feeling sharp and fresh.",
+      "category": "Side",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Side Green Salad",
+      "target": "Sauvignon Blanc",
+      "note": "Green salad is at its best with a crisp, uncomplicated pairing that mirrors its freshness.",
+      "category": "Side",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Side Green Salad",
+      "target": "Light Lager",
+      "note": "Green salad is at its best with a crisp, uncomplicated pairing that mirrors its freshness.",
+      "category": "Side",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Add Feta",
+      "target": "Sauvignon Blanc",
+      "note": "Feta adds salt and tang, so a bright pairing naturally supports it best.",
+      "category": "Side",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Add Feta",
+      "target": "Light Lager",
+      "note": "Feta adds salt and tang, so a bright pairing naturally supports it best.",
+      "category": "Side",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Duo of Ice Cream",
+      "target": "Moscato",
+      "note": "A sweet dessert like this wants either a soft, sweet match or a roasted contrast to keep it interesting.",
+      "category": "Dessert",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Duo of Ice Cream",
+      "target": "Stout",
+      "note": "A sweet dessert like this wants either a soft, sweet match or a roasted contrast to keep it interesting.",
+      "category": "Dessert",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Trio of Ice Cream",
+      "target": "Moscato",
+      "note": "The sweetness and creamy texture need a pairing that feels rich enough to sit beside them comfortably.",
+      "category": "Dessert",
+      "drinkType": "white",
+      "tier": "hero",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Trio of Ice Cream",
+      "target": "Stout",
+      "note": "The sweetness and creamy texture need a pairing that feels rich enough to sit beside them comfortably.",
+      "category": "Dessert",
+      "drinkType": "beer",
+      "tier": "strong",
+      "axis": "authored"
+    },
+    {
+      "type": "pairs_with",
+      "source": "BBQ / Peri-Peri Beef Burger",
+      "target": "Margarita",
+      "note": "The Margarita's citrus and salt cut straight through the peri-peri heat and the char, resetting your palate for the next bite.",
+      "category": "Burger",
+      "drinkType": "cocktail",
+      "tier": "strong",
+      "axis": "spice-cool"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Cheese Burger",
+      "target": "Cosmopolitan",
+      "note": "A Cosmopolitan's cranberry tartness and citrus snap slice through the melted cheese and beef fat instead of getting lost in it.",
+      "category": "Burger",
+      "drinkType": "cocktail",
+      "tier": "strong",
+      "axis": "acid-lift"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Firecracker Chicken Wings",
+      "target": "Mojito",
+      "note": "Fresh mint and lime in a Mojito are the classic cooling foil for firecracker heat — it refreshes rather than fights the chilli.",
+      "category": "Starter",
+      "drinkType": "cocktail",
+      "tier": "hero",
+      "axis": "spice-cool"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Trumps Rainbow Reloaded",
+      "target": "Cucumber and Mint G&T",
+      "note": "The cucumber and mint keep this G&T crisp and clean, mirroring the roll's fresh, delicate flavours rather than overpowering them.",
+      "category": "Sushi",
+      "drinkType": "cocktail",
+      "tier": "strong",
+      "axis": "acid-lift"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Falklands Calamari",
+      "target": "Pink Grapefruit and Rosemary G&T",
+      "note": "Grapefruit's bitter-citrus edge and a whisper of rosemary lift the calamari without masking its delicate, briny sweetness.",
+      "category": "Seafood",
+      "drinkType": "cocktail",
+      "tier": "strong",
+      "axis": "acid-lift"
+    },
+    {
+      "type": "pairs_with",
+      "source": "Seared Salmon",
+      "target": "Fruit Daiquiri - Strawberry",
+      "note": "A Strawberry Daiquiri's bright fruit and gentle sweetness play well against seared salmon's richness without overwhelming it.",
+      "category": "Seafood",
+      "drinkType": "cocktail",
+      "tier": "strong",
+      "axis": "fruit-echo"
+    },
+    {
+      "type": "upgrade_of",
+      "source": "Wagyu Ribeye",
+      "target": "Ribeye",
+      "note": "for noticeably richer marbling and a more buttery finish"
+    },
+    {
+      "type": "upgrade_of",
+      "source": "Wagyu Fillet",
+      "target": "Fillet",
+      "note": "the same gentle cut, softened further by Wagyu's marbling"
+    },
+    {
+      "type": "upgrade_of",
+      "source": "Wagyu Sirloin",
+      "target": "Sirloin",
+      "note": "the same firm bite, with Wagyu's marbling carrying it further"
+    },
+    {
+      "type": "upgrade_of",
+      "source": "Wagyu Rump",
+      "target": "Rump",
+      "note": "the same full flavour, elevated by Wagyu's fat"
+    },
+    {
+      "type": "upgrade_of",
+      "source": "Wagyu Ribeye",
+      "target": "Tomahawk",
+      "note": "if you'd like the marbling of Wagyu in a more manageable portion"
+    },
+    {
+      "type": "add_on_to",
+      "source": "Mushroom Truffle Butter",
+      "target": "Ribeye",
+      "note": "melts over the hot steak and rounds out the char with an earthy, buttery finish"
+    },
+    {
+      "type": "add_on_to",
+      "source": "Creamy Mushroom Sauce",
+      "target": "Fillet",
+      "note": "a gentle sauce that won't overpower fillet's own delicate flavour"
+    },
+    {
+      "type": "add_on_to",
+      "source": "Three Peppercorn Sauce",
+      "target": "Sirloin",
+      "note": "classic with sirloin's firmer bite and deeper flavour"
+    },
+    {
+      "type": "add_on_to",
+      "source": "Garlic & Sage Butter",
+      "target": "Rump",
+      "note": "a simple, savoury finish that lets the rump's own flavour lead"
+    },
+    {
+      "type": "add_on_to",
+      "source": "Mushroom Truffle Butter",
+      "target": "Tomahawk",
+      "note": "a showpiece sauce for a showpiece cut"
+    },
+    {
+      "type": "add_on_to",
+      "source": "Mushroom Truffle Butter",
+      "target": "Wagyu Ribeye",
+      "note": "doubles down on the richness — truffle and Wagyu fat both lean into umami"
+    },
+    {
+      "type": "follows",
+      "source": "food",
+      "target": "wine",
+      "note": "After a food item is in the cart, the engine looks to complete the journey with a wine pairing next (nextJourneyStage returns \"wine\" once hasFood is true but hasWine is false)."
+    },
+    {
+      "type": "follows",
+      "source": "wine",
+      "target": "dessert",
+      "note": "Once food + wine are both in the cart (and any upgrade has been offered), the engine looks to complete the journey with dessert next (nextJourneyStage returns \"dessert\")."
+    },
+    {
+      "type": "follows",
+      "source": "dessert",
+      "target": "coffee",
+      "note": "Once dessert is in the cart, the engine looks to complete the journey with coffee next (nextJourneyStage returns \"coffee\")."
+    },
+    {
+      "type": "follows",
+      "source": "coffee",
+      "target": "digestif",
+      "note": "Once coffee is in the cart, the engine looks to complete the journey with a digestif (port/amarula/spirit) next (nextJourneyStage returns \"digestif\")."
+    }
+  ]
+}

@@ -26,9 +26,20 @@ cd Sites/Trump/client && npm ci && npm run build      # produces client/dist/ (g
 ```
 
 ## 3. Sync code to the box
+
+> **NEVER sync `.env` or `ecosystem.config.js` from the workstation to prod.**
+> These are environment-specific and machine-specific — the workstation's copy is
+> a local dev file, not a template. A sync that includes `.env` will silently
+> overwrite production's `DATABASE_URL`/secrets with the developer's local
+> (non-production) values. The already-running process is unaffected (it loaded
+> its env at startup), but the **next restart or `pm2 reload` will fail to reach
+> the database** — this exact incident happened on 2026-07-05 (see
+> `docs/project-progress/` for the writeup) and cost real time to diagnose and
+> recover. `--exclude .env` below is not optional.
+
 ```bash
 # Windows has no rsync → tar-over-ssh:
-tar czf - --exclude node_modules --exclude .git --exclude client/node_modules Sites/Trump \
+tar czf - --exclude node_modules --exclude .git --exclude client/node_modules --exclude .env --exclude ecosystem.config.js Sites/Trump \
   | ssh root@134.122.99.78 'tar xzf - -C /var/www/mysite/Emenyu/Trump --strip-components=2'
 tar czf - -C Sites/Trump/client dist \
   | ssh root@134.122.99.78 'tar xzf - -C /var/www/mysite/Emenyu/Trump/client'

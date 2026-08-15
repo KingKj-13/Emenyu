@@ -1,59 +1,46 @@
-function registerOrderRoutes(app, controllers, auth) {
+const { tenantPaths } = require('../utils/helpers');
+
+function registerOrderRoutes(app, config, controllers, auth) {
   const adminAuth = auth.requireRoles(['owner', 'manager']);
   const waiterAuth = auth.requireRoles(['owner', 'manager', 'waiter']);
+  const api = p => tenantPaths(config, `/api${p}`);
+  const bare = p => tenantPaths(config, p);
+  // These three accept both Capitalized and lower-case suffixes regardless of
+  // prefix casing (a page-name convention, distinct from the prefix aliasing
+  // tenantPaths already handles) — union the two suffix variants.
+  const pageAliases = suffix => [
+    ...tenantPaths(config, `/${suffix}`),
+    ...tenantPaths(config, `/${suffix.toLowerCase()}`)
+  ];
 
-  app.get(
-    ['/Trump/Admin', '/Trump/admin', '/trump/Admin', '/trump/admin'],
-    auth.requirePage(['owner', 'manager']),
-    controllers.order.serveAdminPage
-  );
-  app.get(
-    ['/Trump/Waiter', '/Trump/waiter', '/trump/Waiter', '/trump/waiter'],
-    auth.requirePage(['owner', 'manager', 'waiter']),
-    controllers.waiter.serveWaiterPage
-  );
-  app.get(
-    ['/Trump/Kitchen', '/Trump/kitchen', '/trump/Kitchen', '/trump/kitchen'],
-    auth.requirePage(['owner', 'manager', 'kitchen']),
-    controllers.order.serveMenuPage
-  );
+  app.get(pageAliases('Admin'), auth.requirePage(['owner', 'manager']), controllers.order.serveAdminPage);
+  app.get(pageAliases('Waiter'), auth.requirePage(['owner', 'manager', 'waiter']), controllers.waiter.serveWaiterPage);
+  app.get(pageAliases('Kitchen'), auth.requirePage(['owner', 'manager', 'kitchen']), controllers.order.serveMenuPage);
 
-  app.get(['/api/config', '/Trump/api/config', '/trump/api/config'], controllers.ai.getConfig);
-  app.post(['/api/chat', '/Trump/api/chat', '/trump/api/chat'], controllers.ai.chat);
-  app.post(['/api/ai-pairing', '/Trump/api/ai-pairing', '/trump/api/ai-pairing'], controllers.ai.aiPairing);
-  app.post(['/api/recommend', '/Trump/api/recommend', '/trump/api/recommend'], controllers.ai.recommend);
-  app.post(['/api/waiter/cart-recommendations', '/Trump/api/waiter/cart-recommendations', '/trump/api/waiter/cart-recommendations'], waiterAuth, controllers.ai.cartRecommendations);
-  app.post(['/api/waiter/ordered-together', '/Trump/api/waiter/ordered-together', '/trump/api/waiter/ordered-together'], waiterAuth, controllers.ai.orderedTogether);
-  app.get(['/api/chat-history', '/Trump/api/chat-history', '/trump/api/chat-history'], adminAuth, controllers.ai.getChatHistory);
+  app.get(api('/config'), controllers.ai.getConfig);
+  app.post(api('/chat'), controllers.ai.chat);
+  app.post(api('/ai-pairing'), controllers.ai.aiPairing);
+  app.post(api('/recommend'), controllers.ai.recommend);
+  app.post(api('/waiter/cart-recommendations'), waiterAuth, controllers.ai.cartRecommendations);
+  app.post(api('/waiter/ordered-together'), waiterAuth, controllers.ai.orderedTogether);
+  app.get(api('/chat-history'), adminAuth, controllers.ai.getChatHistory);
 
-  app.post(['/submit_order', '/Trump/submit_order', '/trump/submit_order'], controllers.order.submitOrder);
+  app.post(bare('/submit_order'), controllers.order.submitOrder);
 
-  app.get(
-    ['/api/waiter/table/:tableId/status', '/Trump/api/waiter/table/:tableId/status', '/trump/api/waiter/table/:tableId/status'],
-    waiterAuth,
-    controllers.waiter.getTableStatus
-  );
-  app.post(['/api/waiter/add-items', '/Trump/api/waiter/add-items', '/trump/api/waiter/add-items'], waiterAuth, controllers.waiter.addItems);
-  app.post(
-    ['/api/waiter/archive-table', '/Trump/api/waiter/archive-table', '/trump/api/waiter/archive-table'],
-    waiterAuth,
-    controllers.waiter.archiveTable
-  );
+  app.get(api('/waiter/table/:tableId/status'), waiterAuth, controllers.waiter.getTableStatus);
+  app.post(api('/waiter/add-items'), waiterAuth, controllers.waiter.addItems);
+  app.post(api('/waiter/archive-table'), waiterAuth, controllers.waiter.archiveTable);
 
-  app.get(
-    ['/api/admin/tables/carts', '/Trump/api/admin/tables/carts', '/trump/api/admin/tables/carts'],
-    adminAuth,
-    controllers.waiter.getTableCarts
-  );
+  app.get(api('/admin/tables/carts'), adminAuth, controllers.waiter.getTableCarts);
 
-  app.get(['/orders', '/Trump/orders', '/trump/orders'], adminAuth, controllers.order.listOrders);
-  app.get(['/history', '/Trump/history', '/trump/history'], adminAuth, controllers.order.listHistory);
-  app.post(['/complete', '/Trump/complete', '/trump/complete'], adminAuth, controllers.order.markComplete);
-  app.post(['/incomplete', '/Trump/incomplete', '/trump/incomplete'], adminAuth, controllers.order.markIncomplete);
-  app.delete(['/delete/:type/:file', '/Trump/delete/:type/:file', '/trump/delete/:type/:file'], adminAuth, controllers.order.deleteOrder);
+  app.get(bare('/orders'), adminAuth, controllers.order.listOrders);
+  app.get(bare('/history'), adminAuth, controllers.order.listHistory);
+  app.post(bare('/complete'), adminAuth, controllers.order.markComplete);
+  app.post(bare('/incomplete'), adminAuth, controllers.order.markIncomplete);
+  app.delete(bare('/delete/:type/:file'), adminAuth, controllers.order.deleteOrder);
 
-  app.get(['/', '/Trump', '/trump'], controllers.order.redirectRoot);
-  app.get(['/Trump/:tableId', '/trump/:tableId', '/:tableId'], controllers.order.serveMenuPage);
+  app.get(tenantPaths(config, '/'), controllers.order.redirectRoot);
+  app.get(bare('/:tableId'), controllers.order.serveMenuPage);
 }
 
 module.exports = {

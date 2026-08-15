@@ -29,8 +29,29 @@ export const EP = {
   notificationAck: (id: number) => `/api/notifications/${id}/ack`,
   notificationsAckAll: '/api/notifications/ack-all',
 
+  // --- public config (assistant name, APK url, latest version) — no auth ---
+  config: '/api/config',
+
   // --- menu (read) ---
-  menu: '/api/menu'
+  menu: '/api/menu',
+
+  // --- waiter floor + order taking (Bearer-accepted `waiterAuth` on the server) ---
+  floor: '/api/floor',
+  tableStatus: (t: string) => `/api/waiter/table/${encodeURIComponent(t)}/status`,
+  tableIntel: (t: string) => `/api/waiter/table/${encodeURIComponent(t)}/intel`,
+  addItems: '/api/waiter/add-items',
+  archiveTable: '/api/waiter/archive-table',
+  cartRecommendations: '/api/waiter/cart-recommendations',
+  upsellEvent: '/api/upsell-event',
+  myPerformance: '/api/waiter/me/performance',
+
+  // --- workflow tasks / alerts / chat / birthday approval ---
+  tasks: '/api/waiter/tasks',
+  taskAck: (id: number | string) => `/api/waiter/tasks/${id}/ack`,
+  taskResolve: (id: number | string) => `/api/waiter/tasks/${id}/resolve`,
+  chatCenter: '/api/waiter/chat-center',
+  chatAnalysis: '/api/waiter/chat-analysis',
+  birthdayRequest: '/api/waiter/birthday-request'
 } as const;
 
 export function qs(params: Record<string, string | number | boolean | undefined>): string {

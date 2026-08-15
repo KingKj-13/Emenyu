@@ -1,0 +1,238 @@
+/* Full rebuild (was ~90 lines of inline styles with no safe-area handling,
+   no portal, and position:absolute anchored to whichever ancestor happened
+   to be nearest -- which for the waiter topbar has backdrop-filter, and an
+   element with backdrop-filter establishes its own containing block for
+   fixed/absolute descendants, so the drawer could render clipped by or
+   overlapping its own trigger's header instead of the viewport). Portaled
+   to document.body (see NotificationBell.tsx) and positioned purely
+   relative to the viewport, so none of that matters anymore. */
+
+.bellBtn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: var(--color-panel, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--color-line, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-lg);
+  color: inherit;
+  cursor: pointer;
+  line-height: 1;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+.bellBtn:hover { border-color: rgba(var(--color-gold-rgb), 0.4); transform: translateY(-1px); }
+.bellBtn:active { transform: translateY(0); }
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-burgundy, #a52b2d);
+  color: #fff;
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-notification);
+  background: var(--color-overlay, rgba(0, 0, 0, 0.5));
+}
+
+/* Desktop/tablet default: an anchored dropdown near the bell (top-right of
+   the viewport -- both mounting sites, Admin's chrome bar and the waiter
+   topbar, put the bell in the top-right). */
+.panel {
+  position: fixed;
+  z-index: var(--z-notification);
+  top: calc(12px + env(safe-area-inset-top));
+  right: calc(12px + env(safe-area-inset-right));
+  width: min(380px, calc(100vw - 24px));
+  max-height: min(560px, calc(100vh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+  max-height: min(560px, calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+  display: flex;
+  flex-direction: column;
+  background: var(--color-panel, #14110d);
+  color: var(--color-cream, #eee);
+  border: 1px solid var(--color-line, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal, 0 24px 70px rgba(0, 0, 0, 0.6));
+  overflow: hidden;
+}
+
+.header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-line, rgba(255, 255, 255, 0.08));
+}
+
+.title {
+  font-family: var(--font-heading, inherit);
+  font-size: var(--text-lg, 16px);
+  letter-spacing: 0.02em;
+}
+
+.headerActions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+
+.markAllBtn {
+  background: transparent;
+  border: none;
+  color: var(--color-gold, #cda85f);
+  font-family: var(--font-label);
+  font-size: var(--text-xs, 11px);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  padding: 6px 4px;
+}
+
+.closeBtn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 140ms ease, background 140ms ease;
+}
+.closeBtn:hover { opacity: 1; background: rgba(255, 255, 255, 0.06); }
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: var(--text-md, 14px);
+  opacity: 0.6;
+}
+
+.groupLabel {
+  padding: 10px 14px 4px;
+  font-family: var(--font-label);
+  font-size: var(--text-xs, 11px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+.row {
+  display: flex;
+  gap: 9px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: transparent;
+}
+.row.unread { background: rgba(var(--color-gold-rgb), 0.07); }
+
+.dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--color-gold, #cda85f);
+  opacity: 0.3;
+}
+.dot.unread { opacity: 1; }
+.dot.urgent { background: var(--color-burgundy, #a52b2d); }
+
+.rowBody { flex: 1; min-width: 0; }
+
+.rowTop { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+
+.rowTitle {
+  font-weight: 600;
+  font-size: var(--text-md, 14px);
+  /* Long titles wrap instead of clipping -- the old inline-style version had
+     no word-wrap guard on this line. */
+  overflow-wrap: anywhere;
+}
+
+.rowTime {
+  flex-shrink: 0;
+  font-size: var(--text-xs, 11px);
+  opacity: 0.5;
+  white-space: nowrap;
+}
+
+.rowText {
+  margin-top: 2px;
+  font-size: var(--text-sm, 12px);
+  opacity: 0.75;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.rowFoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  gap: 8px;
+}
+
+.priorityLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+.markBtn {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-gold, #cda85f);
+  font-size: var(--text-xs, 11px);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* Mobile: bottom sheet instead of a top-right dropdown -- this is the actual
+   bug fix. Anchored to the viewport (not the trigger button), so it can
+   never overlap the header, and every measurement below is safe-area-aware
+   so Android's gesture nav / notch never clips it. */
+@media (max-width: 560px) {
+  .panel {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: min(75vh, calc(100dvh - 20px - env(safe-area-inset-top)));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .header { padding: 14px 16px; }
+  .title { font-size: var(--text-xl, 18px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel, .backdrop { transition: none; }
+}

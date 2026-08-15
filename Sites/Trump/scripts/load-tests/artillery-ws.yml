@@ -1,0 +1,42 @@
+config:
+  target: "http://localhost:3000"
+  environments:
+    dev:
+      target: "http://localhost:3000"
+    prod:
+      target: "{{ $processEnvironment.BASE_URL }}"
+  phases:
+    - duration: 30
+      arrivalRate: 2
+      rampTo: "{{ $processEnvironment.ARRIVAL_RATE }}"
+      name: "Ramp up"
+    - duration: 60
+      arrivalRate: "{{ $processEnvironment.ARRIVAL_RATE }}"
+      name: "Steady state"
+    - duration: 30
+      arrivalRate: "{{ $processEnvironment.ARRIVAL_RATE }}"
+      rampTo: 0
+      name: "Ramp down"
+  engines:
+    socketio: {}
+
+scenarios:
+  - name: "Customer connects and listens"
+    engine: "socketio"
+    flow:
+      - get:
+          url: "/Trump/healthz" # Ensures initial HTTP handshake works
+          headers:
+            x-load-test-secret: "{{ $processEnvironment.LOAD_TEST_SECRET }}"
+      - connect:
+          namespace: "/"
+          extraHeaders:
+            x-load-test-secret: "{{ $processEnvironment.LOAD_TEST_SECRET }}"
+      - think: 2
+      - emit:
+          channel: "table:join"
+          data: "table_1"
+      - think: 5
+      - emit:
+          channel: "ping"
+      - think: 5

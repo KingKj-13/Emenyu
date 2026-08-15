@@ -5,7 +5,10 @@ const categoryClassifier = require('../services/categoryClassifier');
 
 const RESTAURANT_ID = process.env.TRUMP_RESTAURANT_ID || 'trump';
 const PUBLIC_BASE_PATH = process.env.TRUMP_PUBLIC_BASE_PATH || '/Trump';
-const ADMIN_USERNAME = 'admin';
+// Overridable so a second tenant process (e.g. the Demo Steakhouse instance)
+// doesn't collide with Trump's real "admin" account — User rows have no
+// restaurantId column, so usernames must stay globally unique across tenants.
+const ADMIN_USERNAME = process.env.TRUMP_ADMIN_USER || 'admin';
 const LOCAL_ONLY_DEFAULT_PASSWORD = 'local-only-change-me';
 
 function parseInteger(value, fallback) {
@@ -49,6 +52,30 @@ function normalizeBasePath(value) {
   }
 
   return `/${raw.replace(/^\/+|\/+$/g, '')}`;
+}
+
+// Most routes need to answer at the bare path (local/dev with no prefix), the
+// tenant's real public base path, and that base path lower-cased (some proxies/
+// clients hit it lower-case). This used to be re-implemented per-file as a local
+// alias(p) function or an inline literal array hardcoding "/Trump"/"trump" —
+// config.publicBasePath was computed but silently ignored. tenantPaths() is the
+// single source of truth so a tenant's own publicBasePath (e.g. "/Carmella")
+// actually drives routing instead of every tenant secretly answering at /Trump.
+// Pass { includeBare: false } for mounts that must only answer under the
+// tenant prefix (e.g. the client build's static assets, historically NOT
+// served at bare '/' — only the media dir and API/HTML routes were).
+function tenantPaths(config, routePath, { includeBare = true } = {}) {
+  const suffix = routePath === '/' ? '' : routePath;
+  const base = config.publicBasePath || '';
+  const lower = base.toLowerCase();
+  const paths = includeBare ? [`${suffix || '/'}`] : [];
+  if (base) {
+    paths.push(`${base}${suffix}`);
+    if (lower !== base) {
+      paths.push(`${lower}${suffix}`);
+    }
+  }
+  return paths;
 }
 
 function getSharedPassword(isProduction) {
@@ -195,13 +222,24 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     history: path.join(baseDir, 'history'),
     tables: path.join(baseDir, 'tables'),
     data: path.join(baseDir, 'data'),
-    uploads: path.join(baseDir, 'uploads')
+    uploads: path.join(baseDir, 'uploads'),
+    // Overridable so a second tenant process can serve Trump's real client
+    // build / Images / Video read-only instead of duplicating them on disk
+    // (see Sites/Demo). Both default to baseDir-relative, i.e. today's paths.
+    clientDist: env.TRUMP_CLIENT_DIST_DIR
+      ? path.resolve(baseDir, env.TRUMP_CLIENT_DIST_DIR)
+      : path.join(baseDir, 'client', 'dist'),
+    media: env.TRUMP_MEDIA_DIR ? path.resolve(baseDir, env.TRUMP_MEDIA_DIR) : baseDir
   };
 
   const files = {
     deals: path.join(directories.food, 'DealOfDay.json'),
     chatLogs: path.join(directories.data, 'chat_logs.json'),
-    accounts: path.join(directories.data, 'accounts.json')
+    accounts: path.join(directories.data, 'accounts.json'),
+    // Curated Demo Mode + future live-flippable admin settings — same
+    // JSON-file pattern as DealOfDay.json, so the toggle can flip instantly
+    // without a server restart (see fileService.loadSettings/saveSettings).
+    settings: path.join(directories.data, 'settings.json')
   };
 
   const config = {
@@ -212,16 +250,64 @@ function createConfig(baseDir = path.resolve(__dirname, '..', '..')) {
     publicBasePath,
     publicOrigin,
     tableCount: parseInteger(env.TRUMP_TABLE_COUNT, 30),
+    // Luxury dining tables share the same restaurant/login/order pipeline as
+    // standard tables — they're just numbered in a reserved high range
+    // (luxuryTableBase+1 .. luxuryTableBase+luxuryTableCount) so every place
+    // that already validates "table<N> where N is 1..tableCount" needs no
+    // changes; only the luxury-aware range check and the waiter UI treat
+    // them differently (display as L1, L2, ... sorted to the top).
+    luxuryTableCount: parseInteger(env.TRUMP_LUXURY_TABLE_COUNT, 6),
+    luxuryTableBase: parseInteger(env.TRUMP_LUXURY_TABLE_BASE, 900),
     brandName: env.TRUMP_BRAND_NAME || 'Trump',
-    // Phase 3B: the chatbot's display name (Donald). Surfaced to the client via
-    // GET /api/config so the SPA stops hardcoding "Trump AI".
-    assistantName: env.TRUMP_ASSISTANT_NAME || 'Donald',
+    // Phase 5 (AI Concierge): the chatbot's display name/branding. Surfaced to
+    // the client via GET /api/config so the SPA never hardcodes it. This is a
+    // branding string only — it carries no recommendation logic.
+    assistantName: env.TRUMP_ASSISTANT_NAME || '🍷 Your Sommelier',
     // Waiter-app APK download link ("latest" GitHub release asset), surfaced to the
     // Admin UI via GET /api/config so managers can hand it to new staff on account
     // creation. See docs/final-product/phase-04b/APK-BUILD.md for the release rule.
     waiterApkUrl: env.TRUMP_WAITER_APK_URL || 'https://github.com/KingKj-13/Emenyu/releases/latest/download/trump-waiter.apk',
+    // Latest waiter-app version. The native app compares its installed version to
+    // this on launch and shows a dismissible "Update available" banner (linking to
+    // waiterApkUrl) when older. Bump via env TRUMP_WAITER_LATEST_VERSION when you
+    // publish a new APK — no code deploy needed. Keep in step with app.json version.
+    waiterLatestVersion: env.TRUMP_WAITER_LATEST_VERSION || '1.0.1',
+    // Persona-vs-scoring seam (AD-005): selects which NLG voice composes the
+    // customer chat reply. The recommendation SCORING engine (recommendationScoring.js)
+    // is unaffected by this — every persona shares it unchanged. 'template' is
+    // Trump's existing Donald/Sommelier voice; 'gaspard' is Carmella's.
+    assistantPersona: env.TRUMP_ASSISTANT_PERSONA || 'template',
     host: env.TRUMP_HOST || env.HOST || '0.0.0.0',
     port,
+    // Sales/investor demo tenant support (Demo Steakhouse). Unset for Trump's
+    // own .env, so this only ever activates on a deliberately-configured demo
+    // process. When set, createRoleAuth() short-circuits every request to a
+    // synthetic user with this role — no real accounts/login needed.
+    demo: {
+      autoLoginRole: env.TRUMP_DEMO_AUTO_LOGIN_ROLE || null,
+      autoLoginUsername: env.TRUMP_DEMO_AUTO_LOGIN_USERNAME || 'demo-guest'
+    },
+    // Live-demo role switching (distinct from config.demo above, which bypasses
+    // auth entirely for a whole separate tenant process). DEMO_MODE=true keeps
+    // real accounts/login/permissions intact — it only auto-issues a session for
+    // the matching seeded role account when /Admin, /Owner, /Waiter, or /Kitchen
+    // is visited directly, so a presenter can jump between role dashboards
+    // without logging out. Off by default; reversible with one env var
+    // (see createRoleAuth's demoAutoLogin()).
+    demoMode: parseBoolean(env.DEMO_MODE, false),
+    // Live pitch-demo mode (demo trump rule.md; Carmella's 2026-07-12 demo
+    // validation report Part 9): hard-coded CHEF'S PICK chains for
+    // aiService.recommend()/chat(), off by default so real diners always get
+    // the real engine. TRUMP_SCRIPTED_DEMO_TABLE scopes it to one table —
+    // leave unset (as here) to disable the table scope entirely, so any
+    // table can trigger a chain by cart contents alone (Carmella runs this
+    // way, since its six demo stories are deliberately spread across
+    // different tables). Which chain set applies is decided by
+    // config.restaurantId inside scriptedDemoChains.js, not by this flag.
+    scriptedDemo: {
+      enabled: parseBoolean(env.TRUMP_SCRIPTED_DEMO_ENABLED, false),
+      tableId: env.TRUMP_SCRIPTED_DEMO_TABLE || null
+    },
     admin: {
       username: ADMIN_USERNAME,
       password: sharedPassword
@@ -398,6 +484,40 @@ function createRoleAuth(config, accountService, logger = null) {
   const crypto = require('crypto');
   const cookieName = config.auth.cookieName || 'trump_session';
 
+  // Public demo tenant only (config.demo.autoLoginRole is unset for Trump's own
+  // .env): every request/socket-handshake is treated as already authenticated,
+  // so the demo admin/waiter UIs open with no login step. Real credentials/
+  // accountService are never consulted on this path.
+  function demoUser() {
+    if (!config.demo?.autoLoginRole) {
+      return null;
+    }
+
+    return {
+      username: config.demo.autoLoginUsername,
+      role: config.demo.autoLoginRole,
+      label: 'Demo Guest',
+      status: 'active'
+    };
+  }
+
+  // Staff/Accounts tab for the demo tenant: `User` rows have no restaurantId
+  // column (global uniqueness across every tenant sharing this DB), so the
+  // demo admin's staff list is a process-local in-memory mock — it never
+  // reads or writes the real Postgres `User` table, and resets on restart.
+  let demoAccountsStore = null;
+  function demoAccounts() {
+    if (!demoAccountsStore) {
+      demoAccountsStore = [
+        { username: 'demo-owner', role: 'owner', label: 'Owner', status: 'active', assignedTables: [], createdBy: 'system', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), suspendedAt: null },
+        { username: 'demo-manager', role: 'manager', label: 'Manager', status: 'active', assignedTables: [], createdBy: 'system', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), suspendedAt: null },
+        { username: 'demo-waiter', role: 'waiter', label: 'Waiter', status: 'active', assignedTables: [], createdBy: 'system', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), suspendedAt: null },
+        { username: 'demo-kitchen', role: 'kitchen', label: 'Kitchen', status: 'active', assignedTables: [], createdBy: 'system', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), suspendedAt: null }
+      ];
+    }
+    return demoAccountsStore;
+  }
+
   function sanitizeUser(user) {
     if (!user) {
       return null;
@@ -488,7 +608,8 @@ function createRoleAuth(config, accountService, logger = null) {
   }
 
   async function getRequestUser(req) {
-    return (await getSessionUser(req))
+    return demoUser()
+      || (await getSessionUser(req))
       || (await getBearerUser(req))
       || (await readBasicUser(req, config, accountService));
   }
@@ -500,10 +621,51 @@ function createRoleAuth(config, accountService, logger = null) {
     const parts = getCookieOptions(req, maxAgeSeconds);
     parts[0] = `${cookieName}=${encodeURIComponent(token)}`;
     res.setHeader('Set-Cookie', parts.join('; '));
+    return token;
   }
 
   function clearSession(req, res) {
     res.setHeader('Set-Cookie', getCookieOptions(req, 0).join('; '));
+  }
+
+  // Live-demo role switching (config.demoMode). Silently issues a fresh session
+  // for the given role's seeded account — same issueSession() a real login uses,
+  // so every downstream requireRoles()/requirePage() check, and the client's
+  // /api/auth/me call once the SPA boots, sees a normal, fully-permissioned
+  // session. Replaces whatever session cookie was already present; the caller
+  // never has to log out. No-op (calls next() only) when config.demoMode is
+  // false, so production behavior is byte-for-byte unchanged when unset.
+  function demoAutoLogin(role) {
+    return async function demoAutoLoginMiddleware(req, res, next) {
+      if (!config.demoMode) {
+        return next();
+      }
+
+      try {
+        const seed = (config.auth.users || []).find(candidate => candidate.role === role);
+        const user = seed && accountService ? await accountService.findActiveUser(seed.username) : null;
+        if (user) {
+          const token = issueSession(req, res, user);
+          // Set-Cookie only takes effect on the browser's *next* request — but
+          // orderRoutes.js registers requirePage() guards for /Admin, /Waiter,
+          // /Kitchen ahead of the SPA fallback, and this middleware must run
+          // ahead of those too (see server.js registration order) so the swap
+          // is visible to THIS same request, not just the following one.
+          const cookies = parseCookies(req);
+          cookies[cookieName] = token;
+          req.headers.cookie = Object.entries(cookies)
+            .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+            .join('; ');
+          logger?.info('demo_mode_auto_login', { role, username: user.username, path: req.originalUrl });
+        } else {
+          logger?.warn('demo_mode_auto_login_missing_account', { role, path: req.originalUrl });
+        }
+      } catch (error) {
+        logger?.warn('demo_mode_auto_login_failed', { role, error });
+      }
+
+      return next();
+    };
   }
 
   function getRoleHome(role) {
@@ -530,7 +692,20 @@ function createRoleAuth(config, accountService, logger = null) {
     }
 
     if (!user) {
-      res.set('WWW-Authenticate', 'Basic');
+      // Deliberately NOT setting WWW-Authenticate: Basic here (removed
+      // 2026-07-12). This app has no interactive Basic-Auth login flow --
+      // every real user authenticates via the cookie-session login page
+      // (the `options.page` branch above) or a Bearer token. But Express/
+      // fetch don't care that a request was a silent background poll (e.g.
+      // /api/notifications/unread-count, hit every ~60s) vs. a user action:
+      // the moment ANY XHR/fetch response carries this header with a 401,
+      // the BROWSER itself intercepts it and pops its own native
+      // username/password dialog over the page -- with no way for the app
+      // to suppress it. A session simply expiring mid-shift was enough to
+      // trigger this on the waiter dashboard. readBasicUser() above still
+      // accepts a proactively-sent `Authorization: Basic ...` header from
+      // any real API client that wants to use it -- this only stops the
+      // browser from being told to prompt for one.
       return res.status(401).json({ error: 'Authentication required' });
     }
 
@@ -554,6 +729,7 @@ function createRoleAuth(config, accountService, logger = null) {
     requirePage(roles = []) {
       return requireRoles(roles, { page: true });
     },
+    demoAutoLogin,
     getRequestUser,
     // Phase 04 — mint a short-lived Bearer access token (reuses the cookie HMAC
     // format so readToken/getBearerUser validate it identically).
@@ -562,9 +738,12 @@ function createRoleAuth(config, accountService, logger = null) {
     },
     // Verify a raw session token (same HMAC + active-user check as REST auth).
     // Returns the sanitized active user, or null. Used by the Socket.IO handshake.
-    getUserFromToken: readToken,
+    getUserFromToken: token => demoUser() || readToken(token),
     // Verify a session from a raw Cookie header string (Socket.IO handshake).
     async authenticateCookieHeader(cookieHeader) {
+      if (demoUser()) {
+        return demoUser();
+      }
       const cookies = parseCookieHeader(cookieHeader);
       const token = cookies[cookieName];
       return token ? readToken(token) : null;
@@ -604,10 +783,28 @@ function createRoleAuth(config, accountService, logger = null) {
       return res.json({ user: user ? sanitizeUser(user) : null, defaultPath: user ? getRoleHome(user.role) : config.publicBasePath });
     },
     async listAccounts(req, res) {
+      if (config.demo?.autoLoginRole) {
+        return res.json(demoAccounts());
+      }
       const accounts = await accountService.listForActor(req.user);
       return res.json(accounts);
     },
     async createAccount(req, res) {
+      if (config.demo?.autoLoginRole) {
+        const body = req.body || {};
+        if (!body.username || !body.role) {
+          return res.status(400).json({ error: 'username and role are required' });
+        }
+        if (demoAccounts().some(a => a.username === body.username)) {
+          return res.status(409).json({ error: 'That username already exists' });
+        }
+        const account = {
+          username: body.username, role: body.role, label: body.label || body.role, status: 'active',
+          assignedTables: [], createdBy: 'demo', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), suspendedAt: null
+        };
+        demoAccounts().push(account);
+        return res.status(201).json(account);
+      }
       try {
         const account = await accountService.createAccount(req.user, req.body || {});
         logger?.info('auth_account_created', { actor: sanitizeUser(req.user), account });
@@ -618,6 +815,14 @@ function createRoleAuth(config, accountService, logger = null) {
       }
     },
     async updateAccount(req, res) {
+      if (config.demo?.autoLoginRole) {
+        const account = demoAccounts().find(a => a.username === req.params.username);
+        if (!account) {
+          return res.status(404).json({ error: 'Account not found' });
+        }
+        Object.assign(account, req.body || {}, { updatedAt: new Date().toISOString() });
+        return res.json(account);
+      }
       try {
         const account = await accountService.updateAccount(req.user, req.params.username, req.body || {});
         logger?.info('auth_account_updated', { actor: sanitizeUser(req.user), account });
@@ -715,5 +920,6 @@ module.exports = {
   normalizeName,
   safeFileName,
   sleep,
-  tableIdFromFilename
+  tableIdFromFilename,
+  tenantPaths
 };

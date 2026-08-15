@@ -1,16 +1,33 @@
+/* Bug #3 fix: .modal now fills its parent panel's (already height-bounded,
+   overflow-y:auto) box exactly -- a box with `overflow:auto` and a
+   `max-height` resolves to EXACTLY that max-height once content needs more
+   room than that, which is precisely the case this height:100% needs to
+   track. That turns .body (below) into the one true scroll region instead of
+   the outer panel, which is what lets .actions leave the scrollable flow
+   entirely rather than needing position:sticky to stay reachable. */
 .modal {
   display: flex;
   flex-direction: column;
   position: relative;
   will-change: transform;
+  height: 100%;
 }
 
+/* Sticky, not a non-scrolling flex sibling: on some mobile browsers the
+   `.modal { height: 100% }` chain below 760px (see the min-width:760px
+   override, which gives .modal its OWN max-height instead) can fail to
+   resolve against `.panel`'s max-height + overflow-y:auto, so `.body`'s own
+   internal scroll never engages and `.panel` scrolls the whole card instead
+   -- dragging the hero photo away with it. Sticky pins `.media` to whichever
+   ancestor actually ends up scrolling, `.body` or `.panel`, so the photo
+   stays put either way instead of depending on that resolution succeeding. */
 .media {
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 3;
   aspect-ratio: 16/9;
   overflow: hidden;
   background: var(--blue-black);
-  flex-shrink: 0;
 }
 
 .image, .video, .youtube, .videoLayer, .imageOverlay {
@@ -99,9 +116,48 @@
 .favBtn:hover, .favActive { color: #e06060; border-color: rgba(224,96,96,0.5); }
 .favBtnOffset { left: 56px; }
 
-.body { padding: 20px 24px 24px; }
+/* Bug #3 fix: .body is now the scrollable region (not the outer modal panel),
+   sized by flexbox to take whatever space .media and the now-sibling
+   .actions don't use. min-height:0 is required -- without it a flex child
+   refuses to shrink below its content's natural height, which would defeat
+   overflow-y:auto entirely and let content grow past .modal's bound instead
+   of scrolling within it. */
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.bodyContent {
+  padding: 20px 24px 16px;
+}
 
 .chips { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+
+.cutLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 5px 11px;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.3);
+  border-radius: 999px;
+  background: rgba(var(--color-gold-rgb), 0.08);
+  color: var(--color-gold);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.cutLink:not(:disabled):hover {
+  border-color: rgba(var(--color-gold-rgb), 0.55);
+  background: rgba(var(--color-gold-rgb), 0.14);
+}
+
+.cutLink:disabled {
+  cursor: default;
+}
 
 .name {
   margin: 0 0 6px;
@@ -127,10 +183,54 @@
   line-height: 1.6;
 }
 
+/* Narrative "story" line (Carmella and any future tenant with authored
+   copy) — serif italic, sits above the description per the design brief. */
+.story {
+  margin: 0 0 10px;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--color-gold-soft, var(--color-gold));
+  line-height: 1.5;
+}
+
 .allergens {
   margin: 0 0 8px;
   font-size: 12px;
   color: rgba(201, 187, 165, 0.7);
+}
+
+.variantGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.2);
+  border-radius: 10px;
+}
+
+.variantOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--color-sand);
+  cursor: pointer;
+}
+
+.variantOption input {
+  accent-color: var(--color-gold);
+  cursor: pointer;
+}
+
+.variantOption span:first-of-type {
+  flex: 1;
+}
+
+.variantPrice {
+  color: var(--color-gold);
+  font-weight: 600;
 }
 
 .calories {
@@ -149,7 +249,27 @@
   padding: 16px 0;
 }
 
-.actions { border-top: 1px solid var(--color-line); padding-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+/* Footer CTA — the primary conversion action must never require scrolling
+   past the recommendation panel to reach. Bug #3 fix: this used to be
+   `position: sticky` INSIDE the scrollable .body, which only reserves space
+   in normal flow -- it doesn't visually vacate it. Once ItemPairings' async
+   API call resolved and inserted ~300px of real content, the already-"stuck"
+   bar ended up rendered on top of the freshly-arrived recommendation cards
+   instead of after them. Now .actions is a flex sibling of .body, OUTSIDE
+   the scrollable region entirely (see .modal/.body above) -- reachable
+   without any scrolling, same as intended, but structurally unable to
+   overlap anything since it no longer shares a stacking/scroll context with
+   the content that grows underneath it. */
+.actions {
+  flex-shrink: 0;
+  padding: 16px 24px calc(16px + env(safe-area-inset-bottom));
+  background: var(--color-glass-strong);
+  border-top: 1px solid var(--color-line);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+}
 
 .qtyRow { display: flex; align-items: center; gap: 16px; }
 
@@ -158,13 +278,13 @@
   height: 36px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(198, 162, 75, 0.4);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.4);
   border-radius: 50%;
-  background: rgba(198, 162, 75, 0.08);
+  background: rgba(var(--color-gold-rgb), 0.08);
   color: var(--color-gold);
   transition: background 160ms ease;
 }
-.qtyBtn:hover { background: rgba(198, 162, 75, 0.18); }
+.qtyBtn:hover { background: rgba(var(--color-gold-rgb), 0.18); }
 
 .qtyValue {
   font-size: 20px;
@@ -187,15 +307,15 @@
   transition: border-color 160ms ease;
 }
 .noteInput::placeholder { color: rgba(201,187,165,0.4); }
-.noteInput:focus { outline: none; border-color: rgba(198,162,75,0.4); }
+.noteInput:focus:not(:focus-visible) { border-color: rgba(var(--color-gold-rgb),0.4); }
 
 .unavailableBanner {
   margin-bottom: 12px;
   padding: 9px 14px;
   background: rgba(239,68,68,0.1);
   border: 1px solid rgba(239,68,68,0.3);
-  border-radius: 8px;
-  color: #fca5a5;
+  border-radius: var(--radius-card);
+  color: var(--color-danger-text);
   font-size: 13px;
   font-weight: 600;
   text-align: center;
@@ -216,11 +336,11 @@
   font-size: 14px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  box-shadow: 0 4px 16px rgba(198,162,75,0.28);
+  box-shadow: 0 4px 16px rgba(var(--color-gold-rgb),0.28);
   transition: box-shadow 180ms ease, transform 180ms ease;
 }
 .addBtn:hover {
-  box-shadow: 0 8px 28px rgba(198,162,75,0.42);
+  box-shadow: 0 8px 28px rgba(var(--color-gold-rgb),0.42);
   transform: translateY(-1px);
 }
 .addBtn:disabled {
@@ -274,10 +394,34 @@
 }
 
 @media (max-width: 560px) {
-  .body { padding: 16px 16px calc(18px + env(safe-area-inset-bottom)); }
+  .bodyContent { padding: 16px 16px 0; }
   .media { aspect-ratio: 16 / 10; }
-  .actions { gap: 10px; padding-top: 12px; }
-  .addBtn { min-height: 48px; }
+  .actions { gap: 10px; margin: 12px -16px 0; padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); }
+  .orderHint { font-size: 12px; }
+  .priceTag { font-size: 15px; }
   .name { font-size: 20px; }
   .price { font-size: 20px; margin-bottom: 10px; }
+}
+
+/* ── the modal footer after ordering was removed ─────────────────────────────
+   Replaces .qtyRow / .noteInput / .addBtn. One line telling the guest how to
+   order, and the price. Logical properties so it mirrors in Arabic. */
+.orderHint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--color-sand);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.orderHint svg { color: var(--color-gold); flex: none; }
+
+.priceTag {
+  margin-inline-start: auto;
+  font-family: var(--font-label);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--color-gold);
+  white-space: nowrap;
 }

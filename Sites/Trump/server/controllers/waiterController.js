@@ -16,11 +16,11 @@ function getItemsCount(items) {
   return items.reduce((sum, item) => sum + getItemQuantity(item), 0);
 }
 
-function createWaiterController({ config, fileService, socketService, orderValidationService }) {
+function createWaiterController({ config, fileService, socketService, orderValidationService, aiEventService = null }) {
   return {
     serveWaiterPage(req, res) {
       // The waiter app is the React SPA (client/dist). React Router (basename
-      // "/Trump") renders the /Waiter route. Served at /Trump/Waiter.
+      // config.publicBasePath) renders the /Waiter route.
       res.sendFile(path.join(config.directories.base, 'client', 'dist', 'index.html'));
     },
 
@@ -82,6 +82,7 @@ function createWaiterController({ config, fileService, socketService, orderValid
         await socketService.replaceTableCart(cleanId, [], { emit: true });
         await socketService.emitTableHistory(cleanId);
         socketService.emitOrderPlaced(order);
+        aiEventService?.evaluateOrderPlaced(order, cleanId).catch(() => {});
         return res.json({ ok: true });
       } catch {
         return res.status(500).json({ error: 'Failed to save order' });

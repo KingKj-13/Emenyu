@@ -1,0 +1,663 @@
+/* The butchery experience.
+   Landscape tablet (the Trump floor device) is the design target: the animal
+   holds the left two-thirds, the cut panel is a permanent right rail, and the
+   layout NEVER reflows when a cut opens — the lift-off measures screen boxes,
+   so a column that resizes mid-flight would send the cut to the wrong place.
+   Under 900px the rail becomes a bottom sheet that overlays instead. */
+
+.root {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--butchery-panel-w, 400px);
+  gap: clamp(12px, 2vw, 28px);
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
+  padding: clamp(8px, 1.4vw, 20px);
+}
+
+/* ── the animal ──────────────────────────────────────────────────────────── */
+.stageCol {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 1.2vh, 16px);
+  min-width: 0;
+  min-height: 0;
+}
+
+/* A soft pool of light under the animal so it sits on the ground rather than
+   floating on it. Cheap: one radial gradient, no filters, no blur layer. */
+.stage {
+  position: relative;
+  width: 100%;
+  max-width: min(1180px, calc((100vh - 260px) * 1.667));
+  background:
+    radial-gradient(ellipse 70% 62% at 50% 52%, rgba(var(--color-gold-rgb), 0.075), transparent 68%);
+}
+
+.caption {
+  margin: 0;
+  min-height: 1.3em;
+  text-align: center;
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+.caption b { color: var(--color-cream); font-weight: 700; }
+.captionAlt { color: rgba(var(--color-gold-rgb), 0.6); }
+
+/* ── the cut rail ────────────────────────────────────────────────────────── */
+.rail {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.rail::-webkit-scrollbar { display: none; }
+
+.railBtn {
+  position: relative;
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+  min-height: 40px;
+  padding: 0 14px;
+  background: transparent;
+  color: var(--color-sand);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+}
+.railBtn:hover { color: var(--color-cream); border-color: rgba(var(--color-gold-rgb), 0.45); }
+.railBtn[aria-pressed='true'] {
+  background: var(--color-burgundy);
+  border-color: var(--color-burgundy);
+  color: var(--color-cream);
+}
+/* A cut with something on tonight's menu carries a gold pip. */
+.railDot {
+  display: inline-block;
+  width: 4px; height: 4px;
+  margin-left: 7px;
+  vertical-align: 2px;
+  border-radius: 50%;
+  background: var(--color-gold);
+}
+.railBtn[aria-pressed='true'] .railDot { background: var(--color-cream); }
+
+/* ── where a lifted cut lands ───────────────────────────────────────────── */
+.viewer {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+}
+/* The viewer box IS the landing box, so the picture fills it exactly and the
+   late crossfade lands on top of the flier rather than beside it. */
+.cutImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  display: block;
+  filter: drop-shadow(0 26px 34px rgba(0, 0, 0, 0.62));
+}
+.stageNote {
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  transform: translateX(-50%);
+  margin: 0;
+  font-family: var(--font-label);
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 260ms ease;
+  white-space: nowrap;
+}
+.stageNoteShown { opacity: 1; }
+
+/* ── the transition layer ───────────────────────────────────────────────── */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  overflow: hidden;
+}
+.flier {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+  visibility: hidden;
+}
+.flier > * {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+}
+.flier[data-mode='meat'] > .flierCut { display: block; object-fit: contain; }
+.flier[data-mode='hide'] > .flierSvg { display: block; }
+.flierShape {
+  fill: var(--color-burgundy);
+  stroke: rgba(var(--color-gold-rgb), 0.75);
+  stroke-width: 5;
+  stroke-linejoin: round;
+}
+
+/* ── the cut panel ──────────────────────────────────────────────────────── */
+.panel {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: clamp(18px, 2vw, 26px) clamp(16px, 1.8vw, 24px) 40px;
+  background: linear-gradient(180deg, rgba(13, 34, 54, 0.72), rgba(4, 14, 26, 0.88));
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
+.panel:focus { outline: none; }
+.panel:focus-visible { outline: 2px solid var(--color-gold); outline-offset: -2px; }
+
+.close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 7px 10px;
+  line-height: 1;
+}
+.close:hover { border-color: var(--color-gold); color: var(--color-cream); }
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+
+.cutName {
+  margin: 0 0 4px;
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: clamp(28px, 3vw, 36px);
+  line-height: 1.06;
+  color: var(--color-cream);
+  padding-right: 82px;    /* clears the close button */
+}
+.altName {
+  margin: 0 0 18px;
+  font-family: var(--font-label);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-sand);
+}
+
+.note {
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  background: rgba(165, 43, 45, 0.14);
+  border-left: 2px solid var(--color-burgundy);
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e8dcdc;
+}
+
+.desc {
+  margin: 0 0 20px;
+  font-size: 14.5px;
+  line-height: 1.66;
+  color: rgba(247, 251, 255, 0.86);
+}
+
+.field {
+  border-top: 1px solid var(--color-line);
+  padding: 14px 0 0;
+  margin: 0 0 16px;
+}
+.field h3 {
+  margin: 0 0 9px;
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-gold-dim);
+}
+.field > p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: rgba(247, 251, 255, 0.82);
+}
+
+.chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+.chips li {
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  padding: 6px 9px;
+  color: var(--color-sand);
+}
+
+/* ── dishes off this cut ────────────────────────────────────────────────── */
+.dishList { list-style: none; margin: 0; padding: 0; }
+
+.dish {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(var(--color-gold-rgb), 0.08);
+}
+.dish:last-child { border-bottom: 0; }
+
+.dishThumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: rgba(var(--color-gold-rgb), 0.06);
+}
+
+.dishMain {
+  display: block;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+}
+.dishMain:disabled { cursor: default; opacity: 1; }
+.dishName {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-cream);
+  line-height: 1.3;
+}
+.dishMain:hover:not(:disabled) .dishName { color: var(--color-gold-soft); }
+.dishDesc {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 2px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.dishPrice {
+  font-family: var(--font-label);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-gold);
+  white-space: nowrap;
+}
+
+/* The add button became a chevron: the row opens the dish, it does not order
+   it. Sold-out still shows, because a guest should know before they ask. */
+.dishGo {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--color-gold-dim);
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+.dishMain:hover ~ .dishGo,
+.dish:hover .dishGo { color: var(--color-gold); }
+[dir='rtl'] .dishGo { transform: scaleX(-1); }
+
+.dishSold {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--color-danger-text);
+}
+
+.empty {
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+}
+.empty p {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.browseBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.4);
+  border-radius: var(--radius-sm);
+  color: var(--color-gold);
+  font-family: var(--font-label);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 9px 13px;
+}
+.browseBtn:hover { background: rgba(var(--color-gold-rgb), 0.12); }
+
+.cutMedia {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+.cutMedia li { margin: 0; }
+.cutMedia img,
+.cutMedia video {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-line);
+  background: rgba(var(--color-ink-rgb), 0.5);
+}
+.cutMedia span {
+  display: block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.classics { list-style: none; margin: 0; padding: 0; }
+.classics li { padding: 0 0 12px; }
+.classics b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-cream);
+}
+.classics span {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* ── the panel before anything is chosen ────────────────────────────────── */
+.idle { display: flex; flex-direction: column; height: 100%; }
+.idleTitle {
+  margin: 0 0 14px;
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.04;
+  color: var(--color-cream);
+}
+.idleBody {
+  margin: 0 0 22px;
+  font-size: 14px;
+  line-height: 1.68;
+  color: rgba(247, 251, 255, 0.78);
+}
+
+.namingRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 0;
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+  margin-bottom: 20px;
+}
+.namingLabel {
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-gold-dim);
+}
+.seg { display: flex; margin-left: auto; border: 1px solid var(--color-line); border-radius: var(--radius-sm); overflow: hidden; }
+.seg button {
+  border: 0;
+  background: transparent;
+  color: var(--color-sand);
+  font-family: var(--font-label);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  line-height: 1;
+}
+.seg button + button { border-left: 1px solid var(--color-line); }
+.seg button[aria-pressed='true'] { background: var(--color-burgundy); color: var(--color-cream); }
+
+.idleHints { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.idleHints button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(var(--color-gold-rgb), 0.05);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  color: var(--color-cream);
+  font-family: var(--font-heading);
+  font-size: 17px;
+  text-align: left;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.idleHints button:hover { background: rgba(var(--color-gold-rgb), 0.12); border-color: rgba(var(--color-gold-rgb), 0.4); }
+.idleHints span {
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-gold-dim);
+  white-space: nowrap;
+}
+
+/* ── portrait / phone: the rail becomes a sheet ─────────────────────────── */
+@media (max-width: 899px) {
+  .root {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 8px;
+  }
+  .stageCol { justify-content: flex-start; padding-top: 4px; }
+  /* Constrain the WIDTH, not the height: aspect-ratio derives height from a
+     definite width, so a max-height would overflow instead of shrinking. The
+     sheet's share of the viewport is subtracted here and reserved permanently,
+     so opening a cut never reflows the chart the lift-off just measured. */
+  .stage {
+    width: min(100%, calc((100dvh - var(--header-h) - 52dvh - 110px) * 1.667));
+    max-width: 100%;
+    margin-inline: auto;
+  }
+
+  .panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-drawer);
+    height: 52dvh;
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    background: var(--color-glass-strong);
+    backdrop-filter: blur(10px);
+    transform: translateY(100%);
+    transition: transform 380ms var(--ease-premium);
+    padding-top: 26px;
+    padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+  }
+  .panel::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 9px;
+    width: 38px;
+    height: 4px;
+    margin-left: -19px;
+    border-radius: 2px;
+    background: rgba(var(--color-gold-rgb), 0.35);
+  }
+  .open .panel { transform: none; }
+  /* Previously `.idle { display: none }` here — idle content used to be
+     unreachable on mobile (the sheet only opened once a cut was already
+     lifted). The trigger row now opens the sheet directly onto it, so it
+     needs to render; the base rule above already gives it display:flex. */
+  .cutName { padding-right: 76px; }
+
+  /* ── the collapsed trigger row (mobileEntry) ──────────────────────────
+     Same dark-card surface as .butcheryStage in MenuPage.module.css, which
+     still wraps this component — the row inherits that border/radius/
+     background for free and only needs its own internal layout. */
+  .triggerRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 44px;
+    height: 64px;
+    padding: 0 clamp(14px, 4vw, 20px);
+    background: transparent;
+    border: 0;
+    color: inherit;
+    text-align: left;
+  }
+  .triggerGlyph {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 21px;
+    fill: rgba(var(--color-gold-rgb), 0.85);
+  }
+  .triggerText {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .triggerTitle {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 1.2;
+    color: var(--color-cream);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .triggerSub {
+    font-family: var(--font-label);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .triggerChevron {
+    flex: 0 0 auto;
+    color: var(--color-gold-dim);
+  }
+  [dir='rtl'] .triggerChevron { transform: scaleX(-1); }
+
+  /* ── the revealed overlay (mobileEntry, tapped open) ──────────────────
+     The row above stays exactly where it is — nothing about it resizes —
+     while this takes the whole viewport on top of it. Because .root is
+     removed from flow entirely, the wrapping .butcheryStage card in
+     MenuPage.module.css (auto-height on mobile) never grows to hold it,
+     so nothing below the row ever shifts, open or closed. */
+  .mobileBackdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: calc(var(--z-drawer) - 1);
+  }
+  .root.mobileSheet {
+    /* Same z-index and inset:0 coverage as SideDrawer's own overlay — this
+       covers the site header while open, matching that existing convention
+       rather than inventing a new one just for this sheet. */
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-drawer);
+    height: auto;
+    overflow-y: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel { transition-duration: 1ms; }
+  .flier { will-change: auto; }
+}

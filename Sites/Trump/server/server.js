@@ -1,3 +1,10 @@
+// Pin the process timezone before anything else touches Date — the analytics
+// controller's hour/day-of-week/trend bucketing all use local Date getters
+// (getHours/getDay/getFullYear etc), which otherwise silently follow whatever
+// timezone the host OS happens to be configured with (commonly UTC on a fresh
+// cloud VPS) rather than the restaurant's real SAST business day.
+process.env.TZ = 'Africa/Johannesburg';
+
 const express = require('express');
 const fsPromises = require('fs').promises;
 const http = require('http');
@@ -10,19 +17,34 @@ const { createAnalyticsController } = require('./controllers/analyticsController
 const { createRecommendationAnalyticsController } = require('./controllers/recommendationAnalyticsController');
 const { createRecommendationBundleController } = require('./controllers/recommendationBundleController');
 const { createDealController } = require('./controllers/dealController');
+const { createSettingsController } = require('./controllers/settingsController');
 const { createKitchenController } = require('./controllers/kitchenController');
 const { createMenuController } = require('./controllers/menuController');
+// QR-menu redesign (2026-08-08): localization, butchery chart data and
+// anonymous guest-engagement analytics.
+const { createLocalizationService } = require('./services/localizationService');
+const { createButcheryService } = require('./services/butcheryService');
+const { createViewAnalyticsService } = require('./services/viewAnalyticsService');
+const { createQrMenuController } = require('./controllers/qrMenuController');
+const { registerQrMenuRoutes } = require('./routes/qrMenuRoutes');
+const { createContentAdminService } = require('./services/contentAdminService');
+const { createContentAdminController } = require('./controllers/contentAdminController');
+const { registerContentAdminRoutes } = require('./routes/contentAdminRoutes');
 const { createPushController } = require('./controllers/pushController');
 const { createRatingController } = require('./controllers/ratingController');
 const { createReservationController } = require('./controllers/reservationController');
 const { createOrderController } = require('./controllers/orderController');
 const { createUploadController } = require('./controllers/uploadController');
+const { createOrderImportController } = require('./controllers/orderImportController');
+const { registerOrderImportRoutes } = require('./routes/orderImportRoutes');
 const { createWaiterController } = require('./controllers/waiterController');
 const { createWaiterApiController } = require('./controllers/waiterApiController');
+const { createDebugController } = require('./controllers/debugController');
 const { registerAnalyticsRoutes } = require('./routes/analyticsRoutes');
 const { registerRecommendationAnalyticsRoutes } = require('./routes/recommendationAnalyticsRoutes');
 const { registerRecommendationBundleRoutes } = require('./routes/recommendationBundleRoutes');
 const { registerWaiterApiRoutes } = require('./routes/waiterApiRoutes');
+const { registerDebugRoutes } = require('./routes/debugRoutes');
 const { registerOperationsRoutes } = require('./routes/operationsRoutes');
 const { AuditService } = require('./services/auditService');
 const { ShiftService } = require('./services/shiftService');
@@ -35,6 +57,7 @@ const { TokenService } = require('./services/tokenService');
 const { PushDispatcher } = require('./services/pushDispatcher');
 const { createAuthTokenController } = require('./controllers/authTokenController');
 const { registerDealRoutes } = require('./routes/dealRoutes');
+const { registerSettingsRoutes } = require('./routes/settingsRoutes');
 const { registerKitchenRoutes } = require('./routes/kitchenRoutes');
 const { registerMenuRoutes } = require('./routes/menuRoutes');
 const { registerPushRoutes } = require('./routes/pushRoutes');
@@ -53,14 +76,54 @@ const { createWaiterAnalyticsService } = require('./services/waiterAnalyticsServ
 const { createServiceRecoveryService } = require('./services/serviceRecoveryService');
 const { createFloorService } = require('./services/floorService');
 const { createWaiterWorkflowService } = require('./services/waiterWorkflowService');
+const { createAiEventService } = require('./services/aiEventService');
 const { AccountService } = require('./services/accountService');
 const { FileService } = require('./services/fileService');
 const { SocketService } = require('./services/socketService');
 const { MediaEnrichmentService } = require('./services/mediaEnrichmentService');
 const { RecommendationEventService } = require('./services/recommendationEventService');
 const { RecommendationBundleService } = require('./services/recommendationBundleService');
+const { createRewardService } = require('./services/rewardService');
+const { createRewardController } = require('./controllers/rewardController');
+const { registerRewardRoutes } = require('./routes/rewardRoutes');
 const { createLogger } = require('./utils/logger');
-const { createConfig, createRoleAuth } = require('./utils/helpers');
+const { createConfig, createRoleAuth, tenantPaths } = require('./utils/helpers');
+
+// --- TEMPORARY MAINTENANCE MODE (reversible) -------------------------------
+// Set TRUMP_MAINTENANCE_MODE=true (in Sites/Trump/.env) and restart the
+// server to serve this page with a 503 for every request. To restore the
+// site, unset the var (or set it to anything else) and restart. See
+// server.js.bak-before-maintenance-mode for the pre-change file.
+const MAINTENANCE_PAGE_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carmella's Website - Temporarily Unavailable</title>
+<style>
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #faf7f2; color: #2b2420; text-align: center; padding: 24px;
+  }
+  .card { max-width: 480px; }
+  h1 { font-size: 1.5rem; margin: 0 0 8px; font-weight: 600; }
+  p { margin: 4px 0; line-height: 1.5; color: #5a4f45; }
+  .status { margin-top: 20px; font-size: 0.85rem; color: #a89a8c; letter-spacing: 0.02em; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Carmella's Website</h1>
+    <p>This website is temporarily unavailable.</p>
+    <p>Please check back later.</p>
+    <p>Thank you for your patience.</p>
+    <div class="status">503 Service Unavailable</div>
+  </div>
+</body>
+</html>`;
+// --- END TEMPORARY MAINTENANCE MODE -----------------------------------------
 
 function loadEnvironment() {
   dotenv.config({ quiet: true });
@@ -82,6 +145,17 @@ function createStaticOptions(config) {
         res.type('video/mp4');
       } else if (/\.webm$/i.test(filePath)) {
         res.type('video/webm');
+      } else if (/\.jpg$/i.test(filePath)) {
+        try {
+          const fs = require('fs');
+          const fd = fs.openSync(filePath, 'r');
+          const buffer = Buffer.alloc(4);
+          fs.readSync(fd, buffer, 0, 4, 0);
+          fs.closeSync(fd);
+          if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+            res.type('image/png');
+          }
+        } catch(e) {}
       }
 
       if (/[\\/]sw\.js$/i.test(filePath)) {
@@ -202,8 +276,8 @@ function registerProcessHandlers({ server, socketService, accountService, fileSe
   });
 }
 
-async function startServer() {
-  const config = createConfig(path.resolve(__dirname, '..'));
+async function startServer(baseDirOverride) {
+  const config = createConfig(baseDirOverride || path.resolve(__dirname, '..'));
   const logger = createLogger(config);
   const fileService = new FileService(config, { logger });
   await fileService.ensureBaseFiles();
@@ -212,6 +286,15 @@ async function startServer() {
   await accountService.ensureReady();
 
   const app = express();
+
+  // TEMPORARY MAINTENANCE MODE — see block near the top of this file for the
+  // page content and restore instructions. No-op unless the env var is set.
+  if (process.env.TRUMP_MAINTENANCE_MODE === 'true') {
+    app.use((req, res) => {
+      res.status(503).set('Retry-After', '3600').type('html').send(MAINTENANCE_PAGE_HTML);
+    });
+  }
+
   const server = http.createServer(app);
   const auth = createRoleAuth(config, accountService, logger);
   const socketService = new SocketService(config, fileService, logger, { auth });
@@ -235,6 +318,7 @@ async function startServer() {
   const opportunityService = createOpportunityService({ config, aiService });
   const waiterAnalyticsService = createWaiterAnalyticsService({ config });
   const serviceRecoveryService = createServiceRecoveryService({ config });
+  const rewardService = createRewardService({ config, logger }); // Curated Demo Mode — one-time reward QR
   const floorService = createFloorService({ config });
   const waiterWorkflowService = createWaiterWorkflowService({ config, socketService });
   // Phase 03 — staff operations services (shifts, table ownership, notification
@@ -243,24 +327,63 @@ async function startServer() {
   // Phase 04B — background push fan-out (Expo); a non-fatal side-effect of notify().
   const pushDispatcher = new PushDispatcher({ accountService, tokenService, config, logger });
   const notificationService = new NotificationService({ config, logger, socketService, auditService, pushDispatcher });
+  socketService.setNotificationService(notificationService);
+  // AI Shared Event System — single source of truth for birthday/VIP/allergy/
+  // large-group/etc. signals across chat detection, guest-seating, and order
+  // placement. Depends on waiterWorkflowService (to keep the existing waiter
+  // task inbox working) and notificationService (existing notification bell).
+  const aiEventService = createAiEventService({ config, socketService, notificationService, waiterWorkflowService, logger });
   const shiftService = new ShiftService({ config, logger, auditService });
   const tableOwnershipService = new TableOwnershipService({ config, logger, auditService, notificationService });
   const operationsService = new OperationsService({ config, logger, shiftService, notificationService });
   logger.info('nlg_mode', nlgService.status());
 
+  // Demo Live Ticker — OPT-IN ONLY (see server/services/demoLiveTicker.js). Keeps
+  // the floor looking alive for sales demos: new orders on idle tables, kitchen
+  // tickets progressing, occasional bill-calls/birthdays. Never runs unless this
+  // env var is explicitly set — must stay inert the moment Trump serves a real
+  // paying guest on a table it could otherwise touch.
+  if (process.env.TRUMP_DEMO_LIVE_MODE === 'true') {
+    const { createDemoLiveTicker } = require('./services/demoLiveTicker');
+    const demoLiveTicker = createDemoLiveTicker({ config, socketService, notificationService, waiterWorkflowService, logger });
+    demoLiveTicker.start();
+  }
+
+  const localizationService = createLocalizationService({
+    prismaMenuService: fileService.prismaMenu,
+    logger
+  });
+  const butcheryService = createButcheryService({
+    prismaMenuService: fileService.prismaMenu,
+    localizationService,
+    logger
+  });
+  const contentAdminService = createContentAdminService({
+    prismaMenuService: fileService.prismaMenu,
+    socketService,
+    logger
+  });
+  const viewAnalyticsService = createViewAnalyticsService({
+    prismaMenuService: fileService.prismaMenu,
+    logger
+  });
+
   const controllers = {
-    ai: createAiController({ aiService, config, waiterWorkflowService }),
+    ai: createAiController({ aiService, config, waiterWorkflowService, fileService, aiEventService }),
     analytics: createAnalyticsController({ config }),
     recommendationAnalytics: createRecommendationAnalyticsController({ recommendationEventService, prismaMenuService: fileService.prismaMenu }),
     recommendationBundle: createRecommendationBundleController({ recommendationBundleService, socketService }),
     deal: createDealController({ fileService, socketService }),
-    kitchen: createKitchenController({ config, fileService, socketService }),
-    menu: createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService: fileService.prismaMenu }),
-    order: createOrderController({ config, fileService, socketService, orderValidationService }),
+    settings: createSettingsController({ fileService, socketService }),
+    kitchen: createKitchenController({ config, fileService, socketService, notificationService }),
+    menu: createMenuController({ fileService, socketService, mediaEnrichmentService, prismaMenuService: fileService.prismaMenu, config, localizationService }),
+    qrMenu: createQrMenuController({ butcheryService, viewAnalyticsService, localizationService, logger }),
+    contentAdmin: createContentAdminController({ contentAdminService, logger }),
+    order: createOrderController({ config, fileService, socketService, orderValidationService, aiEventService }),
     push: createPushController({ config }),
     rating: createRatingController({ config }),
     reservation: createReservationController({ config }),
-    waiter: createWaiterController({ config, fileService, socketService, orderValidationService }),
+    waiter: createWaiterController({ config, fileService, socketService, orderValidationService, aiEventService }),
     waiterApi: createWaiterApiController({
       config,
       fileService,
@@ -272,101 +395,187 @@ async function startServer() {
       waiterAnalyticsService,
       serviceRecoveryService,
       floorService,
-      waiterWorkflowService
+      waiterWorkflowService,
+      rewardService,
+      aiEventService
     }),
+    debug: createDebugController({ config, guestService, aiEventService }),
+    reward: createRewardController({ rewardService }),
     operations: createOperationsController({
       shiftService, tableOwnershipService, notificationService, operationsService, auditService
     }),
     authToken: createAuthTokenController({ accountService, auth, tokenService, config, logger })
   };
-  const uploadController = createUploadController(config);
+  const uploadController = createUploadController(config, { logger });
+  const orderImportController = createOrderImportController({ fileService, logger });
 
-  app.use(createRequestLogger(logger));
+  app.use(createRequestLogger(logger, config));
   configureSecurity(app, config, logger);
   app.use(express.json({ limit: config.http.bodyLimit }));
   app.use(express.urlencoded({ extended: true, limit: config.http.urlEncodedLimit }));
 
   registerHealthRoutes(app, config, fileService, new Date().toISOString());
 
-  app.get(['/favicon.ico', '/Trump/favicon.ico', '/trump/favicon.ico'], (req, res) => {
+  app.get(tenantPaths(config, '/favicon.ico'), (req, res) => {
     res.status(204).end();
   });
 
+  // ── waiter + kitchen: retired ────────────────────────────────────────────
+  // Registered before any auth guard on purpose: a stale waiter tablet should
+  // be told the app is gone, not bounced to a login screen it can never get
+  // past. TRUMP_WAITER_APP_ENABLED=true restores every route below.
+  const waiterAppEnabled = String(process.env.TRUMP_WAITER_APP_ENABLED || 'false').toLowerCase() === 'true';
+  if (!waiterAppEnabled) {
+    const retired = (what) => (_req, res) => {
+      if (_req.accepts(['html', 'json']) === 'json') {
+        return res.status(410).json({ error: `The ${what} application has been retired.` });
+      }
+      return res.status(410).type('text/plain').send(`The ${what} application has been retired.`);
+    };
+    // Express 5 / path-to-regexp v8 require a NAMED wildcard — a bare `*`
+    // throws at registration and takes the whole server down on boot.
+    app.all(tenantPaths(config, '/api/waiter/*rest'), retired('waiter'));
+    app.all(tenantPaths(config, '/api/kitchen/*rest'), retired('kitchen'));
+    app.get(tenantPaths(config, '/waiter.html'), retired('waiter'));
+    for (const p of ['/Waiter', '/waiter']) app.get(tenantPaths(config, p), retired('waiter'));
+    app.get(tenantPaths(config, '/Kitchen'), retired('kitchen'));
+  } else {
+    logger.warn('waiter_app_enabled', {
+      note: 'TRUMP_WAITER_APP_ENABLED=true — the retired waiter/kitchen routes are exposed.'
+    });
+  }
+
   // Retired (Phase 01B): the vanilla admin.html is superseded by the React /Admin
   // dashboard. Redirect preserves the old bookmark and keeps the same owner/manager
-  // guard. A .html URL cannot render the SPA directly (React Router basename "/Trump"),
-  // so we redirect to the canonical /Admin route instead of serving the SPA here.
+  // guard. A .html URL cannot render the SPA directly (React Router basename is
+  // config.publicBasePath), so we redirect to the canonical /Admin route instead
+  // of serving the SPA here.
   app.get(
-    ['/admin.html', '/Trump/admin.html', '/trump/admin.html'],
+    tenantPaths(config, '/admin.html'),
     auth.requirePage(['owner', 'manager']),
     (req, res) => res.redirect(`${config.publicBasePath}/Admin`)
   );
   // Retired (Phase 01B): the vanilla waiter.html is superseded by the React /Waiter
   // app. Redirect preserves the bookmark and the same guard (a .html URL cannot
-  // render the SPA directly because React Router uses basename "/Trump").
+  // render the SPA directly because React Router basename is config.publicBasePath).
   app.get(
-    ['/waiter.html', '/Trump/waiter.html', '/trump/waiter.html'],
+    tenantPaths(config, '/waiter.html'),
     auth.requirePage(['owner', 'manager', 'waiter']),
     (req, res) => res.redirect(`${config.publicBasePath}/Waiter`)
   );
   // Retired: the vanilla owner.html is superseded by the React /Owner dashboard.
   app.get(
-    ['/owner.html', '/Trump/owner.html', '/trump/owner.html'],
+    tenantPaths(config, '/owner.html'),
     auth.requirePage(['owner']),
     (req, res) => res.redirect(`${config.publicBasePath}/Owner`)
   );
 
   const staticOptions = createStaticOptions(config);
-  const clientDist = path.join(__dirname, '../client/dist');
-  app.use('/Trump', express.static(clientDist, staticOptions));
-  app.use('/trump', express.static(clientDist, staticOptions));
-  app.use(express.static(config.directories.base, staticOptions));
-  app.use('/Trump', express.static(config.directories.base, staticOptions));
-  app.use('/trump', express.static(config.directories.base, staticOptions));
+  // Overridable so a second tenant process (e.g. Sites/Demo, Sites/Carmella) can
+  // reuse Trump's real client build / Images / Video without duplicating either
+  // on disk. Each tenant serves its own build under its own publicBasePath.
+  const clientDist = config.directories.clientDist;
+  const mediaDir = config.directories.media;
+  // Client build is only ever served under the tenant prefix, never at bare '/'
+  // (unchanged from before this refactor).
+  for (const p of tenantPaths(config, '', { includeBare: false })) {
+    app.use(p, express.static(clientDist, staticOptions));
+  }
+  app.use(express.static(mediaDir, staticOptions));
+  for (const p of tenantPaths(config, '', { includeBare: false })) {
+    app.use(p, express.static(mediaDir, staticOptions));
+  }
 
   // Legacy login URL — React Router handles this via SPA fallback below
-  app.post(['/api/auth/login', '/Trump/api/auth/login', '/trump/api/auth/login'], auth.login);
-  app.post(['/api/auth/logout', '/Trump/api/auth/logout', '/trump/api/auth/logout'], auth.logout);
-  app.get(['/api/auth/me', '/Trump/api/auth/me', '/trump/api/auth/me'], auth.me);
+  app.post(tenantPaths(config, '/api/auth/login'), auth.login);
+  app.post(tenantPaths(config, '/api/auth/logout'), auth.logout);
+  app.get(tenantPaths(config, '/api/auth/me'), auth.me);
   app.get(
-    ['/api/auth/accounts', '/Trump/api/auth/accounts', '/trump/api/auth/accounts'],
+    tenantPaths(config, '/api/auth/accounts'),
     auth.requireRoles(['owner', 'manager']),
     auth.listAccounts
   );
   app.post(
-    ['/api/auth/accounts', '/Trump/api/auth/accounts', '/trump/api/auth/accounts'],
+    tenantPaths(config, '/api/auth/accounts'),
     auth.requireRoles(['owner', 'manager']),
     auth.createAccount
   );
   app.patch(
-    ['/api/auth/accounts/:username', '/Trump/api/auth/accounts/:username', '/trump/api/auth/accounts/:username'],
+    tenantPaths(config, '/api/auth/accounts/:username'),
     auth.requireRoles(['owner', 'manager']),
     auth.updateAccount
   );
 
-  registerAnalyticsRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
-  registerRecommendationAnalyticsRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
-  registerRecommendationBundleRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
-  registerMenuRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
-  registerDealRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
-  registerKitchenRoutes(app, controllers, auth.requireRoles(['owner', 'manager', 'kitchen']));
-  registerPushRoutes(app, controllers, auth.requireRoles(['owner', 'manager', 'waiter', 'kitchen']));
-  registerRatingRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
-  registerReservationRoutes(app, controllers, auth.requireRoles(['owner', 'manager']));
-  registerUploadRoutes(app, uploadController, auth.requireRoles(['owner', 'manager']));
-  registerWaiterApiRoutes(app, controllers, auth);
-  registerOperationsRoutes(app, controllers, auth);
-  registerAuthTokenRoutes(app, controllers, auth);
-  registerOrderRoutes(app, controllers, auth);
+  // DEMO MODE (config.demoMode / DEMO_MODE env var) — reversible, off by default.
+  // Visiting one of these role dashboards directly re-authenticates as that
+  // role's seeded account, so a live demo can jump Waiter -> Admin -> Owner ->
+  // Kitchen without a logout step. Must be registered before
+  // registerOrderRoutes() below, whose requirePage() guards on /Admin,
+  // /Waiter, /Kitchen would otherwise redirect to /login first (Express
+  // matches same-path routes in registration order). A pure no-op — just
+  // calls next() — when demoMode is false. See demoAutoLogin() in
+  // utils/helpers.js.
+  if (config.demoMode) {
+    const demoRoleRoutes = [
+      { role: 'manager', routePaths: ['/Admin', '/admin'] },
+      { role: 'owner', routePaths: ['/Owner'] },
+    ];
+    demoRoleRoutes.forEach(({ role, routePaths }) => {
+      const paths = [...new Set(routePaths.flatMap(p => tenantPaths(config, p)))];
+      app.get(paths, auth.demoAutoLogin(role));
+    });
+    logger.warn('demo_mode_enabled', {
+      note: 'DEMO_MODE=true — /Admin and /Owner auto-authenticate. Unset for normal production auth.'
+    });
+  }
 
-  // SPA fallback: serve React app for all /Trump/* routes with no file extension
-  const spaIndex = path.join(__dirname, '../client/dist/index.html');
+  registerAnalyticsRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerRecommendationAnalyticsRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerRecommendationBundleRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerMenuRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerQrMenuRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerContentAdminRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerDealRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerSettingsRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerRewardRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager', 'waiter']));
+  if (waiterAppEnabled) {
+    registerKitchenRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager', 'kitchen']));
+  }
+  registerPushRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager', 'waiter', 'kitchen']));
+  registerRatingRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerReservationRoutes(app, config, controllers, auth.requireRoles(['owner', 'manager']));
+  registerUploadRoutes(app, config, uploadController, auth.requireRoles(['owner', 'manager']));
+  registerOrderImportRoutes(app, config, orderImportController, auth.requireRoles(['owner', 'manager']));
+  // The retirement gate above already answers every waiter/kitchen route.
+  if (waiterAppEnabled) {
+    registerWaiterApiRoutes(app, config, controllers, auth);
+  }
+  registerDebugRoutes(app, config, controllers, auth);
+  registerOperationsRoutes(app, config, controllers, auth);
+  registerAuthTokenRoutes(app, config, controllers, auth);
+  registerOrderRoutes(app, config, controllers, auth);
+
+  // SPA fallback: serve React app for all <publicBasePath>/* routes with no
+  // file extension (never at bare '/', unchanged from before this refactor).
+  // MUST use config.directories.clientDist, not a __dirname-relative path:
+  // server.js is one shared file required by every tenant process (Trump,
+  // Demo, Carmella all `require('../Trump/server/server')`), so __dirname is
+  // ALWAYS Trump's own directory regardless of which tenant is running. This
+  // was previously hardcoded to Trump's own client/dist/index.html for every
+  // tenant — silently "worked" for Demo only because Demo's React Router
+  // basename is also literally "/Trump" (see AD-001), so serving Trump's own
+  // compiled shell happened to match. Carmella's native "/Carmella" basename
+  // exposed it as a hard blank-page bug: Trump's compiled index.html has
+  // basename="/Trump" baked in, which cannot match a "/Carmella/..." URL, so
+  // React Router renders nothing.
+  const spaIndex = path.join(config.directories.clientDist, 'index.html');
   function serveSpa(req, res, next) {
     if (/\.\w+$/.test(req.path)) return next();
     res.sendFile(spaIndex);
   }
-  app.use('/Trump', serveSpa);
-  app.use('/trump', serveSpa);
+  for (const p of tenantPaths(config, '', { includeBare: false })) {
+    app.use(p, serveSpa);
+  }
 
   app.use(createErrorHandler(logger, config));
 
@@ -396,7 +605,7 @@ async function startServer() {
     cron.schedule('0 3 * * *', async () => {
       logger.info('media_enrichment_cron_start');
       try {
-        const result = await mediaEnrichmentService.enrichBatch({ limit: 50, restaurantId: 'trump' });
+        const result = await mediaEnrichmentService.enrichBatch({ limit: 50, restaurantId: config.restaurantId });
         logger.info('media_enrichment_cron_done', result);
       } catch (e) {
         logger.warn('media_enrichment_cron_error', { error: e.message });

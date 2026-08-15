@@ -1,0 +1,295 @@
+// carmella-production — forked from the shared platform schema (see root
+// prisma/schema.prisma) and trimmed to only what this tenant uses: menu
+// browsing, live cart estimates, and promotions/analytics. This is its own
+// file generating its own Prisma client against its own dedicated database
+// (never Trump's or live Carmella's) — no shared-schema risk to any other
+// tenant. Order/waiter/reservation/recommendation/auth/push models were
+// deliberately not carried over; they have no code path left that uses them.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model MenuCategory {
+  id           Int            @id @default(autoincrement())
+  restaurantId String         @default("carmella-production")
+  title        String
+  slug         String
+  path         String         @unique
+  intro        String         @default("")
+  parentId     Int?
+  parent       MenuCategory?  @relation("MenuCategoryChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children     MenuCategory[] @relation("MenuCategoryChildren")
+  sortOrder    Int            @default(0)
+  visible      Boolean        @default(true)
+  courseType   String?        @default("MAIN")
+  metadata     Json?
+  items        MenuItem[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([restaurantId, parentId, sortOrder])
+  @@index([restaurantId, slug])
+  @@index([restaurantId, courseType])
+  @@index([visible])
+}
+
+model MenuItem {
+  id             Int               @id @default(autoincrement())
+  restaurantId   String            @default("carmella-production")
+  categoryId     Int
+  category       MenuCategory      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name           String
+  normalizedName String
+  description    String            @default("")
+  story          String            @default("")
+  subtitle       String            @default("")
+  price          Float             @default(0)
+  calories       String            @default("")
+  allergens      String            @default("")
+  spice          String            @default("")
+  imagePath      String            @default("")
+  imageVisible   Boolean           @default(true)
+  visible        Boolean           @default(true)
+  available      Boolean           @default(true)
+  availability   String            @default("available") // available | ask | unavailable
+  popular        Boolean           @default(false)
+  daypart        String            @default("both") // day | night | both -- which VISUAL theme(s) this item appears on; separate from mealPeriod below
+  mealPeriod     String            @default("all_day") // breakfast | lunch | dinner | all_day -- which meal SERVICE this item is available during, filtered automatically by the current time (see getCurrentMealPeriod in menuUtils.ts). Independent of daypart: daypart never hides items, mealPeriod does.
+  sortOrder      Int               @default(0)
+  metadata       Json?
+  variants       MenuItemVariant[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([restaurantId, normalizedName])
+  @@index([restaurantId, categoryId, sortOrder])
+  @@index([visible])
+  @@index([available])
+  @@index([popular])
+}
+
+model MenuItemVariant {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("carmella-production")
+  itemId       Int
+  item         MenuItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  name         String
+  price        Float    @default(0)
+  imagePath    String   @default("")
+  isAddon      Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([restaurantId, itemId, sortOrder])
+}
+
+model RestaurantMenuSettings {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @unique @default("carmella-production")
+  settings     Json?
+  source       String   @default("json-hybrid")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Table {
+  id           Int              @id @default(autoincrement())
+  restaurantId String           @default("carmella-production")
+  tableId      String
+  displayName  String           @default("")
+  status       String           @default("active")
+  metadata     Json?
+  cartState    ActiveCartState?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([restaurantId, tableId])
+  @@index([restaurantId, status])
+}
+
+// The live, estimate-only cart. No order is ever created from this — it is
+// the single source of truth for what a guest is browsing/holding right now,
+// synced to the Admin "Live Carts" view over Socket.IO.
+model ActiveCartState {
+  id             Int      @id @default(autoincrement())
+  restaurantId   String   @default("carmella-production")
+  tableId        String
+  table          Table    @relation(fields: [restaurantId, tableId], references: [restaurantId, tableId])
+  cart           Json
+  updatedBy      String   @default("guest")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([restaurantId, tableId])
+  @@index([restaurantId, updatedAt])
+}
+
+// STEP 12 — Shared Cart, per-device split. Each browser/device that joins a
+// table's cart (see storage.ts's per-tenant sessionId, reused here as the
+// device identifier) gets a stable, table-scoped sequence number assigned on
+// first join -- "Device 1" is whichever device joined that table first,
+// "Device 2" the next, and so on, and that numbering stays fixed for the
+// rest of the seating regardless of who's currently looking at the cart.
+// This is what lets the Shared Cart UI show "Your Cart" (this device) plus
+// each OTHER device's section labeled consistently (D1/D2/D3) for every
+// guest at the table, not just relative to whoever is viewing. Cleared
+// alongside the cart on Reset Cart (new seating = new device numbering);
+// survives a Clear Entire Table (same seating, cart emptied).
+model TableDevice {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("carmella-production")
+  tableId      String
+  deviceId     String
+  deviceNumber Int
+  firstSeenAt  DateTime @default(now())
+  lastSeenAt   DateTime @updatedAt
+
+  @@unique([restaurantId, tableId, deviceId])
+  @@index([restaurantId, tableId, deviceNumber])
+}
+
+// STEP 7 — Deal of the Day / Promotions. A Promotion with isDealOfDay=true is
+// the ONE featured hero banner on the Menu page; every other (active)
+// Promotion renders in the smaller "Promotions/Combo Deals" section below it.
+// Only one row may have isDealOfDay=true at a time -- enforced in
+// promotionController.js's setDealOfDay (clears the flag off every other row
+// in the same transaction), not by a DB constraint, since Postgres has no
+// native "at most one true" check short of a partial unique index workaround
+// that would complicate the common "no deal configured yet" empty state.
+model Promotion {
+  id           Int       @id @default(autoincrement())
+  restaurantId String    @default("carmella-production")
+  title        String
+  description  String    @default("")
+  bannerImage  String    @default("")
+  badge        String    @default("") // NEW | SPECIAL | 10% OFF | 20% OFF | LIMITED | CHEF SPECIAL
+  itemIds      Json      @default("[]") // featured MenuItem.id[], shown on the homepage hero banner
+  dealPrice    Float?    // combined bundle price; when set, the Deal-of-Day
+                         // popup shows original-combined-price vs this price
+                         // as savings, and "Add complete deal" charges this
+                         // one price instead of summing live item prices
+  isDealOfDay  Boolean   @default(false)
+  startDate    DateTime?
+  endDate      DateTime?
+  startTime    String    @default("") // "HH:MM", restaurant-local
+  endTime      String    @default("")
+  active       Boolean   @default(true) // admin kill-switch, independent of the schedule window
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([restaurantId, active])
+  @@index([restaurantId, isDealOfDay])
+}
+
+// STEP 11 — Combo Specials. Distinct from a Promotion: always has an explicit
+// combo price (never just a showcase), and separates food (items) from
+// optional drinks (drinkItemIds) so the popup can show them in two groups.
+// originalPrice/savings are always computed live from current MenuItem
+// prices (never snapshotted), matching Special's own convention.
+model ComboSpecial {
+  id            Int       @id @default(autoincrement())
+  restaurantId  String    @default("carmella-production")
+  title         String
+  description   String    @default("")
+  bannerImage   String    @default("")
+  itemIds       Json      @default("[]") // dish MenuItem.id[]
+  drinkItemIds  Json      @default("[]") // optional drink MenuItem.id[]
+  comboPrice    Float
+  startDate     DateTime?
+  endDate       DateTime?
+  startTime     String    @default("")
+  endTime       String    @default("")
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([restaurantId, active])
+}
+
+// STEP 8 — Happy Hour.
+model HappyHour {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("carmella-production")
+  name         String   @default("Happy Hour")
+  itemIds      Json // MenuItem.id[]
+  discountPct  Float    @default(0)
+  startTime    String // "HH:MM"
+  endTime      String
+  activeDays   Json? // 0(Sun)-6(Sat)[]; empty/null = every day
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([restaurantId, active])
+}
+
+// STEP 9 — Daily Specials. Each item gets its own price override — not one
+// blanket discount for the whole special — so `items` is a JSON array of
+// { itemId: number, specialPrice: number|null, discountPct: number|null }.
+// Exactly one of specialPrice/discountPct is set per entry; discountPct wins
+// if a caller somehow sets both. The item's live menu price is always read
+// fresh from MenuItem (never snapshotted) so "original price" never drifts.
+model Special {
+  id           Int       @id @default(autoincrement())
+  restaurantId String    @default("carmella-production")
+  title        String
+  bannerImage  String    @default("")
+  items        Json      @default("[]")
+  startDate    DateTime?
+  endDate      DateTime?
+  startTime    String    @default("")
+  endTime      String    @default("")
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([restaurantId, active])
+}
+
+// STEP 10 — Analytics. One row per tracked interaction; the dashboard
+// aggregates over this instead of scanning cart/promotion state directly.
+// isSeed marks rows generated by the auto-seed (see analyticsController.js)
+// so they can be excluded the moment real traffic accumulates — they never
+// mix with or get mistaken for real guest activity.
+model AnalyticsEvent {
+  id           Int      @id @default(autoincrement())
+  restaurantId String   @default("carmella-production")
+  type         String   // session_start | item_view | add_to_cart | remove_from_cart
+  itemId       Int?
+  categoryId   Int?
+  tableId      String?
+  sessionId    String?
+  isSeed       Boolean  @default(false)
+  // Separate from isSeed (the dashboard's own automatic below-threshold
+  // filler, see analyticsController.js) -- this tags rows from the
+  // explicitly-invoked demo data generator (scripts/seed-demo-data.js), so
+  // the two can never be confused or interfere with each other's lifecycle.
+  isDemo       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([restaurantId, type, createdAt])
+  @@index([restaurantId, itemId])
+  @@index([restaurantId, sessionId])
+  @@index([restaurantId, isSeed])
+  @@index([restaurantId, isDemo])
+}
+
+// STEP 2 — Day/Night visual theme. One row per tenant (singleton via the
+// unique restaurantId). Controls APPEARANCE ONLY — never filters or hides
+// menu items/categories; see resolveActiveTheme() in themeController.js.
+model ThemeSettings {
+  id             Int      @id @default(autoincrement())
+  restaurantId   String   @unique @default("carmella-production")
+  autoEnabled    Boolean  @default(false)
+  manualTheme    String   @default("day") // "day" | "night" — used when autoEnabled=false
+  dayStartTime   String   @default("06:00") // "HH:MM", used when autoEnabled=true
+  nightStartTime String   @default("18:00")
+  updatedAt      DateTime @updatedAt
+}

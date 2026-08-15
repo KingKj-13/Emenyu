@@ -113,23 +113,68 @@ function createKnowledgeService({ config, fileService, logger = null }) {
     return { reply: `Today's special — ${deal.name || 'Chef’s deal'}${items.length ? `: ${items.join(', ')}` : ''}${price}.` };
   }
 
+  // Menu data has TWO different tag shapes across tenants: Trump's is a
+  // structured object (tags.protein: [...], tags.dietary: [...]); Carmella's
+  // is a flat array of plain category strings (tags: ["seafood","spicy"]).
+  // This normalizes either into one flat, lowercased list so a single check
+  // works against both -- checking only `.protein`/`.dietary` silently no-ops
+  // on Carmella's flat-array items (item.tags.protein is undefined there).
+  function tagList(item) {
+    const tags = item && item.tags;
+    if (Array.isArray(tags)) return tags.map(t => String(t).toLowerCase());
+    if (tags && typeof tags === 'object') {
+      return [
+        ...(Array.isArray(tags.protein) ? tags.protein : []),
+        ...(Array.isArray(tags.dietary) ? tags.dietary : [])
+      ].map(t => String(t).toLowerCase());
+    }
+    return [];
+  }
+
+  // Expand a spoken allergen word to (a) every literal term that might appear
+  // in menu name/description/allergens text, AND (b) the tag values that
+  // indicate it, in whichever tag shape a given tenant's data actually uses.
+  // The tag check matters most: the legacy `allergens` column is only
+  // populated on a minority of items and never contains the literal word
+  // "shellfish" (it uses "Seafood"), so a guest saying "I'm allergic to
+  // shellfish" previously matched almost nothing and silently let unsafe
+  // dishes (e.g. a calamari/prawn dish) through as "safe".
+  const ALLERGEN_EXPANSIONS = {
+    shellfish: { terms: ['shellfish', 'seafood', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'crayfish', 'lobster', 'crab', 'clam', 'scallop'], tags: ['seafood', 'shellfish'] },
+    seafood: { terms: ['seafood', 'shellfish', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'fish', 'salmon', 'crayfish', 'lobster', 'crab'], tags: ['seafood', 'shellfish'] },
+    fish: { terms: ['fish', 'salmon', 'kingklip', 'hake', 'sole', 'sushi', 'sashimi'], tags: ['seafood'] },
+    gluten: { terms: ['gluten', 'bread', 'pasta', 'crumbed', 'tempura', 'batter', 'noodle', 'flour'], tags: ['contains-gluten', 'gluten'] },
+    nut: { terms: ['nut', 'nuts', 'almond', 'peanut', 'cashew'], tags: ['contains-nuts', 'nuts', 'nut'] },
+    nuts: { terms: ['nut', 'nuts', 'almond', 'peanut', 'cashew'], tags: ['contains-nuts', 'nuts', 'nut'] },
+    egg: { terms: ['egg', 'eggs', 'benedict', 'mayo', 'mayonnaise', 'aioli', 'hollandaise', 'meringue'], tags: ['contains-egg', 'egg'] },
+    dairy: { terms: ['dairy', 'cheese', 'cream', 'milk', 'butter', 'mozzarella', 'feta', 'halloumi'], tags: ['dairy'] },
+    lactose: { terms: ['dairy', 'cheese', 'cream', 'milk', 'butter', 'mozzarella', 'feta', 'halloumi'], tags: ['dairy'] },
+    soy: { terms: ['soy', 'soya', 'tofu', 'edamame'], tags: ['soy'] }
+  };
+
   // Allergen guidance is conservative: we surface items that do NOT list the
-  // allergen, and always defer to the waiter for confirmation.
+  // allergen (by text OR by tag), and always defer to the waiter for
+  // confirmation.
   async function allergenReply(normalized, menuContext) {
-    const ALLERGENS = ['gluten', 'nut', 'nuts', 'dairy', 'lactose', 'egg', 'shellfish', 'soy'];
-    const term = ALLERGENS.find(a => normalized.includes(a));
+    const term = Object.keys(ALLERGEN_EXPANSIONS).find(a => normalized.includes(a));
     if (/halal/.test(normalized)) {
       return { reply: 'Some dishes can be prepared to preference — please ask your waiter and we’ll confirm with the kitchen.' };
     }
     if (!term || !menuContext) {
       return { reply: 'I can flag allergens from our menu data, but please always confirm with your waiter before ordering.' };
     }
+    const rule = ALLERGEN_EXPANSIONS[term];
     const safe = (menuContext.items || [])
-      .filter(it => !String(it.allergens || '').toLowerCase().includes(term) && !String(it.searchText || '').includes(term))
+      .filter(it => {
+        const tags = tagList(it);
+        if (rule.tags.some(t => tags.includes(t))) return false;
+        const hay = `${String(it.allergens || '')} ${String(it.searchText || '')}`.toLowerCase();
+        return !rule.terms.some(t => hay.includes(t));
+      })
       .slice(0, 4);
     return {
       reply: safe.length
-        ? `A few options that don't list ${term} in our data: ${safe.map(i => i.name).slice(0, 3).join(', ')}. Please confirm with your waiter before ordering.`
+        ? `A few options that don't contain ${term} in our data: ${safe.map(i => i.name).slice(0, 3).join(', ')}. Please confirm with your waiter before ordering.`
         : `I can't find enough ${term}-free matches in our data — please ask your waiter so the kitchen can confirm.`,
       suggestions: safe
     };

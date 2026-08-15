@@ -4,10 +4,10 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef, ty
 import { getSocket } from '../services/socket';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../services/api';
-import { RESTAURANT_ID } from '../constants/api';
+import { RESTAURANT_ID, DEMO_MODE } from '../constants/api';
 import { clockTime } from '../lib/waiterFormat';
 import type { MenuItem } from '../types/menu';
-import type { WaiterTab, WaiterRole, OrderLine, ServiceNotes, WaiterAlert, GuestEvent } from '../types/waiter';
+import type { WaiterTab, WaiterRole, OrderLine, ServiceNotes, WaiterAlert, GuestEvent, TableDeviceInfo } from '../types/waiter';
 
 export type OverlayKind = 'notes' | 'split' | 'recovery' | 'alerts' | 'voice';
 
@@ -17,6 +17,25 @@ interface Shift {
   role: WaiterRole;
   section: number[];
   target: { revenue: number; avgCheck: number; upsell: number };
+}
+
+// Bug fix (Priority 7 — session persistence): startShift only ever set React
+// state + emitted a socket join, with no server round-trip and nothing
+// persisted, so ANY refresh (accidental, or the guest's own browser doing it)
+// dropped the waiter straight back to "Who's on the floor?", losing their
+// name/role/section even though they were mid-shift. sessionStorage matches
+// the same "remember for this session" pattern already used for the Day/
+// Night toggle and the chat launcher hint.
+const WAITER_SHIFT_KEY = 'emenyu_waiter_shift';
+
+function loadStoredShift(): Pick<Shift, 'name' | 'role' | 'section'> | null {
+  try {
+    const raw = sessionStorage.getItem(WAITER_SHIFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.name) return null;
+    return parsed;
+  } catch { return null; }
 }
 
 interface WaiterContextValue {
@@ -58,8 +77,18 @@ interface WaiterContextValue {
   events: Record<string, GuestEvent>;
   placedItems: { name: string; price: number; quantity: number }[];
 
+  // Device Awareness (Curated Demo Mode): the current guest roster for
+  // selectedTableId — used by SplitBillModal's "By Device" mode and any
+  // "grouped by guest" cart view.
+  tableDevices: TableDeviceInfo[];
+
   toast: string | null;
   showToast: (msg: string) => void;
+
+  // Phase 2 (Waiter Experience): tables with activity the waiter hasn't seen
+  // yet, WITHOUT interrupting whichever table they're currently viewing —
+  // shown as a small badge, cleared the moment that table is opened.
+  unseenTableUpdates: Set<string>;
 }
 
 const WaiterContext = createContext<WaiterContextValue>(null!);
@@ -71,12 +100,15 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef(getSocket());
   const selectedTableRef = useRef<string | null>(null);
 
-  const [shift, setShift] = useState<Shift>({
-    started: false,
-    name: '',
-    role: 'Head Waiter',
-    section: DEFAULT_SECTION,
-    target: { revenue: 50000, avgCheck: 1200, upsell: 0.6 }
+  const [shift, setShift] = useState<Shift>(() => {
+    const stored = loadStoredShift();
+    return {
+      started: Boolean(stored),
+      name: stored?.name || '',
+      role: stored?.role || 'Head Waiter',
+      section: stored?.section || DEFAULT_SECTION,
+      target: { revenue: 50000, avgCheck: 1200, upsell: 0.6 }
+    };
   });
   const [tab, setTab] = useState<WaiterTab>('home');
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
@@ -87,8 +119,17 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
   const [alerts, setAlerts] = useState<WaiterAlert[]>([]);
   const [events, setEvents] = useState<Record<string, GuestEvent>>({});
   const [placedItems, setPlacedItems] = useState<{ name: string; price: number; quantity: number }[]>([]);
+  const [tableDevices, setTableDevices] = useState<TableDeviceInfo[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [unseenTableUpdates, setUnseenTableUpdates] = useState<Set<string>>(new Set());
+
+  const markTableUpdated = useCallback((tableId?: string | null) => {
+    if (!tableId) return;
+    // Don't badge the table the waiter is already looking at — they'll see the change directly.
+    if (tableId === selectedTableRef.current) return;
+    setUnseenTableUpdates(prev => (prev.has(tableId) ? prev : new Set(prev).add(tableId)));
+  }, []);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -97,13 +138,40 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
 
   const startShift = useCallback((name: string, role: WaiterRole, section: number[]) => {
     setShift(s => ({ ...s, started: true, name, role, section }));
+    try { sessionStorage.setItem(WAITER_SHIFT_KEY, JSON.stringify({ name, role, section })); } catch { /* ignore */ }
     const socket = socketRef.current;
     socket.emit('joinAsWaiter', { restaurantId: RESTAURANT_ID, name });
     socket.emit('joinAdmin', { restaurantId: RESTAURANT_ID });
   }, []);
 
+  // Public demo build only: skip the manual "clock in" screen entirely so
+  // /waiter opens straight into a populated dashboard, no login/setup step.
+  useEffect(() => {
+    if (DEMO_MODE) {
+      startShift('Demo Waiter', 'Head Waiter', DEFAULT_SECTION);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // A shift restored from sessionStorage (the lazy useState initializer
+  // above) skipped startShift entirely, so this fresh page load's socket
+  // was never registered as this waiter -- redo just that half of
+  // startShift once, on mount, for the restored-shift case.
+  useEffect(() => {
+    if (!DEMO_MODE && shift.started && shift.name) {
+      const socket = socketRef.current;
+      socket.emit('joinAsWaiter', { restaurantId: RESTAURANT_ID, name: shift.name });
+      socket.emit('joinAdmin', { restaurantId: RESTAURANT_ID });
+    }
+    // Mount-only: re-registers the socket for a shift restored from
+    // sessionStorage. A shift started via the button in this same session
+    // already registered its socket in startShift() above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const endShift = useCallback(() => {
     setShift(s => ({ ...s, started: false }));
+    try { sessionStorage.removeItem(WAITER_SHIFT_KEY); } catch { /* ignore */ }
     setSelectedTableId(null);
     setOrder([]);
     setTab('home');
@@ -114,7 +182,10 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     selectedTableRef.current = tableId;
     setOrder([]);
     setPlacedItems([]);
+    setTableDevices([]);
     setTab('tables');
+    // Opening a table is the "refresh immediately" moment — clear its badge.
+    setUnseenTableUpdates(prev => (prev.has(tableId) ? (() => { const next = new Set(prev); next.delete(tableId); return next; })() : prev));
     const socket = socketRef.current;
     socket.emit('joinTable', { restaurantId: RESTAURANT_ID, tableId });
     socket.emit('fetchHistory', { restaurantId: RESTAURANT_ID, tableId });
@@ -126,13 +197,24 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
   // Replace the GUEST-tagged lines with the guest's current live cart on EVERY
   // sync (waiter-added lines are preserved) — so the waiter sees guest changes
   // in real time without reloading.
-  const seedGuestLines = useCallback((_tableId: string, lines: { name?: string; price?: number; quantity?: number; qty?: number }[]) => {
+  const seedGuestLines = useCallback((_tableId: string, lines: { name?: string; price?: number; quantity?: number; qty?: number; addedByDevice?: string; addedAt?: number }[]) => {
     setOrder(prev => {
       const waiterLines = prev.filter(l => l.source !== 'guest');
       const waiterNames = new Set(waiterLines.map(l => l.name));
       const guestLines: OrderLine[] = (lines || [])
         .filter(l => l.name && !waiterNames.has(l.name))
-        .map(l => ({ name: String(l.name), price: Number(l.price) || 0, quantity: Number(l.quantity ?? l.qty) || 1, source: 'guest' as const }));
+        .map(l => ({
+          name: String(l.name),
+          price: Number(l.price) || 0,
+          quantity: Number(l.quantity ?? l.qty) || 1,
+          source: 'guest' as const,
+          // Device Awareness / split-bill-by-device: carried through from the
+          // guest's live cart (CartItem.addedByDevice/addedAt) so the waiter's
+          // "By Device" split mode and any grouped-by-guest view can use it —
+          // previously dropped here, which is why neither existed until now.
+          addedByDevice: l.addedByDevice || undefined,
+          addedAt: l.addedAt || undefined,
+        }));
       return [...guestLines, ...waiterLines];
     });
   }, []);
@@ -212,14 +294,30 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
       pushAlert({ kind: 'manager', title: 'Manager', message: p.message || 'Manager called you to the front' });
     };
     const onKitchen = (p: { tableId?: string; kitchenStatus?: string; displayTable?: string }) => {
-      if ((p.kitchenStatus || '').toLowerCase() !== 'ready') return;
+      const status = (p.kitchenStatus || '').toLowerCase();
+      // Bug fix: "served" moves the order off the kitchen queue (active ->
+      // history) and the server already emits a fresh syncHistory for the
+      // table room, but this handler only ever re-fetched on "ready" -- if the
+      // waiter's socket wasn't (still) in that exact table's room, placedItems
+      // never refreshed, so a served order kept showing on the waiter's screen
+      // long after it vanished from the kitchen. Explicitly re-fetch history
+      // here too, the same way onOrderPlaced already does.
+      if (status === 'served' && sameTable(p.tableId, selectedTableRef.current)) {
+        socket.emit('fetchHistory', { restaurantId: RESTAURANT_ID, tableId: p.tableId });
+      }
+      if (status !== 'ready') return;
       const label = p.displayTable || (p.tableId ? p.tableId.replace('table', 'Table ') : 'A table');
       pushAlert({ kind: 'ready', tableId: p.tableId, title: label, message: `Order ready - bring to ${label.toLowerCase()}` });
+      markTableUpdated(p.tableId);
+    };
+    const onWaiterTaskCreated = (p: { task?: { tableId?: string } }) => {
+      markTableUpdated(p?.task?.tableId);
     };
     const onGuestEvent = (p: { tableId?: string; event?: GuestEvent | null }) => {
       if (!p?.event) return;
       const label = p.tableId ? p.tableId.replace('table', 'Table ') : 'A table';
       setEvents(prev => ({ ...prev, [String(p.tableId)]: p.event as GuestEvent }));
+      markTableUpdated(p.tableId);
       pushAlert({
         kind: 'event',
         tableId: p.tableId,
@@ -234,10 +332,14 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     };
     const sameTable = (a?: string | null, b?: string | null) =>
       String(a || '').toLowerCase().replace(/[^a-z0-9]/g, '') === String(b || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const onSyncCart = (p: { tableId?: string; cart?: { name?: string; price?: number; quantity?: number; qty?: number }[] }) => {
+    const onSyncCart = (p: { tableId?: string; cart?: { name?: string; price?: number; quantity?: number; qty?: number; addedByDevice?: string; addedAt?: number }[] }) => {
       if (!p || !Array.isArray(p.cart)) return;
       if (!sameTable(p.tableId, selectedTableRef.current)) return;
       seedGuestLines(String(p.tableId), p.cart);
+    };
+    const onTableDevices = (p: { tableId?: string; devices?: TableDeviceInfo[] }) => {
+      if (!p || !sameTable(p.tableId, selectedTableRef.current)) return;
+      setTableDevices(Array.isArray(p.devices) ? p.devices : []);
     };
     const onSyncHistory = (p: { tableId?: string; history?: { name?: string; price?: number; quantity?: number; qty?: number }[] }) => {
       if (!p || !sameTable(p.tableId, selectedTableRef.current) || !Array.isArray(p.history)) return;
@@ -247,9 +349,10 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
           .map(h => ({ name: String(h.name), price: Number(h.price) || 0, quantity: Number(h.quantity ?? h.qty) || 1 }))
       );
     };
-    const onOrderPlaced = () => {
+    const onOrderPlaced = (p?: { tableId?: string }) => {
       const tid = selectedTableRef.current;
       if (tid) socket.emit('fetchHistory', { restaurantId: RESTAURANT_ID, tableId: tid });
+      markTableUpdated(p?.tableId);
     };
     // On (re)connect — e.g. after a server restart — re-join the waiter/admin
     // rooms and the selected table so notifications and cart sync keep working.
@@ -272,6 +375,8 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
     socket.on('syncCart', onSyncCart);
     socket.on('syncHistory', onSyncHistory);
     socket.on('orderPlaced', onOrderPlaced);
+    socket.on('waiterTaskCreated', onWaiterTaskCreated);
+    socket.on('tableDevices', onTableDevices);
     return () => {
       socket.off('connect', onConnect);
       socket.off('incomingWaiterCall', onBell);
@@ -281,8 +386,10 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
       socket.off('syncCart', onSyncCart);
       socket.off('syncHistory', onSyncHistory);
       socket.off('orderPlaced', onOrderPlaced);
+      socket.off('waiterTaskCreated', onWaiterTaskCreated);
+      socket.off('tableDevices', onTableDevices);
     };
-  }, [seedGuestLines, showToast]);
+  }, [seedGuestLines, showToast, markTableUpdated]);
 
   const liveAlertCount = alerts.filter(a => a.state === 'live').length;
 
@@ -297,7 +404,9 @@ export function WaiterProvider({ children }: { children: ReactNode }) {
       notes, setTableNotes,
       alerts, liveAlertCount, respondAlert, dismissAlert,
       events, placedItems,
-      toast, showToast
+      toast, showToast,
+      unseenTableUpdates,
+      tableDevices
     }}>
       {children}
     </WaiterContext.Provider>

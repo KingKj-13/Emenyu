@@ -1,0 +1,80 @@
+{
+  "$schema": "emenu-v3-knowledge",
+  "domain": "dessert_pairings",
+  "source_files": [
+    "server/services/nlg/hospitalityKnowledge.js (RULES array, foodPairClauseFor())",
+    "server/services/aiService.js (addPerfectPairings -> pairingRules[\"Sweet finish pairing\"])",
+    "server/services/reasonComposer.js (dessertNarrative() light-vs-indulgent classifier)"
+  ],
+  "notes": [
+    "'spirit-dessert' and 'hot-dessert' below are duplicated (cross-referenced) from spirit_pairings.json and coffee_pairings.json respectively, because both RULES entries are gated on d.course === 'DESSERT' and this file is meant to collect every dessert-facing pairing rule in one place, regardless of which beverage family it belongs to.",
+    "'dessert-course-food' captures the generic foodPairClauseFor() DESSERT branch in hospitalityKnowledge.js, which is a food+food (not food+drink) clause used when a dessert is paired against a main/source dish with no wine anchor."
+  ],
+  "entries": [
+    {
+      "id": "spirit-dessert",
+      "source": "hospitalityKnowledge.js RULES (duplicated from spirit_pairings.json)",
+      "conditions": { "drinkType": "spirit", "course": "DESSERT" },
+      "recommended_style": "neat spirit (e.g. whisky, cognac)",
+      "principle": "a spirit is the natural way to close the meal once dessert is finished",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["A spirit like this is a natural way to close the meal after dessert."],
+        "friendly": ["A neat pour like that is honestly the perfect way to finish once the dessert's done."],
+        "luxury": ["A spirit of this weight is the natural way to close the evening once the dessert is finished."]
+      }
+    },
+    {
+      "id": "hot-dessert",
+      "source": "hospitalityKnowledge.js RULES (duplicated from coffee_pairings.json)",
+      "conditions": { "drinkType": "hot", "course": "DESSERT" },
+      "recommended_style": "hot drink (coffee/espresso-type)",
+      "principle": "classic way to finish a meal: a hot drink alongside dessert",
+      "rotation": "deterministic-hash (single-variant clause set, no rotation needed)",
+      "phrases": {
+        "professional": ["A hot drink alongside dessert is the classic way to finish the meal."],
+        "friendly": ["A coffee with dessert is the classic move, always works."],
+        "luxury": ["A hot pour alongside dessert is the traditional, and still the best, way to close the meal."]
+      }
+    },
+    {
+      "id": "dessert-course-food",
+      "source": "hospitalityKnowledge.js foodPairClauseFor()",
+      "conditions": { "course": "DESSERT", "pairing_type": "food+food (no wine anchor)" },
+      "recommended_style": "n/a (food-to-food closing course clause)",
+      "principle": "light-vs-indulgent framing based on the dessert's own richness tag",
+      "classification_threshold": { "light_if": "richness <= 1", "indulgent_if": "richness > 1 (or not finite)" },
+      "phrases": {
+        "friendly_or_professional_light": "Keeps things light rather than heavy after the {sourceName}.",
+        "friendly_or_professional_indulgent": "A properly sweet way to close things out after the {sourceName}.",
+        "template_vars": { "sourceName": "lowercased name of the source/main dish being closed out" }
+      },
+      "fidelity_note": "foodPairClauseFor() only has ONE phrasing per branch (no professional/friendly/luxury split for course===DESSERT specifically, unlike the STARTER branch which does split by tone) -- copied verbatim, not invented."
+    },
+    {
+      "id": "sweet-finish-pairing",
+      "source": "aiService.js addPerfectPairings() pairingRules[\"Sweet finish pairing\"] (DRINK typedPair)",
+      "conditions": { "dish_name_or_searchText_matches": "/dessert|malva|cake|ice cream|baklava|loukoumades|rizogalo|portokalopita/" },
+      "recommended_style": "irish coffee, espresso, whisky, or cognac",
+      "principle": "classic dessert-closing drinks spanning both hot-drink and spirit families (candidate-generation rule, not a narrative phrase rule)",
+      "label": "Sweet finish pairing",
+      "score": 84,
+      "drink_keywords": ["irish coffee", "espresso", "whisky", "cognac"],
+      "fidelity_note": "Keyword candidate generator (pickVariedMenuItem against type DRINK), no professional/friendly/luxury phrase variants in source; this rule has no companion 'MAIN'/food typedPair (dessert is the anchor dish itself, not a side)."
+    }
+  ],
+  "dessert_narrative_classification": {
+    "source": "server/services/reasonComposer.js dessertNarrative()",
+    "description": "Used when composing a dessert recommendation that references BOTH the main dish already ordered AND a wine already in the cart -- the 'light vs indulgent' framing decision.",
+    "applies_when": "target.categoryType === 'DESSERT' && source (anchor dish) present && cartWine present",
+    "classification_logic": {
+      "primary": "isLight = Number.isFinite(richness) ? richness <= 1 : (regex fallback)",
+      "fallback_regex": "/lemon|sorbet|fruit|berry/i tested against the dessert item's own name, used ONLY when richness is not a finite number (i.e. the item has no richness tag)"
+    },
+    "templates": {
+      "light": "{dessertName} keeps things light rather than heavy after the {sourceName}.",
+      "indulgent": "{dessertName} is a properly rich way to close out the {sourceName} and {cartWineName}.",
+      "wrapper": "You've chosen {sourceName} and a {cartWineName} — {closing}"
+    }
+  }
+}

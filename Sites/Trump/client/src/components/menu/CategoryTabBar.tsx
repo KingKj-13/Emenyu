@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import type { MenuSection } from '../../types/menu';
+import { useT } from '../../i18n';
 import styles from './CategoryTabBar.module.css';
 
 interface CategoryTabBarProps {
@@ -10,18 +11,37 @@ interface CategoryTabBarProps {
 // a sub-bar of just that group's sections. Sushi lives under Mains (per spec).
 type Group = 'Starters' | 'Mains' | 'Dessert' | 'Drinks';
 const GROUP_ORDER: Group[] = ['Starters', 'Mains', 'Dessert', 'Drinks'];
+// The Group value stays English — it is a routing key, matched by groupOf()
+// against section titles. Only the pill's wording is localised.
+const GROUP_KEY = {
+  Starters: 'group.starters',
+  Mains: 'group.mains',
+  Dessert: 'group.dessert',
+  Drinks: 'group.drinks',
+} as const;
 
 function groupOf(title: string): Group {
   const t = title.toLowerCase();
-  if (/wine|beer|cider|spirit|liqueur|cocktail|mocktail|champagne|sparkling|beverage|whisk|gin|vodka|\brum\b|tequila|brandy|cognac|coffee|\btea\b|juice|water|shake|tiser|cordial|soft\s*&?\s*hot|after-dinner|draught/.test(t)) return 'Drinks';
+  // "liquor"/"smoothie"/"crusher" added alongside the pre-existing
+  // "spirit"/"shake" keywords — none of Trump's own section titles contain
+  // these words (its spirits section is literally named "Spirits"), so this
+  // is purely additive for tenants (Carmella) whose section titles use them;
+  // it fixes a real bug where an entire Liquor/Smoothies/Crushers section
+  // fell through to the "Mains" tab for lack of a matching keyword (demo
+  // validation report Bug H-4 — the tab bar defaulting almost everything
+  // into one bloated "Mains" pill).
+  if (/wine|beer|cider|spirit|liquor|liqueur|cocktail|mocktail|champagne|sparkling|beverage|whisk|gin|vodka|\brum\b|tequila|brandy|cognac|coffee|\btea\b|juice|water|shake|smoothie|crusher|tiser|cordial|soft\s*&?\s*hot|after-dinner|draught/.test(t)) return 'Drinks';
   if (/dessert|cake|\bsweet\b|ice cream|gelato/.test(t)) return 'Dessert';
-  if (/start|salad|tempura|meze|snack|biltong|appetiser|appetizer/.test(t)) return 'Starters';
+  // "breakfast" added — Trump has no section titled that; Carmella's Morning
+  // Pages chapter otherwise fell to the "Mains" fallback (same bug as above).
+  if (/start|salad|tempura|meze|snack|biltong|appetiser|appetizer|breakfast/.test(t)) return 'Starters';
   return 'Mains';
 }
 
 const sid = (title: string) => `section-${title.toLowerCase().replace(/\s+/g, '-')}`;
 
 export function CategoryTabBar({ sections }: CategoryTabBarProps) {
+  const t = useT();
   const [activeId, setActiveId] = useState<string>('');
   const [openGroup, setOpenGroup] = useState<Group | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -47,6 +67,13 @@ export function CategoryTabBar({ sections }: CategoryTabBarProps) {
   const shownGroup = openGroup ?? activeGroup;
   const shownItems = grouped.find(g => g.group === shownGroup)?.items ?? [];
 
+  // Once scrolling has genuinely carried the guest into a different group than
+  // the one they tapped, drop the tap override so the bar starts following
+  // scroll position again — otherwise it stays frozen on the tapped group forever.
+  useEffect(() => {
+    if (openGroup && activeGroup && activeGroup !== openGroup) setOpenGroup(null);
+  }, [activeGroup, openGroup]);
+
   useEffect(() => {
     if (sections.length <= 1) return;
     observerRef.current?.disconnect();
@@ -70,7 +97,7 @@ export function CategoryTabBar({ sections }: CategoryTabBarProps) {
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   return (
-    <nav className={styles.bar} aria-label="Jump to menu section">
+    <nav className={styles.bar} aria-label={t('nav.jumpToSection')}>
       <div className={styles.groupStrip}>
         {grouped.map(({ group, items }) => (
           <button
@@ -79,7 +106,7 @@ export function CategoryTabBar({ sections }: CategoryTabBarProps) {
             onClick={() => { setOpenGroup(group); scrollTo(sid(items[0].title)); }}
             aria-current={shownGroup === group ? 'true' : undefined}
           >
-            {group}
+            {t(GROUP_KEY[group])}
           </button>
         ))}
       </div>
@@ -96,7 +123,7 @@ export function CategoryTabBar({ sections }: CategoryTabBarProps) {
                 onClick={() => scrollTo(id)}
                 aria-current={active ? 'location' : undefined}
               >
-                {s.title}
+                {s.displayTitle ?? s.title}
               </button>
             );
           })}

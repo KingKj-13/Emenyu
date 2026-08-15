@@ -1,0 +1,198 @@
+.panel { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.state, .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 24px;
+  color: var(--muted);
+  text-align: center;
+}
+.empty p { margin: 0; }
+.emptyHint { font-size: 13px; max-width: 46ch; line-height: 1.6; }
+.none { margin: 0; color: var(--muted); font-size: 13px; }
+
+/* ── toolbar ─────────────────────────────────────────────────────────────── */
+.toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ranges { display: flex; gap: 6px; }
+
+.range {
+  padding: 8px 13px;
+  background: transparent;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  color: var(--color-sand);
+  font-family: var(--font-label);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.rangeOn { background: rgba(var(--color-gold-rgb), 0.14); border-color: var(--color-gold); color: var(--color-gold); }
+
+.refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-inline-start: auto;
+  padding: 8px 13px;
+  background: transparent;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  color: var(--color-sand);
+  font-family: var(--font-label);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.refresh:hover { border-color: var(--color-gold); color: var(--color-cream); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 900ms linear infinite; }
+
+/* ── headline tiles ──────────────────────────────────────────────────────── */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  gap: 10px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 15px 16px;
+  background: linear-gradient(160deg, rgba(13, 34, 54, 0.6), rgba(4, 14, 26, 0.45));
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+.tileIcon { color: var(--color-gold); }
+.tileValue {
+  font-family: var(--font-heading);
+  font-size: 27px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--color-cream);
+}
+.tileLabel {
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-gold-dim);
+}
+.tileNote { font-size: 11px; color: var(--muted); }
+
+/* ── cards ───────────────────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.cardWide { grid-column: 1 / -1; }
+
+.card {
+  padding: 16px 18px 18px;
+  background: rgba(var(--color-ink-rgb), 0.5);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+.cardNote { margin: -4px 0 12px; font-size: 12px; color: var(--muted); }
+
+/* ── ranked lists ────────────────────────────────────────────────────────── */
+.rank { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.rank li { display: grid; grid-template-columns: minmax(0, 1fr) 90px 42px; align-items: center; gap: 10px; }
+
+.rankLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--color-cream);
+}
+.rankTrack { height: 6px; border-radius: 3px; background: rgba(var(--color-gold-rgb), 0.1); overflow: hidden; }
+.rankFill { display: block; height: 100%; background: var(--color-gold); border-radius: 3px; }
+.rankFillMuted { background: var(--color-moss); }
+.rankValue {
+  text-align: end;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-gold);
+}
+
+/* ── language shares ─────────────────────────────────────────────────────── */
+.bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.bars li { display: grid; grid-template-columns: minmax(0, 1fr) 80px 44px; align-items: center; gap: 10px; }
+.barLabel { display: flex; flex-direction: column; min-width: 0; font-size: 12.5px; color: var(--color-cream); }
+.barLabel i { font-style: normal; font-size: 11px; color: var(--muted); }
+/* An RTL endonym inside an LTR column aligns to the right edge of the grid
+   cell and reads as if it belongs to the next column. Pinning the inline
+   start keeps every native name in its own row, whichever way it reads. */
+.native {
+  display: block;
+  width: 100%;
+  text-align: start;
+  unicode-bidi: isolate;
+}
+.barTrack { height: 6px; border-radius: 3px; background: rgba(var(--color-gold-rgb), 0.1); overflow: hidden; }
+.barFill { display: block; height: 100%; background: var(--color-teal); border-radius: 3px; }
+.barValue { text-align: end; font-family: var(--font-label); font-size: 12px; font-weight: 700; color: var(--color-cream); }
+
+/* ── video table ─────────────────────────────────────────────────────────── */
+.table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.table th {
+  text-align: start;
+  padding: 0 8px 8px 0;
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-gold-dim);
+  border-bottom: 1px solid var(--color-line);
+}
+.table td { padding: 8px 8px 8px 0; border-bottom: 1px solid rgba(var(--color-gold-rgb), 0.07); color: var(--color-cream); }
+.table tr:last-child td { border-bottom: 0; }
+.rate { color: var(--color-gold); font-weight: 700; }
+
+/* ── hour histogram ──────────────────────────────────────────────────────── */
+.hours {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 96px;
+  padding-top: 4px;
+}
+.hourBar {
+  flex: 1;
+  min-width: 0;
+  background: linear-gradient(180deg, var(--color-gold), rgba(var(--color-gold-rgb), 0.35));
+  border-radius: 2px 2px 0 0;
+}
+.hourAxis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}

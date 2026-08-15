@@ -11,29 +11,52 @@ const { createReasonComposer } = require('./reasonComposer');
 const { createHeroPairings } = require('./heroPairings');
 const { computeOrderedTogether } = require('./marketBasket');
 const { SmartPairingEngine } = require('./smartPairingEngine');
+const scoring = require('./recommendationScoring');
+// Phase 4 (Recommendation Engine V2) additions — additive, do not change any
+// existing candidate-generation/ranking behaviour by themselves.
+const { createMealStateService } = require('./mealStateService');
+const { createBusinessRules } = require('./businessRules');
+const { createRecommendationMemory } = require('./recommendationMemory');
+const { createItemGraph } = require('./itemGraph');
+const candidateFilterPipeline = require('./candidateFilterPipeline');
+const gaspardVoice = require('./nlg/gaspardVoice');
+const { resolveDayPart } = require('../utils/dayPartResolver');
+const { resolveScriptedPick } = require('./scriptedDemoChains');
+const { resolveCuratedPick } = require('./curatedDemoJourney');
+const fs = require('fs');
+const path = require('path');
 
-const SPECIAL_WORDS = [
-  'birthday',
-  'anniversary',
-  'event',
-  'celebration',
-  'party',
-  'gathering',
-  'festival',
-  'ceremony',
-  'function',
-  'occasion',
-  'milestone',
-  'achievement',
-  'engagement',
-  'wedding',
-  'proposal',
-  'graduation',
-  'farewell',
-  'retirement',
-  'promotion',
-  'date'
-];
+// Phase 4 (Recommendation Engine V2): loaded from knowledge/occasion_rules.json
+// (specialWords), the single authoritative source — not duplicated here.
+function loadSpecialWords() {
+  try {
+    const file = path.join(__dirname, '..', '..', 'knowledge', 'occasion_rules.json');
+    const data = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    if (Array.isArray(data.specialWords) && data.specialWords.length) return data.specialWords;
+  } catch (error) {
+    // fall through to the fallback below
+  }
+  return ['birthday', 'anniversary', 'event', 'celebration', 'party', 'gathering', 'festival', 'ceremony', 'function', 'occasion', 'milestone', 'achievement', 'engagement', 'wedding', 'proposal', 'graduation', 'farewell', 'retirement', 'promotion', 'date'];
+}
+const SPECIAL_WORDS = loadSpecialWords();
+
+// Phase 4 (Recommendation Engine V2): per-stage intensity scores loaded from
+// knowledge/upsell_timing.json — the single authoritative source for
+// addCourseCompletions()'s stage-score constants (title strings/pools/filter
+// functions stay in code, only the numeric intensity moved to data).
+function loadUpsellTiming() {
+  const fallback = { drink: 74, food: 78, wine: 76, upgrade: 1150, dessert: 66, coffee: 60, digestif: 56 };
+  try {
+    const file = path.join(__dirname, '..', '..', 'knowledge', 'upsell_timing.json');
+    const data = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    const byStage = {};
+    (data.stages || []).forEach(s => { if (s.stage && Number.isFinite(s.intensity)) byStage[s.stage] = s.intensity; });
+    return { ...fallback, ...byStage };
+  } catch (error) {
+    return fallback;
+  }
+}
+const UPSELL_TIMING = loadUpsellTiming();
 
 const STOP_WORDS = new Set([
   'the',
@@ -77,10 +100,20 @@ const QUERY_INTENTS = [
 
 // When a guest excludes a category, expand it to the concrete menu terms to filter.
 const NEGATION_SYNONYMS = {
-  seafood: ['seafood', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'fish', 'salmon', 'kingklip', 'hake', 'sole', 'sushi', 'sashimi', 'linefish', 'crayfish', 'lobster'],
+  // "shellfish" is one of the most common real allergy words guests actually
+  // say ("I'm allergic to shellfish") and previously had NO entry here at
+  // all, so it fell through to the single literal word "shellfish" — which
+  // never appears in any menu item's text (the data uses "Seafood"/dish
+  // names), silently defeating the exclusion. Same list as `seafood` below.
+  seafood: ['seafood', 'shellfish', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'fish', 'salmon', 'kingklip', 'hake', 'sole', 'sushi', 'sashimi', 'linefish', 'crayfish', 'lobster', 'crab', 'clam', 'clams', 'scallop', 'scallops'],
+  shellfish: ['seafood', 'shellfish', 'prawn', 'prawns', 'calamari', 'squid', 'mussel', 'mussels', 'oyster', 'oysters', 'crayfish', 'lobster', 'crab', 'clam', 'clams', 'scallop', 'scallops'],
+  crustacean: ['prawn', 'prawns', 'crayfish', 'lobster', 'crab'],
   fish: ['fish', 'salmon', 'kingklip', 'hake', 'sole', 'linefish', 'sushi', 'sashimi'],
   prawn: ['prawn', 'prawns'],
   prawns: ['prawn', 'prawns'],
+  // "egg" also had no entry — an "allergic to eggs" exclusion fell through to
+  // the literal word "egg", missing dishes that contain egg without naming it.
+  egg: ['egg', 'eggs', 'benedict', 'mayo', 'mayonnaise', 'aioli', 'hollandaise', 'meringue'],
   meat: ['beef', 'steak', 'rump', 'fillet', 'ribeye', 'tomahawk', 'sirloin', 'lamb', 'pork', 'chicken', 'ribs', 'wors', 'boerewors', 'game', 'venison', 'oxtail', 'biltong'],
   steak: ['steak', 'rump', 'fillet', 'ribeye', 'tomahawk', 'sirloin', 'beef'],
   beef: ['beef', 'steak', 'rump', 'fillet', 'ribeye', 'tomahawk', 'sirloin'],
@@ -149,6 +182,7 @@ function publicItem(item = {}, sourceTitle = '') {
     subcategory: item.subcategory || '',
     categoryType: item.categoryType || 'MAIN',
     story: item.story || '',
+    availability: item.availability || 'available',
     source_title: sourceTitle || item.source_title || '',
     // Phase 3A: carry the structured tags so the shared reasonComposer can craft
     // tag-true copy on any surface. Absent (undefined) when the menu isn't enriched.
@@ -256,6 +290,20 @@ function fuzzyFindItem(menuContext, rawName) {
   return fuzzyKey ? menuContext.byName.get(fuzzyKey) : null;
 }
 
+// menuContext.byName collapses same-named items to whichever was added last
+// while building the menu (e.g. two wines are both named "KLEINE ZALZE
+// VINEYARD SELECTION" — a R255 Chenin Blanc and a R295 Shiraz). The scripted
+// demo chains pin an exact price alongside the name for exactly this reason;
+// this resolves the correct one instead of trusting fuzzyFindItem's Map lookup.
+function findScriptedMenuItem(menuContext, step) {
+  const key = normalizeName(step.name);
+  const matches = menuContext.items.filter(item => normalizeName(item.name) === key);
+  if (matches.length <= 1) {
+    return matches[0] || fuzzyFindItem(menuContext, step.name);
+  }
+  return matches.find(item => Number(item.price) === step.price) || matches[0];
+}
+
 function findMentionedItem(menuContext, message) {
   const compact = normalizeName(message);
   const sorted = [...menuContext.items].sort((left, right) => right.name.length - left.name.length);
@@ -326,15 +374,62 @@ function itemQuantity(item = {}) {
 const MEAT_PROTEINS = new Set(['beef', 'chicken', 'lamb', 'pork', 'seafood', 'game']);
 const MEAT_TEXT = /beef|steak|chicken|wings|lamb|pork|ribs|bacon|prawn|calamari|salmon|fish|seafood|sushi|sashimi|oxtail|game|venison|ostrich|biltong|wors/;
 function dietaryOk(item = {}, diets = []) {
-  const tags = item.tags || {};
-  const dietary = Array.isArray(tags.dietary) ? tags.dietary : [];
-  const protein = Array.isArray(tags.protein) ? tags.protein : [];
-  const hasMeat = tags.protein
-    ? protein.some(p => MEAT_PROTEINS.has(p))
+  const tags = tagList(item);
+  const hasTagData = tags.length > 0;
+  const hasMeat = hasTagData
+    ? tags.some(t => MEAT_PROTEINS.has(t))
     : MEAT_TEXT.test(`${item.allergens || ''} ${item.searchText || item.name || ''}`.toLowerCase());
-  if (diets.includes('vegan')) return tags.dietary ? dietary.includes('vegan') : !hasMeat;
-  if (diets.includes('vegetarian')) return dietary.includes('vegetarian') || !hasMeat;
+  // Bug fix: wine/drinks are never tagged with dietary data AND never mention
+  // meat, so the "untagged = assume OK" fallback below let them slip through
+  // a "vegan option" food request (e.g. "vegan option" returning a wine).
+  // That fallback exists to rescue untagged FOOD items, not beverages — a
+  // drink can still pass if it's explicitly tagged vegan/vegetarian.
+  const categoryType = item.categoryType || classifier.categoryType(item);
+  const isBeverage = categoryType === 'WINE' || categoryType === 'DRINK';
+  if (diets.includes('vegan')) return tags.includes('vegan') || (!isBeverage && !hasTagData && !hasMeat);
+  if (diets.includes('vegetarian')) return tags.includes('vegetarian') || tags.includes('vegan') || (!isBeverage && !hasTagData && !hasMeat) || (hasTagData && !hasMeat);
   return true;
+}
+
+// Menu data has TWO different tag shapes across tenants, both live in
+// production: Trump's is a structured object (tags.protein: ["seafood"],
+// tags.dietary: [...], tags.drinkType: "red"|"white"|...), written by
+// scripts/enrich-menu-tags.js. Carmella's is a flat array of plain category
+// strings (tags: ["seafood","spicy"], tags: ["vegetarian"], tags:
+// ["alcohol"]), with no drinkType at all. Every check below has to work
+// against both, or it silently no-ops on whichever tenant it wasn't written
+// against (this exact gap is what let a "no seafood" exclusion pass straight
+// through on live Carmella data, since item.tags.protein is undefined when
+// item.tags is really a flat array).
+function tagList(item) {
+  const tags = item?.tags;
+  if (Array.isArray(tags)) return tags.map(t => String(t).toLowerCase());
+  if (tags && typeof tags === 'object') {
+    return [
+      ...(Array.isArray(tags.protein) ? tags.protein : []),
+      ...(Array.isArray(tags.dietary) ? tags.dietary : [])
+    ].map(t => String(t).toLowerCase());
+  }
+  return [];
+}
+
+// Wine colour: Trump's data has tags.drinkType directly; Carmella's flat tag
+// array never encodes colour at all (every wine is just tagged ["alcohol"]).
+// Both tenants DO consistently use "Red Wine"/"White Wine"/"Rosé Wine"/
+// "Sparkling Wine"/"Champagne" in category or subcategory text, so that's
+// the one signal guaranteed to work everywhere -- tags.drinkType is used
+// first when it's actually present (Trump), text is the fallback (both).
+function wineColorOf(item) {
+  const tags = item?.tags;
+  if (tags && typeof tags === 'object' && !Array.isArray(tags) && tags.drinkType) {
+    return tags.drinkType;
+  }
+  const text = `${item?.category || ''} ${item?.subcategory || ''}`.toLowerCase();
+  if (/champagne|sparkling|cap classique|prosecco|\bmcc\b/.test(text)) return 'sparkling';
+  if (/ros[eé]/.test(text)) return 'rose';
+  if (/red wine/.test(text)) return 'red';
+  if (/white wine/.test(text)) return 'white';
+  return null;
 }
 
 // Phase 3B: crisp "white" pours for a seafood/light pairing, still whites first
@@ -342,8 +437,46 @@ function dietaryOk(item = {}, diets = []) {
 const CRISP_RANK = { white: 0, rose: 1, sparkling: 2 };
 function crispWhites(items = []) {
   return items
-    .filter(item => item.tags && ['white', 'sparkling', 'rose'].includes(item.tags.drinkType))
-    .sort((a, b) => (CRISP_RANK[a.tags.drinkType] ?? 3) - (CRISP_RANK[b.tags.drinkType] ?? 3));
+    .map(item => ({ item, color: wineColorOf(item) }))
+    .filter(({ color }) => ['white', 'sparkling', 'rose'].includes(color))
+    .sort((a, b) => (CRISP_RANK[a.color] ?? 3) - (CRISP_RANK[b.color] ?? 3))
+    .map(({ item }) => item);
+}
+
+// Full-bodied reds for a red-meat pairing -- the classic counterpart to
+// crispWhites() above. Without this, a generic "what wine pairs with steak"
+// question (no specific dish named, so nothing to read a protein tag from)
+// fell through to whatever wines happened to be listed first in the menu
+// data -- which could easily be Champagne/MCC if that's how the wine list
+// is ordered, producing exactly the wrong classic pairing for red meat.
+function fullBodiedReds(items = []) {
+  return items.filter(item => wineColorOf(item) === 'red');
+}
+
+const PROTEIN_WORDS = new Set(['beef', 'chicken', 'lamb', 'pork', 'seafood']);
+
+// A specific dish (`mentioned`) carries its own protein tag, but a generic
+// category question -- "what wine pairs with steak?" -- doesn't always fail
+// to resolve `mentioned` the way it should: findMentionedItem() matches on a
+// raw, word-boundary-free substring of the whole message (e.g. a menu item
+// literally named "Tea" matches inside "...withSTEAk", since "tea" is a
+// literal substring of "steak"), so `mentioned` can end up pointing at an
+// unrelated, non-food item -- which, read naively, looks like a confirmed
+// signal and blocks the real "steak" word in the message from ever being
+// checked. Only a tag that actually names a real protein counts; anything
+// else (a non-food item's tags, or Trump's "none") falls through to the
+// spoken-word check below instead of short-circuiting past it.
+function proteinFromMessage(mentioned, lower) {
+  const mentionedProtein = tagList(mentioned).filter(t => PROTEIN_WORDS.has(t));
+  if (mentionedProtein.length) {
+    return mentionedProtein;
+  }
+  if (/\b(steak|beef|rump|fillet|ribeye|tomahawk|sirloin|red meat|oxtail|biltong)\b/.test(lower)) return ['beef'];
+  if (/\b(lamb|game|venison)\b/.test(lower)) return ['lamb'];
+  if (/\b(seafood|shellfish|prawn|prawns|calamari|squid|mussel|oyster|fish|salmon|kingklip|hake|sole|sushi|sashimi)\b/.test(lower)) return ['seafood'];
+  if (/\bchicken\b/.test(lower)) return ['chicken'];
+  if (/\bpork\b/.test(lower)) return ['pork'];
+  return [];
 }
 
 class AiService {
@@ -362,6 +495,15 @@ class AiService {
     this.hero = createHeroPairings({ logger });
     this.reason = createReasonComposer({ nlgService: this.nlgService, heroPairings: this.hero, logger });
     this.smartPairings = new SmartPairingEngine(config, { logger });
+
+    // Phase 4 (Recommendation Engine V2): meal-state model, business/frequency
+    // rules, per-table recommendation memory, and the unified item graph.
+    // Additive — nothing above this line changes; recommend()/chat() opt into
+    // these below rather than having their existing logic replaced.
+    this.mealStates = createMealStateService();
+    this.businessRules = createBusinessRules();
+    this.recoMemory = createRecommendationMemory({ businessRules: this.businessRules, logger });
+    this.itemGraph = createItemGraph({ marketBasket: { computeOrderedTogether } });
 
     // Perf: the recommendation/chat path used to reload the whole menu, every
     // order + history record, the admin/chef recs and recompute popularity on
@@ -442,6 +584,16 @@ class AiService {
     });
   }
 
+  // Phase 1 (Recommendation Brain): course-attach-rate-derived tier weights
+  // (dessert promoted when measurably under-ordered vs the other courses).
+  // Cached alongside popularity — same inputs, same refresh cadence.
+  getTierWeights() {
+    return this._cached('tierWeights', async () => {
+      const [menuContext, orderRecords] = await Promise.all([this.getMenuContext(), this.getOrderRecords()]);
+      return scoring.tierWeights(orderRecords, menuContext.byName);
+    });
+  }
+
   async chat(payload = {}) {
     const requestBody = {
       ...payload,
@@ -474,9 +626,15 @@ class AiService {
     } else if (lower.includes('deal') || lower.includes('special')) {
       responseData = await this.buildDealsReply(menuContext);
     } else if (knowledgeAnswer) {
+      // Phase 4 (business_rules.json "timing:never-interrupt-to-upsell"): a
+      // guest asking about hours/policy/allergens is mid-question about
+      // something else entirely — riding an unrelated upsell along on the
+      // answer is exactly the interruption the spec warns against.
       responseData = {
         reply: knowledgeAnswer.reply,
-        suggestions: (knowledgeAnswer.suggestions || []).map(item => publicItem(item, 'From our kitchen'))
+        suggestions: this.businessRules.shouldSuppressProactive('info')
+          ? []
+          : (knowledgeAnswer.suggestions || []).map(item => publicItem(item, 'From our kitchen'))
       };
     } else if (intent.type === 'offtopic') {
       // Phase 3B: warm, in-character decline — never a random menu match.
@@ -501,7 +659,8 @@ class AiService {
         reason: nlu.tokens.join(' '),
         tableId: requestBody.tableId,
         deviceId: payload.deviceId,
-        menuContext
+        menuContext,
+        excludeNames: session.ignoredNames
       });
       // Phase 3B: when there's a cart, make the lead a cart-aware cross-sell.
       const cartLead = this.cartAwareLead(cart, suggestions);
@@ -520,6 +679,7 @@ class AiService {
       const suggestions = await this.recommend({
         cart,
         limit: 4,
+        excludeNames: session.ignoredNames,
         intent,
         reason: nlu.tokens.join(' '),
         tableId: requestBody.tableId,
@@ -585,8 +745,148 @@ class AiService {
       }
     }
 
-    await this.appendChatLog(requestBody, responseData);
+    // Phase 1 (Recommendation Brain): occasion detection from a CART SIGNAL, not
+    // just words — a guest adding a sparkling/Champagne pour without having said
+    // anything about an occasion is the brief's own example. Ask once per
+    // conversation (derived from history, no new state) and only when the guest
+    // hasn't already told us the occasion this turn.
+    if (!intent.slots.occasion && !intent.slots.occasionDetail) {
+      const occasionPrompt = this.celebratoryOccasionPrompt(cart, menuContext, payload.history);
+      if (occasionPrompt) {
+        responseData = { ...responseData, reply: `${occasionPrompt} ${responseData.reply || ''}`.trim() };
+      }
+    }
+
+    // Curated Demo Mode override: applies the SAME resolveCuratedPick() stage
+    // machine recommend() already uses (see there), so the chat reply and the
+    // cart-level Chef's Pick always name the same next item. Checked before
+    // the older scriptedDemo override below so Curated Demo Mode takes
+    // priority whenever it's live-enabled from the Admin UI.
+    if (this.config?.restaurantId === 'trump' && this.fileService?.loadSettings) {
+      const liveSettings = await this.fileService.loadSettings();
+      if (liveSettings?.curatedDemoMode) {
+        const cartNames = cart.map(item => normalizeName(item.name));
+        const curatedPick = resolveCuratedPick(cartNames, {
+          tableId: requestBody.tableId,
+          deviceId: payload.deviceId || null,
+          skip: payload.skip === true
+        });
+        if (curatedPick === 'done') {
+          responseData = { ...responseData, suggestions: [] };
+        } else if (curatedPick) {
+          const item = findScriptedMenuItem(menuContext, curatedPick);
+          if (item) {
+            const pub = publicItem(item, "Chef's pairing");
+            pub.chef = true;
+            pub.beverageKind = item.beverageKind || 'NONE';
+            pub.scripted = true;
+            pub.curated = true;
+            pub.confidence = 0.92;
+            pub.netRevenueIncrease = Number(pub.price) || 0;
+            pub.expectedValue = Math.round(pub.confidence * pub.netRevenueIncrease * 100) / 100;
+            if (curatedPick.reason) pub.reason = curatedPick.reason;
+            responseData = { ...responseData, suggestions: [pub] };
+          }
+        }
+      }
+    }
+
+    // Scripted demo override: applies the SAME resolveScriptedPick() chain
+    // recommend() already uses (see there), so a scripted cart's chat reply,
+    // waiter card and cart-level Chef's Pick all ever name one matching next
+    // item — never a different, live-engine pick for the same cart depending
+    // on which surface asked. Deliberately placed after exclusion-filtering/
+    // the occasion prompt and before the persona voice swap below, so Gaspard
+    // always narrates whatever is about to actually be shown.
+    const scriptedDemo = this.config?.scriptedDemo;
+    if (scriptedDemo?.enabled) {
+      const demoTableId = scriptedDemo.tableId ? normalizeId(scriptedDemo.tableId) : null;
+      if (!demoTableId || requestBody.tableId === demoTableId) {
+        const cartNames = cart.map(item => normalizeName(item.name));
+        const pick = resolveScriptedPick(cartNames, { restaurantId: this.config?.restaurantId });
+        if (pick === 'done') {
+          responseData = { ...responseData, suggestions: [] };
+        } else if (pick) {
+          const item = findScriptedMenuItem(menuContext, pick);
+          if (item) {
+            const pub = publicItem(item, "Chef's pairing");
+            pub.chef = true;
+            // publicItem() deliberately omits beverageKind (see its
+            // definition) -- the normal candidate path re-attaches it after
+            // the fact (search `pub.beverageKind =` above); this scripted
+            // short-circuit needs the same so gaspardVoice's alcoholPosture()
+            // can actually see a WINE/COCKTAIL/BEER item and append the
+            // "skip the alcohol" line the demo script quotes verbatim.
+            pub.beverageKind = item.beverageKind || 'NONE';
+            pub.scripted = true;
+            pub.confidence = 0.92;
+            pub.netRevenueIncrease = Number(pub.price) || 0;
+            pub.expectedValue = Math.round(pub.confidence * pub.netRevenueIncrease * 100) / 100;
+            if (pick.reason) pub.reason = pick.reason;
+            responseData = { ...responseData, suggestions: [pub] };
+          }
+        }
+      }
+    }
+
+    // Persona voice swap (AD-005): reuses the exact suggestions the scoring
+    // engine above already decided on — only the WORDING changes. Runs last,
+    // after exclusion-filtering, the occasion prompt and the scripted-demo
+    // override, so Gaspard always talks about the final, real suggestion set.
+    if (this.config?.assistantPersona === 'gaspard') {
+      const dayParts = await this.fileService.loadDayParts();
+      // A client-supplied day-part (the Day/Night toggle's active mode) wins
+      // over the server clock — without this, Gaspard's greeting follows
+      // wall-clock time even when the guest is looking at the other menu
+      // (e.g. "Good morning" while browsing the Night menu at 6pm).
+      const requestedDayPart = payload.dayPart ? dayParts.find(dp => dp.slug === payload.dayPart) : null;
+      const dayPart = requestedDayPart || (dayParts.length > 0 ? resolveDayPart(dayParts) : null);
+      const isFirstTurn = !(Array.isArray(payload.history) && payload.history.length > 0);
+      responseData = {
+        ...responseData,
+        reply: gaspardVoice.composeReply({
+          message,
+          suggestions: responseData.suggestions || [],
+          dayPart,
+          isFirstTurn
+        })
+      };
+    }
+
+    // Chat logging is a side effect, not part of the guest-facing reply --
+    // `responseData` above is already a complete, successfully-computed
+    // answer. appendChatLog() does an unlocked read-modify-write on one
+    // shared chat_logs.json file (every table's every turn), so concurrent
+    // chat requests can race on the rename step and intermittently throw
+    // (observed as EPERM/EBUSY on Windows). Previously that error propagated
+    // up through this unguarded `await`, discarding the already-good reply
+    // and surfacing as a fake "chat failed" error to the guest -- an
+    // identical retry then succeeded once the contention window passed,
+    // because the reply computation itself was never the problem.
+    try {
+      await this.appendChatLog(requestBody, responseData);
+    } catch (error) {
+      this.logger?.warn?.('appendChatLog failed (non-fatal, reply still returned)', { error: error?.message });
+    }
     return responseData;
+  }
+
+  // Phase 1 (Recommendation Brain): last cart line resolves to a sparkling/
+  // Champagne pour, and we haven't already asked this conversation.
+  celebratoryOccasionPrompt(cart, menuContext, history) {
+    if (!Array.isArray(cart) || cart.length === 0) return null;
+    const last = cart[cart.length - 1];
+    const resolved = fuzzyFindItem(menuContext, last?.name) || last;
+    const text = `${resolved?.name || ''} ${resolved?.category || ''} ${resolved?.subcategory || ''}`.toLowerCase();
+    const isCelebratory = resolved?.categoryType === 'WINE' && /champagne|sparkling|cap classique|\bmcc\b|prosecco/.test(text);
+    if (!isCelebratory) return null;
+
+    const alreadyAsked = (Array.isArray(history) ? history : []).some(
+      msg => msg?.role === 'assistant' && typeof msg.content === 'string' && /celebrating something/i.test(msg.content)
+    );
+    if (alreadyAsked) return null;
+
+    return 'Are you celebrating something tonight?';
   }
 
   // ── Exclusion ("no X") handling ───────────────────────────────────────────
@@ -621,8 +921,14 @@ class AiService {
     const hay = (suggestion.searchText
       || [suggestion.name, suggestion.description, suggestion.category, suggestion.subcategory, suggestion.categoryType]
         .filter(Boolean).join(' ')).toLowerCase();
+    // Defense-in-depth: also check the item's tags (both shapes -- see
+    // tagList()'s own comment), not just free text — a dish can be a genuine
+    // match (a squid/prawn dish tagged seafood) without the blocked word
+    // ever appearing literally in its name/description/category text.
+    const tagValues = tagList(suggestion);
     for (const term of blocked) {
       if (hay.includes(term)) return true;
+      if (tagValues.includes(term)) return true;
     }
     return false;
   }
@@ -631,43 +937,136 @@ class AiService {
     const cart = this.readCart(payload);
     const [menuContext, recs] = await Promise.all([
       this.getMenuContext(),
-      this.recommend({ cart, limit: 8, reason: payload.reason })
+      // tableId threaded through so recoMemory's "recently ignored"/session
+      // suppression (already built, otherwise dormant for this endpoint) can
+      // actually apply here — previously silently dropped, so a card the
+      // waiter had just ignored could resurface on the very next cart refetch.
+      this.recommend({ cart, limit: 8, reason: payload.reason, guestIntel: payload.guestIntel, tableId: payload.tableId, deviceId: payload.deviceId, skip: payload.skip, declinedName: payload.declinedName })
     ]);
     const cartNames = new Set(cart.map(c => normalizeName(c.name)));
     const csvRecs = this.smartPairings.recommend({ cart, menuContext, limit: 4 });
 
+    // Phase 2.5 (Hospitality Intelligence): the same food/wine cart anchors
+    // recommend() resolves internally for pairingReason() — recomputed here
+    // (cheap, cart is tiny) so upsellScript can build the SAME tag-driven WHY
+    // clause for its Professional/Friendly/Luxury scripts, not a separate one.
+    const anchorDish = cart
+      .map(c => fuzzyFindItem(menuContext, c.name))
+      .find(m => m && !['WINE', 'DRINK'].includes(m.categoryType)) || null;
+    const anchorWine = cart
+      .map(c => fuzzyFindItem(menuContext, c.name))
+      .find(m => m && m.categoryType === 'WINE') || null;
+
+    // csvRecs' `.reason` comes straight from the CSV's own `reasoning` column —
+    // a completely separate, formulaic wording system that bypasses
+    // reasonComposer/heroPairings entirely (verified: the same sentence repeats
+    // verbatim across unrelated dishes in the source CSVs). Recompute it through
+    // the same composer `recs` already uses, so both sources sound alike. Clear
+    // the CSV text first — pairingReason's Tier-1b returns an existing
+    // `target.reason` verbatim (by design, for genuinely authored overrides), so
+    // leaving the CSV string in place would make the recompute a no-op.
+    await Promise.all(csvRecs.map(async item => {
+      const isBev = ['WINE', 'DRINK'].includes(item.categoryType);
+      const anchor = isBev ? anchorDish : (anchorWine || anchorDish);
+      item.reason = await this.reason.pairingReason({ ...item, reason: '' }, anchor, { cartWine: anchorWine });
+    }));
+
     // Phase 3C: the waiter upsell reads the SAME composed reason as the cards and
     // chat (authored hero → chef → tag-true Tier-2 → never blank). One copy source.
-    const recommendations = [...csvRecs, ...recs]
-      .filter(r => !cartNames.has(normalizeName(r.name)))
-      .filter((r, index, list) => list.findIndex(x => normalizeName(x.name) === normalizeName(r.name)) === index)
-      .slice(0, 4)
-      .map(r => {
-        // Script the waiter can say out loud. Name the dish it pairs from (CSV
-        // source) and fold in the pairing reasoning when we have it.
-        const from = r.pairedWith || cart[0]?.name || 'your order';
-        const why = r.reason ? ` ${r.reason}` : '';
-        return {
+    //
+    // Scripted-demo carts (recs[0].scripted, set by recommend()'s scripted-
+    // chain short-circuit) skip the csvRecs blend entirely — the waiter card
+    // must show the exact same single next item as the customer chat/
+    // recommend surfaces, never SmartPairingEngine's independent (and here,
+    // non-deterministic) picks alongside it.
+    let merged = recs.some(r => r.scripted)
+      ? recs
+      : [...csvRecs, ...recs]
+        .filter(r => !cartNames.has(normalizeName(r.name)))
+        .filter((r, index, list) => list.findIndex(x => normalizeName(x.name) === normalizeName(r.name)) === index);
+
+    // csvRecs (SmartPairingEngine) has no beverage-primacy logic of its own,
+    // unlike `recs` (which already passed recommendationRules.applyCategorySafety's
+    // "max one primary beverage" rule). If both independently name a different
+    // wine/drink for the same cart, keep only the already-safety-checked one from
+    // `recs` — otherwise the waiter can see two wine recommendations for one steak.
+    const isBevCandidate = r => ['WINE', 'DRINK'].includes(r.categoryType);
+    if (recs.some(isBevCandidate)) {
+      const safeBevNames = new Set(recs.filter(isBevCandidate).map(r => normalizeName(r.name)));
+      merged = merged.filter(r => !isBevCandidate(r) || safeBevNames.has(normalizeName(r.name)));
+    }
+
+    // Luxury tables: surface chef-picks and higher-priced items first, so the
+    // 4-item cut favours the premium end of the menu rather than whatever
+    // scored highest for the general (price-agnostic) standard-table pipeline.
+    if (payload.mode === 'luxury') {
+      merged = [...merged].sort((a, b) => {
+        const chefDelta = (b.chef === true ? 1 : 0) - (a.chef === true ? 1 : 0);
+        return chefDelta || (Number(b.price) || 0) - (Number(a.price) || 0);
+      });
+    }
+
+    const candidates = merged.slice(0, 4);
+
+    // Phase 2 (Waiter Experience): the waiter picks a delivery style per guest —
+    // reuse the SAME nlgService/templateNlgProvider tones already built for the
+    // AI Table Coach (postCoach), not a second wording system. "Friendly" maps to
+    // the existing 'casual' tone (there is no separate 'friendly' tone).
+    const recommendations = await Promise.all(candidates.map(async r => {
+      // Script the waiter can say out loud. Name the dish it pairs from (CSV
+      // source) and fold in the pairing reasoning when we have it.
+      const from = r.pairedWith || cart[0]?.name || 'your order';
+      const why = r.reason ? ` ${r.reason}` : '';
+      // Phase 1 (Recommendation Brain): the "uplift" a waiter is coached to
+      // expect must be the replacement-aware delta, not the new item's full
+      // price — a same-role swap (e.g. Wine A -> Wine B) only nets the difference.
+      const netIncrease = r.netRevenueIncrease ?? r.price;
+      const isBev = ['WINE', 'DRINK'].includes(r.categoryType);
+      const anchor = isBev ? anchorDish : (anchorWine || anchorDish);
+      const scriptData = {
+        suggestedItem: { name: r.name, price: r.price, categoryType: r.categoryType, tags: r.tags },
+        forItem: anchor ? { name: anchor.name, categoryType: anchor.categoryType, tags: anchor.tags } : null
+      };
+      const [professional, friendly, luxury] = await Promise.all([
+        this.nlgService.phrase({ kind: this.nlgService.KINDS.UPSELL_SCRIPT, tone: 'professional', data: scriptData }),
+        this.nlgService.phrase({ kind: this.nlgService.KINDS.UPSELL_SCRIPT, tone: 'casual', data: scriptData }),
+        this.nlgService.phrase({ kind: this.nlgService.KINDS.UPSELL_SCRIPT, tone: 'luxury', data: scriptData })
+      ]);
+      const fallbackScript = `I see you have the ${from} — many guests pair it with our ${r.name}.${why}`;
+      return {
         name: r.name,
         price: r.price,
         img: r.img,
         categoryType: r.categoryType,
         story: r.story || '',
         reason: r.reason || '',
-        script: `I see you have the ${from} — many guests pair it with our ${r.name}.${why}`,
-        upsell: Math.round(Number(r.price) || 0),
+        script: fallbackScript,
+        scripts: {
+          professional: professional || fallbackScript,
+          friendly: friendly || fallbackScript,
+          luxury: luxury || fallbackScript
+        },
+        upsell: Math.max(0, Math.round(Number(netIncrease) || 0)),
+        confidence: r.confidence,
+        expectedValue: r.expectedValue,
+        replacement: r.replacement || null,
         // Phase 4 analytics attribution.
         source_title: r.source_title || '',
         rotationGroup: r.rotationGroup || '',
         chef: r.chef === true,
         relation: r.relation || ''
-        };
-      });
+      };
+    }));
+
+    // Phase 2: expose the same cart-signal occasion detection chat() already
+    // uses (Champagne/sparkling in cart, no words needed) so the waiter UI can
+    // show an occasion badge without a second detector.
+    const occasionPrompt = this.celebratoryOccasionPrompt(cart, menuContext, payload.history);
 
     const eventRec = null;
 
     const potentialUplift = recommendations.reduce((sum, r) => sum + r.upsell, 0);
-    return { recommendations, eventRec, potentialUplift };
+    return { recommendations, eventRec, potentialUplift, occasionPrompt: occasionPrompt || null };
   }
 
   // Phase 3C: waiter-only "ordered together" — counted co-occurrence over real
@@ -791,13 +1190,27 @@ class AiService {
     // Phase 3B: "a wine for it" — return a colour-appropriate wine (crisp white
     // for seafood), not a mixed plate. Resolves "it" from the remembered anchor.
     if (/\bwine\b|\bcellar\b/.test(lower)) {
-      const isCrisp = x => x && x.tags && ['white', 'sparkling', 'rose'].includes(x.tags.drinkType);
-      const anchorSeafood = mentioned && mentioned.tags && Array.isArray(mentioned.tags.protein) && mentioned.tags.protein.includes('seafood');
+      const isCrisp = x => ['white', 'sparkling', 'rose'].includes(wineColorOf(x));
+      const isRed = x => wineColorOf(x) === 'red';
+      // Resolves from the specific dish's protein tag when one was named
+      // ("a wine for the calamari"), or from the spoken protein word itself
+      // when it wasn't ("what wine pairs with steak?") -- see
+      // proteinFromMessage()'s own comment for why `mentioned` alone isn't
+      // enough to catch the generic-category case.
+      const protein = proteinFromMessage(mentioned, lower);
+      const anchorSeafood = protein.includes('seafood');
+      const anchorRedMeat = protein.some(p => ['beef', 'lamb', 'pork'].includes(p));
       let wines = suggestions.filter(s => s.categoryType === 'WINE');
       if (anchorSeafood) {
         const crisp = wines.filter(isCrisp);
         wines = (crisp.length ? crisp : crispWhites(menuContext.items).slice(0, 4).map(w => publicItem(w, 'Crisp white')));
+      } else if (anchorRedMeat) {
+        const reds = wines.filter(isRed);
+        wines = (reds.length ? reds : fullBodiedReds(menuContext.items).slice(0, 4).map(w => publicItem(w, 'Full-bodied red')));
       }
+      // Last-resort fallback (still no protein signal at all, e.g. "what
+      // wine do you have") stays list order -- there's genuinely no pairing
+      // logic to apply without something to pair against.
       if (wines.length === 0) wines = (menuContext.categorized.WINE || []).slice(0, 3).map(w => publicItem(w, 'Cellar selection'));
       wines = wines.slice(0, 4);
       const lead = mentioned ? `For the ${mentioned.name}, from the cellar I'd pour` : 'From the cellar I would pour';
@@ -942,6 +1355,15 @@ class AiService {
     if (s.body === 'full') return 'For a hearty plate —';
     if ((s.dietary || []).includes('vegan')) return 'Plant-based picks —';
     if ((s.dietary || []).length) return 'Vegetarian-friendly —';
+    // Phase 1 (Recommendation Brain): occasionDetail is a refinement of the
+    // coarse `occasion` bucket below — check it first so a stated birthday/
+    // anniversary/etc gets a specific lead rather than the generic one.
+    if (s.occasionDetail === 'birthday') return 'Happy birthday to someone at the table — let’s make it special —';
+    if (s.occasionDetail === 'anniversary') return 'Congratulations on the anniversary — for a memorable toast —';
+    if (s.occasionDetail === 'graduation') return 'Congratulations on the graduation — a fitting way to celebrate —';
+    if (s.occasionDetail === 'business_dinner') return 'For a polished business dinner —';
+    if (s.occasionDetail === 'sports_night') return 'Perfect for match night —';
+    if (s.occasionDetail === 'family_dinner') return 'Great for a family dinner —';
     if (s.occasion === 'sharing') return 'Great for the table —';
     if (s.occasion === 'celebration') return "Let's make it special —";
     if (s.occasion === 'date') return 'For a memorable evening —';
@@ -967,13 +1389,14 @@ class AiService {
     }
 
     const recs = await this.recommend({ cart: [newDish], intent, menuContext, limit: 6 });
-    const goesLighter = (newDish.tags && Array.isArray(newDish.tags.protein) && newDish.tags.protein.includes('seafood'))
+    const goesLighter = tagList(newDish).includes('seafood')
       || (slots.proteinWanted || []).includes('seafood') || slots.body === 'light';
 
-    // Pick the new drink off tags.drinkType (never mistake a dish for a wine): a
-    // crisp white/sparkling for a lighter/seafood swap, otherwise any wine pour.
-    const isCrisp = x => x && x.tags && ['white', 'sparkling', 'rose'].includes(x.tags.drinkType);
-    const isAnyWine = x => x && (x.categoryType === 'WINE' || (x.tags && ['white', 'sparkling', 'rose', 'red'].includes(x.tags.drinkType)));
+    // Pick the new drink off its resolved colour (never mistake a dish for a
+    // wine): a crisp white/sparkling for a lighter/seafood swap, otherwise
+    // any wine pour.
+    const isCrisp = x => ['white', 'sparkling', 'rose'].includes(wineColorOf(x));
+    const isAnyWine = x => x && (x.categoryType === 'WINE' || ['white', 'sparkling', 'rose', 'red'].includes(wineColorOf(x)));
     const newWine = goesLighter
       ? (recs.find(isCrisp) || crispWhites(menuContext.items)[0])
       : recs.find(isAnyWine);
@@ -994,7 +1417,7 @@ class AiService {
 
   // Phase 3B: warm, in-character decline for anything off the menu.
   buildOfftopicReply() {
-    const name = (this.config && this.config.assistantName) || 'Donald';
+    const name = (this.config && this.config.assistantName) || '🍷 Your Sommelier';
     return {
       reply: `Ha — that one's a little beyond my table. I'm ${name}, your dining host: I can talk steaks, seafood, sushi, wines and pairings, or help you build the perfect meal. What are you in the mood for?`,
       suggestions: []
@@ -1020,7 +1443,7 @@ class AiService {
     const rawItem = payload.item || payload.selectedItem || payload.name || payload.cart?.[0];
     const menuContext = await this.getMenuContext();
     const item = typeof rawItem === 'string' ? fuzzyFindItem(menuContext, rawItem) : fuzzyFindItem(menuContext, rawItem?.name) || rawItem;
-    const recs = await this.recommend({ cart: item ? [item] : [], limit: 6, menuContext });
+    const recs = await this.recommend({ cart: item ? [item] : [], limit: 6, menuContext, tableId: payload.tableId, deviceId: payload.deviceId });
 
     // Phase 3A: one shared copy layer (varietal notes, dish hooks, tag bridges,
     // chef-authored reason verbatim, never blank) — replaces the old bland templates.
@@ -1038,12 +1461,25 @@ class AiService {
     const foodPairings = enriched.filter(p => !['WINE', 'DRINK'].includes(p.categoryType || ''));
     const drinkPairings = enriched.filter(p => ['WINE', 'DRINK'].includes(p.categoryType || ''));
 
+    // Phase 4 (Recommendation Engine V2): direct pairs_with/upgrade_of/add_on_to
+    // edges from the unified item graph (spec 4.7), additive/optional so
+    // existing clients that don't render it are unaffected. Capped to
+    // one-hop-out from the item itself — a full multi-hop BFS through a
+    // shared wine node fans out to many unrelated dishes that also pair with
+    // it (noisy, not a meaningful "meal journey" chain), so it's not used here.
+    const secondOrder = item?.name
+      ? this.itemGraph.edgesFor(item.name)
+          .slice(0, 6)
+          .map(edge => ({ type: edge.type, source: edge.source, target: edge.target, note: edge.note }))
+      : [];
+
     return {
       title: item?.name ? `Pairs with ${item.name}` : "Chef's Pick",
       description: item?.description || 'A confident table recommendation from the local menu.',
       foodPairings,
       drinkPairings,
       pairings: [...foodPairings, ...drinkPairings],
+      secondOrder,
       talkTrack: recs.length
         ? `I would pair this with ${recs[0].name}; it rounds out the table nicely.`
         : "I'd keep this simple and ask the waiter for the freshest pairing tonight."
@@ -1064,7 +1500,91 @@ class AiService {
     ]);
 
     const cartNames = cart.map(item => normalizeName(item.name));
+
+    // Curated Demo Mode (admin-togglable live, see settingsController.js) —
+    // takes priority over the older env-gated scriptedDemo mechanism below.
+    // Runs the accept/skip/no-loop stage machine in curatedDemoJourney.js
+    // against the 3 hand-designed journeys in config/trumpDemoJourney.js.
+    // Falls through untouched (curatedPick === null) when no curated
+    // journey's starter is in this cart, so a non-demo table, and every
+    // other tenant, is unaffected.
+    if (this.config?.restaurantId === 'trump' && this.fileService?.loadSettings) {
+      const liveSettings = await this.fileService.loadSettings();
+      if (liveSettings?.curatedDemoMode) {
+        const curatedPick = resolveCuratedPick(cartNames, {
+          tableId: payload.tableId ? normalizeId(payload.tableId) : null,
+          deviceId: payload.deviceId || null,
+          skip: payload.skip === true
+        });
+        if (curatedPick === 'done') {
+          return [];
+        }
+        if (curatedPick) {
+          const item = findScriptedMenuItem(menuContext, curatedPick);
+          if (item) {
+            const pub = publicItem(item, "Chef's pairing");
+            pub.chef = true;
+            pub.scripted = true;
+            pub.curated = true;
+            pub.confidence = 0.92;
+            pub.netRevenueIncrease = Number(pub.price) || 0;
+            pub.expectedValue = Math.round(pub.confidence * pub.netRevenueIncrease * 100) / 100;
+            if (curatedPick.reason) pub.reason = curatedPick.reason;
+            return [pub];
+          }
+        }
+      }
+    }
+
+    // Live-demo hard-coded CHEF'S PICK chains (Trump's Prime Grillhouse demo
+    // scripts — see demo trump rule.md). When active for this table, this
+    // completely bypasses the algorithmic engine below so the demo can never
+    // surface a surprise pick — either the next scripted item, or nothing
+    // once a chain has run its course. Gated by config so every other table
+    // (i.e. real diners) keeps the normal recommendation engine untouched.
+    const scriptedDemo = this.config?.scriptedDemo;
+    if (scriptedDemo?.enabled) {
+      const requestTableId = payload.tableId ? normalizeId(payload.tableId) : null;
+      const demoTableId = scriptedDemo.tableId ? normalizeId(scriptedDemo.tableId) : null;
+      if (!demoTableId || requestTableId === demoTableId) {
+        const pick = resolveScriptedPick(cartNames, { restaurantId: this.config?.restaurantId });
+        if (pick === 'done') {
+          return [];
+        }
+        if (pick) {
+          const item = findScriptedMenuItem(menuContext, pick);
+          if (item) {
+            const pub = publicItem(item, "Chef's pairing");
+            pub.chef = true;
+            // Distinct from `chef` (which genuine chef-first candidates also
+            // carry) — lets cartRecommendations() detect that THIS result
+            // came from the scripted chain, not the live engine, so it can
+            // skip blending in SmartPairingEngine's independent csvRecs and
+            // keep the waiter card showing exactly this one item, matching
+            // the customer chat/recommend surfaces exactly (see there).
+            pub.scripted = true;
+            // Demo validation report Part 5/9: every scripted pick reports a
+            // fixed 0.92 confidence (the same band a genuine chef:true
+            // candidate gets — see the `candidate.brain` path below, which
+            // this early-return bypasses entirely) and expected value =
+            // confidence × price. Always a pure add here, never a
+            // replacement, so netRevenueIncrease is the full price.
+            pub.confidence = 0.92;
+            pub.netRevenueIncrease = Number(pub.price) || 0;
+            pub.expectedValue = Math.round(pub.confidence * pub.netRevenueIncrease * 100) / 100;
+            if (pick.reason) pub.reason = pick.reason;
+            return [pub];
+          }
+        }
+      }
+    }
+
     const seen = new Set(cartNames);
+    // Phase 1 (Recommendation Brain): "wait before suggesting something else" —
+    // chatSession derives which names the guest just ignored (suggested last turn,
+    // not added, not asked about again); recommend() simply excludes them from
+    // this turn's candidates rather than tracking any new state itself.
+    (Array.isArray(payload.excludeNames) ? payload.excludeNames : []).forEach(name => seen.add(normalizeName(name)));
     const candidates = [];
 
     const addCandidate = (item, source, score, extra = {}) => {
@@ -1144,7 +1664,7 @@ class AiService {
     this.addPeopleAlsoOrdered(cartNames, menuContext, orderRecords, addCandidate);
     this.addPerfectPairings(cartNames, menuContext, addCandidate);
     this.addFoodPairings(cartNames, menuContext, addCandidate);
-    this.addCourseCompletions(cartNames, menuContext, addCandidate, popularity);
+    this.addCourseCompletions(cartNames, menuContext, addCandidate, popularity, seen);
     this.addPopularCandidates(menuContext, popularity, addCandidate);
 
     if (payload.reason) {
@@ -1166,8 +1686,25 @@ class AiService {
         beverageKind: ct === 'WINE' ? 'WINE' : ct === 'DRINK' ? classifier.beverageKind(match || c.name) : 'NONE'
       };
     });
+    // Phase 1 (Recommendation Brain) — Replacement Logic: tag beverage candidates
+    // that are a same-role UPGRADE of something already in the cart (same
+    // categoryType/beverageKind) so the category-safety rules below treat them as
+    // a swap, not an addition (R4/R1 exist to stop beverage PILE-UP, not to block
+    // a guest trading up their current pour). Food-course candidates are untouched
+    // — R5/R7 already handle those via the chef bypass.
+    candidates.forEach(candidate => {
+      const ct = candidate.item?.categoryType || classifier.categoryType(candidate.item);
+      if (ct === 'WINE' || ct === 'DRINK') {
+        candidate.isReplacement = Boolean(scoring.findReplacementTarget(candidate.item, cart, menuContext.byName));
+      }
+    });
     const { ordered } = this.rotation.rotate(candidates, payload);
-    const { kept } = this.rules.applyCategorySafety(ordered, enrichedCart);
+    const categorySafety = this.rules.applyCategorySafety(ordered, enrichedCart);
+    const { kept } = categorySafety;
+    if (payload.__debugTrace && typeof payload.__debugTrace === 'object') {
+      payload.__debugTrace.mealStage = categorySafety.stage;
+      payload.__debugTrace.rejectedByCategorySafety = categorySafety.dropped;
+    }
 
     // Phase 3A: enforce a dietary request as a hard constraint — meat must never
     // reach a vegetarian/vegan result, even from the popular/backfill sources.
@@ -1179,12 +1716,125 @@ class AiService {
       if (filtered.length) finalKept = filtered;
     }
 
+    // Phase 1 (Recommendation Brain): guest-aware hard exclusion — an allergy/avoid
+    // match never surfaces, regardless of how well it otherwise scores.
+    const guestIntel = payload.guestIntel && payload.guestIntel.present ? payload.guestIntel : null;
+    if (guestIntel) {
+      const safeKept = finalKept.filter(candidate => !scoring.isAllergyMatch(candidate.item, guestIntel));
+      if (safeKept.length) finalKept = safeKept;
+    }
+
+    // Phase 1 (Recommendation Brain): confidence + replacement-aware expected
+    // value, then re-rank by (expectedValue × course tier weight) — Wine > Main >
+    // Side > Dessert as a PRIOR, not a hard gate, so a high-EV dessert (measurably
+    // under-ordered) can still outrank a low-EV wine. Chef recommendations keep
+    // their existing "always wins" position — only the non-chef tail is re-ranked.
+    const tierWeightMap = await this.getTierWeights();
+    const scored = finalKept.map(candidate => ({
+      candidate,
+      brain: scoring.scoreCandidate({ candidate, cart, menuByName: menuContext.byName, guestIntel, weights: tierWeightMap })
+    }));
+    // Phase 3 (Dining Concierge): chef-tier candidates now come from two
+    // sources (curated chefRecs AND the journey's own upgrade nudge) that can
+    // both apply to the same dish, so this tier needs its OWN priority order
+    // instead of relying on insertion order -- sorted by the same `score` every
+    // chef candidate already carries (chefRecs' 1000+priority band; the
+    // journey upgrade's score is set to compete on the same scale below).
+    const chefScored = scored.filter(s => s.candidate.chef === true).sort((a, b) => b.candidate.score - a.candidate.score);
+    const restScored = scored
+      .filter(s => s.candidate.chef !== true)
+      .sort((a, b) => b.brain.finalScore - a.brain.finalScore);
+    finalKept = [...chefScored, ...restScored].map(s => ({ ...s.candidate, brain: s.brain }));
+
+    // Phase 4 (Recommendation Engine V2): the candidate filter pipeline's
+    // remaining steps (never-suggest-declined, no-dessert-before-mains,
+    // no-wine-after-coffee, never-downsell, protein/structural conflict,
+    // per-category cap, frequency/cooldown) — additive on top of the
+    // existing chef/hero/tag/rotation/category-safety/dietary/allergy
+    // filtering above, never replacing it. The quality/correctness steps
+    // (5-8) always run; the frequency/cooldown step (9) only gates a call a
+    // caller has explicitly flagged payload.proactive === true (an
+    // unsolicited nudge, e.g. a future chat-initiated upsell) — recommend()
+    // is called continuously by many existing surfaces (ItemModal pairings,
+    // the cart upsell rail, waiter panel, etc.) that never set this flag
+    // today, so the suggestion/frequency counters stay dormant for all of
+    // them rather than silently emptying an always-on panel a guest expects
+    // to see something in.
+    // Device-aware recommendations: scope recoMemory's accepted/rejected/
+    // frequency-cooldown state per guest device, not per whole table, so one
+    // diner's decline doesn't suppress a suggestion for another diner at the
+    // same table (recommendationMemory.js treats this as an opaque key).
+    const tableId = payload.deviceId
+      ? `${payload.tableId || 'anon'}:${payload.deviceId}`
+      : (payload.tableId || null);
+    // Waiter "AI Recommendation" panel decline/skip: record it against the
+    // SAME tableId key the pipeline's isRejected/isRecentlyIgnored checks
+    // below already use, so the just-declined item is filtered out of THIS
+    // turn's result too — not just future ones — giving an immediate next-
+    // best pick instead of re-showing the same card. Curated Demo Mode never
+    // reaches this line (it returns earlier); this only affects the normal
+    // algorithmic engine every real table already runs.
+    if (payload.skip === true && payload.declinedName) {
+      this.recoMemory.recordDecline(tableId, payload.declinedName);
+    }
+    const pipelineResult = candidateFilterPipeline.runPipeline({
+      candidates: finalKept,
+      cart,
+      tableId,
+      wantsValue: false,
+      proactive: payload.proactive === true,
+      memory: this.recoMemory,
+      businessRules: this.businessRules,
+      maxUnrelatedItems: this.businessRules.thresholds.maxUnrelatedItems
+    });
+    // Dev-only inspection hook (scripts/inspect-recommendations.js): when a caller
+    // passes __debugTrace (a plain object reference), attach data this method
+    // already computes but would otherwise discard. No production HTTP route
+    // ever sets this field, so it has zero effect on any real request.
+    if (payload.__debugTrace && typeof payload.__debugTrace === 'object') {
+      payload.__debugTrace.candidatesConsidered = finalKept.map(c => ({
+        name: c.item?.name, source: c.source, chef: c.chef === true, score: c.score, brain: c.brain
+      }));
+      payload.__debugTrace.rejected = pipelineResult.dropped;
+      payload.__debugTrace.frequencyGated = pipelineResult.frequencyGated;
+    }
+    finalKept = pipelineResult.kept;
+
     // Phase 3C: ONE copy source. Compose every result's reason via reasonComposer
     // (authored hero → chef → tag-true Tier-2 → never-blank), anchored to the
     // primary food dish in the cart so a hero dish renders its varietal's line.
     const sourceDish = cart
       .map(c => fuzzyFindItem(menuContext, c.name))
       .find(m => m && !['WINE', 'DRINK'].includes(m.categoryType)) || null;
+    // Recommendation Brain V2: for a dessert suggestion specifically, reference
+    // BOTH what's already on the table (the dish AND the wine), not just one
+    // anchor — "you've chosen seafood pasta and a Sauvignon Blanc, so..." reads
+    // as an experienced waiter's observation, not a single-item lookup.
+    const cartWine = cart
+      .map(c => fuzzyFindItem(menuContext, c.name))
+      .find(m => m && m.categoryType === 'WINE') || null;
+
+    // Phase 2 (recommendation-quality review): reasonComposer's hero-pairing
+    // reason for a WINE/side candidate independently appends an "upgrade to
+    // the Wagyu X" nudge whenever sourceDish has one (narrativeExtras ->
+    // upgradeNudge). When that same upgrade is ALSO about to be surfaced as
+    // its own standalone candidate this turn (the journey's separate
+    // upgrade-stage logic below), the guest heard the identical pitch twice —
+    // once folded into another item's reason, once as its own card. Computed
+    // once here (source-dish-dependent, not per-candidate) and passed through
+    // so the composer can suppress the redundant mention; no scoring/ranking
+    // logic changes, purely a narrative dedup.
+    const sourceUpgrade = sourceDish && this.hero && this.hero.ready && typeof this.hero.upgradeFor === 'function'
+      ? this.hero.upgradeFor(sourceDish.name, sourceDish.tags || {})
+      : null;
+    // upgrade_rules.json's `to` is a generic archetype name ("Wagyu Ribeye"),
+    // not the full menu item name ("WAGYU RIBEYE 300g") -- substring match,
+    // not equality, same reason `fuzzyFindItem` elsewhere in this file does.
+    const upgradeAlreadyPresent = Boolean(sourceUpgrade) && finalKept.some(c => {
+      const candName = normalizeName(c.item?.name);
+      const upgradeName = normalizeName(sourceUpgrade.to);
+      return Boolean(candName) && Boolean(upgradeName) && candName.includes(upgradeName);
+    });
 
     const out = [];
     for (const candidate of finalKept.slice(0, recommendationLimit)) {
@@ -1194,11 +1844,49 @@ class AiService {
         : (pub.categoryType === 'WINE' ? 'WINE' : pub.categoryType === 'DRINK' ? classifier.beverageKind(candidate.item) : 'NONE');
       if (candidate.reason) pub.reason = candidate.reason;
       pub.chef = candidate.chef === true;
+      // Phase 1 (Recommendation Brain): confidence score, replacement-aware
+      // expected value, and what (if anything) this recommendation would replace.
+      if (candidate.brain) {
+        pub.confidence = candidate.brain.confidence;
+        pub.expectedValue = candidate.brain.expectedValue;
+        pub.netRevenueIncrease = candidate.brain.netRevenueIncrease;
+        pub.replacement = candidate.brain.replacement;
+      }
+      // Phase 4 (Recommendation Engine V2): named scoring components (H/P/R/
+      // S/T/O/Pop/Chef/Pref/Pen, spec 4.3) and the confidence breakdown (spec
+      // 4.6), exposed alongside the existing confidence/expectedValue fields
+      // above — additive, informational; ranking above still uses finalScore.
+      const currentState = this.mealStates.currentState(cart, menuContext.byName);
+      const scoreComponents = scoring.computeScoreComponents({
+        candidate,
+        mealStateService: this.mealStates,
+        currentState,
+        popularity: (popularity.get(normalizeName(candidate.item?.name)) || 0) / Math.max(1, Math.max(...popularity.values(), 1)),
+        guestIntel
+      });
+      pub.scoreComponents = scoreComponents;
+      pub.confidenceBreakdown = scoring.computeConfidenceBreakdown({ candidate, scoreComponents });
       // Phase 4: carry the rotation group through so analytics can attribute
       // impressions/clicks to the group the engine drew from.
       pub.rotationGroup = candidate.rotationGroup || '';
-      pub.reason = await this.reason.pairingReason(pub, sourceDish);
+      pub.reason = await this.reason.pairingReason(pub, sourceDish, { cartWine, suppressUpgradeNudge: upgradeAlreadyPresent });
       out.push(pub);
+    }
+
+    // Phase 4 (Recommendation Engine V2): record this turn into the per-table
+    // recommendation memory (spec 4.5) — never-re-suggest-rejected and
+    // frequency/cooldown enforcement above read this on the NEXT call.
+    if (tableId) {
+      this.recoMemory.recordTurn(tableId, {
+        cartNames: cart.map(c => c.name),
+        suggestedNames: out.map(o => o.name),
+        ignoredNamesThisTurn: Array.isArray(payload.excludeNames) ? payload.excludeNames : [],
+        stage: this.mealStates.currentState(cart, menuContext.byName),
+        proactive: payload.proactive === true
+      });
+    }
+    if (payload.__debugTrace && typeof payload.__debugTrace === 'object') {
+      payload.__debugTrace.finalOutput = out;
     }
     return out;
   }
@@ -1207,13 +1895,26 @@ class AiService {
     if (Array.isArray(payload)) {
       return payload;
     }
-    if (Array.isArray(payload.cart)) {
-      return payload.cart;
+    const cart = Array.isArray(payload.cart)
+      ? payload.cart
+      : Array.isArray(payload.items)
+        ? payload.items
+        : [];
+
+    // Device-aware recommendations: a table's cart is shared/merged across
+    // every guest device (client/src/context/CartContext.tsx converges them
+    // on purpose), so a caller identifying itself via deviceId only wants
+    // recommendations built from the items IT added, not the whole table's.
+    // Falls back to the unfiltered cart when nothing in it carries an
+    // ownership tag at all (pre-rollout carts, waiter-added items) so a
+    // legacy cart never silently reads as empty.
+    if (payload.deviceId) {
+      const hasOwnershipData = cart.some(item => item?.addedByDevice);
+      if (hasOwnershipData) {
+        return cart.filter(item => item?.addedByDevice === payload.deviceId);
+      }
     }
-    if (Array.isArray(payload.items)) {
-      return payload.items;
-    }
-    return [];
+    return cart;
   }
 
   addPeopleAlsoOrdered(cartNames, menuContext, orderRecords, addCandidate) {
@@ -1360,6 +2061,12 @@ class AiService {
         title: 'Pairs with chicken',
         score: 84,
         keywords: ['chips', 'salad', 'garlic bread', 'coleslaw']
+      },
+      {
+        when: /beer|lager|cider|draught/,
+        title: 'Goes great with a cold one',
+        score: 86,
+        keywords: ['wings', 'biltong', 'burger', 'snails', 'calamari']
       }
     ];
 
@@ -1379,36 +2086,95 @@ class AiService {
       });
   }
 
-  addCourseCompletions(cartNames, menuContext, addCandidate, popularity) {
-    const cartTypes = new Set(
-      cartNames
-        .map(name => menuContext.byName.get(name))
-        .filter(Boolean)
-        .map(item => item.categoryType)
+  // Phase 3 (Dining Concierge): ONE clear "next best decision" per turn, driven
+  // by scoring.nextJourneyStage — not a scattershot fill of every empty course.
+  // Still reuses the exact same candidate pipeline (addCandidate -> Brain
+  // scoring -> category-safety rules) that every other source here uses; this
+  // just decides WHICH course gets the strongest push this turn, and stops
+  // pushing anything once the journey (drink -> food -> wine -> upgrade ->
+  // dessert -> coffee -> digestif) is complete, per product spec.
+  addCourseCompletions(cartNames, menuContext, addCandidate, popularity, seen = new Set()) {
+    const cartItems = cartNames.map(name => menuContext.byName.get(name)).filter(Boolean);
+    const cartTypes = new Set(cartItems.map(item => item.categoryType));
+    const mainDish = cartItems.find(it => ['MAIN', 'STARTER', 'SUSHI'].includes(it.categoryType)) || null;
+
+    const upgrade = mainDish && this.hero && this.hero.ready
+      ? this.hero.upgradeFor(mainDish.name, mainDish.tags || {})
+      : null;
+    const upgradeItem = upgrade ? fuzzyFindItem(menuContext, upgrade.to) : null;
+    const upgradeAvailable = Boolean(upgradeItem && normalizeName(upgradeItem.name) !== normalizeName(mainDish?.name));
+    const upgradeOffered = !upgradeAvailable || seen.has(normalizeName(upgradeItem.name));
+
+    const stage = scoring.nextJourneyStage(
+      cartNames.map(name => ({ name })),
+      menuContext.byName,
+      { upgradeAvailable, upgradeOffered }
     );
 
-    [
-      { key: 'STARTER', title: 'Start with a starter', score: 76 },
-      { key: 'WINE', title: 'Wine pairing', score: 74 },
-      { key: 'DRINK', title: 'Cellar pairing', score: 72 },
-      { key: 'DESSERT', title: 'Sweet finish', score: 66 }
-    ].forEach(suggestion => {
-      if (cartTypes.has(suggestion.key)) {
-        return;
-      }
+    if (stage === 'done') {
+      return; // journey complete -- stop recommending, per product spec.
+    }
 
-      const options = [...(menuContext.categorized[suggestion.key] || [])].sort(
-        (left, right) => (popularity.get(normalizeName(right.name)) || 0) - (popularity.get(normalizeName(left.name)) || 0)
-      );
-      // Rotate wine/drink completions by cart so it isn't always the same bottle.
-      const pool = options.slice(0, Math.min(5, options.length));
-      const choice = (suggestion.key === 'WINE' || suggestion.key === 'DRINK') && pool.length > 1
-        ? pool[this.hashString(cartNames.join('|')) % pool.length]
-        : options[0];
-      if (choice) {
-        addCandidate(choice, suggestion.title, suggestion.score);
+    if (stage === 'upgrade') {
+      if (upgradeItem) {
+        // A same-role swap of the main already in the cart -- reuses the exact
+        // Phase 1 Replacement Logic (isReplacement -> price-delta EV, bypasses
+        // R5's "no second main", surfaces as "Replace X" on the card) rather
+        // than a second, parallel "this is an upgrade" mechanism.
+        // Also chef:true -- a curated upgrade nudge, not an algorithmic guess,
+        // so it earns the SAME guaranteed-prominent placement every other
+        // chef pairing gets (existing "chef always wins" ordering), rather
+        // than competing on raw EV against everything else in the rest tier.
+        addCandidate(upgradeItem, "Premium upgrade", UPSELL_TIMING.upgrade, {
+          rotationGroup: `upgrade:${normalizeName(mainDish.name)}`,
+          isReplacement: true,
+          chef: true,
+          // Tier 1b (reasonComposer): an explicit candidate.reason wins verbatim
+          // over the generic tag-driven fallback, reusing heroPairings' own
+          // upgrade note rather than inventing a second copy of it.
+          reason: `If you'd like something even more memorable, I'd suggest the ${upgrade.to} — ${upgrade.note}.`
+        });
       }
-    });
+      return;
+    }
+
+    const pickFrom = (pool, title, score, filterFn) => {
+      let options = [...pool].filter(item => !cartTypes.has(item.categoryType) || item.categoryType === 'DRINK');
+      if (filterFn) options = options.filter(filterFn);
+      options.sort((left, right) => (popularity.get(normalizeName(right.name)) || 0) - (popularity.get(normalizeName(left.name)) || 0));
+      const top = options.slice(0, Math.min(5, options.length));
+      const choice = top.length > 1 ? top[this.hashString(cartNames.join('|') + title) % top.length] : top[0];
+      if (choice) addCandidate(choice, title, score);
+    };
+
+    if (stage === 'food') {
+      pickFrom([...(menuContext.categorized.STARTER || []), ...(menuContext.categorized.MAIN || [])], 'Start with a starter or main', UPSELL_TIMING.food);
+    } else if (stage === 'wine') {
+      pickFrom(menuContext.categorized.WINE || [], 'Wine pairing', UPSELL_TIMING.wine);
+    } else if (stage === 'drink') {
+      // Restrict to primary beverage kinds (wine/cocktail/beer) — without this,
+      // the pool included soft drinks/water/coffee, and if the popularity+hash
+      // pick landed on one of those, R3 (recommendationRules.js) drops secondary
+      // beverages from headlining outright, leaving the guest with no drink
+      // candidate at all for this turn.
+      pickFrom([...(menuContext.categorized.WINE || []), ...(menuContext.categorized.DRINK || [])], 'To start, something to drink', UPSELL_TIMING.drink,
+        item => ['WINE', 'COCKTAIL', 'BEER'].includes(classifier.beverageKind(item)));
+    } else if (stage === 'dessert') {
+      // All 6 desserts on the menu carry identical richness/sweetness tags
+      // (bootstrap defaults, verified live) so richness can't differentiate
+      // them — temperature does vary (ice creams are 'cold', cakes 'room').
+      // After a hot, heavy main, prefer a cold dessert for contrast; fall back
+      // to the unfiltered pool rather than risk zero candidates if that ever
+      // empties out (e.g. a future menu change).
+      const desserts = menuContext.categorized.DESSERT || [];
+      const mainIsHotAndHeavy = mainDish && mainDish.tags?.temperature !== 'cold' && Number(mainDish.tags?.richness) >= 3;
+      const coldDesserts = mainIsHotAndHeavy ? desserts.filter(d => d.tags?.temperature === 'cold') : [];
+      pickFrom(coldDesserts.length ? coldDesserts : desserts, 'Sweet finish', UPSELL_TIMING.dessert);
+    } else if (stage === 'coffee') {
+      pickFrom(menuContext.categorized.DRINK || [], 'Coffee to finish', UPSELL_TIMING.coffee, item => classifier.beverageKind(item) === 'HOT');
+    } else if (stage === 'digestif') {
+      pickFrom(menuContext.categorized.DRINK || [], 'An after-dinner drink', UPSELL_TIMING.digestif, item => ['spirit', 'port', 'amarula'].includes(item.tags?.drinkType));
+    }
   }
 
   // Phase 3A: score every menu item against the chat intent's slots using the

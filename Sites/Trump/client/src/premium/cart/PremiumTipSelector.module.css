@@ -1,0 +1,55 @@
+.wrap {
+  padding: 18px 0 4px;
+}
+
+.label {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--p-faint);
+  margin: 0 0 10px;
+}
+
+.options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.option {
+  border: 1px solid var(--p-line);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 11px;
+  color: var(--p-sub);
+}
+
+.optionActive {
+  background: var(--p-nav);
+  border-color: var(--p-nav);
+  color: var(--p-navtext);
+}
+
+.customRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 10px;
+  border-bottom: 1px solid var(--p-line);
+  padding-bottom: 6px;
+  max-width: 100px;
+}
+
+.customInput {
+  border: none;
+  background: transparent;
+  font-family: var(--p-serif);
+  font-size: 16px;
+  width: 60px;
+  color: var(--p-ink);
+}
+
+.customPct {
+  font-size: 13px;
+  color: var(--p-faint);
+}

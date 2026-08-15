@@ -1,12 +1,15 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useApp } from '../context/AppContext';
 import { Spinner } from '../components/ui/Spinner';
+import { LANDING_BRAND_NAME } from '../constants/api';
 import styles from './LoginPage.module.css';
 
 export function LoginPage() {
   const { user, login } = useAuth();
+  const { tableId } = useApp();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -51,13 +54,9 @@ export function LoginPage() {
     <div className={styles.page}>
       <div className={styles.panel}>
         <div className={styles.brand}>
-          <div className={styles.brandMark}>
-            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M4 19V5h16v14" />
-              <path d="M8 19V9h8v10" />
-            </svg>
-          </div>
-          <h1 className={styles.title}>TRUMPS</h1>
+          {/* Same circled-T monogram as the customer landing screen — one brand, one mark. */}
+          <div className={styles.brandMark} aria-hidden>{LANDING_BRAND_NAME.charAt(0)}</div>
+          <h1 className={styles.title}>{LANDING_BRAND_NAME}</h1>
           <div className={styles.line} />
           <p className={styles.subtitle}>Staff Portal</p>
         </div>
@@ -108,7 +107,7 @@ export function LoginPage() {
         </form>
 
         <p className={styles.back}>
-          <a href="/Trump/table1">← Back to menu</a>
+          <Link to={`/${tableId}`}>← Back to menu</Link>
         </p>
       </div>
     </div>

@@ -1,12 +1,54 @@
 // Use the shared, explicitly-resolved Prisma client so a Trump-local @prisma/client
 // stub can't shadow the generated client (which silently zeroed analytics).
 const { getPrisma } = require('../services/prismaClient');
+// Read-only classification for reporting (category splits, pairing labels). This
+// is the same shared classifier every other surface uses — not part of the
+// recommendation engine's candidate/scoring pipeline.
+const { categoryType, beverageKind } = require('../services/categoryClassifier');
+const { getCanonicalTableId, normalizeName } = require('../utils/helpers');
 
+// A malformed `from`/`to` used to throw a Prisma validation error deep inside
+// each controller's query, caught by that method's own catch-all and reported
+// as a normal 200 with all-zero/empty data — indistinguishable from a
+// genuinely quiet period. Validate up front and drop (not throw on) a bad
+// bound instead, and self-correct a reversed range by swapping it, so a bad
+// query string degrades gracefully rather than silently lying about the data.
 function parseDateRange(from, to) {
+  let gte = from ? new Date(from) : null;
+  let lte = to ? new Date(to) : null;
+  if (gte && Number.isNaN(gte.getTime())) gte = null;
+  if (lte && Number.isNaN(lte.getTime())) lte = null;
+  if (gte && lte && gte > lte) { const t = gte; gte = lte; lte = t; }
   const ts = {};
-  if (from) ts.gte = new Date(from);
-  if (to) ts.lte = new Date(to);
+  if (gte) ts.gte = gte;
+  if (lte) ts.lte = lte;
   return Object.keys(ts).length > 0 ? { timestamp: ts } : {};
+}
+
+// name -> category title, cached briefly. Historical OrderItem rows only ever
+// stored the item name, not its category — and the classifier needs the
+// category (e.g. "Cabernet Sauvignon") to tell a wine brand like "Tokara" or
+// a beer like "Castle Lite" apart from a food dish; passing the bare name alone
+// silently falls through to the MAIN default. Same pattern as
+// waiterAnalyticsService's getCourseMap().
+let categoryMapCache = { at: 0, map: null, restaurantId: null };
+async function getCategoryMap(db, restaurantId) {
+  if (categoryMapCache.map && categoryMapCache.restaurantId === restaurantId && Date.now() - categoryMapCache.at < 60000) {
+    return categoryMapCache.map;
+  }
+  const map = new Map();
+  try {
+    const items = await db.menuItem.findMany({ where: { restaurantId }, select: { name: true, category: { select: { title: true } } } });
+    for (const item of items) map.set(normalizeName(item.name), item.category?.title || '');
+  } catch { /* empty map -> classification falls back to name-only */ }
+  categoryMapCache = { at: Date.now(), map, restaurantId };
+  return map;
+}
+function classifyByName(name, categoryMap) {
+  return categoryType({ name, category: categoryMap.get(normalizeName(name)) || '' });
+}
+function beverageKindByName(name, categoryMap) {
+  return beverageKind({ name, category: categoryMap.get(normalizeName(name)) || '' });
 }
 
 const pad = n => String(n).padStart(2, '0');
@@ -64,20 +106,39 @@ function createAnalyticsController({ config }) {
     },
 
     // order=desc (default) → best sellers; order=asc → worst sellers (bottom dishes).
-    // Both are over items that sold at least once in the period.
+    // Both are over items that sold at least once in the period. An optional
+    // `category` (STARTER|MAIN|DESSERT|WINE|DRINK, comma-separated for several,
+    // or the shorthand `DISH` = STARTER,MAIN,DESSERT) narrows to those
+    // categoryTypes; `excludeCategory` (same format) drops them instead —
+    // pulled over a wider pool then filtered in-process, since categoryType isn't
+    // a stored column on OrderItem.
     async getItems(req, res) {
-      const { from, to, order } = req.query;
+      const { from, to, order, category, excludeCategory, limit } = req.query;
       const dir = order === 'asc' ? 'asc' : 'desc';
+      const wantFilter = Boolean(category || excludeCategory);
+      const take = wantFilter ? 200 : (Math.min(Number(limit) || 10, 50));
+      const expand = spec => String(spec).toUpperCase().split(',').map(s => s.trim()).flatMap(s => s === 'DISH' ? ['STARTER', 'MAIN', 'DESSERT'] : [s]);
       try {
         const db = getPrisma();
         const orderWhere = { restaurantId, status: 'history', ...parseDateRange(from, to) };
-        const rows = await db.orderItem.groupBy({
+        let rows = await db.orderItem.groupBy({
           by: ['name'],
           where: { order: orderWhere },
           _sum: { quantity: true },
           orderBy: { _sum: { quantity: dir } },
-          take: 10
+          take
         });
+        if (wantFilter) {
+          const categoryMap = await getCategoryMap(db, restaurantId);
+          const include = category ? new Set(expand(category)) : null;
+          const exclude = excludeCategory ? new Set(expand(excludeCategory)) : null;
+          rows = rows.filter(r => {
+            const ct = classifyByName(r.name, categoryMap);
+            if (include && !include.has(ct)) return false;
+            if (exclude && exclude.has(ct)) return false;
+            return true;
+          }).slice(0, Math.min(Number(limit) || 10, 50));
+        }
         const names = rows.map(r => r.name);
         const revenues = await db.orderItem.groupBy({
           by: ['name'],
@@ -85,10 +146,12 @@ function createAnalyticsController({ config }) {
           _sum: { price: true }
         });
         const revMap = Object.fromEntries(revenues.map(r => [r.name, r._sum.price || 0]));
+        const categoryMap = await getCategoryMap(db, restaurantId);
         res.json(rows.map(r => ({
           name: r.name,
           quantity: r._sum.quantity || 0,
-          revenue: Number((revMap[r.name] || 0).toFixed(2))
+          revenue: Number((revMap[r.name] || 0).toFixed(2)),
+          categoryType: classifyByName(r.name, categoryMap)
         })));
       } catch {
         res.json([]);
@@ -159,6 +222,111 @@ function createAnalyticsController({ config }) {
         res.json({ bucket: b, points });
       } catch {
         res.json({ bucket: b, points: [] });
+      }
+    },
+
+    // Popular pairings — which two items most often appear on the same bill.
+    // Pure reporting: computed fresh from completed orders, no recommendation
+    // engine involved and nothing fed back into it.
+    async getPairings(req, res) {
+      const { from, to } = req.query;
+      try {
+        const db = getPrisma();
+        const where = { restaurantId, status: 'history', ...parseDateRange(from, to) };
+        const orders = await db.order.findMany({
+          where,
+          select: { items: { select: { name: true, price: true, quantity: true } } }
+        });
+        const pairs = new Map(); // "A|B" (alpha-sorted) -> { a, b, count, revenue }
+        for (const order of orders) {
+          const lineValue = new Map(); // name -> price*quantity, O(1) lookup instead of a re-scan per pair
+          for (const it of order.items) {
+            if (!lineValue.has(it.name)) lineValue.set(it.name, (Number(it.price) || 0) * (Number(it.quantity) || 1));
+          }
+          const names = [...lineValue.keys()];
+          for (let i = 0; i < names.length; i++) {
+            for (let j = i + 1; j < names.length; j++) {
+              const [a, b] = [names[i], names[j]].sort();
+              const key = `${a}|${b}`;
+              const lineRevenue = lineValue.get(a) + lineValue.get(b);
+              const cur = pairs.get(key) || { a, b, count: 0, revenue: 0 };
+              cur.count += 1;
+              cur.revenue += lineRevenue;
+              pairs.set(key, cur);
+            }
+          }
+        }
+        const top = [...pairs.values()]
+          .filter(p => p.count > 1) // a pairing needs to have actually repeated to be "popular"
+          .sort((x, y) => y.count - x.count || y.revenue - x.revenue)
+          .slice(0, 10)
+          .map(p => ({ a: p.a, b: p.b, count: p.count, revenue: Number(p.revenue.toFixed(2)) }));
+        res.json(top);
+      } catch {
+        res.json([]);
+      }
+    },
+
+    // Customer journey for a single table — built fresh from Order/OrderItem for
+    // its most recent order (active if one exists, else the latest history one).
+    // Pure reporting: classification reuses the shared categoryClassifier, nothing
+    // here reads or writes recommendation-engine state.
+    async getJourney(req, res) {
+      const tableId = getCanonicalTableId(req.query.tableId || '');
+      if (!tableId) return res.status(400).json({ error: 'tableId required' });
+      try {
+        const db = getPrisma();
+        const active = await db.order.findFirst({
+          where: { restaurantId, tableId, status: 'active' },
+          orderBy: { timestamp: 'desc' },
+          include: { items: true }
+        });
+        const order = active || await db.order.findFirst({
+          where: { restaurantId, tableId, status: 'history' },
+          orderBy: { timestamp: 'desc' },
+          include: { items: true }
+        });
+        if (!order) return res.json({ tableId, found: false });
+
+        const categoryMap = await getCategoryMap(db, restaurantId);
+        const buckets = { drink: [], starter: [], main: [], dessert: [], coffee: [] };
+        for (const item of order.items) {
+          const type = classifyByName(item.name, categoryMap);
+          if (type === 'STARTER') buckets.starter.push(item.name);
+          else if (type === 'DESSERT') buckets.dessert.push(item.name);
+          else if (type === 'MAIN') buckets.main.push(item.name);
+          else if (type === 'WINE' || type === 'DRINK') {
+            (beverageKindByName(item.name, categoryMap) === 'HOT' ? buckets.coffee : buckets.drink).push(item.name);
+          }
+        }
+
+        const [rating, waiter, recoEvent] = await Promise.all([
+          db.orderRating.findUnique({ where: { orderId: order.id } }).catch(() => null),
+          db.waiterAssignment.findFirst({ where: { restaurantId, tableId, status: 'active' }, orderBy: { assignedAt: 'desc' } }).catch(() => null),
+          db.recommendationEvent.findFirst({
+            where: { restaurantId, eventType: 'accepted', sessionId: { contains: tableId } },
+            orderBy: { createdAt: 'desc' }
+          }).catch(() => null)
+        ]);
+
+        const steps = [
+          { key: 'entered', label: 'Guest seated', done: true, detail: waiter?.waiterName ? `Served by ${waiter.waiterName}` : '' },
+          { key: 'drink', label: 'Drink ordered', done: buckets.drink.length > 0, items: buckets.drink },
+          { key: 'starter', label: 'Starter', done: buckets.starter.length > 0, items: buckets.starter },
+          { key: 'main', label: 'Main course', done: buckets.main.length > 0, items: buckets.main },
+          { key: 'dessert', label: 'Dessert', done: buckets.dessert.length > 0, items: buckets.dessert },
+          { key: 'coffee', label: 'Coffee / digestif', done: buckets.coffee.length > 0, items: buckets.coffee },
+          { key: 'recommendation', label: `${config.assistantName || 'Sommelier'} recommendation accepted`, done: Boolean(recoEvent), detail: recoEvent?.recommendedName || '' },
+          { key: 'billPaid', label: 'Bill settled', done: order.status === 'history' },
+        ];
+
+        res.json({
+          tableId, found: true, status: order.status, timestamp: order.timestamp, total: order.total,
+          waiterName: waiter?.waiterName || order.waiterName || '', rating: rating?.rating || null,
+          steps
+        });
+      } catch (err) {
+        res.status(500).json({ tableId, found: false, error: err.message });
       }
     },
 

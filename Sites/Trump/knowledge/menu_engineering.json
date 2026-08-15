@@ -1,0 +1,64 @@
+{
+  "_meta": {
+    "title": "Menu Engineering — Stars / Plow-Horses / Puzzles / Dogs Classification Spec",
+    "status": "specification-only",
+    "_active": false,
+    "_status": "REFERENCE ONLY — no runtime consumer exists yet. Nothing in the codebase computes or reads this classification today; recommendationInsights.js's dead_recommendation/poor_rotation_group detection is the nearest existing analogue (acceptance-rate-only, not this popularity x price-tier matrix).",
+    "status_note": "This is a specification for a classifier to COMPUTE AT RUNTIME (e.g. a new menuEngineeringService.js), not a static per-item list. Thresholds are medians recomputed whenever menu/order data changes — nothing here is a frozen snapshot.",
+    "margin_data_confirmed_absent": "Verified against prisma/schema.prisma: the shared schema has no cost/margin/foodCost/wholesalePrice field on the menu item model or anywhere else — only `price` (the sale price) is stored. Classic menu engineering (Kasavana & Smith) crosses POPULARITY with CONTRIBUTION MARGIN (price minus food cost); with no cost data in the schema, real margin cannot be computed today.",
+    "proxy_disclosure": "This spec substitutes PRICE TIER as an explicit, clearly-labeled PROXY for margin — it is NOT real margin data and should never be presented to restaurant owners as an actual profitability figure. It assumes (does not confirm) that higher-priced items carry proportionally higher margin, which is a common but unverified assumption in the absence of real cost data. The moment a real cost/foodCost field is added to the schema, this proxy should be replaced by true contribution-margin classification."
+  },
+  "data_sources": {
+    "popularity_axis": {
+      "source": "aiService.js getPopularityScores(menuContext, orderRecords) — a name-keyed Map<string, number> combining three signals: (1) real order-history quantities summed per resolved menu item across both live orders and history records, (2) an admin-configured 'popular' list boost (16 - index, i.e. a manually curated ranking), and (3) a static keyword heuristic bonus for recognizable hero terms (e.g. tomahawk/wagyu/fillet/ribeye/rump/sirloin +7, prawn/salmon/oyster/kingklip/calamari +6, old fashioned/margarita/shiraz/cabernet/champagne +5, dessert/malva/ice cream/cake +4).",
+      "caveat": "This is a genuine popularity signal (grounded in real order counts), but it is NOT pure demand data — it is inflated by admin curation (the 'popular' list) and by a fixed keyword allowlist that favors certain dish families regardless of actual sales. Treat it as 'popularity as the engine currently measures it', not ground-truth demand."
+    },
+    "price_axis_margin_proxy": {
+      "source": "item.price, taken directly from the menu record.",
+      "caveat": "Sale price only — see margin_data_confirmed_absent above. This is the proxy axis, explicitly not a margin figure."
+    }
+  },
+  "classification": {
+    "comparison_scope": "Compute both medians (popularity, price) PER categoryType (STARTER / MAIN / DESSERT / WINE / DRINK) among currently visible + available items only, not menu-wide — so a wine's popularity/price is judged against other wines, not against starters. A menu-wide fallback may be used only for categories with too few items to produce a meaningful median (e.g. fewer than ~5 items).",
+    "axes": {
+      "popularity": "getPopularityScores() score for the item, compared to the MEDIAN popularity score across all currently visible/available items in the same categoryType.",
+      "price_tier_margin_proxy": "item.price, compared to the MEDIAN price across the same comparison set (same categoryType, visible + available items)."
+    },
+    "quadrants": [
+      {
+        "name": "Stars",
+        "popularity": ">= median",
+        "price_tier_margin_proxy": ">= median",
+        "definition": "High demand AND high price-tier (assumed high-margin proxy). The menu's proven, valuable performers.",
+        "recommended_action": "Feature prominently — use as chef-first anchors, hero pairings, and the primary candidates rotationService rotates in as the leading recommendation. Protect these from menu changes; they're doing the most work."
+      },
+      {
+        "name": "Plow-Horses",
+        "popularity": ">= median",
+        "price_tier_margin_proxy": "< median",
+        "definition": "High demand but lower price-tier (assumed lower-margin proxy) — guests love these, but they're not the most profitable pick per cover.",
+        "recommended_action": "Prime candidates for the Recommendation Brain's replacement/upgrade logic (recommendationScoring.js's isReplacement mechanism) — pair a same-role, higher-price alternative as a gentle upsell rather than discouraging the popular choice outright. This is where value:never-downsell (see business_rules.json) matters most: the upgrade path must go up in price, never down."
+      },
+      {
+        "name": "Puzzles",
+        "popularity": "< median",
+        "price_tier_margin_proxy": ">= median",
+        "definition": "Low demand but high price-tier (assumed high-margin proxy) — potentially valuable items that guests aren't finding or choosing.",
+        "recommended_action": "Exactly the population recommendationInsights.js's `missing_pairing` check (mains with no chef recommendation as a source) and `dead_recommendation` check (high impressions, near-zero acceptance — see recommendationInsights.js DEFAULTS.deadMinImpressions/deadMaxAcceptance) should prioritize surfacing for owner attention: give these items a chef pairing, a rotation slot, or a repositioned reason string before concluding they simply don't sell."
+      },
+      {
+        "name": "Dogs",
+        "popularity": "< median",
+        "price_tier_margin_proxy": "< median",
+        "definition": "Low demand AND low price-tier (assumed low-margin proxy) — the weakest quadrant on both axes.",
+        "recommended_action": "Candidates for menu simplification/pruning, or for exclusion from the active proactive-recommendation pool (they should still be orderable if a guest asks directly, but shouldn't consume a rotation or suggestion slot that a Star or Plow-Horse could use instead)."
+      }
+    ]
+  },
+  "implementation_notes": [
+    "This is a runtime classifier spec, not a static list: build it as a pure function (menuItems, popularityScores) -> classification map, analogous in spirit to recommendationAnalytics.js's aggregate() — deterministic, no I/O, fully unit-testable offline.",
+    "Recompute medians whenever the menu changes (item added/removed/repriced) or on the same cache cadence as aiService.js's getPopularity() (TRUMP_RECO_CACHE_TTL_MS, default 30s) — stale medians would misclassify items right after a menu edit.",
+    "Never surface 'margin' language to restaurant owners from this classifier without the accompanying proxy disclaimer — until a real cost/foodCost field exists on the Prisma schema, every 'high-margin' label here actually means 'higher price tier', which is a different (and weaker) claim.",
+    "Future improvement path: add a `costPrice` (or `foodCostPercent`) field to the menu item model in prisma/schema.prisma via a migration, then replace the price_tier_margin_proxy axis with a true contribution-margin axis (price - costPrice) without changing the popularity axis or the quadrant logic."
+  ]
+}

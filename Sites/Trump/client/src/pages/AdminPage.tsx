@@ -1,19 +1,27 @@
-import { useState, useEffect, useCallback, type ReactNode, type CSSProperties } from 'react';
-import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Pencil, Plus, X, Sparkles, TrendingUp, Activity, ShieldCheck, Copy, Check } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef, type ReactNode, type CSSProperties } from 'react';
+import { ClipboardList, BookOpen, Users, MessageSquare, LogOut, RefreshCw, UtensilsCrossed, BarChart2, QrCode, Download, Printer, CalendarDays, LayoutGrid, Clock, Bell, Upload, Image as ImageIcon, Film, Link2, Trash2, Pencil, Plus, X, Sparkles, TrendingUp, Activity, ShieldCheck, Copy, Check, Star, Armchair, Brain, ChefHat, Route, Eye } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../hooks/useAuth';
 import { useHomeBackGuard } from '../hooks/useHomeBackGuard';
 import { api } from '../services/api';
 import { Spinner } from '../components/ui/Spinner';
-import { formatPrice } from '../lib/menuUtils';
+import { Badge } from '../components/ui/Badge';
+import { formatPrice, formatTableLabel } from '../lib/menuUtils';
+import { sastTodayStartIso } from '../lib/businessDay';
 import type { ChefRec, ChefRecInput, ChefRecType, ChefBeverageKind, RecommendationAnalytics, RecoTally, RecoInsightsResult, RecoInsight, BundleAdmin, BundleInput, BundleItemInput } from '../types/menu';
-import type { WaiterTask } from '../types/waiter';
+import type { WaiterTask, AiEvent, Guest } from '../types/waiter';
 import styles from './AdminPage.module.css';
 import { NotificationBell } from '../components/operations/NotificationBell';
 import { OwnerOperations } from '../components/operations/OwnerOperations';
 import { AuditViewer } from '../components/operations/AuditViewer';
+import { AIPerformancePanel } from '../components/analytics/AIPerformancePanel';
+import { ChefIntelligencePanel } from '../components/analytics/ChefIntelligencePanel';
+import { CustomerJourneyPanel } from '../components/analytics/CustomerJourneyPanel';
+import { EngagementPanel } from '../components/analytics/EngagementPanel';
+import { ContentPanel } from '../components/content/ContentPanel';
+import { BRAND_NAME, BRAND_TAGLINE, QR_BASE, ENDPOINTS } from '../constants/api';
 
-type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles' | 'servicedesk' | 'operations' | 'audit';
+type Tab = 'orders' | 'history' | 'accounts' | 'chat' | 'menu' | 'reports' | 'qrcodes' | 'reservations' | 'tables' | 'deals' | 'chefrecs' | 'recoanalytics' | 'bundles' | 'servicedesk' | 'operations' | 'audit' | 'engagement' | 'content' | 'aiperformance' | 'chefintel' | 'journey' | 'demo' | 'aievents' | 'guests' | 'verify';
 
 interface Order {
   filename: string;
@@ -113,11 +121,17 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [reservationDate, setReservationDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportRange, setReportRange] = useState<ReportRange>('7d');
+  const [importingCsv, setImportingCsv] = useState(false);
+  const csvInputRef = useRef<HTMLInputElement>(null);
   const [reportSummary, setReportSummary] = useState<AnalyticsSummary | null>(null);
   const [reportItems, setReportItems] = useState<AnalyticsItem[]>([]);
   const [reportTables, setReportTables] = useState<AnalyticsTable[]>([]);
   const [reportHours, setReportHours] = useState<AnalyticsHour[]>([]);
   const [reportRatings, setReportRatings] = useState<RatingsData | null>(null);
+  const [reportTrend, setReportTrend] = useState<{ date: string; revenue: number; orders: number }[]>([]);
+  const [reportTrendBucket, setReportTrendBucket] = useState<'day' | 'week' | 'month'>('day');
+  const [reportLeaderboard, setReportLeaderboard] = useState<{ rank: number; waiterName: string; salesDriven: number; tips: number; tablesServed: number }[]>([]);
+  const [reportKitchen, setReportKitchen] = useState<{ seated: number; cooking: number; ready: number; empty: number } | null>(null);
   const [tableCarts, setTableCarts] = useState<TableCartEntry[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [chefRecs, setChefRecs] = useState<ChefRec[]>([]);
@@ -126,6 +140,8 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const [recoFilters, setRecoFilters] = useState<{ range: ReportRange; category: string; source: string; rotationGroup: string; mode: string }>({ range: '7d', category: '', source: '', rotationGroup: '', mode: '' });
   const [bundles, setBundles] = useState<BundleAdmin[]>([]);
   const [serviceTasks, setServiceTasks] = useState<WaiterTask[]>([]);
+  const [aiEvents, setAiEvents] = useState<AiEvent[]>([]);
+  const [guests, setGuests] = useState<Guest[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'item' | 'reservation' | 'deal' | 'account'>(null);
@@ -147,7 +163,11 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
         setAccounts(data || []);
       } else if (t === 'chat') {
         const data = await api.getChatHistory();
-        setChatLogs(data || []);
+        // Priority 2 (demo blocker pass 2) — stored/returned oldest-first
+        // (append order); newest-first here so the message a presenter just
+        // sent from the customer app is at the top of the list, not buried
+        // at the bottom of a growing session's worth of chat.
+        setChatLogs(data ? [...(data as unknown[])].reverse() : []);
       } else if (t === 'menu') {
         const data = await api.getAdminMenuItems();
         setMenuItems((data as AdminMenuItem[]) || []);
@@ -176,6 +196,12 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
       } else if (t === 'servicedesk') {
         const data = await api.getWaiterTasks({ status: 'all' });
         setServiceTasks((data as WaiterTask[]) || []);
+      } else if (t === 'aievents') {
+        const data = await api.getAiEvents({ status: 'all' });
+        setAiEvents((data as AiEvent[]) || []);
+      } else if (t === 'guests') {
+        const data = await api.getGuests();
+        setGuests((data as Guest[]) || []);
       }
     } catch (err) {
       console.error(err);
@@ -211,8 +237,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     const now = new Date();
     const to = now.toISOString();
     if (range === 'today') {
-      const from = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      return { from, to };
+      return { from: sastTodayStartIso(), to };
     }
     if (range === '7d') {
       const from = new Date(Date.now() - 7 * 86400000).toISOString();
@@ -228,19 +253,28 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   async function loadReports(range: ReportRange) {
     setLoading(true);
     const params = getDateRange(range);
+    const bucket: 'day' | 'week' | 'month' = range === 'all' ? 'month' : range === '30d' ? 'week' : 'day';
+    const leaderboardPeriod = range === 'today' ? 'today' : range === '7d' ? 'week' : 'month';
+    setReportTrendBucket(bucket);
     try {
-      const [summary, items, tables, hours, ratings] = await Promise.all([
+      const [summary, items, tables, hours, ratings, trend, leaderboard, floor] = await Promise.all([
         api.getAnalyticsSummary(params),
         api.getAnalyticsItems(params),
         api.getAnalyticsTables(params),
         api.getAnalyticsHours(params),
         api.getRatings(params),
+        api.getAnalyticsTrend({ ...params, bucket }).catch(() => ({ bucket, points: [] })),
+        api.getWaiterLeaderboard({ period: leaderboardPeriod }).catch(() => ({ leaderboard: [] })),
+        api.getFloor().catch(() => null),
       ]);
       setReportSummary(summary as AnalyticsSummary);
       setReportItems((items as AnalyticsItem[]) || []);
       setReportTables((tables as AnalyticsTable[]) || []);
       setReportHours((hours as AnalyticsHour[]) || []);
       setReportRatings(ratings as RatingsData || null);
+      setReportTrend(trend.points || []);
+      setReportLeaderboard(leaderboard.leaderboard || []);
+      setReportKitchen(floor?.counts || null);
     } catch {}
     setLoading(false);
   }
@@ -452,32 +486,76 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     URL.revokeObjectURL(url);
   }
 
+  function exportReportsCsv() {
+    const rows = [['Item', 'Quantity sold', 'Revenue']];
+    reportItems.forEach(it => rows.push([it.name, String(it.quantity), String(it.revenue)]));
+    rows.push([]);
+    rows.push(['Table', 'Revenue', 'Orders']);
+    reportTables.forEach(t => rows.push([t.tableId, String(t.revenue), String(t.orderCount)]));
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `report-${reportRange}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleImportOrdersCsv(file: File) {
+    setImportingCsv(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const result = await api.importOrdersCsv(formData);
+      const errorNote = result.errors.length ? `\n\n${result.errors.slice(0, 5).join('\n')}` : '';
+      alert(
+        `Imported ${result.ordersCreated} order${result.ordersCreated !== 1 ? 's' : ''} `
+        + `(${result.itemsImported} item${result.itemsImported !== 1 ? 's' : ''}).`
+        + (result.skippedRows ? ` ${result.skippedRows} row(s) skipped.` : '')
+        + errorNote
+      );
+      await loadReports(reportRange);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'CSV import failed');
+    }
+    setImportingCsv(false);
+  }
+
   const liveCovers = tableCarts.filter(t => t.itemCount > 0).length;
 
   const NAV_GROUPS: { label: string; items: { key: Tab; label: string; icon: typeof ClipboardList; badge?: number }[] }[] = [
     { label: 'SERVICE', items: [
       { key: 'orders', label: 'Orders', icon: ClipboardList, badge: orders.length || undefined },
       { key: 'servicedesk', label: 'Service Desk', icon: Bell, badge: serviceTasks.filter(t => ['open', 'acknowledged'].includes(t.status)).length || undefined },
+      { key: 'aievents', label: 'AI Events', icon: Sparkles, badge: aiEvents.filter(e => e.status === 'open').length || undefined },
+      { key: 'guests', label: 'Guests', icon: Users },
       { key: 'history', label: 'History', icon: BookOpen },
       { key: 'tables', label: 'Tables', icon: LayoutGrid },
       { key: 'reservations', label: 'Reservations', icon: CalendarDays },
     ] },
     { label: 'MENU & OFFERS', items: [
       { key: 'menu', label: 'Menu', icon: UtensilsCrossed },
+      { key: 'content', label: 'Media & Languages', icon: ImageIcon },
       { key: 'chefrecs', label: 'Chef Recs', icon: Sparkles },
       { key: 'bundles', label: 'Bundles', icon: LayoutGrid },
       { key: 'deals', label: 'Deals', icon: Clock },
       { key: 'qrcodes', label: 'QR Codes', icon: QrCode },
+      { key: 'demo', label: 'Curated Demo', icon: Sparkles },
     ] },
     { label: 'INSIGHT', items: [
       { key: 'reports', label: 'Reports', icon: BarChart2 },
+      { key: 'engagement', label: 'Guest Engagement', icon: Eye },
       { key: 'recoanalytics', label: 'Reco Analytics', icon: TrendingUp },
+      { key: 'aiperformance', label: 'AI Performance', icon: Brain },
+      { key: 'chefintel', label: 'Chef Intelligence', icon: ChefHat },
+      { key: 'journey', label: 'Customer Journey', icon: Route },
       { key: 'accounts', label: 'Accounts', icon: Users },
       { key: 'chat', label: 'Chat Logs', icon: MessageSquare },
     ] },
     { label: 'OPERATIONS', items: [
       { key: 'operations', label: 'Operations', icon: Activity },
       { key: 'audit', label: 'Audit Trail', icon: ShieldCheck },
+      { key: 'verify', label: 'Verify Data', icon: Check },
     ] },
   ];
 
@@ -488,6 +566,9 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
   const PAGE_HEADS: Record<Tab, { eyebrow: string; title: string; sub: string; actions?: ReactNode }> = {
     orders: { eyebrow: 'SERVICE · LIVE', title: 'Live orders', sub: `${orders.length} active ticket${orders.length !== 1 ? 's' : ''}`, actions: <><span className={styles.livePill}><span className={styles.liveDot} /> {liveCovers} live covers</span>{refreshAction}</> },
     servicedesk: { eyebrow: 'SERVICE · LIVE', title: 'Service desk', sub: 'Approvals, manager dispatch & live floor requests', actions: <><span className={styles.livePill}><span className={styles.liveDot} /> Live</span>{refreshAction}</> },
+    aievents: { eyebrow: 'AI SHARED EVENTS', title: 'AI Events', sub: `${aiEvents.filter(e => e.status === 'open').length} open · same events the waiter app sees, one shared source`, actions: refreshAction },
+    guests: { eyebrow: 'GUEST CRM', title: 'Guests', sub: `${guests.length} guest${guests.length !== 1 ? 's' : ''} · loyalty, dietary & VIP profile`, actions: refreshAction },
+    verify: { eyebrow: 'INTERNAL TOOL', title: 'Verify Data', sub: 'Database vs. backend API, side by side, for a given table' },
     history: { eyebrow: 'COMPLETED', title: 'Order history', sub: `${history.length} settled order${history.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtn} onClick={exportHistoryCsv}><Download size={14} /> Export CSV</button> },
     tables: { eyebrow: 'LIVE FLOOR', title: 'Tables', sub: `${liveCovers} active cart${liveCovers !== 1 ? 's' : ''} · manager override`, actions: <><span className={styles.livePill}><span className={styles.liveDot} /> Live sync</span>{refreshAction}</> },
     reservations: { eyebrow: 'BOOKINGS', title: 'Reservations', sub: `${reservations.length} booking${reservations.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('reservation')}><Plus size={14} /> New booking</button> },
@@ -497,7 +578,38 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
     bundles: { eyebrow: 'CURATED MENUS', title: 'Recommended orders', sub: `${bundles.length} persona bundle${bundles.length !== 1 ? 's' : ''} · the menu "Not sure what to order?" strip`, actions: refreshAction },
     deals: { eyebrow: 'OFFERS', title: 'Deals', sub: 'Bundle dishes into featured set menus', actions: <button className={styles.actionBtnGold} onClick={openNewDeal}><Plus size={14} /> New deal</button> },
     qrcodes: { eyebrow: 'TABLE QR CODES', title: 'QR codes', sub: 'Each links a guest straight to its table session' },
-    reports: { eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top dishes, peak hours & guest ratings' },
+    demo: { eyebrow: 'LIVE DEMO', title: 'Curated Demo', sub: 'Toggle the curated dining journeys and redeem guest reward codes' },
+    reports: {
+      eyebrow: 'ANALYTICS', title: 'Reports', sub: 'Revenue, top items, peak hours & guest ratings',
+      actions: (
+        <>
+          <input
+            ref={csvInputRef}
+            type="file"
+            accept=".csv,.xlsx,.xls,text/csv"
+            style={{ display: 'none' }}
+            onChange={e => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (file) void handleImportOrdersCsv(file);
+            }}
+          />
+          <button
+            className={styles.actionBtn}
+            onClick={() => csvInputRef.current?.click()}
+            disabled={importingCsv}
+          >
+            <Upload size={14} /> {importingCsv ? 'Importing…' : 'Import order history (CSV/Excel)'}
+          </button>
+          <button className={styles.actionBtn} onClick={exportReportsCsv}><Download size={14} /> Export CSV</button>
+        </>
+      ),
+    },
+    content: { eyebrow: 'CONTENT', title: 'Media & Languages', sub: 'Photos, videos, butchery cuts and translations — no deploy needed' },
+    engagement: { eyebrow: 'ANALYTICS', title: 'Guest Engagement', sub: 'What guests looked at, for how long, and in which language' },
+    aiperformance: { eyebrow: 'ANALYTICS', title: 'AI Performance', sub: 'Recommendations made, accepted, and the revenue behind them' },
+    chefintel: { eyebrow: 'ANALYTICS', title: 'Chef Intelligence', sub: 'Best & worst sellers, wine pairings, pricing tier & trends' },
+    journey: { eyebrow: 'ANALYTICS', title: 'Customer Journey', sub: 'One table’s visit, course by course' },
     accounts: { eyebrow: 'STAFF', title: 'Accounts', sub: `${accounts.length} team member${accounts.length !== 1 ? 's' : ''}`, actions: <button className={styles.actionBtnGold} onClick={() => setModal('account')}><Plus size={14} /> Add account</button> },
     chat: { eyebrow: 'AI SOMMELIER', title: 'Chat logs', sub: 'Guest conversations with the AI sommelier' },
     operations: { eyebrow: 'OPERATIONS · LIVE', title: 'Operations', sub: 'Live floor — staff on shift, table ownership, orders & alerts', actions: refreshAction },
@@ -508,18 +620,18 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
 
   return (
     <AppShell requireRole={['owner', 'manager']} hideHeader>
-      <div className={styles.console}>
+      <div className={styles.console} data-admin-console>
         <div className={styles.topChrome}>
           <div className={styles.lights}><span /><span /><span /></div>
-          <div className={styles.urlPill}><span className={styles.urlDot} /> emenyu.io/admin · Trump Steakhouse</div>
+          <div className={styles.urlPill}><span className={styles.urlDot} /><span className={styles.urlText}>emenyu.com/admin · {BRAND_NAME} {BRAND_TAGLINE}</span></div>
           <div className={styles.chromeRight}><NotificationBell scope="all" /><NotificationButton /></div>
         </div>
         <div className={styles.body}>
           <aside className={styles.sidebar}>
             <div className={styles.brand}>
-              <div className={styles.brandLogo}>T</div>
+              <div className={styles.brandLogo}>{BRAND_NAME.charAt(0)}</div>
               <div>
-                <div className={styles.brandName}>Trump</div>
+                <div className={styles.brandName}>{BRAND_NAME}</div>
                 <div className={styles.brandSub}>{(user?.role || 'manager').toUpperCase()} CONSOLE</div>
               </div>
             </div>
@@ -584,6 +696,11 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
               )}
               {tab === 'accounts' && <AccountsList accounts={accounts} currentUsername={user?.username} onUpdateStatus={handleUpdateAccountStatus} />}
               {tab === 'chat' && <><LiveChatMonitor /><ChatLogList logs={chatLogs} /></>}
+              {tab === 'content' && <ContentPanel />}
+              {tab === 'engagement' && <EngagementPanel />}
+              {tab === 'aiperformance' && <AIPerformancePanel />}
+              {tab === 'chefintel' && <ChefIntelligencePanel />}
+              {tab === 'journey' && <CustomerJourneyPanel />}
               {tab === 'operations' && <OwnerOperations />}
               {tab === 'audit' && <AuditViewer />}
               {tab === 'menu' && (
@@ -605,6 +722,7 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
                 />
               )}
               {tab === 'qrcodes' && <QrCodesPanel />}
+              {tab === 'demo' && <CuratedDemoPanel />}
               {tab === 'tables' && (
                 <TablesPanel
                   tableCarts={tableCarts}
@@ -667,6 +785,10 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
                   tables={reportTables}
                   hours={reportHours}
                   ratings={reportRatings}
+                  trend={reportTrend}
+                  trendBucket={reportTrendBucket}
+                  leaderboard={reportLeaderboard}
+                  kitchen={reportKitchen}
                   onRangeChange={r => {
                     setReportRange(r);
                     loadReports(r);
@@ -700,6 +822,15 @@ export function AdminPage({ initialTab }: { initialTab?: Tab } = {}) {
               )}
               {tab === 'servicedesk' && (
                 <ServiceDeskPanel tasks={serviceTasks} onChange={setServiceTasks} />
+              )}
+              {tab === 'aievents' && (
+                <AiEventsPanel events={aiEvents} onChange={setAiEvents} />
+              )}
+              {tab === 'guests' && (
+                <GuestsPanel guests={guests} />
+              )}
+              {tab === 'verify' && (
+                <VerifyPanel />
               )}
                 </>
               )}
@@ -735,7 +866,7 @@ function OrderList({ orders, actionLoading, isHistory = false, onComplete, onDel
         <div key={order.filename} className={styles.orderCard}>
           <div className={styles.orderHeader}>
             <span className={styles.orderTable}>
-              {order.tableId || order.table_number || 'Unknown table'}
+              {formatTableLabel(order.tableId || order.table_number || 'unknown table')}
             </span>
             {order.timestamp && (
               <span className={styles.orderTime}>
@@ -819,12 +950,13 @@ function AccountRow({ acc, isSelf, onUpdateStatus }: {
     catch { alert('Could not update the account.'); }
     finally { setBusy(false); }
   }
+  const roleVariant = acc.role === 'owner' ? 'purple' : acc.role === 'manager' ? 'gold' : 'muted';
   return (
     <div className={styles.accountRow}>
       <span className={styles.accName}>{acc.label || acc.username}</span>
       <span className={styles.accUsername}>@{acc.username}</span>
-      <span className={styles.accRole}>{acc.role}</span>
-      <span className={`${styles.accStatus} ${suspended ? styles.suspended : ''}`}>{acc.status || 'active'}</span>
+      <Badge variant={roleVariant}>{acc.role}</Badge>
+      <Badge variant={suspended ? 'red' : 'gold'}>{acc.status || 'active'}</Badge>
       {!isSelf && (
         <button className={styles.actionBtn} onClick={toggle} disabled={busy} style={{ marginLeft: 'auto' }}>
           {busy ? <Spinner size={12} /> : suspended ? 'Activate' : 'Suspend'}
@@ -868,8 +1000,8 @@ function LiveChatMonitor() {
       {alerts.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
           {alerts.map((a, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, padding: '8px 10px', borderRadius: 8, background: 'rgba(198,162,75,0.12)', border: '1px solid rgba(198,162,75,0.3)' }}>
-              <Bell size={14} style={{ color: '#c6a24b', flexShrink: 0 }} />
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, padding: '8px 10px', borderRadius: 8, background: 'rgba(var(--color-gold-rgb),0.12)', border: '1px solid rgba(var(--color-gold-rgb),0.3)' }}>
+              <Bell size={14} style={{ color: 'var(--color-gold)', flexShrink: 0 }} />
               <span>{a.message || `${a.displayTable || 'A table'} called a waiter.`}</span>
               {a.timestamp && <span style={{ marginLeft: 'auto', opacity: 0.6 }}>{a.timestamp}</span>}
             </div>
@@ -883,7 +1015,7 @@ function LiveChatMonitor() {
           {live.map((log, i) => (
             <div key={i} className={styles.chatLog}>
               <div className={styles.chatLogMeta}>
-                <span>{log.tableId || 'Unknown'}{log.is_special ? ' ⭐' : ''}</span>
+                <span>{formatTableLabel(log.tableId || 'unknown')}{log.is_special ? <Star size={12} fill="currentColor" className={styles.specialStar} /> : ''}</span>
                 {log.timestamp && <span>{log.timestamp}</span>}
               </div>
               {log.message && <p className={styles.chatLogMsg}><strong>Q:</strong> {log.message}</p>}
@@ -900,11 +1032,16 @@ function ChatLogList({ logs }: { logs: unknown[] }) {
   if (logs.length === 0) return <div className={styles.emptyState}><p>No chat logs</p></div>;
   return (
     <div className={styles.chatLogList}>
-      {(logs as Array<{ timestamp?: string; tableId?: string; message?: string; reply?: string }>).map((log, i) => (
+      {(logs as Array<{ date?: string; timestamp?: string; tableId?: string; message?: string; reply?: string }>).map((log, i) => (
         <div key={i} className={styles.chatLog}>
           <div className={styles.chatLogMeta}>
-            <span>{log.tableId || 'Unknown'}</span>
-            {log.timestamp && <span>{new Date(log.timestamp).toLocaleString()}</span>}
+            <span>{formatTableLabel(log.tableId || 'unknown')}</span>
+            {/* aiService.appendChatLog stores `timestamp` as a bare "HH:MM"
+                clock string (not an ISO datetime) alongside a separate `date`
+                field -- new Date(log.timestamp) alone parsed to "Invalid
+                Date". Render both stored fields as text instead of
+                re-parsing them through Date. */}
+            {log.timestamp && <span>{log.date ? `${log.date} ${log.timestamp}` : log.timestamp}</span>}
           </div>
           {log.message && <p className={styles.chatLogMsg}><strong>Q:</strong> {log.message}</p>}
           {log.reply && <p className={styles.chatLogReply}><strong>A:</strong> {log.reply}</p>}
@@ -915,13 +1052,13 @@ function ChatLogList({ logs }: { logs: unknown[] }) {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'rgba(198,162,75,0.15)',
+  pending: 'rgba(var(--color-gold-rgb),0.15)',
   confirmed: 'rgba(34,197,94,0.12)',
   seated: 'rgba(99,102,241,0.15)',
   cancelled: 'rgba(239,68,68,0.1)'
 };
 const STATUS_TEXT: Record<string, string> = {
-  pending: '#c6a24b',
+  pending: 'var(--color-gold)',
   confirmed: '#4ade80',
   seated: '#818cf8',
   cancelled: '#fca5a5'
@@ -964,9 +1101,9 @@ function ReservationsPanel({ reservations, date, onDateChange, onStatusChange, o
                 </span>
               </div>
               <div className={styles.resvMeta}>
-                <span>👥 {r.partySize} {r.partySize === 1 ? 'person' : 'people'}</span>
-                <span>🕐 {new Date(r.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                {r.tableId && <span>🪑 {r.tableId}</span>}
+                <span><Users size={12} /> {r.partySize} {r.partySize === 1 ? 'person' : 'people'}</span>
+                <span><Clock size={12} /> {new Date(r.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                {r.tableId && <span><Armchair size={12} /> {formatTableLabel(r.tableId)}</span>}
               </div>
               {r.notes && <p className={styles.resvNotes}>{r.notes}</p>}
               <div className={styles.resvActions}>
@@ -989,7 +1126,113 @@ function ReservationsPanel({ reservations, date, onDateChange, onStatusChange, o
 }
 
 const TABLE_COUNT = 15;
-const QR_BASE = 'https://emenyu.com/Trump';
+
+// Curated Demo Mode — the admin ON/OFF toggle (server/services/fileService.js's
+// live settings.json, flipped instantly via socket broadcast, no restart —
+// see settingsController.js) plus a simple staff-facing reward redemption
+// widget for the Order Complete "your next drink is on us" QR.
+function CuratedDemoPanel() {
+  const [curatedDemoMode, setCuratedDemoMode] = useState<boolean | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [code, setCode] = useState('');
+  const [redeemResult, setRedeemResult] = useState<{ ok: boolean; reason?: string } | null>(null);
+  const [redeeming, setRedeeming] = useState(false);
+
+  useEffect(() => {
+    api.getSettings().then(s => setCuratedDemoMode(Boolean(s?.curatedDemoMode))).catch(() => setCuratedDemoMode(false));
+  }, []);
+
+  async function toggle() {
+    if (curatedDemoMode === null || saving) return;
+    const next = !curatedDemoMode;
+    setSaving(true);
+    setCuratedDemoMode(next); // optimistic — matches the menu-availability toggle pattern elsewhere in this page
+    try {
+      await api.saveSettings({ curatedDemoMode: next });
+    } catch {
+      setCuratedDemoMode(!next); // revert on failure
+      alert('Failed to save — please try again');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function redeem() {
+    const trimmed = code.trim();
+    if (!trimmed || redeeming) return;
+    setRedeeming(true);
+    setRedeemResult(null);
+    try {
+      const result = await api.redeemReward(trimmed);
+      setRedeemResult(result);
+      if (result.ok) setCode('');
+    } catch {
+      setRedeemResult({ ok: false, reason: 'invalid' });
+    } finally {
+      setRedeeming(false);
+    }
+  }
+
+  const REDEEM_LABELS: Record<string, string> = {
+    already_redeemed: 'This reward has already been redeemed.',
+    expired: 'This reward code has expired.',
+    invalid: 'That code is not valid.',
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', border: '1px solid rgba(var(--color-gold-rgb, 200,165,85),0.25)', borderRadius: 12, marginBottom: 20 }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Curated Demo Mode</div>
+          <div style={{ fontSize: 13, opacity: 0.75, maxWidth: 480 }}>
+            When ON, the three hand-designed dining journeys (starter → main with skip alternatives → side → drink → dessert)
+            replace the live algorithmic engine on chat, cart and waiter recommendation surfaces. When OFF, normal production
+            behaviour is unchanged.
+          </div>
+        </div>
+        <button
+          role="switch"
+          aria-checked={curatedDemoMode === true}
+          onClick={toggle}
+          disabled={curatedDemoMode === null || saving}
+          style={{
+            width: 52, height: 30, borderRadius: 999, border: 'none', cursor: 'pointer', flexShrink: 0,
+            background: curatedDemoMode ? 'var(--color-gold, #c8a555)' : 'rgba(255,255,255,0.15)',
+            position: 'relative', transition: 'background 160ms ease',
+          }}
+        >
+          <span style={{
+            position: 'absolute', top: 3, left: curatedDemoMode ? 25 : 3, width: 24, height: 24, borderRadius: '50%',
+            background: '#fff', transition: 'left 160ms ease',
+          }} />
+        </button>
+      </div>
+
+      <div style={{ padding: '18px 20px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Redeem a reward code</div>
+        <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 12 }}>
+          Enter the code the guest presents (from their "next drink is on us" QR) to mark it used, once, at the till.
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            value={code}
+            onChange={e => setCode(e.target.value)}
+            placeholder="e.g. 42.aBcD..."
+            style={{ flex: 1, padding: '8px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.2)', color: 'inherit', border: '1px solid rgba(255,255,255,0.15)' }}
+          />
+          <button className={styles.actionBtnGold} onClick={redeem} disabled={!code.trim() || redeeming}>
+            {redeeming ? 'Checking…' : 'Redeem'}
+          </button>
+        </div>
+        {redeemResult && (
+          <p style={{ marginTop: 10, fontSize: 13, color: redeemResult.ok ? '#5fcf8a' : '#e07a7a' }}>
+            {redeemResult.ok ? 'Reward redeemed — one free drink, this visit only.' : (REDEEM_LABELS[redeemResult.reason || 'invalid'] || 'Could not redeem this code.')}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function QrCodesPanel() {
   const [qrUrls, setQrUrls] = useState<Record<string, string>>({});
@@ -1067,17 +1310,22 @@ const RANGE_LABELS: Record<ReportRange, string> = {
   all: 'All Time'
 };
 
-function ReportsPanel({ range, summary, items, tables, hours, ratings, onRangeChange }: {
+function ReportsPanel({ range, summary, items, tables, hours, ratings, trend, trendBucket, leaderboard, kitchen, onRangeChange }: {
   range: ReportRange;
   summary: AnalyticsSummary | null;
   items: AnalyticsItem[];
   tables: AnalyticsTable[];
   hours: AnalyticsHour[];
   ratings: RatingsData | null;
+  trend: { date: string; revenue: number; orders: number }[];
+  trendBucket: 'day' | 'week' | 'month';
+  leaderboard: { rank: number; waiterName: string; salesDriven: number; tips: number; tablesServed: number }[];
+  kitchen: { seated: number; cooking: number; ready: number; empty: number } | null;
   onRangeChange: (r: ReportRange) => void;
 }) {
   const maxTableRevenue = Math.max(...tables.map(t => t.revenue), 1);
   const maxHourCount = Math.max(...hours.map(h => h.count), 1);
+  const maxTrendRevenue = Math.max(...trend.map(t => t.revenue), 1);
 
   return (
     <div className={styles.reportsPanel}>
@@ -1120,6 +1368,24 @@ function ReportsPanel({ range, summary, items, tables, hours, ratings, onRangeCh
         <div className={styles.emptyState}><p>No data for this period.</p></div>
       )}
 
+      {trend.length > 0 && (
+        <div className={styles.reportSection}>
+          <h3 className={styles.reportSectionTitle}>Revenue trend ({trendBucket === 'day' ? 'daily' : trendBucket === 'week' ? 'weekly' : 'monthly'})</h3>
+          <div className={styles.hoursChart}>
+            {trend.map(t => (
+              <div key={t.date} className={styles.hourBar}>
+                <div
+                  className={styles.hourBarFill}
+                  style={{ height: `${(t.revenue / maxTrendRevenue) * 100}%` }}
+                  title={`${t.date} — ${formatPrice(t.revenue)} (${t.orders} orders)`}
+                />
+                <span className={styles.hourLabel}>{t.date.slice(5)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className={styles.reportsGrid}>
         {items.length > 0 && (
           <div className={styles.reportSection}>
@@ -1156,6 +1422,47 @@ function ReportsPanel({ range, summary, items, tables, hours, ratings, onRangeCh
             </div>
           </div>
         )}
+
+        {leaderboard.length > 0 && (
+          <div className={styles.reportSection}>
+            <h3 className={styles.reportSectionTitle}>Waiter performance</h3>
+            <div className={styles.topItemsList}>
+              {leaderboard.map(w => (
+                <div key={w.waiterName} className={styles.topItemRow}>
+                  <span className={styles.topItemRank}>#{w.rank}</span>
+                  <span className={styles.topItemName}>{w.waiterName}</span>
+                  <span className={styles.topItemQty}>{w.tablesServed} table{w.tablesServed !== 1 ? 's' : ''}</span>
+                  <span className={styles.topItemRev}>{formatPrice(w.salesDriven)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {kitchen && (
+          <div className={styles.reportSection}>
+            <h3 className={styles.reportSectionTitle}>Kitchen performance</h3>
+            <p style={{ fontSize: 11.5, opacity: .6, margin: '0 0 8px' }}>Live board right now — no per-order prep-time history is tracked yet</p>
+            <div className={styles.summaryCards}>
+              <div className={styles.summaryCard}>
+                <div className={styles.summaryValue}>{kitchen.cooking}</div>
+                <div className={styles.summaryLabel}>Cooking</div>
+              </div>
+              <div className={styles.summaryCard}>
+                <div className={styles.summaryValue}>{kitchen.ready}</div>
+                <div className={styles.summaryLabel}>Ready to serve</div>
+              </div>
+              <div className={styles.summaryCard}>
+                <div className={styles.summaryValue}>{kitchen.seated}</div>
+                <div className={styles.summaryLabel}>Seated, ordering</div>
+              </div>
+              <div className={styles.summaryCard}>
+                <div className={styles.summaryValue}>{kitchen.empty}</div>
+                <div className={styles.summaryLabel}>Empty tables</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {hours.some(h => h.count > 0) && (
@@ -1185,7 +1492,7 @@ function ReportsPanel({ range, summary, items, tables, hours, ratings, onRangeCh
             <div className={styles.ratingBig}>{ratings.average.toFixed(1)}</div>
             <div className={styles.ratingStarsRow}>
               {[1,2,3,4,5].map(s => (
-                <span key={s} className={s <= Math.round(ratings.average) ? styles.starFilled : styles.starEmpty}>★</span>
+                <Star key={s} size={16} className={s <= Math.round(ratings.average) ? styles.starFilled : styles.starEmpty} fill={s <= Math.round(ratings.average) ? 'currentColor' : 'none'} />
               ))}
             </div>
             <div className={styles.ratingCount}>{ratings.count} review{ratings.count !== 1 ? 's' : ''}</div>
@@ -1193,8 +1500,10 @@ function ReportsPanel({ range, summary, items, tables, hours, ratings, onRangeCh
           {ratings.recent.filter(r => r.comment).slice(0, 10).map(r => (
             <div key={r.id} className={styles.ratingComment}>
               <div className={styles.ratingCommentMeta}>
-                <span className={styles.ratingCommentStars}>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
-                <span className={styles.ratingCommentTable}>{r.tableId.replace(/^table/, 'Table ')}</span>
+                <span className={styles.ratingCommentStars}>
+                  {[1,2,3,4,5].map(s => <Star key={s} size={11} fill={s <= r.rating ? 'currentColor' : 'none'} />)}
+                </span>
+                <span className={styles.ratingCommentTable}>{formatTableLabel(r.tableId)}</span>
                 <span className={styles.ratingCommentDate}>{new Date(r.createdAt).toLocaleDateString()}</span>
               </div>
               <p className={styles.ratingCommentText}>{r.comment}</p>
@@ -1294,7 +1603,7 @@ function MenuAvailabilityList({ items, togglingId, selected, bulkLoading, onTogg
                   {togglingId === item.dbId ? <Spinner size={12} /> : item.available ? 'Available' : 'Sold Out'}
                 </button>
                 <button
-                  className={styles.itemDeleteBtn}
+                  className={styles.itemEditBtn}
                   onClick={() => onEdit(item)}
                   aria-label={`Edit ${item.name}`}
                   title="Edit item"
@@ -1573,7 +1882,7 @@ const titleCase = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
 
 const chefField: CSSProperties = {
   width: '100%', padding: '9px 11px', background: 'rgba(0,0,0,0.35)',
-  border: '1px solid var(--color-line, rgba(198,162,75,0.22))', borderRadius: 8,
+  border: '1px solid var(--color-line, rgba(var(--color-gold-rgb),0.22))', borderRadius: 8,
   color: 'var(--color-cream, #f3ead6)', fontSize: 13, outline: 'none'
 };
 const chefLabel: CSSProperties = {
@@ -1625,13 +1934,13 @@ function ChefRecsPanel({ recs, menuItems, onCreate, onUpdate, onDelete }: {
   return (
     <div>
       <p style={{ color: 'var(--color-sand, #b8a88a)', fontSize: 13, lineHeight: 1.55, maxWidth: 720, marginBottom: 18 }}>
-        Chef recommendations <strong style={{ color: 'var(--color-gold, #c6a24b)' }}>always win</strong> — they show ahead of
+        Chef recommendations <strong style={{ color: 'var(--color-gold)' }}>always win</strong> — they show ahead of
         every automatic suggestion across the guest app, chatbot, item pairings and the waiter upsell screen. Put several
         beverages in one rotation group and the engine rotates between them for different guests. Category-safety rules
         (one beverage, never wine + cocktail, no dessert → starter) still apply.
       </p>
 
-      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-line, rgba(198,162,75,0.18))', borderRadius: 12, padding: 18, marginBottom: 24 }}>
+      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-line, rgba(var(--color-gold-rgb),0.18))', borderRadius: 12, padding: 18, marginBottom: 24 }}>
         <h3 style={{ margin: '0 0 14px', fontSize: 15, color: 'var(--color-cream, #f3ead6)' }}>Add chef recommendation</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
           <div>
@@ -1701,7 +2010,7 @@ function ChefRecsPanel({ recs, menuItems, onCreate, onUpdate, onDelete }: {
         groupNames.map(name => (
           <div key={name} style={{ marginBottom: 18 }}>
             <h3 style={{ fontSize: 14, color: 'var(--color-cream, #f3ead6)', margin: '0 0 8px' }}>
-              With <span style={{ color: 'var(--color-gold, #c6a24b)' }}>{name}</span>
+              With <span style={{ color: 'var(--color-gold)' }}>{name}</span>
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {groups.get(name)!.map(r => (
@@ -1727,7 +2036,7 @@ function ChefRecRow({ rec, onUpdate, onDelete }: {
   const kindLabel = rec.recType === 'BEVERAGE' ? `${rec.recType} · ${rec.beverageKind}` : rec.recType;
 
   return (
-    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(198,162,75,0.14))', borderRadius: 10, padding: '12px 14px', opacity: rec.active ? 1 : 0.55 }}>
+    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(var(--color-gold-rgb),0.14))', borderRadius: 10, padding: '12px 14px', opacity: rec.active ? 1 : 0.55 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
         <div>
           <strong style={{ color: 'var(--color-cream, #f3ead6)' }}>→ {rec.targetName}</strong>
@@ -1786,7 +2095,7 @@ function RecoBoard({ title, rows, metric }: { title: string; rows: RecoTally[]; 
         {rows.map((r, i) => (
           <div key={`${r.name || r.source || r.rotationGroup || 'row'}-${i}`} className={styles.topItemRow}>
             <span className={styles.topItemRank}>#{i + 1}</span>
-            <span className={styles.topItemName}>{r.name || r.source || r.rotationGroup || '—'}{r.chef ? ' ⭐' : ''}</span>
+            <span className={styles.topItemName}>{r.name || r.source || r.rotationGroup || '—'}{r.chef ? <Star size={11} fill="currentColor" className={styles.specialStar} /> : ''}</span>
             <span className={styles.topItemQty}>{r.impressions} shown</span>
             <span className={styles.topItemRev}>{metric(r)}</span>
           </div>
@@ -1805,13 +2114,13 @@ function RecoActionItems({ insights }: { insights: RecoInsight[] }) {
       <h3 className={styles.reportSectionTitle}>Action items ({insights.length})</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {insights.slice(0, 12).map((ins, i) => (
-          <div key={i} style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(198,162,75,0.14))', borderLeft: `3px solid ${SEVERITY_COLOR[ins.severity] || '#9aa6b2'}`, borderRadius: 8, padding: '10px 12px' }}>
+          <div key={i} style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(var(--color-gold-rgb),0.14))', borderLeft: `3px solid ${SEVERITY_COLOR[ins.severity] || '#9aa6b2'}`, borderRadius: 8, padding: '10px 12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: SEVERITY_COLOR[ins.severity] || '#9aa6b2' }}>{ins.severity}</span>
               <strong style={{ color: 'var(--color-cream, #f3ead6)', fontSize: 13 }}>{ins.title}</strong>
             </div>
             <div style={{ color: 'var(--color-sand, #b8a88a)', fontSize: 12, marginTop: 3 }}>{ins.detail}</div>
-            <div style={{ color: 'var(--color-gold, #c6a24b)', fontSize: 12, marginTop: 4 }}>→ {ins.action}</div>
+            <div style={{ color: 'var(--color-gold)', fontSize: 12, marginTop: 4 }}>→ {ins.action}</div>
           </div>
         ))}
       </div>
@@ -1929,7 +2238,7 @@ function BundleRow({ bundle, onUpdate, onDelete }: {
   const dirty = JSON.stringify(items) !== JSON.stringify(bundle.items || []);
 
   return (
-    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(198,162,75,0.14))', borderRadius: 10, padding: '12px 14px', marginBottom: 12, opacity: bundle.active ? 1 : 0.55 }}>
+    <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--color-line, rgba(var(--color-gold-rgb),0.14))', borderRadius: 10, padding: '12px 14px', marginBottom: 12, opacity: bundle.active ? 1 : 0.55 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
         <strong style={{ color: 'var(--color-cream, #f3ead6)' }}>{bundle.icon} {bundle.persona}</strong>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1989,7 +2298,7 @@ function BundlesPanel({ bundles, onCreate, onUpdate, onDelete }: {
         to a built-in set only if the database is unavailable.
       </p>
 
-      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-line, rgba(198,162,75,0.18))', borderRadius: 12, padding: 18, marginBottom: 24 }}>
+      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-line, rgba(var(--color-gold-rgb),0.18))', borderRadius: 12, padding: 18, marginBottom: 24 }}>
         <h3 style={{ margin: '0 0 14px', fontSize: 15, color: 'var(--color-cream, #f3ead6)' }}>Add bundle</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
           <div><label style={chefLabel}>Persona</label><input style={chefField} placeholder="The Steak Lover" value={persona} onChange={e => setPersona(e.target.value)} /></div>
@@ -2372,7 +2681,7 @@ function NewAccountModal({ currentRole, onClose, onSubmit }: {
   }
 
   const shareText = [
-    apkUrl ? `Download the Trump Waiter app: ${apkUrl}` : '',
+    apkUrl ? `Download the ${BRAND_NAME} Waiter app: ${apkUrl}` : '',
     `Username: ${created ?? ''}`,
   ].filter(Boolean).join('\n');
 
@@ -2482,10 +2791,14 @@ function ServiceDeskPanel({ tasks, onChange }: { tasks: WaiterTask[]; onChange: 
     return () => { cancelled = true; cleanup(); };
   }, [reload]);
 
-  const approvals = tasks.filter(t => t.type === 'birthday_approval' && t.status === 'open');
+  const approvals = tasks
+    .filter(t => t.type === 'birthday_approval' && t.status === 'open')
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
   const openTasks = tasks
     .filter(t => ['open', 'acknowledged'].includes(t.status) && t.type !== 'birthday_approval')
-    .sort((a, b) => a.priority - b.priority);
+    // Newest first within the same priority band, so a fresh notification
+    // never gets buried under an older one that merely shares a priority.
+    .sort((a, b) => a.priority - b.priority || +new Date(b.createdAt) - +new Date(a.createdAt));
 
   async function decide(id: number, approved: boolean) {
     setBusy(id);
@@ -2517,10 +2830,10 @@ function ServiceDeskPanel({ tasks, onChange }: { tasks: WaiterTask[]; onChange: 
       {approvals.length === 0 ? (
         <div className={styles.emptyState}><p>No approvals waiting.</p></div>
       ) : approvals.map(t => (
-        <div key={t.id} style={{ ...card, borderColor: 'rgba(198,162,75,0.4)' }}>
+        <div key={t.id} style={{ ...card, borderColor: 'rgba(var(--color-gold-rgb),0.4)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontWeight: 600, color: '#c6a24b' }}>🎂 {t.title} · Table {deskTableNum(t.tableId)}</div>
+              <div style={{ fontWeight: 600, color: 'var(--color-gold)' }}>🎂 {t.title} · Table {deskTableNum(t.tableId)}</div>
               <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>{t.message}</div>
               <div style={{ fontSize: 12, opacity: 0.55, marginTop: 4 }}>Requested by {t.waiterName || t.requestedBy || 'waiter'}</div>
             </div>
@@ -2573,6 +2886,200 @@ function ServiceDeskPanel({ tasks, onChange }: { tasks: WaiterTask[]; onChange: 
   );
 }
 
+// AI Shared Event System (admin side) — reads the SAME /api/ai-events rows the
+// waiter app's TableAiEvents component reads (WaiterPage.tsx); no separate
+// business logic, no re-derivation of priority/label/suggested action.
+function AiEventsPanel({ events, onChange }: { events: AiEvent[]; onChange: (e: AiEvent[]) => void }) {
+  const [statusFilter, setStatusFilter] = useState<'open' | 'all'>('open');
+  const [busy, setBusy] = useState<number | null>(null);
+
+  const reload = useCallback(() => {
+    api.getAiEvents({ status: 'all' }).then(d => onChange((d as AiEvent[]) || [])).catch(() => {});
+  }, [onChange]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let cleanup = () => {};
+    import('../services/socket').then(({ getSocket }) => {
+      if (cancelled) return;
+      const socket = getSocket();
+      socket.emit('joinAdmin', { restaurantId: 'trump' });
+      const onEvt = () => reload();
+      socket.on('aiEventCreated', onEvt);
+      socket.on('aiEventUpdated', onEvt);
+      cleanup = () => { socket.off('aiEventCreated', onEvt); socket.off('aiEventUpdated', onEvt); };
+    });
+    return () => { cancelled = true; cleanup(); };
+  }, [reload]);
+
+  async function resolve(id: number) {
+    setBusy(id);
+    try { await api.resolveAiEvent(id); reload(); } catch {}
+    setBusy(null);
+  }
+
+  const visible = (statusFilter === 'open' ? events.filter(e => e.status === 'open') : events)
+    .sort((a, b) => a.priority - b.priority || +new Date(b.createdAt) - +new Date(a.createdAt));
+
+  const card: CSSProperties = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 16, marginBottom: 12 };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <button className={statusFilter === 'open' ? styles.actionBtnGold : styles.actionBtn} onClick={() => setStatusFilter('open')}>Open</button>
+        <button className={statusFilter === 'all' ? styles.actionBtnGold : styles.actionBtn} onClick={() => setStatusFilter('all')}>All</button>
+      </div>
+      {visible.length === 0 ? (
+        <div className={styles.emptyState}><p>No AI events{statusFilter === 'open' ? ' open right now' : ''}.</p></div>
+      ) : visible.map(e => (
+        <div key={e.id} style={{ ...card, borderColor: e.priority <= 1 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.08)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontWeight: 600 }}>{e.icon} {e.label}{e.tableId ? ` · Table ${deskTableNum(e.tableId)}` : ''}</div>
+              {e.suggestedWaiterMessage && <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}><b>Waiter:</b> {e.suggestedWaiterMessage}</div>}
+              {e.suggestedManagerAction && <div style={{ fontSize: 13, opacity: 0.8, marginTop: 2 }}><b>Manager:</b> {e.suggestedManagerAction}</div>}
+              <div style={{ fontSize: 12, opacity: 0.55, marginTop: 4 }}>
+                {e.status.toUpperCase()} · P{e.priority} · confidence {Math.round(e.confidence * 100)}% · source: {e.source}
+              </div>
+            </div>
+            {e.status === 'open' && (
+              <button className={styles.actionBtn} disabled={busy === e.id} onClick={() => resolve(e.id)}>Resolve</button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Guest CRM (admin side) — was previously built on the backend (guestService.js)
+// with no UI consumer anywhere in the app; this is that missing surface.
+function GuestsPanel({ guests }: { guests: Guest[] }) {
+  const [query, setQuery] = useState('');
+  const filtered = guests.filter(g => g.name.toLowerCase().includes(query.toLowerCase()));
+
+  const card: CSSProperties = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 16, marginBottom: 10 };
+
+  return (
+    <div>
+      <input
+        placeholder="Search guests by name..."
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        style={{ width: '100%', maxWidth: 360, padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.25)', color: 'inherit', fontSize: 14, marginBottom: 16 }}
+      />
+      {filtered.length === 0 ? (
+        <div className={styles.emptyState}><p>No guests match.</p></div>
+      ) : filtered.map(g => (
+        <div key={g.id} style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontWeight: 600 }}>
+                {g.name}{g.vip ? ' · ⭐ VIP' : ''}{g.loyaltyTier ? ` · ${g.loyaltyTier}` : ''}
+              </div>
+              <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>
+                {g.visitCount} visit{g.visitCount === 1 ? '' : 's'} · lifetime {formatPrice(g.lifetimeSpend)} · avg {formatPrice(g.avgSpend)}
+              </div>
+              {(g.dietary || g.allergies) && (
+                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+                  {g.dietary && <span>Dietary: {g.dietary} </span>}
+                  {g.allergies && <span style={{ color: '#f59e0b' }}>Allergy: {g.allergies}</span>}
+                </div>
+              )}
+              {g.notes && <div style={{ fontSize: 12, opacity: 0.55, marginTop: 4 }}>{g.notes}</div>}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Data Verification Tool — calls GET /api/admin/verify/:tableId
+// (debugController.js), which queries the raw DB row AND the same
+// service-layer function every admin/waiter screen actually calls, then
+// diffs them field by field. A clean run here means "the pipeline this
+// screen reads from is provably correct for this table right now" — use it
+// after any deploy/reseed before trusting what's on screen.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function VerifyPanel() {
+  const [tableNum, setTableNum] = useState('1');
+  const [loading, setLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState('');
+
+  async function check() {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.verifyTable(`table${parseInt(tableNum, 10) || 1}`);
+      setResult(data);
+    } catch {
+      setError('Verification request failed — check the table exists and you have owner/manager access.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const card: CSSProperties = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 16, marginBottom: 12 };
+  const mono: CSSProperties = { fontFamily: 'monospace', fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word' };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
+        <span>Table</span>
+        <input
+          value={tableNum}
+          onChange={e => setTableNum(e.target.value.replace(/[^0-9]/g, ''))}
+          inputMode="numeric"
+          style={{ width: 70, padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.25)', color: 'inherit', fontSize: 16 }}
+        />
+        <button className={styles.actionBtnGold} disabled={loading} onClick={check}>{loading ? 'Checking...' : 'Check'}</button>
+      </div>
+
+      {error && <div className={styles.emptyState}><p>{error}</p></div>}
+
+      {result && (
+        <>
+          <div style={{ ...card, borderColor: result.ok ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)' }}>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>
+              {result.ok ? '✓ Database and backend API agree' : `✗ ${result.mismatches.length} mismatch(es) found`}
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Checked {result.tableId} at {new Date(result.checkedAt).toLocaleTimeString()}</div>
+            {result.mismatches.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {result.mismatches.map((m: any, i: number) => (
+                  <div key={i} style={{ padding: '8px 0', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
+                    <b style={{ color: '#f59e0b' }}>{m.field}</b>
+                    <div style={mono}>database: {JSON.stringify(m.database)}{'\n'}backendApi: {JSON.stringify(m.backendApi)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={card}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>👤 Guest {result.guest.seated ? '(seated)' : '(none seated on this table)'}</div>
+            <div style={mono}>{JSON.stringify(result.guest, null, 2)}</div>
+          </div>
+
+          <div style={card}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>🔔 AI Events ({result.aiEvents.database.length})</div>
+            <div style={mono}>{JSON.stringify(result.aiEvents, null, 2)}</div>
+          </div>
+
+          <div style={card}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>🍽️ Active Orders ({result.activeOrders.length})</div>
+            <div style={mono}>{JSON.stringify(result.activeOrders, null, 2)}</div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function NotificationButton() {
   const [status, setStatus] = useState<'idle' | 'subscribed' | 'denied' | 'loading'>('idle');
 
@@ -2591,7 +3098,7 @@ function NotificationButton() {
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') { setStatus('denied'); return; }
 
-      const resp = await fetch('/Trump/api/push/vapid-key').then(r => r.json());
+      const resp = await fetch(ENDPOINTS.pushVapidKey).then(r => r.json());
       const publicKey = resp?.publicKey;
       if (!publicKey) { setStatus('idle'); return; }
 
@@ -2601,7 +3108,7 @@ function NotificationButton() {
         applicationServerKey: publicKey
       });
 
-      await fetch('/Trump/api/push/subscribe', {
+      await fetch(ENDPOINTS.pushSubscribe, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sub.toJSON())

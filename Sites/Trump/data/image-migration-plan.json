@@ -1,0 +1,3953 @@
+[
+  {
+    "id": 1,
+    "name": "FLASH PAN FRIED CHICKEN LIVERS",
+    "oldImagePath": "Images/FLASH PAN FRIED CHICKEN LIVERS.jpg",
+    "matchedFile": "flash_pan_fried_chicken_livers.jpg",
+    "newImagePath": "Images/FLASH PAN FRIED CHICKEN LIVERS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 2,
+    "name": "CHICKEN TRINCHADO",
+    "oldImagePath": "Images/CHICKEN TRINCHADO.jpg",
+    "matchedFile": "chicken_trinchado.jpg",
+    "newImagePath": "Images/CHICKEN TRINCHADO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 3,
+    "name": "FIRECRACKER CHICKEN WINGS (400g)",
+    "oldImagePath": "Images/FIRECRACKER CHICKEN WINGS.jpg",
+    "matchedFile": "firecracker_chicken_wings_400g.jpg",
+    "newImagePath": "Images/FIRECRACKER CHICKEN WINGS (400g).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 4,
+    "name": "BEEF BILTONG",
+    "oldImagePath": "Images/BEEF BILTONG.jpg",
+    "matchedFile": "beef_biltong.jpg",
+    "newImagePath": "Images/BEEF BILTONG.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 5,
+    "name": "BOEREWORS & CHAKALAKA",
+    "oldImagePath": "Images/BOEREWORS & CHAKALAKA.jpg",
+    "matchedFile": "boerewors_and_chakalaka.jpg",
+    "newImagePath": "Images/BOEREWORS & CHAKALAKA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 6,
+    "name": "SPRINGBOK CARPACCIO",
+    "oldImagePath": "/uploads/menu-media/6.webp",
+    "matchedFile": "springbok_carpaccio.jpg",
+    "newImagePath": "Images/SPRINGBOK CARPACCIO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 7,
+    "name": "GARLIC SNAILS",
+    "oldImagePath": "Images/GARLIC SNAILS.jpg",
+    "matchedFile": "garlic_snails.jpg",
+    "newImagePath": "Images/GARLIC SNAILS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 8,
+    "name": "GARLIC LEMON CALAMARI",
+    "oldImagePath": "Images/GARLIC LEMON CALAMARI.jpg",
+    "matchedFile": "garlic_lemon_calamari.jpg",
+    "newImagePath": "Images/GARLIC LEMON CALAMARI.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 9,
+    "name": "MUSSELS",
+    "oldImagePath": "Images/MUSSELS.jpg",
+    "matchedFile": "mussels.jpg",
+    "newImagePath": "Images/MUSSELS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 10,
+    "name": "QUEEN PRAWNS 3's",
+    "oldImagePath": "Images/Butter-garlic-prawns.jpg",
+    "matchedFile": "queen_prawns_3_s.jpg",
+    "newImagePath": "Images/QUEEN PRAWNS 3's.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 11,
+    "name": "FRIED HALLOUMI FINGERS",
+    "oldImagePath": "Images/FRIED HALLOUMI FINGERS.jpg",
+    "matchedFile": "fried_halloumi_fingers.jpg",
+    "newImagePath": "Images/FRIED HALLOUMI FINGERS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 12,
+    "name": "SMALL GREEK SALAD",
+    "oldImagePath": "Images/SMALL GREEK SALAD.jpg",
+    "matchedFile": "small_greek_salad.jpg",
+    "newImagePath": "Images/SMALL GREEK SALAD.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 13,
+    "name": "TEMPURA CHICKEN",
+    "oldImagePath": "Images/TEMPURA CHICKEN.jpg",
+    "matchedFile": "tempura_chicken.jpg",
+    "newImagePath": "Images/TEMPURA CHICKEN.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 14,
+    "name": "TEMPURA PRAWN",
+    "oldImagePath": "Images/TEMPURA PRAWN.jpg",
+    "matchedFile": "tempura_prawn.jpg",
+    "newImagePath": "Images/TEMPURA PRAWN.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 15,
+    "name": "TEMPURA BILTONG",
+    "oldImagePath": "Images/TEMPURA BILTONG.jpg",
+    "matchedFile": "tempura_biltong.jpg",
+    "newImagePath": "Images/TEMPURA BILTONG.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 16,
+    "name": "TRUMPS SALAD",
+    "oldImagePath": "Images/TRUMPS SALAD.jpg",
+    "matchedFile": "trumps_salad.jpg",
+    "newImagePath": "Images/TRUMPS SALAD.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 17,
+    "name": "GREEK SALAD",
+    "oldImagePath": "Images/GREEK SALAD.jpg",
+    "matchedFile": "greek_salad.jpg",
+    "newImagePath": "Images/GREEK SALAD.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 18,
+    "name": "HALLOUMI SALAD",
+    "oldImagePath": "Images/HALLOUMI SALAD.jpg",
+    "matchedFile": "halloumi_salad.jpg",
+    "newImagePath": "Images/HALLOUMI SALAD.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 19,
+    "name": "CAPRESE & AVOCADO SALAD",
+    "oldImagePath": "Images/Veg Meze Platter.jpg",
+    "matchedFile": "caprese_and_avocado_salad_19.jpg",
+    "newImagePath": "Images/CAPRESE & AVOCADO SALAD [19].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 20,
+    "name": "TRUMPS CHAR GRILLED CHICKEN",
+    "oldImagePath": "Images/TRUMPS CHAR GRILLED CHICKEN.jpg",
+    "matchedFile": "trumps_char_grilled_chicken.jpg",
+    "newImagePath": "Images/TRUMPS CHAR GRILLED CHICKEN.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 21,
+    "name": "CRISPY RICE",
+    "oldImagePath": "Images/Butter-garlic-prawns.jpg",
+    "matchedFile": "crispy_rice.jpg",
+    "newImagePath": "Images/CRISPY RICE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 22,
+    "name": "ROSES - SALMON (4 Pieces)",
+    "oldImagePath": "Images/ROSES - SALMON (4 Pieces).jpg",
+    "matchedFile": "roses_salmon_4_pieces.jpg",
+    "newImagePath": "Images/ROSES - SALMON (4 Pieces).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 23,
+    "name": "ROSES - SALMON (6 Pieces)",
+    "oldImagePath": "Images/ROSES - SALMON (6 Pieces).jpg",
+    "matchedFile": "roses_salmon_6_pieces.jpg",
+    "newImagePath": "Images/ROSES - SALMON (6 Pieces).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 24,
+    "name": "CALIFORNIA ROLL - SALMON (8pc)",
+    "oldImagePath": "Images/CALIFORNIA ROLL-SALMON(8PC).jpg",
+    "matchedFile": "california_roll_salmon_8pc.jpg",
+    "newImagePath": "Images/CALIFORNIA ROLL - SALMON (8pc).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 25,
+    "name": "CALIFORNIA ROLL - PRAWN (8pc)",
+    "oldImagePath": "Images/CALIFORNIA ROLL - PRAWN (8pc).jpg",
+    "matchedFile": "california_roll_prawn_8pc.jpg",
+    "newImagePath": "Images/CALIFORNIA ROLL - PRAWN (8pc).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 26,
+    "name": "CALIFORNIA ROLL - SALMON (4pc)",
+    "oldImagePath": "Images/CALIFORNIA ROLL - SALMON (4pc).jpg",
+    "matchedFile": "california_roll_salmon_4pc.jpg",
+    "newImagePath": "Images/CALIFORNIA ROLL - SALMON (4pc).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 27,
+    "name": "CALIFORNIA ROLL - PRAWN (4pc)",
+    "oldImagePath": "/uploads/menu-media/27.webp",
+    "matchedFile": "california_roll_prawn_4pc.jpg",
+    "newImagePath": "Images/CALIFORNIA ROLL - PRAWN (4pc).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 28,
+    "name": "RAINBOW ROLL - SALMON (8pc)",
+    "oldImagePath": "Images/RAINBOW ROLL - SALMON (8pc).jpg",
+    "matchedFile": "rainbow_roll_salmon_8pc.jpg",
+    "newImagePath": "Images/RAINBOW ROLL - SALMON (8pc).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 29,
+    "name": "RAINBOW ROLL - PRAWN (8pc)",
+    "oldImagePath": "Images/RAINBOW ROLL - PRAWN(8pc).jpg",
+    "matchedFile": "rainbow_roll_prawn_8pc.jpg",
+    "newImagePath": "Images/RAINBOW ROLL - PRAWN (8pc).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 30,
+    "name": "RAINBOW ROLL - VEGETABLE (8pc)",
+    "oldImagePath": "Images/RAINBOW ROLL - VEGETABLE (8pc).jpg",
+    "matchedFile": "rainbow_roll_vegetable_8pc.jpg",
+    "newImagePath": "Images/RAINBOW ROLL - VEGETABLE (8pc).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 31,
+    "name": "RAINBOW ROLL - SALMON (4pc)",
+    "oldImagePath": "/uploads/menu-media/31.webp",
+    "matchedFile": "rainbow_roll_salmon_4pc.jpg",
+    "newImagePath": "Images/RAINBOW ROLL - SALMON (4pc).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 32,
+    "name": "RAINBOW ROLL - PRAWN (4pc)",
+    "oldImagePath": "/uploads/menu-media/32.webp",
+    "matchedFile": "rainbow_roll_prawn_4pc.jpg",
+    "newImagePath": "Images/RAINBOW ROLL - PRAWN (4pc).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 33,
+    "name": "RAINBOW ROLL - VEGETABLE (4pc)",
+    "oldImagePath": "/uploads/menu-media/33.webp",
+    "matchedFile": "rainbow_roll_vegetable_4pc.jpg",
+    "newImagePath": "Images/RAINBOW ROLL - VEGETABLE (4pc).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 34,
+    "name": "DRAGON ROLL (8pc)",
+    "oldImagePath": "/uploads/menu-media/34.webp",
+    "matchedFile": "dragon_roll_8pc.jpg",
+    "newImagePath": "Images/DRAGON ROLL (8pc).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 35,
+    "name": "ROCK SHRIMP TEMPURA ROLL (8pc)",
+    "oldImagePath": "/uploads/menu-media/35.webp",
+    "matchedFile": "rock_shrimp_tempura_roll_8pc.jpg",
+    "newImagePath": "Images/ROCK SHRIMP TEMPURA ROLL (8pc).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 36,
+    "name": "TRUMPS RAINBOW RELOADED (10pc)",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "trumps_rainbow_reloaded_10pc.jpg",
+    "newImagePath": "Images/TRUMPS RAINBOW RELOADED (10pc).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 37,
+    "name": "TRUMPS CALIFORNIA RAINBOW RELOADED (8pc)",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "trumps_california_rainbow_reloaded_8pc.jpg",
+    "newImagePath": "Images/TRUMPS CALIFORNIA RAINBOW RELOADED (8pc).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 38,
+    "name": "TRUMPS SALMON SASHIMI",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "trumps_salmon_sashimi.jpg",
+    "newImagePath": "Images/TRUMPS SALMON SASHIMI.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 39,
+    "name": "NEW STYLE SASHIMI",
+    "oldImagePath": "Images/Fish & Chips.jpg",
+    "matchedFile": "new_style_sashimi.jpg",
+    "newImagePath": "Images/NEW STYLE SASHIMI.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 40,
+    "name": "JALAPENO SALMON SASHIMI",
+    "oldImagePath": "Images/Veg Meze Platter.jpg",
+    "matchedFile": "jalapeno_salmon_sashimi.jpg",
+    "newImagePath": "Images/JALAPENO SALMON SASHIMI.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 41,
+    "name": "SEARED SALMON",
+    "oldImagePath": "/uploads/menu-media/41.webp",
+    "matchedFile": "seared_salmon.jpg",
+    "newImagePath": "Images/SEARED SALMON.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 42,
+    "name": "KINGKLIP FILLET",
+    "oldImagePath": "Images/Beef fillet.jpg",
+    "matchedFile": "kingklip_fillet.jpg",
+    "newImagePath": "Images/KINGKLIP FILLET.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 43,
+    "name": "HAKE & CALAMARI",
+    "oldImagePath": "Images/Calamari.jpeg",
+    "matchedFile": "hake_and_calamari.jpg",
+    "newImagePath": "Images/HAKE & CALAMARI.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 44,
+    "name": "FALKLANDS CALAMARI",
+    "oldImagePath": "Images/Calamari.jpeg",
+    "matchedFile": "falklands_calamari.jpg",
+    "newImagePath": "Images/FALKLANDS CALAMARI.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 45,
+    "name": "PRAWN & CALAMARI",
+    "oldImagePath": "Images/Calamari.jpeg",
+    "matchedFile": "prawn_and_calamari.jpg",
+    "newImagePath": "Images/PRAWN & CALAMARI.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 46,
+    "name": "HAKE & PRAWN",
+    "oldImagePath": "Images/Butter-garlic-prawns.jpg",
+    "matchedFile": "hake_and_prawn.jpg",
+    "newImagePath": "Images/HAKE & PRAWN.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 47,
+    "name": "KINGKLIP & PRAWN",
+    "oldImagePath": "Images/Butter-garlic-prawns.jpg",
+    "matchedFile": "kingklip_and_prawn.jpg",
+    "newImagePath": "Images/KINGKLIP & PRAWN.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 48,
+    "name": "HAKE PLATTER FOR 1",
+    "oldImagePath": "Images/Calamari.jpeg",
+    "matchedFile": "hake_platter_for_1.jpg",
+    "newImagePath": "Images/HAKE PLATTER FOR 1.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 49,
+    "name": "6 QUEEN PRAWNS",
+    "oldImagePath": "Images/Butter-garlic-prawns.jpg",
+    "matchedFile": "6_queen_prawns.jpg",
+    "newImagePath": "Images/6 QUEEN PRAWNS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 50,
+    "name": "9 QUEEN PRAWNS",
+    "oldImagePath": "Images/Butter-garlic-prawns.jpg",
+    "matchedFile": "9_queen_prawns.jpg",
+    "newImagePath": "Images/9 QUEEN PRAWNS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 51,
+    "name": "GRILLED HAKE",
+    "oldImagePath": "/uploads/menu-media/51.webp",
+    "matchedFile": "grilled_hake.jpg",
+    "newImagePath": "Images/GRILLED HAKE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 52,
+    "name": "SIRLOIN 350g",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "sirloin_350g.jpg",
+    "newImagePath": "Images/SIRLOIN 350g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 53,
+    "name": "RUMP 400g",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "rump_400g.jpg",
+    "newImagePath": "Images/RUMP 400g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 54,
+    "name": "RIBEYE 380g",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "ribeye_380g.jpg",
+    "newImagePath": "Images/RIBEYE 380g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 55,
+    "name": "FILLET 260g",
+    "oldImagePath": "Images/Beef fillet.jpg",
+    "matchedFile": "fillet_260g.jpg",
+    "newImagePath": "Images/FILLET 260g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 56,
+    "name": "FILLET 360g",
+    "oldImagePath": "Images/Beef fillet.jpg",
+    "matchedFile": "fillet_360g.jpg",
+    "newImagePath": "Images/FILLET 360g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 57,
+    "name": "PORTUGUESE RUMP 350g & EGGS",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "portuguese_rump_350g_and_eggs.jpg",
+    "newImagePath": "Images/PORTUGUESE RUMP 350g & EGGS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 58,
+    "name": "T-BONE 500g",
+    "oldImagePath": "/uploads/menu-media/58.webp",
+    "matchedFile": "t_bone_500g.jpg",
+    "newImagePath": "Images/T-BONE 500g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 59,
+    "name": "TOMAHAWK (FRENCH CUT) 650g",
+    "oldImagePath": "/uploads/menu-media/59.webp",
+    "matchedFile": "tomahawk_french_cut_650g.jpg",
+    "newImagePath": "Images/TOMAHAWK (FRENCH CUT) 650g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 60,
+    "name": "RIBEYE ON THE BONE",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "ribeye_on_the_bone.jpg",
+    "newImagePath": "Images/RIBEYE ON THE BONE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 61,
+    "name": "SIRLOIN ON THE BONE 480g",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "sirloin_on_the_bone_480g.jpg",
+    "newImagePath": "Images/SIRLOIN ON THE BONE 480g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 62,
+    "name": "T-BONE 700g",
+    "oldImagePath": "/uploads/menu-media/62.webp",
+    "matchedFile": "t_bone_700g.jpg",
+    "newImagePath": "Images/T-BONE 700g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 63,
+    "name": "SIRLOIN 500g",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "sirloin_500g.jpg",
+    "newImagePath": "Images/SIRLOIN 500g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 64,
+    "name": "RUMP 600g",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "rump_600g.jpg",
+    "newImagePath": "Images/RUMP 600g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 65,
+    "name": "RIBEYE 500g",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "ribeye_500g.jpg",
+    "newImagePath": "Images/RIBEYE 500g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 66,
+    "name": "FILLET 500g",
+    "oldImagePath": "Images/Beef fillet.jpg",
+    "matchedFile": "fillet_500g.jpg",
+    "newImagePath": "Images/FILLET 500g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 67,
+    "name": "TOMAHAWK 850g - 900g",
+    "oldImagePath": "/uploads/menu-media/67.webp",
+    "matchedFile": "tomahawk_850g_900g.jpg",
+    "newImagePath": "Images/TOMAHAWK 850g - 900g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 68,
+    "name": "T-BONE 850g - 900g",
+    "oldImagePath": "/uploads/menu-media/68.webp",
+    "matchedFile": "t_bone_850g_900g.jpg",
+    "newImagePath": "Images/T-BONE 850g - 900g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 69,
+    "name": "RIBEYE 850g - 900g",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "ribeye_850g_900g.jpg",
+    "newImagePath": "Images/RIBEYE 850g - 900g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 70,
+    "name": "WAGYU RIBEYE 300g",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "wagyu_ribeye_300g.jpg",
+    "newImagePath": "Images/WAGYU RIBEYE 300g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 71,
+    "name": "WAGYU FILLET 300g",
+    "oldImagePath": "Images/Beef fillet.jpg",
+    "matchedFile": "wagyu_fillet_300g.jpg",
+    "newImagePath": "Images/WAGYU FILLET 300g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 72,
+    "name": "WAGYU SIRLOIN 300g",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "wagyu_sirloin_300g.jpg",
+    "newImagePath": "Images/WAGYU SIRLOIN 300g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 73,
+    "name": "WAGYU CHUCKEYE 350g",
+    "oldImagePath": "/uploads/menu-media/73.webp",
+    "matchedFile": "wagyu_chuckeye_350g.jpg",
+    "newImagePath": "Images/WAGYU CHUCKEYE 350g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 74,
+    "name": "WAGYU RUMP 350g",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "wagyu_rump_350g.jpg",
+    "newImagePath": "Images/WAGYU RUMP 350g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 75,
+    "name": "WAGYU DENVER 350g",
+    "oldImagePath": "/uploads/menu-media/75.webp",
+    "matchedFile": "wagyu_denver_350g.jpg",
+    "newImagePath": "Images/WAGYU DENVER 350g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 76,
+    "name": "GARLIC & SAGE BUTTER",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "garlic_and_sage_butter.jpg",
+    "newImagePath": "Images/GARLIC & SAGE BUTTER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 77,
+    "name": "MUSHROOM TRUFFLE BUTTER",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "mushroom_truffle_butter.jpg",
+    "newImagePath": "Images/MUSHROOM TRUFFLE BUTTER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 78,
+    "name": "GARLIC SAUCE",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "garlic_sauce.jpg",
+    "newImagePath": "Images/GARLIC SAUCE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 79,
+    "name": "CREAMY CHEESE SAUCE",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "creamy_cheese_sauce.jpg",
+    "newImagePath": "Images/CREAMY CHEESE SAUCE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 80,
+    "name": "THREE PEPPERCORN SAUCE",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "three_peppercorn_sauce.jpg",
+    "newImagePath": "Images/THREE PEPPERCORN SAUCE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 81,
+    "name": "CREAMY MUSHROOM SAUCE",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "creamy_mushroom_sauce.jpg",
+    "newImagePath": "Images/CREAMY MUSHROOM SAUCE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 82,
+    "name": "CHAKALAKA SAUCE",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "chakalaka_sauce.jpg",
+    "newImagePath": "Images/CHAKALAKA SAUCE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 83,
+    "name": "PERI-PERI SAUCE",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "peri_peri_sauce.jpg",
+    "newImagePath": "Images/PERI-PERI SAUCE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 84,
+    "name": "SWEET CHILLI SAUCE",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "sweet_chilli_sauce.jpg",
+    "newImagePath": "Images/SWEET CHILLI SAUCE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 85,
+    "name": "CRANBERRY SAUCE",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "cranberry_sauce.jpg",
+    "newImagePath": "Images/CRANBERRY SAUCE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 86,
+    "name": "CHIMICHURRI",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "chimichurri.jpg",
+    "newImagePath": "Images/CHIMICHURRI.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 87,
+    "name": "PORK CHOPS ±500g",
+    "oldImagePath": "Images/Crispy Pork Chops.jpg",
+    "matchedFile": "pork_chops_500g.jpg",
+    "newImagePath": "Images/PORK CHOPS ±500g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 88,
+    "name": "PORK TOMAHAWK ±600g",
+    "oldImagePath": "/uploads/menu-media/88.webp",
+    "matchedFile": "pork_tomahawk_600g.jpg",
+    "newImagePath": "Images/PORK TOMAHAWK ±600g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 89,
+    "name": "EISBEIN ±1kg",
+    "oldImagePath": "/uploads/menu-media/89.webp",
+    "matchedFile": "eisbein_1kg.jpg",
+    "newImagePath": "Images/EISBEIN ±1kg.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 90,
+    "name": "FULL RACK PORK LOIN RIBS ±600g",
+    "oldImagePath": "/uploads/menu-media/90.webp",
+    "matchedFile": "full_rack_pork_loin_ribs_600g.jpg",
+    "newImagePath": "Images/FULL RACK PORK LOIN RIBS ±600g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 91,
+    "name": "LAMB RUMP 300g",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "lamb_rump_300g.jpg",
+    "newImagePath": "Images/LAMB RUMP 300g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 92,
+    "name": "LAMB SHANK ±850g",
+    "oldImagePath": "Images/Crispy Lamb Chops.jpg",
+    "matchedFile": "lamb_shank_850g.jpg",
+    "newImagePath": "Images/LAMB SHANK ±850g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 93,
+    "name": "LAMB CHOPS 4's 500g",
+    "oldImagePath": "Images/Crispy Lamb Chops.jpg",
+    "matchedFile": "lamb_chops_4_s_500g.jpg",
+    "newImagePath": "Images/LAMB CHOPS 4's 500g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 94,
+    "name": "LAMB RUMP 300g & CHOPS COMBO 250g",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "lamb_rump_300g_and_chops_combo_250g.jpg",
+    "newImagePath": "Images/LAMB RUMP 300g & CHOPS COMBO 250g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 95,
+    "name": "OSTRICH FILLET ±450g",
+    "oldImagePath": "Images/Beef fillet.jpg",
+    "matchedFile": "ostrich_fillet_450g.jpg",
+    "newImagePath": "Images/OSTRICH FILLET ±450g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 96,
+    "name": "KUDU ±450g",
+    "oldImagePath": "/uploads/menu-media/96.webp",
+    "matchedFile": "kudu_450g.jpg",
+    "newImagePath": "Images/KUDU ±450g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 97,
+    "name": "SPRINGBOK ±450g",
+    "oldImagePath": "/uploads/menu-media/97.webp",
+    "matchedFile": "springbok_450g.jpg",
+    "newImagePath": "Images/SPRINGBOK ±450g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 98,
+    "name": "OXTAIL",
+    "oldImagePath": "/uploads/menu-media/98.webp",
+    "matchedFile": "oxtail.jpg",
+    "newImagePath": "Images/OXTAIL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 99,
+    "name": "BEEF RIBS (2 pce) 600g",
+    "oldImagePath": "/uploads/menu-media/99.webp",
+    "matchedFile": "beef_ribs_2_pce_600g.jpg",
+    "newImagePath": "Images/BEEF RIBS (2 pce) 600g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 100,
+    "name": "BEEF RIBS (3 pce) ±1kg",
+    "oldImagePath": "/uploads/menu-media/100.webp",
+    "matchedFile": "beef_ribs_3_pce_1kg.jpg",
+    "newImagePath": "Images/BEEF RIBS (3 pce) ±1kg.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 101,
+    "name": "PRIME STEAK & LAMB CHOPS",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "prime_steak_and_lamb_chops.jpg",
+    "newImagePath": "Images/PRIME STEAK & LAMB CHOPS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 102,
+    "name": "(PORK OR BEEF) RIBS & QUEEN PRAWNS",
+    "oldImagePath": "Images/Butter-garlic-prawns.jpg",
+    "matchedFile": "pork_or_beef_ribs_and_queen_prawns.jpg",
+    "newImagePath": "Images/(PORK OR BEEF) RIBS & QUEEN PRAWNS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 103,
+    "name": "(PORK OR BEEF) RIBS & WINGS",
+    "oldImagePath": "/uploads/menu-media/103.webp",
+    "matchedFile": "pork_or_beef_ribs_and_wings.jpg",
+    "newImagePath": "Images/(PORK OR BEEF) RIBS & WINGS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 104,
+    "name": "MIXED GRILL",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "mixed_grill.jpg",
+    "newImagePath": "Images/MIXED GRILL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 105,
+    "name": "PRIME STEAK & PRAWNS (Surf & Turf)",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "prime_steak_and_prawns_surf_and_turf.jpg",
+    "newImagePath": "Images/PRIME STEAK & PRAWNS (Surf & Turf).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 106,
+    "name": "(PORK OR BEEF) RIBS & LAMB CHOPS",
+    "oldImagePath": "Images/Crispy Lamb Chops.jpg",
+    "matchedFile": "pork_or_beef_ribs_and_lamb_chops.jpg",
+    "newImagePath": "Images/(PORK OR BEEF) RIBS & LAMB CHOPS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 107,
+    "name": "RUMP STEAK, BOEREWORS AND RIBS",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "rump_steak_boerewors_and_ribs.jpg",
+    "newImagePath": "Images/RUMP STEAK, BOEREWORS AND RIBS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 108,
+    "name": "T-BONE, WINGS AND BOEREWORS",
+    "oldImagePath": "/uploads/menu-media/108.webp",
+    "matchedFile": "t_bone_wings_and_boerewors.jpg",
+    "newImagePath": "Images/T-BONE, WINGS AND BOEREWORS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 109,
+    "name": "THE KING, QUEEN PLATTER",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "the_king_queen_platter.jpg",
+    "newImagePath": "Images/THE KING, QUEEN PLATTER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 110,
+    "name": "BBQ / PERI-PERI BEEF BURGER",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "bbq_peri_peri_beef_burger.jpg",
+    "newImagePath": "Images/BBQ PERI-PERI BEEF BURGER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 111,
+    "name": "CHEESE BURGER",
+    "oldImagePath": "Images/Bifteki Burger.jpg",
+    "matchedFile": "cheese_burger.jpg",
+    "newImagePath": "Images/CHEESE BURGER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 112,
+    "name": "BBQ / PERI-PERI CHICKEN BURGER",
+    "oldImagePath": "Images/Bifteki Burger.jpg",
+    "matchedFile": "bbq_peri_peri_chicken_burger.jpg",
+    "newImagePath": "Images/BBQ PERI-PERI CHICKEN BURGER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 113,
+    "name": "BACON AND CHICKEN BURGER",
+    "oldImagePath": "Images/Bifteki Burger.jpg",
+    "matchedFile": "bacon_and_chicken_burger.jpg",
+    "newImagePath": "Images/BACON AND CHICKEN BURGER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 114,
+    "name": "JALAPENO CHILLI AND CHEESE BURGER",
+    "oldImagePath": "Images/Bifteki Burger.jpg",
+    "matchedFile": "jalapeno_chilli_and_cheese_burger.jpg",
+    "newImagePath": "Images/JALAPENO CHILLI AND CHEESE BURGER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 115,
+    "name": "BACON AND CHEESE BURGER",
+    "oldImagePath": "Images/Bifteki Burger.jpg",
+    "matchedFile": "bacon_and_cheese_burger.jpg",
+    "newImagePath": "Images/BACON AND CHEESE BURGER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 116,
+    "name": "BACON, EGG & CHEESE BURGER",
+    "oldImagePath": "Images/Bifteki Burger.jpg",
+    "matchedFile": "bacon_egg_and_cheese_burger.jpg",
+    "newImagePath": "Images/BACON, EGG & CHEESE BURGER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 117,
+    "name": "HALF CHICKEN",
+    "oldImagePath": "Images/Chicken Pasta.jpg",
+    "matchedFile": "half_chicken.jpg",
+    "newImagePath": "Images/HALF CHICKEN.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 118,
+    "name": "CHICKEN BREAST",
+    "oldImagePath": "Images/Chicken Pasta.jpg",
+    "matchedFile": "chicken_breast.jpg",
+    "newImagePath": "Images/CHICKEN BREAST.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 119,
+    "name": "MUSHROOM SAUCE CHICKEN BREAST",
+    "oldImagePath": "Images/Chicken Pasta.jpg",
+    "matchedFile": "mushroom_sauce_chicken_breast.jpg",
+    "newImagePath": "Images/MUSHROOM SAUCE CHICKEN BREAST.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 120,
+    "name": "FULL CHICKEN",
+    "oldImagePath": "Images/Chicken Pasta.jpg",
+    "matchedFile": "full_chicken.jpg",
+    "newImagePath": "Images/FULL CHICKEN.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 121,
+    "name": "FIRECRACKER CHICKEN WINGS - 800g",
+    "oldImagePath": "Images/FIRECRACKER CHICKEN WINGS.jpg",
+    "matchedFile": "firecracker_chicken_wings_800g.jpg",
+    "newImagePath": "Images/FIRECRACKER CHICKEN WINGS - 800g.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 122,
+    "name": "CREAMY BASIL PESTO & MUSHROOM",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "creamy_basil_pesto_and_mushroom.jpg",
+    "newImagePath": "Images/CREAMY BASIL PESTO & MUSHROOM.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 123,
+    "name": "SPAGHETTI BOLOGNESE",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "spaghetti_bolognese.jpg",
+    "newImagePath": "Images/SPAGHETTI BOLOGNESE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 124,
+    "name": "CHICKEN PASTA",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "chicken_pasta.jpg",
+    "newImagePath": "Images/CHICKEN PASTA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 125,
+    "name": "ALFREDO",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "alfredo.jpg",
+    "newImagePath": "Images/ALFREDO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 126,
+    "name": "BEEF FILLET PASTA",
+    "oldImagePath": "Images/Beef fillet.jpg",
+    "matchedFile": "beef_fillet_pasta.jpg",
+    "newImagePath": "Images/BEEF FILLET PASTA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 127,
+    "name": "SEAFOOD PASTA",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "seafood_pasta.jpg",
+    "newImagePath": "Images/SEAFOOD PASTA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 128,
+    "name": "VEG BURGER",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "veg_burger.jpg",
+    "newImagePath": "Images/VEG BURGER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 129,
+    "name": "VEG PLATTER",
+    "oldImagePath": "Images/Veg Meze Platter.jpg",
+    "matchedFile": "veg_platter.jpg",
+    "newImagePath": "Images/VEG PLATTER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 130,
+    "name": "HALLOUMI BURGER",
+    "oldImagePath": "Images/Bifteki Burger.jpg",
+    "matchedFile": "halloumi_burger.jpg",
+    "newImagePath": "Images/HALLOUMI BURGER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 131,
+    "name": "CAPRESE & AVOCADO SALAD",
+    "oldImagePath": "Images/CAPRESE & AVOCADO SALAD.jpg",
+    "matchedFile": "caprese_and_avocado_salad_131.jpg",
+    "newImagePath": "Images/CAPRESE & AVOCADO SALAD [131].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 132,
+    "name": "MASHED POTATOES",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "mashed_potatoes.jpg",
+    "newImagePath": "Images/MASHED POTATOES.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 133,
+    "name": "CREAMED SPINACH",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "creamed_spinach.jpg",
+    "newImagePath": "Images/CREAMED SPINACH.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 134,
+    "name": "ONION RINGS",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "onion_rings.jpg",
+    "newImagePath": "Images/ONION RINGS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 135,
+    "name": "STEAKHOUSE CHIPS",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "steakhouse_chips.jpg",
+    "newImagePath": "Images/STEAKHOUSE CHIPS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 136,
+    "name": "SAUTÉED MUSHROOMS WITH FRESH HERBS",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "sauteed_mushrooms_with_fresh_herbs.jpg",
+    "newImagePath": "Images/SAUTÉED MUSHROOMS WITH FRESH HERBS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 137,
+    "name": "SAVOURY RICE",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "savoury_rice.jpg",
+    "newImagePath": "Images/SAVOURY RICE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 138,
+    "name": "SWEET PUMPKIN",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "sweet_pumpkin.jpg",
+    "newImagePath": "Images/SWEET PUMPKIN.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 139,
+    "name": "TOMATO & ONION SALAD",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "tomato_and_onion_salad.jpg",
+    "newImagePath": "Images/TOMATO & ONION SALAD.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 140,
+    "name": "STEAMED POTATOES & SOUR CREAM",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "steamed_potatoes_and_sour_cream.jpg",
+    "newImagePath": "Images/STEAMED POTATOES & SOUR CREAM.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 141,
+    "name": "TOMATO AND AVO SALAD",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "tomato_and_avo_salad.jpg",
+    "newImagePath": "Images/TOMATO AND AVO SALAD.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 142,
+    "name": "SIDE GREEN SALAD",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "side_green_salad.jpg",
+    "newImagePath": "Images/SIDE GREEN SALAD.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 143,
+    "name": "ADD FETA",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "add_feta.jpg",
+    "newImagePath": "Images/ADD FETA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 144,
+    "name": "DUO OF ICE CREAM",
+    "oldImagePath": "Images/Cheese Cake.jpg",
+    "matchedFile": "duo_of_ice_cream.jpg",
+    "newImagePath": "Images/DUO OF ICE CREAM.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 145,
+    "name": "TRIO OF ICE CREAM",
+    "oldImagePath": "Images/Cheese Cake.jpg",
+    "matchedFile": "trio_of_ice_cream.jpg",
+    "newImagePath": "Images/TRIO OF ICE CREAM.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 146,
+    "name": "CAPE MALVA PUDDING",
+    "oldImagePath": "Images/Cheese Cake.jpg",
+    "matchedFile": "cape_malva_pudding.jpg",
+    "newImagePath": "Images/CAPE MALVA PUDDING.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 147,
+    "name": "RED VELVET CAKE",
+    "oldImagePath": "Images/Cheese Cake.jpg",
+    "matchedFile": "red_velvet_cake.jpg",
+    "newImagePath": "Images/RED VELVET CAKE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 148,
+    "name": "DEATH BY CHOCOLATE CAKE",
+    "oldImagePath": "Images/Cheese Cake.jpg",
+    "matchedFile": "death_by_chocolate_cake.jpg",
+    "newImagePath": "Images/DEATH BY CHOCOLATE CAKE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 149,
+    "name": "CHOCOLATE BROWNIE",
+    "oldImagePath": "Images/Cheese Cake.jpg",
+    "matchedFile": "chocolate_brownie.jpg",
+    "newImagePath": "Images/CHOCOLATE BROWNIE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 150,
+    "name": "CHEF'S CHOICE - 2 Courses",
+    "oldImagePath": "Images/Beef fillet.jpg",
+    "matchedFile": "chef_s_choice_2_courses.jpg",
+    "newImagePath": "Images/CHEF'S CHOICE - 2 Courses.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 151,
+    "name": "CHEF'S CHOICE - 3 Courses",
+    "oldImagePath": "Images/Beef fillet.jpg",
+    "matchedFile": "chef_s_choice_3_courses.jpg",
+    "newImagePath": "Images/CHEF'S CHOICE - 3 Courses.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 152,
+    "name": "CHEF'S PREMIUM - 2 Courses",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "chef_s_premium_2_courses.jpg",
+    "newImagePath": "Images/CHEF'S PREMIUM - 2 Courses.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 153,
+    "name": "CHEF'S PREMIUM - 3 Courses",
+    "oldImagePath": "Images/Rump Steak.jpg",
+    "matchedFile": "chef_s_premium_3_courses.jpg",
+    "newImagePath": "Images/CHEF'S PREMIUM - 3 Courses.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 154,
+    "name": "MOËT & CHANDON BRUT",
+    "oldImagePath": "Images/Simonsig Kaapse Vonkel Brut (Cap Classique).jpg",
+    "matchedFile": "moet_and_chandon_brut.jpg",
+    "newImagePath": "Images/MOËT & CHANDON BRUT.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 155,
+    "name": "MOËT & CHANDON NECTAR",
+    "oldImagePath": "Images/Simonsig Kaapse Vonkel Brut (Cap Classique).jpg",
+    "matchedFile": "moet_and_chandon_nectar.jpg",
+    "newImagePath": "Images/MOËT & CHANDON NECTAR.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 156,
+    "name": "MOËT & CHANDON BRUT ROSÉ",
+    "oldImagePath": "Images/Simonsig Kaapse Vonkel Brut (Cap Classique).jpg",
+    "matchedFile": "moet_and_chandon_brut_rose.jpg",
+    "newImagePath": "Images/MOËT & CHANDON BRUT ROSÉ.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 157,
+    "name": "VEUVE CLICQUOT BRUT",
+    "oldImagePath": "Images/Simonsig Kaapse Vonkel Brut (Cap Classique).jpg",
+    "matchedFile": "veuve_clicquot_brut.jpg",
+    "newImagePath": "Images/VEUVE CLICQUOT BRUT.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 158,
+    "name": "VEUVE CLICQUOT ROSÉ",
+    "oldImagePath": "Images/Simonsig Kaapse Vonkel Brut (Cap Classique).jpg",
+    "matchedFile": "veuve_clicquot_rose.jpg",
+    "newImagePath": "Images/VEUVE CLICQUOT ROSÉ.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 159,
+    "name": "VEUVE CLICQUOT RICH",
+    "oldImagePath": "Images/Simonsig Kaapse Vonkel Brut (Cap Classique).jpg",
+    "matchedFile": "veuve_clicquot_rich.jpg",
+    "newImagePath": "Images/VEUVE CLICQUOT RICH.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 160,
+    "name": "BOLLINGER SPECIAL CUVEE BRUT",
+    "oldImagePath": "Images/Simonsig Kaapse Vonkel Brut (Cap Classique).jpg",
+    "matchedFile": "bollinger_special_cuvee_brut.jpg",
+    "newImagePath": "Images/BOLLINGER SPECIAL CUVEE BRUT.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 161,
+    "name": "DOM PERIGNON BLANC",
+    "oldImagePath": "Images/Simonsig Kaapse Vonkel Brut (Cap Classique).jpg",
+    "matchedFile": "dom_perignon_blanc.jpg",
+    "newImagePath": "Images/DOM PERIGNON BLANC.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 162,
+    "name": "DOM PERIGNON ROSE",
+    "oldImagePath": "Images/Simonsig Kaapse Vonkel Brut (Cap Classique).jpg",
+    "matchedFile": "dom_perignon_rose.jpg",
+    "newImagePath": "Images/DOM PERIGNON ROSE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 163,
+    "name": "ARMAND DE BRIGNAC GOLD (ACE OF SPADES)",
+    "oldImagePath": "Images/Simonsig Kaapse Vonkel Brut (Cap Classique).jpg",
+    "matchedFile": "armand_de_brignac_gold_ace_of_spades.jpg",
+    "newImagePath": "Images/ARMAND DE BRIGNAC GOLD (ACE OF SPADES).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 164,
+    "name": "ARMAND DE BRIGNAC BRUT ROSÉ (ACE OF SPADES)",
+    "oldImagePath": "Images/Simonsig Kaapse Vonkel Brut (Cap Classique).jpg",
+    "matchedFile": "armand_de_brignac_brut_rose_ace_of_spades.jpg",
+    "newImagePath": "Images/ARMAND DE BRIGNAC BRUT ROSÉ (ACE OF SPADES).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 165,
+    "name": "L'ORMARINS BRUT CLASSIQUE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "l_ormarins_brut_classique.jpg",
+    "newImagePath": "Images/L'ORMARINS BRUT CLASSIQUE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 166,
+    "name": "L'ORMARINS BRUT CLASSIQUE ROSÉ",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "l_ormarins_brut_classique_rose.jpg",
+    "newImagePath": "Images/L'ORMARINS BRUT CLASSIQUE ROSÉ.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 167,
+    "name": "PIERRE JOURDAN BELLE NECTAR",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "pierre_jourdan_belle_nectar.jpg",
+    "newImagePath": "Images/PIERRE JOURDAN BELLE NECTAR.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 168,
+    "name": "KRONE NIGHT NECTAR DEMI-SEC",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "krone_night_nectar_demi_sec.jpg",
+    "newImagePath": "Images/KRONE NIGHT NECTAR DEMI-SEC.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 169,
+    "name": "PONGRÀCZ ROSÉ",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "pongracz_rose.jpg",
+    "newImagePath": "Images/PONGRÀCZ ROSÉ.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 170,
+    "name": "PONGRÀCZ NOBLE NECTAR",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "pongracz_noble_nectar.jpg",
+    "newImagePath": "Images/PONGRÀCZ NOBLE NECTAR.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 171,
+    "name": "DA LUCA PROSECCO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "da_luca_prosecco.jpg",
+    "newImagePath": "Images/DA LUCA PROSECCO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 172,
+    "name": "DA LUCA ROSÉ PROSECCO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "da_luca_rose_prosecco.jpg",
+    "newImagePath": "Images/DA LUCA ROSÉ PROSECCO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 173,
+    "name": "NEDERBURG",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "nederburg_173.jpg",
+    "newImagePath": "Images/NEDERBURG [173].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 174,
+    "name": "DURBANVILLE HILLS",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "durbanville_hills_174.jpg",
+    "newImagePath": "Images/DURBANVILLE HILLS [174].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 175,
+    "name": "DIEMERSDAL",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "diemersdal.jpg",
+    "newImagePath": "Images/DIEMERSDAL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 176,
+    "name": "SHANNON SANCTUARY PEAK",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "shannon_sanctuary_peak.jpg",
+    "newImagePath": "Images/SHANNON SANCTUARY PEAK.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 177,
+    "name": "ALLÉE BLEUE ESTATE",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "allee_bleue_estate_177.jpg",
+    "newImagePath": "Images/ALLÉE BLEUE ESTATE [177].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 178,
+    "name": "SPRINGFIELD LIFE OF STONE",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "springfield_life_of_stone.jpg",
+    "newImagePath": "Images/SPRINGFIELD LIFE OF STONE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 179,
+    "name": "KLEIN CONSTANTIA",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "klein_constantia.jpg",
+    "newImagePath": "Images/KLEIN CONSTANTIA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 180,
+    "name": "FRYER'S COVE",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "fryer_s_cove_180.jpg",
+    "newImagePath": "Images/FRYER'S COVE [180].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 181,
+    "name": "BLACK",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "black_181.jpg",
+    "newImagePath": "Images/BLACK [181].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 182,
+    "name": "KEN FORRESTER OLD VINE RESERVE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "ken_forrester_old_vine_reserve.jpg",
+    "newImagePath": "Images/KEN FORRESTER OLD VINE RESERVE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 183,
+    "name": "KLEINE ZALZE VINEYARD SELECTION",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "kleine_zalze_vineyard_selection_183.jpg",
+    "newImagePath": "Images/KLEINE ZALZE VINEYARD SELECTION [183].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 184,
+    "name": "ORPHEUS & THE RAVEN OLD BUSH VINE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "orpheus_and_the_raven_old_bush_vine.jpg",
+    "newImagePath": "Images/ORPHEUS & THE RAVEN OLD BUSH VINE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 185,
+    "name": "L'AVENIR SINGLE BLOCK",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "l_avenir_single_block.jpg",
+    "newImagePath": "Images/L'AVENIR SINGLE BLOCK.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 186,
+    "name": "FRYER'S COVE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "fryer_s_cove_186.jpg",
+    "newImagePath": "Images/FRYER'S COVE [186].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 187,
+    "name": "DURBANVILLE HILLS",
+    "oldImagePath": "Images/Boschendal 1685 Chardonnay.jpg",
+    "matchedFile": "durbanville_hills_187.jpg",
+    "newImagePath": "Images/DURBANVILLE HILLS [187].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 188,
+    "name": "FAT BASTARD",
+    "oldImagePath": "Images/Boschendal 1685 Chardonnay.jpg",
+    "matchedFile": "fat_bastard_188.jpg",
+    "newImagePath": "Images/FAT BASTARD [188].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 189,
+    "name": "GLENELLY UNWOODED",
+    "oldImagePath": "Images/Boschendal 1685 Chardonnay.jpg",
+    "matchedFile": "glenelly_unwooded.jpg",
+    "newImagePath": "Images/GLENELLY UNWOODED.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 190,
+    "name": "CONSTITUTION ROAD",
+    "oldImagePath": "Images/Boschendal 1685 Chardonnay.jpg",
+    "matchedFile": "constitution_road_190.jpg",
+    "newImagePath": "Images/CONSTITUTION ROAD [190].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 191,
+    "name": "ALLÉE BLEUE ISABEAU",
+    "oldImagePath": "Images/Boschendal 1685 Chardonnay.jpg",
+    "matchedFile": "allee_bleue_isabeau.jpg",
+    "newImagePath": "Images/ALLÉE BLEUE ISABEAU.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 192,
+    "name": "RUPERT & ROTHSCHILD BARONESS NADINE",
+    "oldImagePath": "Images/Boschendal 1685 Chardonnay.jpg",
+    "matchedFile": "rupert_and_rothschild_baroness_nadine.jpg",
+    "newImagePath": "Images/RUPERT & ROTHSCHILD BARONESS NADINE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 193,
+    "name": "BLACK",
+    "oldImagePath": "Images/Boschendal 1685 Chardonnay.jpg",
+    "matchedFile": "black_193.jpg",
+    "newImagePath": "Images/BLACK [193].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 194,
+    "name": "BOSCHENDAL 1685",
+    "oldImagePath": "Images/Boschendal 1685 Chardonnay.jpg",
+    "matchedFile": "boschendal_1685_194.jpg",
+    "newImagePath": "Images/BOSCHENDAL 1685 [194].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 195,
+    "name": "ZONNEBLOEM BLANC DE BLANC",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "zonnebloem_blanc_de_blanc.jpg",
+    "newImagePath": "Images/ZONNEBLOEM BLANC DE BLANC.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 196,
+    "name": "NITIDA SEMILLION",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "nitida_semillion.jpg",
+    "newImagePath": "Images/NITIDA SEMILLION.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 197,
+    "name": "HAUTE CABRIÈRE CHARDONNAY PINOT NOIR",
+    "oldImagePath": "Images/Boschendal 1685 Chardonnay.jpg",
+    "matchedFile": "haute_cabriere_chardonnay_pinot_noir.jpg",
+    "newImagePath": "Images/HAUTE CABRIÈRE CHARDONNAY PINOT NOIR.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 198,
+    "name": "CONSTANTIA GLEN TWO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "constantia_glen_two.jpg",
+    "newImagePath": "Images/CONSTANTIA GLEN TWO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 199,
+    "name": "DE KRANS MOSCATO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "de_krans_moscato.jpg",
+    "newImagePath": "Images/DE KRANS MOSCATO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 200,
+    "name": "TRUMPS",
+    "oldImagePath": "Images/Fairview Pinotage.jpeg",
+    "matchedFile": "trumps.jpg",
+    "newImagePath": "Images/TRUMPS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 201,
+    "name": "BEYERSKLOOF RESERVE",
+    "oldImagePath": "Images/Fairview Pinotage.jpeg",
+    "matchedFile": "beyerskloof_reserve.jpg",
+    "newImagePath": "Images/BEYERSKLOOF RESERVE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 202,
+    "name": "ZONNEBLOEM",
+    "oldImagePath": "Images/Fairview Pinotage.jpeg",
+    "matchedFile": "zonnebloem_202.jpg",
+    "newImagePath": "Images/ZONNEBLOEM [202].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 203,
+    "name": "DIEMERSDAL RESERVE",
+    "oldImagePath": "Images/Fairview Pinotage.jpeg",
+    "matchedFile": "diemersdal_reserve.jpg",
+    "newImagePath": "Images/DIEMERSDAL RESERVE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 204,
+    "name": "LANZERAC",
+    "oldImagePath": "Images/Fairview Pinotage.jpeg",
+    "matchedFile": "lanzerac.jpg",
+    "newImagePath": "Images/LANZERAC.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 205,
+    "name": "BLACK",
+    "oldImagePath": "Images/Fairview Pinotage.jpeg",
+    "matchedFile": "black_205.jpg",
+    "newImagePath": "Images/BLACK [205].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 206,
+    "name": "ALLÉE BLEUE BLACK SERIES OLD VINE",
+    "oldImagePath": "Images/Fairview Pinotage.jpeg",
+    "matchedFile": "allee_bleue_black_series_old_vine.jpg",
+    "newImagePath": "Images/ALLÉE BLEUE BLACK SERIES OLD VINE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 207,
+    "name": "SPIER 21 GABLES",
+    "oldImagePath": "Images/Fairview Pinotage.jpeg",
+    "matchedFile": "spier_21_gables.jpg",
+    "newImagePath": "Images/SPIER 21 GABLES.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 208,
+    "name": "ORPHEUS AND THE RAVEN 7",
+    "oldImagePath": "Images/Fairview Pinotage.jpeg",
+    "matchedFile": "orpheus_and_the_raven_7.jpg",
+    "newImagePath": "Images/ORPHEUS AND THE RAVEN 7.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 209,
+    "name": "GLENELLY GLASS COLLECTION",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "glenelly_glass_collection.jpg",
+    "newImagePath": "Images/GLENELLY GLASS COLLECTION.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 210,
+    "name": "DURBANVILLE HILLS",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "durbanville_hills_210.jpg",
+    "newImagePath": "Images/DURBANVILLE HILLS [210].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 211,
+    "name": "GLEN CARLOU",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "glen_carlou.jpg",
+    "newImagePath": "Images/GLEN CARLOU.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 212,
+    "name": "DE GRENDEL",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "de_grendel.jpg",
+    "newImagePath": "Images/DE GRENDEL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 213,
+    "name": "SHANNON ELGIN",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "shannon_elgin.jpg",
+    "newImagePath": "Images/SHANNON ELGIN.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 214,
+    "name": "THELEMA",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "thelema.jpg",
+    "newImagePath": "Images/THELEMA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 215,
+    "name": "CREATION",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "creation_215.jpg",
+    "newImagePath": "Images/CREATION [215].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 216,
+    "name": "GROOT CONSTANTIA",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "groot_constantia.jpg",
+    "newImagePath": "Images/GROOT CONSTANTIA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 217,
+    "name": "BOSCHENDAL 1685",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "boschendal_1685_217.jpg",
+    "newImagePath": "Images/BOSCHENDAL 1685 [217].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 218,
+    "name": "NEDERBURG",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "nederburg_218.jpg",
+    "newImagePath": "Images/NEDERBURG [218].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 219,
+    "name": "WARWICK THE FIRST LADY",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "warwick_the_first_lady.jpg",
+    "newImagePath": "Images/WARWICK THE FIRST LADY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 220,
+    "name": "L'AVENIR GLENROSE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "l_avenir_glenrose.jpg",
+    "newImagePath": "Images/L'AVENIR GLENROSE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 221,
+    "name": "LA MOTTE VIN DE JOIE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "la_motte_vin_de_joie.jpg",
+    "newImagePath": "Images/LA MOTTE VIN DE JOIE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 222,
+    "name": "NEDERBURG WINE MASTERS",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "nederburg_wine_masters.jpg",
+    "newImagePath": "Images/NEDERBURG WINE MASTERS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 223,
+    "name": "ZONNEBLOEM",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "zonnebloem_223.jpg",
+    "newImagePath": "Images/ZONNEBLOEM [223].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 224,
+    "name": "RUSTENBURG",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "rustenburg.jpg",
+    "newImagePath": "Images/RUSTENBURG.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 225,
+    "name": "TOKARA",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "tokara.jpg",
+    "newImagePath": "Images/TOKARA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 226,
+    "name": "LE RICHE",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "le_riche.jpg",
+    "newImagePath": "Images/LE RICHE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 227,
+    "name": "ERNIE ELS MAJOR SERIES",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "ernie_els_major_series.jpg",
+    "newImagePath": "Images/ERNIE ELS MAJOR SERIES.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 228,
+    "name": "KLEINE ZALZE FAMILY RESERVE",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "kleine_zalze_family_reserve.jpg",
+    "newImagePath": "Images/KLEINE ZALZE FAMILY RESERVE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 229,
+    "name": "BOEKENHOUTSKLOOF STELLENBOSCH",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "boekenhoutskloof_stellenbosch.jpg",
+    "newImagePath": "Images/BOEKENHOUTSKLOOF STELLENBOSCH.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 230,
+    "name": "LE RICHE RESERVE",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "le_riche_reserve.jpg",
+    "newImagePath": "Images/LE RICHE RESERVE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 231,
+    "name": "NEIL ELLIS JONKERSHOEK VALLEY",
+    "oldImagePath": "Images/Two Oceans Sauvignon Blanc.jpg",
+    "matchedFile": "neil_ellis_jonkershoek_valley.jpg",
+    "newImagePath": "Images/NEIL ELLIS JONKERSHOEK VALLEY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 232,
+    "name": "DURBANVILLE HILLS",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "durbanville_hills_232.jpg",
+    "newImagePath": "Images/DURBANVILLE HILLS [232].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 233,
+    "name": "CAPE OF GOOD HOPE RIEBEEKSRIVIER",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "cape_of_good_hope_riebeeksrivier.jpg",
+    "newImagePath": "Images/CAPE OF GOOD HOPE RIEBEEKSRIVIER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 234,
+    "name": "FAT BASTARD",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "fat_bastard_234.jpg",
+    "newImagePath": "Images/FAT BASTARD [234].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 235,
+    "name": "KLEINE ZALZE VINEYARD SELECTION",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "kleine_zalze_vineyard_selection_235.jpg",
+    "newImagePath": "Images/KLEINE ZALZE VINEYARD SELECTION [235].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 236,
+    "name": "BLACK",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "black_236.jpg",
+    "newImagePath": "Images/BLACK [236].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 237,
+    "name": "KANU NATURAL SWEET",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "kanu_natural_sweet.jpg",
+    "newImagePath": "Images/KANU NATURAL SWEET.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 238,
+    "name": "ALLÉE BLEUE ESTATE",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "allee_bleue_estate_238.jpg",
+    "newImagePath": "Images/ALLÉE BLEUE ESTATE [238].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 239,
+    "name": "CONSTITUTION ROAD",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "constitution_road_239.jpg",
+    "newImagePath": "Images/CONSTITUTION ROAD [239].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 240,
+    "name": "RUST EN VREDE ESTATE",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "rust_en_vrede_estate_240.jpg",
+    "newImagePath": "Images/RUST EN VREDE ESTATE [240].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 241,
+    "name": "BOEKENHOUTSKLOOF",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "boekenhoutskloof.jpg",
+    "newImagePath": "Images/BOEKENHOUTSKLOOF.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 242,
+    "name": "ALTO",
+    "oldImagePath": "Images/Porcupine Ridge Shiraz.jpg",
+    "matchedFile": "alto.jpg",
+    "newImagePath": "Images/ALTO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 243,
+    "name": "CAP MARITIME COASTAL",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "cap_maritime_coastal.jpg",
+    "newImagePath": "Images/CAP MARITIME COASTAL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 244,
+    "name": "CREATION",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "creation_244.jpg",
+    "newImagePath": "Images/CREATION [244].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 245,
+    "name": "HAUTE CABRIÈRE UNWOODED",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "haute_cabriere_unwooded.jpg",
+    "newImagePath": "Images/HAUTE CABRIÈRE UNWOODED.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 246,
+    "name": "GHOST CORNER",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "ghost_corner.jpg",
+    "newImagePath": "Images/GHOST CORNER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 247,
+    "name": "PAUL CLÜVER ESTATE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "paul_cluver_estate.jpg",
+    "newImagePath": "Images/PAUL CLÜVER ESTATE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 248,
+    "name": "DALLA CIA",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "dalla_cia.jpg",
+    "newImagePath": "Images/DALLA CIA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 249,
+    "name": "MEERLUST RED",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "meerlust_red.jpg",
+    "newImagePath": "Images/MEERLUST RED.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 250,
+    "name": "WARWICK THREE CAPE LADIES",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "warwick_three_cape_ladies.jpg",
+    "newImagePath": "Images/WARWICK THREE CAPE LADIES.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 251,
+    "name": "FAT BASTARD GOLDEN RESERVE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "fat_bastard_golden_reserve.jpg",
+    "newImagePath": "Images/FAT BASTARD GOLDEN RESERVE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 252,
+    "name": "ANTHONIJ RUPERT OPTIMA",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "anthonij_rupert_optima.jpg",
+    "newImagePath": "Images/ANTHONIJ RUPERT OPTIMA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 253,
+    "name": "DELAIRE GRAFF BOTMASKOP",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "delaire_graff_botmaskop.jpg",
+    "newImagePath": "Images/DELAIRE GRAFF BOTMASKOP.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 254,
+    "name": "LA MOTTE PIERNEEF SYRAH VIOGNIER",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "la_motte_pierneef_syrah_viognier.jpg",
+    "newImagePath": "Images/LA MOTTE PIERNEEF SYRAH VIOGNIER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 255,
+    "name": "HAUTE CABRIÈRE ARNIM FAMILY RÉSERVE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "haute_cabriere_arnim_family_reserve.jpg",
+    "newImagePath": "Images/HAUTE CABRIÈRE ARNIM FAMILY RÉSERVE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 256,
+    "name": "SARONSBERG SEISMIC",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "saronsberg_seismic.jpg",
+    "newImagePath": "Images/SARONSBERG SEISMIC.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 257,
+    "name": "LE RICHE RICHESSE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "le_riche_richesse.jpg",
+    "newImagePath": "Images/LE RICHE RICHESSE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 258,
+    "name": "BOSCHENDAL NICOLAS",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "boschendal_nicolas.jpg",
+    "newImagePath": "Images/BOSCHENDAL NICOLAS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 259,
+    "name": "RUPERT & ROTHSCHILD CLASSIQUE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "rupert_and_rothschild_classique.jpg",
+    "newImagePath": "Images/RUPERT & ROTHSCHILD CLASSIQUE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 260,
+    "name": "SERIOUSLY OLD DIRT BY VILAFONTE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "seriously_old_dirt_by_vilafonte.jpg",
+    "newImagePath": "Images/SERIOUSLY OLD DIRT BY VILAFONTE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 261,
+    "name": "THE CHOCOLATE BLOCK",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "the_chocolate_block.jpg",
+    "newImagePath": "Images/THE CHOCOLATE BLOCK.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 262,
+    "name": "ORPHEUS & THE RAVEN ETERNAL 8",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "orpheus_and_the_raven_eternal_8.jpg",
+    "newImagePath": "Images/ORPHEUS & THE RAVEN ETERNAL 8.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 263,
+    "name": "GROOT CONSTANTIA LADY OF ABUNDANCE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "groot_constantia_lady_of_abundance.jpg",
+    "newImagePath": "Images/GROOT CONSTANTIA LADY OF ABUNDANCE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 264,
+    "name": "CONSTANTIA GLEN 3",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "constantia_glen_3.jpg",
+    "newImagePath": "Images/CONSTANTIA GLEN 3.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 265,
+    "name": "ORPHEUS & THE RAVEN 42",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "orpheus_and_the_raven_42.jpg",
+    "newImagePath": "Images/ORPHEUS & THE RAVEN 42.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 266,
+    "name": "MURATIE ANSELA VAN DE CAAB",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "muratie_ansela_van_de_caab.jpg",
+    "newImagePath": "Images/MURATIE ANSELA VAN DE CAAB.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 267,
+    "name": "ALTO ESTATE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "alto_estate.jpg",
+    "newImagePath": "Images/ALTO ESTATE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 268,
+    "name": "GROOT CONSTANTIA GOUVERNEURS RESERVE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "groot_constantia_gouverneurs_reserve.jpg",
+    "newImagePath": "Images/GROOT CONSTANTIA GOUVERNEURS RESERVE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 269,
+    "name": "GLENELLY LADY MAY",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "glenelly_lady_may.jpg",
+    "newImagePath": "Images/GLENELLY LADY MAY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 270,
+    "name": "RUST EN VREDE ESTATE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "rust_en_vrede_estate_270.jpg",
+    "newImagePath": "Images/RUST EN VREDE ESTATE [270].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 271,
+    "name": "WARWICK TRILOGY",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "warwick_trilogy.jpg",
+    "newImagePath": "Images/WARWICK TRILOGY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 272,
+    "name": "VILAFONTE SERIES M",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "vilafonte_series_m.jpg",
+    "newImagePath": "Images/VILAFONTE SERIES M.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 273,
+    "name": "VILAFONTE SERIES C",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "vilafonte_series_c.jpg",
+    "newImagePath": "Images/VILAFONTE SERIES C.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 274,
+    "name": "CASTLE",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "castle.jpg",
+    "newImagePath": "Images/CASTLE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 275,
+    "name": "CASTLE LITE",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "castle_lite_275.jpg",
+    "newImagePath": "Images/CASTLE LITE [275].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 276,
+    "name": "STELLA ARTOIS",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "stella_artois.jpg",
+    "newImagePath": "Images/STELLA ARTOIS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 277,
+    "name": "HEINEKEN",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "heineken_277.jpg",
+    "newImagePath": "Images/HEINEKEN [277].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 278,
+    "name": "WINDHOEK",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "windhoek.jpg",
+    "newImagePath": "Images/WINDHOEK.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 279,
+    "name": "CARLING BLACK LABEL",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "carling_black_label.jpg",
+    "newImagePath": "Images/CARLING BLACK LABEL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 280,
+    "name": "CASTLE LAGER",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "castle_lager.jpg",
+    "newImagePath": "Images/CASTLE LAGER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 281,
+    "name": "CASTLE LITE",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "castle_lite_281.jpg",
+    "newImagePath": "Images/CASTLE LITE [281].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 282,
+    "name": "CASTLE DOUBLE MALT",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "castle_double_malt.jpg",
+    "newImagePath": "Images/CASTLE DOUBLE MALT.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 283,
+    "name": "FLYING FISH LEMON",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "flying_fish_lemon.jpg",
+    "newImagePath": "Images/FLYING FISH LEMON.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 284,
+    "name": "FLYING FISH DRY APPLE",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "flying_fish_dry_apple.jpg",
+    "newImagePath": "Images/FLYING FISH DRY APPLE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 285,
+    "name": "CORONA",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "corona.jpg",
+    "newImagePath": "Images/CORONA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 286,
+    "name": "AMSTEL",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "amstel.jpg",
+    "newImagePath": "Images/AMSTEL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 287,
+    "name": "HEINEKEN SILVER",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "heineken_silver.jpg",
+    "newImagePath": "Images/HEINEKEN SILVER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 288,
+    "name": "HEINEKEN",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "heineken_288.jpg",
+    "newImagePath": "Images/HEINEKEN [288].jpg",
+    "tier": "T0",
+    "confidence": 100
+  },
+  {
+    "id": 289,
+    "name": "BUDWEISER",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "budweiser.jpg",
+    "newImagePath": "Images/BUDWEISER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 290,
+    "name": "CORONA NON-ALCOHOLIC 0.0",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "corona_non_alcoholic_0_0.jpg",
+    "newImagePath": "Images/CORONA NON-ALCOHOLIC 0.0.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 291,
+    "name": "HEINEKEN 0.0",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "heineken_0_0.jpg",
+    "newImagePath": "Images/HEINEKEN 0.0.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 292,
+    "name": "SAVANNA LEMON - NON-ALCOHOLIC",
+    "oldImagePath": "Images/Heineken (330ml).jpg",
+    "matchedFile": "savanna_lemon_non_alcoholic.jpg",
+    "newImagePath": "Images/SAVANNA LEMON - NON-ALCOHOLIC.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 293,
+    "name": "BRUTAL FRUIT LITCHI SECHE",
+    "oldImagePath": "Images/Savanna Dry (330ml).jpg",
+    "matchedFile": "brutal_fruit_litchi_seche.jpg",
+    "newImagePath": "Images/BRUTAL FRUIT LITCHI SECHE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 294,
+    "name": "BERNINI BLUSH",
+    "oldImagePath": "Images/Savanna Dry (330ml).jpg",
+    "matchedFile": "bernini_blush.jpg",
+    "newImagePath": "Images/BERNINI BLUSH.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 295,
+    "name": "HUNTERS DRY",
+    "oldImagePath": "Images/Savanna Dry (330ml).jpg",
+    "matchedFile": "hunters_dry.jpg",
+    "newImagePath": "Images/HUNTERS DRY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 296,
+    "name": "HUNTERS GOLD",
+    "oldImagePath": "Images/Savanna Dry (330ml).jpg",
+    "matchedFile": "hunters_gold.jpg",
+    "newImagePath": "Images/HUNTERS GOLD.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 297,
+    "name": "SAVANNA DRY",
+    "oldImagePath": "Images/Savanna Dry (330ml).jpg",
+    "matchedFile": "savanna_dry.jpg",
+    "newImagePath": "Images/SAVANNA DRY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 298,
+    "name": "SAVANNA LIGHT",
+    "oldImagePath": "Images/Savanna Dry (330ml).jpg",
+    "matchedFile": "savanna_light.jpg",
+    "newImagePath": "Images/SAVANNA LIGHT.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 299,
+    "name": "LOXTONIA CRISPY APPLE CIDER",
+    "oldImagePath": "Images/Savanna Dry (330ml).jpg",
+    "matchedFile": "loxtonia_crispy_apple_cider.jpg",
+    "newImagePath": "Images/LOXTONIA CRISPY APPLE CIDER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 300,
+    "name": "LOXTONIA STONE FRUIT CIDER",
+    "oldImagePath": "Images/Savanna Dry (330ml).jpg",
+    "matchedFile": "loxtonia_stone_fruit_cider.jpg",
+    "newImagePath": "Images/LOXTONIA STONE FRUIT CIDER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 301,
+    "name": "GLENFIDDICH 12 year",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "glenfiddich_12_year.jpg",
+    "newImagePath": "Images/GLENFIDDICH 12 year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 302,
+    "name": "GLENFIDDICH 15 year",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "glenfiddich_15_year.jpg",
+    "newImagePath": "Images/GLENFIDDICH 15 year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 303,
+    "name": "GLENFIDDICH 18 year",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "glenfiddich_18_year.jpg",
+    "newImagePath": "Images/GLENFIDDICH 18 year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 304,
+    "name": "GLENFIDDICH 21 year",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "glenfiddich_21_year.jpg",
+    "newImagePath": "Images/GLENFIDDICH 21 year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 305,
+    "name": "GLENFIDDICH 23 year Grand Gru",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "glenfiddich_23_year_grand_gru.jpg",
+    "newImagePath": "Images/GLENFIDDICH 23 year Grand Gru.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 306,
+    "name": "GLENFIDDICH 26 year Grande Couronne",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "glenfiddich_26_year_grande_couronne.jpg",
+    "newImagePath": "Images/GLENFIDDICH 26 year Grande Couronne.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 307,
+    "name": "JOHNNIE WALKER BLONDE",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "johnnie_walker_blonde.jpg",
+    "newImagePath": "Images/JOHNNIE WALKER BLONDE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 308,
+    "name": "JOHNNIE WALKER BLACK",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "johnnie_walker_black.jpg",
+    "newImagePath": "Images/JOHNNIE WALKER BLACK.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 309,
+    "name": "JOHNNIE WALKER GOLD",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "johnnie_walker_gold.jpg",
+    "newImagePath": "Images/JOHNNIE WALKER GOLD.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 310,
+    "name": "JOHNNIE WALKER GREEN",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "johnnie_walker_green.jpg",
+    "newImagePath": "Images/JOHNNIE WALKER GREEN.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 311,
+    "name": "JOHNNIE WALKER BLUE",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "johnnie_walker_blue.jpg",
+    "newImagePath": "Images/JOHNNIE WALKER BLUE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 312,
+    "name": "JAMESON",
+    "oldImagePath": "Images/Jameson Irish Whiskey 750ml.jpg",
+    "matchedFile": "jameson.jpg",
+    "newImagePath": "Images/JAMESON.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 313,
+    "name": "JAMESON SELECT RESERVE",
+    "oldImagePath": "Images/Jameson Irish Whiskey 750ml.jpg",
+    "matchedFile": "jameson_select_reserve.jpg",
+    "newImagePath": "Images/JAMESON SELECT RESERVE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 314,
+    "name": "BELLS",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "bells.jpg",
+    "newImagePath": "Images/BELLS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 315,
+    "name": "JACK DANIELS",
+    "oldImagePath": "Images/Jameson Irish Whiskey 750ml.jpg",
+    "matchedFile": "jack_daniels.jpg",
+    "newImagePath": "Images/JACK DANIELS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 316,
+    "name": "BAINS CAPE MOUNTAIN",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "bains_cape_mountain.jpg",
+    "newImagePath": "Images/BAINS CAPE MOUNTAIN.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 317,
+    "name": "GRANTS TRIPPLE WOOD 12 year",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "grants_tripple_wood_12_year.jpg",
+    "newImagePath": "Images/GRANTS TRIPPLE WOOD 12 year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 318,
+    "name": "BUSHMILLS ORIGINAL",
+    "oldImagePath": "Images/Jameson Irish Whiskey 750ml.jpg",
+    "matchedFile": "bushmills_original.jpg",
+    "newImagePath": "Images/BUSHMILLS ORIGINAL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 319,
+    "name": "BUSHMILLS BLACK",
+    "oldImagePath": "Images/Jameson Irish Whiskey 750ml.jpg",
+    "matchedFile": "bushmills_black.jpg",
+    "newImagePath": "Images/BUSHMILLS BLACK.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 320,
+    "name": "CARDHU 12 year",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "cardhu_12_year.jpg",
+    "newImagePath": "Images/CARDHU 12 year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 321,
+    "name": "MACALLAN 15 year",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "macallan_15_year.jpg",
+    "newImagePath": "Images/MACALLAN 15 year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 322,
+    "name": "GLENLIVET 18 year",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "glenlivet_18_year.jpg",
+    "newImagePath": "Images/GLENLIVET 18 year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 323,
+    "name": "GLENMORANGIE 10 year",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "glenmorangie_10_year.jpg",
+    "newImagePath": "Images/GLENMORANGIE 10 year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 324,
+    "name": "SINGLETON 12 year",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "singleton_12_year.jpg",
+    "newImagePath": "Images/SINGLETON 12 year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 325,
+    "name": "BALVENIE 12 year",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "balvenie_12_year.jpg",
+    "newImagePath": "Images/BALVENIE 12 year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 326,
+    "name": "LAGAVULIN 16 year",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "lagavulin_16_year.jpg",
+    "newImagePath": "Images/LAGAVULIN 16 year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 327,
+    "name": "POGUES IRISH WHISKY",
+    "oldImagePath": "Images/Jameson Irish Whiskey 750ml.jpg",
+    "matchedFile": "pogues_irish_whisky.jpg",
+    "newImagePath": "Images/POGUES IRISH WHISKY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 328,
+    "name": "REMY MARTIN 1738",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "remy_martin_1738.jpg",
+    "newImagePath": "Images/REMY MARTIN 1738.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 329,
+    "name": "REMY MARTIN VSOP",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "remy_martin_vsop.jpg",
+    "newImagePath": "Images/REMY MARTIN VSOP.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 330,
+    "name": "REMY MARTIN XO EXCELLENCE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "remy_martin_xo_excellence.jpg",
+    "newImagePath": "Images/REMY MARTIN XO EXCELLENCE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 331,
+    "name": "HENNESSY VERY SPECIAL",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "hennessy_very_special.jpg",
+    "newImagePath": "Images/HENNESSY VERY SPECIAL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 332,
+    "name": "HENNESSY VSOP PRIVILEGE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "hennessy_vsop_privilege.jpg",
+    "newImagePath": "Images/HENNESSY VSOP PRIVILEGE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 333,
+    "name": "HENNESSY XO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "hennessy_xo.jpg",
+    "newImagePath": "Images/HENNESSY XO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 334,
+    "name": "JOSE CUERVO CLASICO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "jose_cuervo_clasico.jpg",
+    "newImagePath": "Images/JOSE CUERVO CLASICO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 335,
+    "name": "JOSE CUERVO REPOSADO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "jose_cuervo_reposado.jpg",
+    "newImagePath": "Images/JOSE CUERVO REPOSADO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 336,
+    "name": "JOSE CUERVO TRADICIONAL PLATA",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "jose_cuervo_tradicional_plata.jpg",
+    "newImagePath": "Images/JOSE CUERVO TRADICIONAL PLATA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 337,
+    "name": "JOSE CUERVO TRADICIONAL REPOSADO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "jose_cuervo_tradicional_reposado.jpg",
+    "newImagePath": "Images/JOSE CUERVO TRADICIONAL REPOSADO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 338,
+    "name": "1800 TEQUILA REPOSADO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "1800_tequila_reposado.jpg",
+    "newImagePath": "Images/1800 TEQUILA REPOSADO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 339,
+    "name": "HERENCIA REPOSADO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "herencia_reposado.jpg",
+    "newImagePath": "Images/HERENCIA REPOSADO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 340,
+    "name": "HERENCIA ANEJO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "herencia_anejo.jpg",
+    "newImagePath": "Images/HERENCIA ANEJO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 341,
+    "name": "DON JULIO BLANCO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "don_julio_blanco.jpg",
+    "newImagePath": "Images/DON JULIO BLANCO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 342,
+    "name": "DON JULIO REPOSADO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "don_julio_reposado.jpg",
+    "newImagePath": "Images/DON JULIO REPOSADO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 343,
+    "name": "DON JULIO 1942 ANEJO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "don_julio_1942_anejo.jpg",
+    "newImagePath": "Images/DON JULIO 1942 ANEJO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 344,
+    "name": "CLASE AZUL REPOSADO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "clase_azul_reposado.jpg",
+    "newImagePath": "Images/CLASE AZUL REPOSADO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 345,
+    "name": "TANQUERAY",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "tanqueray.jpg",
+    "newImagePath": "Images/TANQUERAY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 346,
+    "name": "TANQUERAY FLOR DE SEVILLA",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "tanqueray_flor_de_sevilla.jpg",
+    "newImagePath": "Images/TANQUERAY FLOR DE SEVILLA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 347,
+    "name": "TANQUERAY BLACKCURRANT ROYALE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "tanqueray_blackcurrant_royale.jpg",
+    "newImagePath": "Images/TANQUERAY BLACKCURRANT ROYALE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 348,
+    "name": "TANQUERAY No. 10",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "tanqueray_no_10.jpg",
+    "newImagePath": "Images/TANQUERAY No. 10.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 349,
+    "name": "AMARULA GIN",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "amarula_gin.jpg",
+    "newImagePath": "Images/AMARULA GIN.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 350,
+    "name": "MUSGRAVE BOTANICAL",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "musgrave_botanical.jpg",
+    "newImagePath": "Images/MUSGRAVE BOTANICAL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 351,
+    "name": "MUSGRAVE PINK",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "musgrave_pink.jpg",
+    "newImagePath": "Images/MUSGRAVE PINK.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 352,
+    "name": "WOODSTOCK ORIGINAL",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "woodstock_original.jpg",
+    "newImagePath": "Images/WOODSTOCK ORIGINAL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 353,
+    "name": "WOODSTOCK TANGERINE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "woodstock_tangerine.jpg",
+    "newImagePath": "Images/WOODSTOCK TANGERINE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 354,
+    "name": "HENDRICKS",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "hendricks.jpg",
+    "newImagePath": "Images/HENDRICKS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 355,
+    "name": "WHITLEY NEILL ORIGINAL",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "whitley_neill_original.jpg",
+    "newImagePath": "Images/WHITLEY NEILL ORIGINAL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 356,
+    "name": "KLIPDRIFT PREMIUM",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "klipdrift_premium.jpg",
+    "newImagePath": "Images/KLIPDRIFT PREMIUM.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 357,
+    "name": "RICHELIEU 10 Year",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "richelieu_10_year.jpg",
+    "newImagePath": "Images/RICHELIEU 10 Year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 358,
+    "name": "KWV 10 Year",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "kwv_10_year.jpg",
+    "newImagePath": "Images/KWV 10 Year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 359,
+    "name": "VAN RYN'S 12 Year",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "van_ryn_s_12_year.jpg",
+    "newImagePath": "Images/VAN RYN'S 12 Year.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 360,
+    "name": "CRUZ VINTAGE BLACK",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "cruz_vintage_black.jpg",
+    "newImagePath": "Images/CRUZ VINTAGE BLACK.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 361,
+    "name": "CIROC",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "ciroc.jpg",
+    "newImagePath": "Images/CIROC.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 362,
+    "name": "BELVEDERE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "belvedere.jpg",
+    "newImagePath": "Images/BELVEDERE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 363,
+    "name": "GREY GOOSE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "grey_goose.jpg",
+    "newImagePath": "Images/GREY GOOSE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 364,
+    "name": "CAPTAIN MORGAN SPICED GOLD",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "captain_morgan_spiced_gold.jpg",
+    "newImagePath": "Images/CAPTAIN MORGAN SPICED GOLD.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 365,
+    "name": "CAPTAIN MORGAN DARK RUM",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "captain_morgan_dark_rum.jpg",
+    "newImagePath": "Images/CAPTAIN MORGAN DARK RUM.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 366,
+    "name": "BACARDI SUPERIOR WHITE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "bacardi_superior_white.jpg",
+    "newImagePath": "Images/BACARDI SUPERIOR WHITE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 367,
+    "name": "BACARDI SUPERIOR BLACK",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "bacardi_superior_black.jpg",
+    "newImagePath": "Images/BACARDI SUPERIOR BLACK.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 368,
+    "name": "MAKERS MARK",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "makers_mark.jpg",
+    "newImagePath": "Images/MAKERS MARK.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 369,
+    "name": "BUFFALO TRACE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "buffalo_trace.jpg",
+    "newImagePath": "Images/BUFFALO TRACE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 370,
+    "name": "BLANTONS ORIGINAL SINGLE BARREL",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "blantons_original_single_barrel.jpg",
+    "newImagePath": "Images/BLANTONS ORIGINAL SINGLE BARREL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 371,
+    "name": "SOUTHERN COMFORT ORIGINAL",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "southern_comfort_original.jpg",
+    "newImagePath": "Images/SOUTHERN COMFORT ORIGINAL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 372,
+    "name": "SIDEKICK COOKIES & CREAM",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "sidekick_cookies_and_cream.jpg",
+    "newImagePath": "Images/SIDEKICK COOKIES & CREAM.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 373,
+    "name": "KAHLUA",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "kahlua.jpg",
+    "newImagePath": "Images/KAHLUA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 374,
+    "name": "FRANGELICO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "frangelico.jpg",
+    "newImagePath": "Images/FRANGELICO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 375,
+    "name": "AMARULA",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "amarula.jpg",
+    "newImagePath": "Images/AMARULA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 376,
+    "name": "COINTREAU",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "cointreau.jpg",
+    "newImagePath": "Images/COINTREAU.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 377,
+    "name": "JAGERMEISTER",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "jagermeister.jpg",
+    "newImagePath": "Images/JAGERMEISTER.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 378,
+    "name": "UNDERBERG",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "underberg.jpg",
+    "newImagePath": "Images/UNDERBERG.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 379,
+    "name": "FERREIRA RUBY",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "ferreira_ruby.jpg",
+    "newImagePath": "Images/FERREIRA RUBY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 380,
+    "name": "FERREIRA TAWNY",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "ferreira_tawny.jpg",
+    "newImagePath": "Images/FERREIRA TAWNY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 381,
+    "name": "DE KRANS CAPE RUBY",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "de_krans_cape_ruby.jpg",
+    "newImagePath": "Images/DE KRANS CAPE RUBY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 382,
+    "name": "CINZANO BIANCO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "cinzano_bianco.jpg",
+    "newImagePath": "Images/CINZANO BIANCO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 383,
+    "name": "DALLA CIA GRAPPA",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "dalla_cia_grappa.jpg",
+    "newImagePath": "Images/DALLA CIA GRAPPA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 384,
+    "name": "APEROL CAMPARI",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "aperol_campari.jpg",
+    "newImagePath": "Images/APEROL CAMPARI.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 385,
+    "name": "MARGARITA",
+    "oldImagePath": "Images/Margarita.jpg",
+    "matchedFile": "margarita.jpg",
+    "newImagePath": "Images/MARGARITA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 386,
+    "name": "COSMOPOLITAN",
+    "oldImagePath": "Images/Cosmopolitan.jpg",
+    "matchedFile": "cosmopolitan.jpg",
+    "newImagePath": "Images/COSMOPOLITAN.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 387,
+    "name": "MARTINI (GIN)",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "martini_gin.jpg",
+    "newImagePath": "Images/MARTINI (GIN).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 388,
+    "name": "MOJITO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "mojito.jpg",
+    "newImagePath": "Images/MOJITO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 389,
+    "name": "PINA COLADA",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "pina_colada.jpg",
+    "newImagePath": "Images/PINA COLADA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 390,
+    "name": "FRUIT DAIQUIRI - BLUEBERRY",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "fruit_daiquiri_blueberry.jpg",
+    "newImagePath": "Images/FRUIT DAIQUIRI - BLUEBERRY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 391,
+    "name": "FRUIT DAIQUIRI - STRAWBERRY",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "fruit_daiquiri_strawberry.jpg",
+    "newImagePath": "Images/FRUIT DAIQUIRI - STRAWBERRY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 392,
+    "name": "FRUIT DAIQUIRI - GREEN APPLE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "fruit_daiquiri_green_apple.jpg",
+    "newImagePath": "Images/FRUIT DAIQUIRI - GREEN APPLE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 393,
+    "name": "FRUIT DAIQUIRI - MANGO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "fruit_daiquiri_mango.jpg",
+    "newImagePath": "Images/FRUIT DAIQUIRI - MANGO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 394,
+    "name": "FLAVOURED MOJITO - GREEN APPLE",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "flavoured_mojito_green_apple.jpg",
+    "newImagePath": "Images/FLAVOURED MOJITO - GREEN APPLE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 395,
+    "name": "FLAVOURED MOJITO - STRAWBERRY",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "flavoured_mojito_strawberry.jpg",
+    "newImagePath": "Images/FLAVOURED MOJITO - STRAWBERRY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 396,
+    "name": "FLAVOURED MOJITO - BLUEBERRY",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "flavoured_mojito_blueberry.jpg",
+    "newImagePath": "Images/FLAVOURED MOJITO - BLUEBERRY.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 397,
+    "name": "FLAVOURED MOJITO - MANGO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "flavoured_mojito_mango.jpg",
+    "newImagePath": "Images/FLAVOURED MOJITO - MANGO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 398,
+    "name": "CUCUMBER AND MINT G&T",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "cucumber_and_mint_gandt.jpg",
+    "newImagePath": "Images/CUCUMBER AND MINT G&T.jpg",
+    "tier": "T1c",
+    "confidence": 99
+  },
+  {
+    "id": 399,
+    "name": "HIBISCUS AND MINT G&T",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "hibiscus_and_mint_gandt.jpg",
+    "newImagePath": "Images/HIBISCUS AND MINT G&T.jpg",
+    "tier": "T1c",
+    "confidence": 99
+  },
+  {
+    "id": 400,
+    "name": "PINK GRAPEFRUIT AND ROSEMARY G&T",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "pink_grapefruit_and_rosemary_gandt.jpg",
+    "newImagePath": "Images/PINK GRAPEFRUIT AND ROSEMARY G&T.jpg",
+    "tier": "T1c",
+    "confidence": 99
+  },
+  {
+    "id": 401,
+    "name": "JOHNNIE BLONDE AND TONIC",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "johnnie_blonde_and_tonic.jpg",
+    "newImagePath": "Images/JOHNNIE BLONDE AND TONIC.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 402,
+    "name": "WATERMELON GIN BULL",
+    "oldImagePath": "Images/Bottled Water.jpg",
+    "matchedFile": "watermelon_gin_bull.jpg",
+    "newImagePath": "Images/WATERMELON GIN BULL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 403,
+    "name": "GLENFIDDICH 12 YEAR WHISKY SOUR",
+    "oldImagePath": "Images/Johnnie Walker Black Label 12yo 750ml.jpeg",
+    "matchedFile": "glenfiddich_12_year_whisky_sour.jpg",
+    "newImagePath": "Images/GLENFIDDICH 12 YEAR WHISKY SOUR.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 404,
+    "name": "REMY MARTIN 1738 SIDE CAR",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "remy_martin_1738_side_car.jpg",
+    "newImagePath": "Images/REMY MARTIN 1738 SIDE CAR.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 405,
+    "name": "DON MAGARITA",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "don_magarita.jpg",
+    "newImagePath": "Images/DON MAGARITA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 406,
+    "name": "CUCUMBER LEMONADE",
+    "oldImagePath": "Images/Red Bull Energy Drink.jpg",
+    "matchedFile": "cucumber_lemonade.jpg",
+    "newImagePath": "Images/CUCUMBER LEMONADE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 407,
+    "name": "FROZEN MINT LEMONADE",
+    "oldImagePath": "Images/Red Bull Energy Drink.jpg",
+    "matchedFile": "frozen_mint_lemonade.jpg",
+    "newImagePath": "Images/FROZEN MINT LEMONADE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 408,
+    "name": "FROZEN PINK GRAPEFRUIT LEMONADE",
+    "oldImagePath": "Images/Old Fashioned.jpg",
+    "matchedFile": "frozen_pink_grapefruit_lemonade.jpg",
+    "newImagePath": "Images/FROZEN PINK GRAPEFRUIT LEMONADE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 409,
+    "name": "ORIGINAL LEMONADE",
+    "oldImagePath": "Images/Old Fashioned.jpg",
+    "matchedFile": "original_lemonade.jpg",
+    "newImagePath": "Images/ORIGINAL LEMONADE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 410,
+    "name": "STRAWBERRY LEMONADE",
+    "oldImagePath": "Images/Red Bull Energy Drink.jpg",
+    "matchedFile": "strawberry_lemonade.jpg",
+    "newImagePath": "Images/STRAWBERRY LEMONADE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 411,
+    "name": "SOFT DRINKS",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "soft_drinks.jpg",
+    "newImagePath": "Images/SOFT DRINKS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 412,
+    "name": "ICE TEA",
+    "oldImagePath": "Images/Rooibos.jpg",
+    "matchedFile": "ice_tea.jpg",
+    "newImagePath": "Images/ICE TEA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 413,
+    "name": "'TISERS",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "tisers.jpg",
+    "newImagePath": "Images/'TISERS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 414,
+    "name": "WATER 250ML LA VIE",
+    "oldImagePath": "Images/Simonsig Kaapse Vonkel Brut (Cap Classique).jpg",
+    "matchedFile": "water_250ml_la_vie.jpg",
+    "newImagePath": "Images/WATER 250ML LA VIE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 415,
+    "name": "WATER 750ML LA VIE (TRUMPS)",
+    "oldImagePath": "Images/Simonsig Kaapse Vonkel Brut (Cap Classique).jpg",
+    "matchedFile": "water_750ml_la_vie_trumps.jpg",
+    "newImagePath": "Images/WATER 750ML LA VIE (TRUMPS).jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 416,
+    "name": "SHAKES",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "shakes.jpg",
+    "newImagePath": "Images/SHAKES.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 417,
+    "name": "SPECIAL SHAKES",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "special_shakes.jpg",
+    "newImagePath": "Images/SPECIAL SHAKES.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 418,
+    "name": "FRUIT JUICES",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "fruit_juices.jpg",
+    "newImagePath": "Images/FRUIT JUICES.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 419,
+    "name": "BERRY FRUIT JUICES",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "berry_fruit_juices.jpg",
+    "newImagePath": "Images/BERRY FRUIT JUICES.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 420,
+    "name": "CORDIALS",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "cordials.jpg",
+    "newImagePath": "Images/CORDIALS.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 421,
+    "name": "RED BULL",
+    "oldImagePath": "Images/Red Bull Energy Drink.jpg",
+    "matchedFile": "red_bull.jpg",
+    "newImagePath": "Images/RED BULL.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 422,
+    "name": "RED BULL SUGAR FREE",
+    "oldImagePath": "Images/Red Bull Energy Drink.jpg",
+    "matchedFile": "red_bull_sugar_free.jpg",
+    "newImagePath": "Images/RED BULL SUGAR FREE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 423,
+    "name": "RED BULL RED EDITION",
+    "oldImagePath": "Images/Red Bull Energy Drink.jpg",
+    "matchedFile": "red_bull_red_edition.jpg",
+    "newImagePath": "Images/RED BULL RED EDITION.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 424,
+    "name": "DOM PEDRO",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "dom_pedro.jpg",
+    "newImagePath": "Images/DOM PEDRO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 425,
+    "name": "DOM AMARULA",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "dom_amarula.jpg",
+    "newImagePath": "Images/DOM AMARULA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 426,
+    "name": "DOM KAHLUA",
+    "oldImagePath": "Images/Mojito.jpg",
+    "matchedFile": "dom_kahlua.jpg",
+    "newImagePath": "Images/DOM KAHLUA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 427,
+    "name": "IRISH COFFEE",
+    "oldImagePath": "Images/Jameson Irish Whiskey 750ml.jpg",
+    "matchedFile": "irish_coffee.jpg",
+    "newImagePath": "Images/IRISH COFFEE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 428,
+    "name": "KAHLUA COFFEE",
+    "oldImagePath": "Images/Cappuccino.jpg",
+    "matchedFile": "kahlua_coffee.jpg",
+    "newImagePath": "Images/KAHLUA COFFEE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 429,
+    "name": "AMERICANO COFFEE",
+    "oldImagePath": "Images/Cappuccino.jpg",
+    "matchedFile": "americano_coffee.jpg",
+    "newImagePath": "Images/AMERICANO COFFEE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 430,
+    "name": "DECAF CAPPUCCINO",
+    "oldImagePath": "Images/Cappuccino.jpg",
+    "matchedFile": "decaf_cappuccino.jpg",
+    "newImagePath": "Images/DECAF CAPPUCCINO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 431,
+    "name": "CAPPUCCINO",
+    "oldImagePath": "Images/Cappuccino.jpg",
+    "matchedFile": "cappuccino.jpg",
+    "newImagePath": "Images/CAPPUCCINO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 432,
+    "name": "CAFÉ LATTE",
+    "oldImagePath": "Images/Cafe Latte.jpg",
+    "matchedFile": "cafe_latte.jpg",
+    "newImagePath": "Images/CAFÉ LATTE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 433,
+    "name": "ESPRESSO SINGLE",
+    "oldImagePath": "Images/Espresso (Single).jpg",
+    "matchedFile": "espresso_single.jpg",
+    "newImagePath": "Images/ESPRESSO SINGLE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 434,
+    "name": "ESPRESSO DOUBLE",
+    "oldImagePath": "Images/Espresso (Single).jpg",
+    "matchedFile": "espresso_double.jpg",
+    "newImagePath": "Images/ESPRESSO DOUBLE.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 435,
+    "name": "MACCHIATO",
+    "oldImagePath": "Images/Espresso (Single).jpg",
+    "matchedFile": "macchiato.jpg",
+    "newImagePath": "Images/MACCHIATO.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 436,
+    "name": "FIVE ROSES TEA",
+    "oldImagePath": "Images/Rooibos.jpg",
+    "matchedFile": "five_roses_tea.jpg",
+    "newImagePath": "Images/FIVE ROSES TEA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 437,
+    "name": "ROOIBOS TEA",
+    "oldImagePath": "Images/Rooibos.jpg",
+    "matchedFile": "rooibos_tea.jpg",
+    "newImagePath": "Images/ROOIBOS TEA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 438,
+    "name": "GREEN TEA",
+    "oldImagePath": "Images/Rooibos.jpg",
+    "matchedFile": "green_tea.jpg",
+    "newImagePath": "Images/GREEN TEA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  },
+  {
+    "id": 439,
+    "name": "EARL GREY TEA",
+    "oldImagePath": "Images/Rooibos.jpg",
+    "matchedFile": "earl_grey_tea.jpg",
+    "newImagePath": "Images/EARL GREY TEA.jpg",
+    "tier": "T1",
+    "confidence": 100
+  }
+]

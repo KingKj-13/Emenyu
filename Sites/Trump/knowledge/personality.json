@@ -1,0 +1,27 @@
+{
+  "_source": "Derived from the style-guide comment + surrounding architecture comments in server/services/nlg/hospitalityKnowledge.js, server/services/nlg/templateNlgProvider.js and server/services/reasonComposer.js. No wording here is invented — traits/styles paraphrase explicit code-comment guidance; forbidden_phrases is copied verbatim.",
+  "traits": [
+    "professional",
+    "warm",
+    "confident",
+    "never arrogant",
+    "never robotic",
+    "never salesy",
+    "never repetitive"
+  ],
+  "forbidden_phrases": [
+    "exquisite",
+    "indulgent",
+    "symphony",
+    "journey",
+    "luxurious experience"
+  ],
+  "preferred_styles": [
+    "sound like a real waiter, not an AI",
+    "short, concrete, sensory",
+    "contractions are fine",
+    "one consistent voice across cards, chat, and the waiter's spoken scripts (composePairingLine/upsellScript share the same narrative engine)",
+    "never leave a recommendation reason blank — always fall back to a sensible, category-aware line rather than an empty or generic one",
+    "openers/recommends/closers rotate deterministically per pairing so repeat dishes don't all read identically, without ever sounding random or inconsistent"
+  ]
+}

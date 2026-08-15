@@ -15,9 +15,14 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { ShiftScreen } from '../screens/ShiftScreen';
 import { TablesScreen } from '../screens/TablesScreen';
 import { TableDetailScreen } from '../screens/TableDetailScreen';
+import { AddItemsScreen } from '../screens/AddItemsScreen';
+import { SplitBillScreen } from '../screens/SplitBillScreen';
+import { ChatScreen } from '../screens/ChatScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { RequestsScreen } from '../screens/RequestsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { WaiterOrderProvider } from '../waiter/WaiterOrderContext';
+import { Toast } from '../components/Toast';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tabs = createBottomTabNavigator<MainTabParamList>();
@@ -85,17 +90,23 @@ export function RootNavigator() {
       {status === 'loading' ? (
         <Loading />
       ) : status === 'authenticated' ? (
-        <RootStack.Navigator
-          screenOptions={{
-            headerStyle: { backgroundColor: theme.colors.surface },
-            headerTintColor: theme.colors.text,
-            contentStyle: { backgroundColor: theme.colors.bg }
-          }}
-        >
-          <RootStack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
-          <RootStack.Screen name="TableDetail" component={TableDetailScreen} options={{ title: 'Table' }} />
-          <RootStack.Screen name="Requests" component={RequestsScreen} options={{ title: 'Customer Requests' }} />
-        </RootStack.Navigator>
+        <WaiterOrderProvider>
+          <RootStack.Navigator
+            screenOptions={{
+              headerStyle: { backgroundColor: theme.colors.surface },
+              headerTintColor: theme.colors.text,
+              contentStyle: { backgroundColor: theme.colors.bg }
+            }}
+          >
+            <RootStack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+            <RootStack.Screen name="TableDetail" component={TableDetailScreen} options={{ title: 'Table' }} />
+            <RootStack.Screen name="AddItems" component={AddItemsScreen} options={{ title: 'Add Items' }} />
+            <RootStack.Screen name="SplitBill" component={SplitBillScreen} options={{ title: 'Split Bill', presentation: 'modal' }} />
+            <RootStack.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat Center' }} />
+            <RootStack.Screen name="Requests" component={RequestsScreen} options={{ title: 'Customer Requests' }} />
+          </RootStack.Navigator>
+          <Toast />
+        </WaiterOrderProvider>
       ) : (
         <RootStack.Navigator screenOptions={{ headerShown: false }}>
           <RootStack.Screen name="Main" component={LoginScreenHost} />

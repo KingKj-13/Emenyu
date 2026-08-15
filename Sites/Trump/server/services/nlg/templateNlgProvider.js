@@ -2,6 +2,20 @@
 // structured decision data. This is BOTH the default and the fallback — the app must
 // read well with zero LLM configured, so the templates carry real weight.
 const { NlgProvider, KINDS, normalizeTone } = require('./nlgProvider');
+const hospitality = require('./hospitalityKnowledge');
+const { hashString } = require('../rotationService');
+
+function pick(list, seedKey) {
+  if (!list || !list.length) return '';
+  if (list.length === 1) return list[0];
+  return list[hashString(seedKey) % list.length];
+}
+
+function bevTone(tone) {
+  return tone === 'casual' ? 'friendly' : (['professional', 'luxury'].includes(tone) ? tone : 'friendly');
+}
+
+const isBevCat = it => ['WINE', 'DRINK'].includes(String(it && it.categoryType || '').toUpperCase());
 
 function money(value) {
   const n = Number(value) || 0;
@@ -89,26 +103,101 @@ class TemplateNlgProvider extends NlgProvider {
     }
   }
 
+  // Phase 2.5 (Hospitality Intelligence): tag-driven WHY, not name-keyword
+  // matching. Works for any of the 439 items as long as it has metadata.tags
+  // (every item does) — a new menu item needs nothing beyond tags to read the
+  // same way. Falls back to the old never-blank category lines only when there
+  // is no anchor to reason from at all (empty cart, fresh table).
   pairingReason(data, tone) {
     const item = data.item || {};
-    const forName = data.forItem?.name || 'this dish';
+    const source = data.forItem || null;
+    const forName = source?.name || 'this dish';
+    const t = bevTone(tone);
+
+    const split = hospitality.splitDishDrink(item, source);
+    if (split) {
+      const why = hospitality.whyClauseFor({ dish: split.dish, drink: split.drink, tone: t });
+      if (why) return this.composePairingLine(item, source, t, why);
+    }
+    if (source && !isBevCat(item) && !isBevCat(source)) {
+      const why = hospitality.foodPairClauseFor({ target: item, source, tone: t });
+      if (why) return why;
+    }
+
+    // Never-blank fallback — no anchor to reason from. A guest's very first
+    // "what's good here?" hits this path (empty cart) far more often than any
+    // other case, so it needs its OWN honest, anchor-free lines rather than a
+    // template built around a "{forName}" that doesn't exist yet.
     const cat = (item.categoryType || '').toUpperCase();
-    const food = lc(forName);
+    if (!source) {
+      if (cat === 'WINE') {
+        const notes = flavorNotes(item.name);
+        return `${notes[0].toUpperCase()}${notes.slice(1)}.`;
+      }
+      if (cat === 'DRINK') return 'A great glass to start the evening.';
+      if (cat === 'DESSERT') return 'A popular way to close out a meal here.';
+      if (cat === 'STARTER') return 'A good way to open the table.';
+      return 'One of the plates guests come back for.';
+    }
     if (cat === 'WINE') {
-      if (/steak|beef|rump|fillet|tomahawk|ribeye|wagyu/.test(food)) {
-        return tone === 'short'
-          ? `Bold red — stands up to the ${forName}.`
-          : `A bold, full-bodied red — ${flavorNotes(item.name)}, built to stand up to the char on the ${forName}.`;
-      }
-      if (/prawn|seafood|salmon|calamari|kingklip|oyster/.test(food)) {
-        return `A crisp white — ${flavorNotes(item.name)}, a classic match for the ${forName}.`;
-      }
-      return `${flavorNotes(item.name).replace(/^a /, '')}${flavorNotes(item.name).startsWith('a ') ? '' : ''} — a confident pour with the ${forName}.`;
+      const notes = flavorNotes(item.name);
+      return `${notes[0].toUpperCase()}${notes.slice(1)} — a confident pour with the ${forName}.`;
     }
     if (cat === 'DRINK') return `A great glass to round off the ${forName}.`;
     if (cat === 'DESSERT') return `The sweet finish that completes the ${forName}.`;
     if (cat === 'STARTER') return `A light opener before the ${forName} lands.`;
     return `Pairs naturally with the ${forName}.`;
+  }
+
+  // Shared composition for both the card "why" (pairingReason) and the
+  // waiter's spoken upsell script (upsellScript) — one narrative shape, tone-
+  // varied, built around a tag-driven WHY clause from hospitalityKnowledge.
+  // Openers/closers rotate deterministically per pairing so 100 different
+  // items don't all read identically, without ever being random/inconsistent.
+  composePairingLine(item, source, tone, why) {
+    const itemName = item.name;
+    const sourceName = source && source.name;
+    const method = hospitality.cookingMethodFor(item, tone);
+    const withMethod = method && !isBevCat(item) ? ` It's ${method}.` : '';
+
+    if (!sourceName) {
+      const openers = {
+        friendly: [`If you're open to a recommendation, I'd go with the ${itemName}.`, `Honestly, I'd suggest the ${itemName}.`],
+        professional: [`I'd recommend the ${itemName}.`, `My suggestion would be the ${itemName}.`],
+        luxury: [`Might I suggest the ${itemName}?`, `A fitting choice would be the ${itemName}.`]
+      };
+      const opener = pick(openers[tone], `${itemName}|noanchor|open|${tone}`);
+      return `${opener} ${why}${withMethod}`.replace(/\s+/g, ' ').trim();
+    }
+
+    const openers = {
+      friendly: [`I noticed you've gone with the ${sourceName}.`, `Since you've already got the ${sourceName} on the table,`],
+      professional: [`You've added the ${sourceName}.`, `With the ${sourceName} already ordered,`],
+      luxury: [`With the ${sourceName} already at the table,`, `Given the ${sourceName} you've chosen,`]
+    };
+    const recommends = {
+      friendly: [`If you're open to a recommendation, I'd definitely pair it with our ${itemName}.`, `I'd pair it with our ${itemName}.`],
+      professional: [`I'd recommend pairing it with our ${itemName}.`, `I'd suggest the ${itemName} alongside it.`],
+      luxury: [`I'd suggest our ${itemName} alongside it.`, `May I suggest the ${itemName} to accompany it?`]
+    };
+    const closers = {
+      friendly: ["It's one of my favourite combinations on the menu.", "It's always a hit at this table."],
+      professional: ["It's a pairing I'd confidently recommend.", "It's one of our most requested combinations."],
+      luxury: ['It’s a pairing our regulars return for.', 'It rarely disappoints.']
+    };
+    // A signature dish (derived, not stored — hospitality.signatureFor) earns a
+    // closer that says so, rather than the generic pairing-praise closer.
+    const dishSide = isBevCat(item) ? source : item;
+    const signatureClosers = {
+      friendly: ["It's one of our signature dishes, so you're in good hands.", "It's a signature plate here — always a good sign."],
+      professional: ["It's one of our signature dishes.", "It's a signature plate, well worth it."],
+      luxury: ['It’s one of the kitchen’s signature dishes.', 'It’s a signature of the house.']
+    };
+    const closerPool = (dishSide && hospitality.signatureFor(dishSide)) ? signatureClosers[tone] : closers[tone];
+    const opener = pick(openers[tone], `${itemName}|${sourceName}|open|${tone}`);
+    const recommend = pick(recommends[tone], `${itemName}|${sourceName}|rec|${tone}`);
+    const closer = pick(closerPool, `${itemName}|${sourceName}|close|${tone}`);
+    return `${opener} ${recommend} ${why}${withMethod} ${closer}`.replace(/\s+/g, ' ').trim();
   }
 
   sayToTable(data, tone) {
@@ -167,26 +256,39 @@ class TemplateNlgProvider extends NlgProvider {
     const hook = dishHook(item.name, item.description);
     const badge = item.chefPick ? "It's a chef's pick" : item.popular ? "It's one of tonight's favourites" : "It's a plate guests rave about";
     if (tone === 'short') return `${item.name} — ${hook}.`;
-    return `${item.name} is ${hook}. ${badge}, and it carries the table beautifully.`;
+    // Phase 3 (Dining Concierge): a tag-driven conversation tip, when the item's
+    // own tags support one -- true of any item, not just the hero-tier dishes.
+    const tip = hospitality.conversationTipFor(item);
+    const tipLine = tip ? ` ${tip}` : '';
+    return `${item.name} is ${hook}. ${badge}, and it carries the table beautifully.${tipLine}`;
   }
 
+  // Phase 2.5 (Hospitality Intelligence): reuses the SAME tag-driven WHY
+  // clause + composePairingLine as pairingReason above — the waiter's spoken
+  // upsell line and the card's "why" are one narrative engine, not two. This
+  // is what renders in the Professional/Friendly/Luxury tone tabs.
   upsellScript(data, tone) {
     const item = data.suggestedItem || {};
     if (!item.name) return '';
+    if (tone === 'short') return `Add the ${item.name}? ${money(item.price)}.`;
+    const t = bevTone(tone);
+    const source = data.forItem || null;
+
+    let why = '';
+    const split = hospitality.splitDishDrink(item, source);
+    if (split) why = hospitality.whyClauseFor({ dish: split.dish, drink: split.drink, tone: t });
+    if (!why && source && !isBevCat(item) && !isBevCat(source)) why = hospitality.foodPairClauseFor({ target: item, source, tone: t });
+
+    if (why) return this.composePairingLine(item, source, t, why);
+
+    // No tag-matched anchor (e.g. empty cart) — short, honest, category-aware line.
     const cat = (item.categoryType || '').toUpperCase();
     const benefit = cat === 'WINE' ? flavorNotes(item.name)
-      : cat === 'DESSERT' ? 'the perfect sweet close'
-        : cat === 'STARTER' ? 'a lovely way to open' : 'a great addition';
-    switch (tone) {
-      case 'luxury':
-        return `May I suggest the ${item.name}? ${benefit[0].toUpperCase()}${benefit.slice(1)} — a beautiful addition at ${money(item.price)}.`;
-      case 'short':
-        return `Add the ${item.name}? ${money(item.price)}.`;
-      case 'casual':
-        return `Want me to bring the ${item.name} too? It's ${benefit} — ${money(item.price)}.`;
-      default:
-        return `The ${item.name} would round this off nicely — ${benefit}. Shall I add it for ${money(item.price)}?`;
-    }
+      : cat === 'DESSERT' ? 'a proper sweet way to close the meal'
+        : cat === 'STARTER' ? 'a good way to open the table' : 'a solid addition to the table';
+    if (t === 'luxury') return `May I suggest the ${item.name}? It's ${benefit} — ${money(item.price)}.`;
+    if (t === 'professional') return `I'd recommend the ${item.name}. It's ${benefit} — ${money(item.price)}.`;
+    return `I'd add the ${item.name} if you're keen — it's ${benefit}, ${money(item.price)}.`;
   }
 
   sommelier(data, tone) {

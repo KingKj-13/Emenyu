@@ -1,13 +1,15 @@
-function registerMenuRoutes(app, controllers, adminAuth) {
-  const menuPaths = ['/api/menu', '/Trump/api/menu', '/trump/api/menu'];
-  const recommendationPaths = ['/api/recommendations', '/Trump/api/recommendations', '/trump/api/recommendations'];
-  const mediaPaths = prefix => [`/api/admin/${prefix}`, `/Trump/api/admin/${prefix}`, `/trump/api/admin/${prefix}`];
-  const itemsPaths = ['/api/menu/items', '/Trump/api/menu/items', '/trump/api/menu/items'];
-  const categoriesPaths = ['/api/menu/categories', '/Trump/api/menu/categories', '/trump/api/menu/categories'];
-  const itemAvailPaths = ['/api/menu/items/:id/availability', '/Trump/api/menu/items/:id/availability', '/trump/api/menu/items/:id/availability'];
-  const itemMediaPaths = ['/api/menu/items/:id/media', '/Trump/api/menu/items/:id/media', '/trump/api/menu/items/:id/media'];
-  const itemDeletePaths = ['/api/menu/items/:id', '/Trump/api/menu/items/:id', '/trump/api/menu/items/:id'];
-  const itemBulkPaths = ['/api/menu/items/bulk', '/Trump/api/menu/items/bulk', '/trump/api/menu/items/bulk'];
+const { tenantPaths } = require('../utils/helpers');
+
+function registerMenuRoutes(app, config, controllers, adminAuth) {
+  const menuPaths = tenantPaths(config, '/api/menu');
+  const recommendationPaths = tenantPaths(config, '/api/recommendations');
+  const mediaPaths = prefix => tenantPaths(config, `/api/admin/${prefix}`);
+  const itemsPaths = tenantPaths(config, '/api/menu/items');
+  const categoriesPaths = tenantPaths(config, '/api/menu/categories');
+  const itemAvailPaths = tenantPaths(config, '/api/menu/items/:id/availability');
+  const itemMediaPaths = tenantPaths(config, '/api/menu/items/:id/media');
+  const itemDeletePaths = tenantPaths(config, '/api/menu/items/:id');
+  const itemBulkPaths = tenantPaths(config, '/api/menu/items/bulk');
 
   app.get(menuPaths, controllers.menu.getMenu);
   app.post(menuPaths, adminAuth, controllers.menu.saveMenu);
@@ -31,8 +33,8 @@ function registerMenuRoutes(app, controllers, adminAuth) {
   app.post(mediaPaths('media-retry'), adminAuth, controllers.menu.retryMediaEnrich);
 
   // Chef recommendation management (owner controls — Phase 3, Task 8)
-  const chefRecPaths = ['/api/menu/chef-recs', '/Trump/api/menu/chef-recs', '/trump/api/menu/chef-recs'];
-  const chefRecItemPaths = ['/api/menu/chef-recs/:id', '/Trump/api/menu/chef-recs/:id', '/trump/api/menu/chef-recs/:id'];
+  const chefRecPaths = tenantPaths(config, '/api/menu/chef-recs');
+  const chefRecItemPaths = tenantPaths(config, '/api/menu/chef-recs/:id');
   app.get(chefRecPaths, adminAuth, controllers.menu.getChefRecommendations);
   app.post(chefRecPaths, adminAuth, controllers.menu.createChefRecommendation);
   app.patch(chefRecItemPaths, adminAuth, controllers.menu.updateChefRecommendation);

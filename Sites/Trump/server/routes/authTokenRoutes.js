@@ -2,9 +2,10 @@
 // Phase 04 — native token auth routes. token issue/refresh/revoke are public (the
 // refresh token itself is the credential); device management requires a logged-in
 // staff session (cookie or Bearer).
-function alias(p) { return [`/api/${p}`, `/Trump/api/${p}`, `/trump/api/${p}`]; }
+const { tenantPaths } = require('../utils/helpers');
 
-function registerAuthTokenRoutes(app, controllers, auth) {
+function registerAuthTokenRoutes(app, config, controllers, auth) {
+  const alias = p => tenantPaths(config, `/api/${p}`);
   const c = controllers.authToken;
   const staff = auth.requireRoles(['owner', 'manager', 'waiter', 'kitchen']);
 

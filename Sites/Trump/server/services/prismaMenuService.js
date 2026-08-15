@@ -11,6 +11,8 @@ const DEFAULT_RESTAURANT_ID = 'trump';
 const ITEM_BASE_KEYS = new Set([
   'name',
   'description',
+  'story',
+  'subtitle',
   'price',
   'calories',
   'allergens',
@@ -22,9 +24,11 @@ const ITEM_BASE_KEYS = new Set([
   'videoVisible',
   'visible',
   'available',
+  'availability',
   'chefPick',
   'popular',
-  'source_title'
+  'source_title',
+  'variants'
 ]);
 
 function parseBoolean(value, fallback = true) {
@@ -110,6 +114,8 @@ function itemToCreateData(item = {}, categoryId, restaurantId, sortOrder) {
     name: String(item.name || '').trim(),
     normalizedName: normalizeName(item.name),
     description: String(item.description || ''),
+    story: String(item.story || ''),
+    subtitle: String(item.subtitle || ''),
     price: Number(item.price) || 0,
     calories: String(item.calories || ''),
     allergens: String(item.allergens || ''),
@@ -121,12 +127,40 @@ function itemToCreateData(item = {}, categoryId, restaurantId, sortOrder) {
     videoVisible: item.videoVisible !== false,
     visible: item.visible !== false,
     available: item.available !== false,
+    availability: String(item.availability || 'available'),
     chefPick: Boolean(item.chefPick),
     popular: Boolean(item.popular),
     sourceTitle: String(item.source_title || item.sourceTitle || ''),
     sortOrder,
     metadata: itemMetadata(item)
   };
+}
+
+function variantToJson(variant) {
+  return {
+    dbId: variant.id,
+    name: variant.name,
+    price: Number(variant.price) || 0,
+    img: variant.imagePath || '',
+    isAddon: Boolean(variant.isAddon)
+  };
+}
+
+// Variant-only items (e.g. Carmella's coffees/wines-by-the-glass: no single
+// price, only per-variant prices) have `price: 0` on the base row — fall back
+// to the cheapest non-addon variant so every card/pairing/recommendation
+// surface shows a real "from" price instead of a bare R0. Single source of
+// truth here rather than patched in each of the N places that render a price.
+function effectivePrice(item) {
+  const basePrice = Number(item.price) || 0;
+  if (basePrice > 0 || !Array.isArray(item.variants) || item.variants.length === 0) {
+    return basePrice;
+  }
+  const variantPrices = item.variants
+    .filter(v => !v.isAddon)
+    .map(v => Number(v.price) || 0)
+    .filter(p => p > 0);
+  return variantPrices.length > 0 ? Math.min(...variantPrices) : 0;
 }
 
 function dbItemToJson(item, { includeId = false, categoryTitle = '', subcategoryTitle = '' } = {}) {
@@ -137,7 +171,9 @@ function dbItemToJson(item, { includeId = false, categoryTitle = '', subcategory
     ...(subcategoryTitle ? { subcategory: subcategoryTitle } : {}),
     name: item.name,
     description: item.description || '',
-    price: Number(item.price) || 0,
+    story: item.story || '',
+    subtitle: item.subtitle || '',
+    price: effectivePrice(item),
     calories: item.calories || '',
     allergens: item.allergens || '',
     spice: item.spice || '',
@@ -148,8 +184,12 @@ function dbItemToJson(item, { includeId = false, categoryTitle = '', subcategory
     videoVisible: item.videoVisible,
     visible: item.visible,
     available: item.available !== false,
+    availability: item.availability || 'available',
     chefPick: item.chefPick,
     popular: item.popular,
+    ...(Array.isArray(item.variants) && item.variants.length > 0
+      ? { variants: item.variants.map(variantToJson) }
+      : {}),
     ...(item.sourceTitle ? { source_title: item.sourceTitle } : {})
   };
 
@@ -380,13 +420,23 @@ class PrismaMenuService {
     }
   }
 
-  async loadMenu() {
+  // `includeIds` stamps each item/category with its database id. The public
+  // menu needs them so translations can be applied by id and so the client
+  // can request a gallery or record a view for a specific dish. Off by
+  // default: the admin save path round-trips this payload back into the
+  // database, and it must not start persisting ids as item metadata.
+  async loadMenu({ includeIds = false } = {}) {
     return this.withPrisma(
       'menu_postgres_load_failed',
       async prisma => {
         const categories = await prisma.menuCategory.findMany({
           where: { restaurantId: this.restaurantId },
-          include: { items: { orderBy: { sortOrder: 'asc' } } },
+          include: {
+            items: {
+              orderBy: { sortOrder: 'asc' },
+              include: { variants: { orderBy: { sortOrder: 'asc' } } }
+            }
+          },
           orderBy: [{ parentId: 'asc' }, { sortOrder: 'asc' }]
         });
 
@@ -404,7 +454,7 @@ class PrismaMenuService {
         const menu = {};
         (byParent.get(0) || []).sort((left, right) => left.sortOrder - right.sortOrder).forEach(root => {
           const metadata = root.metadata && typeof root.metadata === 'object' ? root.metadata : {};
-          const directItems = root.items.map(item => dbItemToJson(item, { categoryTitle: root.title }));
+          const directItems = root.items.map(item => dbItemToJson(item, { categoryTitle: root.title, includeId: includeIds }));
           if (metadata.storage === 'array') {
             menu[root.title] = directItems;
             return;
@@ -412,7 +462,10 @@ class PrismaMenuService {
 
           const categoryValue = {
             ...(metadata.extra && typeof metadata.extra === 'object' ? metadata.extra : {}),
+            ...(includeIds ? { dbId: root.id } : {}),
             visible: root.visible,
+            slug: root.slug,
+            ...(root.intro ? { intro: root.intro } : {}),
             ...(directItems.length > 0 ? { items: directItems } : {})
           };
 
@@ -420,8 +473,11 @@ class PrismaMenuService {
             const subMetadata = sub.metadata && typeof sub.metadata === 'object' ? sub.metadata : {};
             categoryValue[sub.title] = {
               ...(subMetadata.extra && typeof subMetadata.extra === 'object' ? subMetadata.extra : {}),
+              ...(includeIds ? { dbId: sub.id } : {}),
               visible: sub.visible,
-              items: sub.items.map(item => dbItemToJson(item, { categoryTitle: root.title, subcategoryTitle: sub.title }))
+              items: sub.items.map(item => dbItemToJson(item, {
+                categoryTitle: root.title, subcategoryTitle: sub.title, includeId: includeIds
+              }))
             };
           });
 
@@ -516,6 +572,32 @@ class PrismaMenuService {
         return true;
       },
       false
+    );
+  }
+
+  // Carmella-style day-part engine (morning/midday/golden-hour). Empty for
+  // tenants (Trump, Demo) with no DayPart rows — callers must treat [] as
+  // "no day-part concept", not an error.
+  async loadDayParts() {
+    return this.withPrisma(
+      'menu_postgres_dayparts_load_failed',
+      async prisma => {
+        const rows = await prisma.dayPart.findMany({
+          where: { restaurantId: this.restaurantId },
+          orderBy: { sortOrder: 'asc' }
+        });
+        return rows.map(row => ({
+          slug: row.slug,
+          name: row.name,
+          from: row.fromTime,
+          to: row.toTime,
+          greeting: row.greeting || '',
+          leadChapters: row.leadChapters || [],
+          gaspardChips: row.gaspardChips || [],
+          suggestStrip: row.suggestStrip || null
+        }));
+      },
+      []
     );
   }
 
@@ -653,7 +735,18 @@ class PrismaMenuService {
   async updateChefRecommendation(id, patch = {}) {
     return this.withPrisma(
       'menu_postgres_chef_rec_update_failed',
-      async prisma => prisma.menuItemRecommendation.update({ where: { id: Number(id) }, data: patch }),
+      async prisma => {
+        // Tenant-scope the write (defence-in-depth, matching updateItem) — id alone
+        // is a global sequence shared across every restaurantId in this table.
+        const result = await prisma.menuItemRecommendation.updateMany({
+          where: { id: Number(id), restaurantId: this.restaurantId },
+          data: patch
+        });
+        if (result.count === 0) {
+          return null;
+        }
+        return prisma.menuItemRecommendation.findUnique({ where: { id: Number(id) } });
+      },
       null
     );
   }
@@ -661,7 +754,12 @@ class PrismaMenuService {
   async deleteChefRecommendation(id) {
     return this.withPrisma(
       'menu_postgres_chef_rec_delete_failed',
-      async prisma => { await prisma.menuItemRecommendation.delete({ where: { id: Number(id) } }); return true; },
+      async prisma => {
+        const result = await prisma.menuItemRecommendation.deleteMany({
+          where: { id: Number(id), restaurantId: this.restaurantId }
+        });
+        return result.count > 0;
+      },
       false
     );
   }
@@ -672,7 +770,10 @@ class PrismaMenuService {
       async prisma => {
         const items = await prisma.menuItem.findMany({
           where: { restaurantId: this.restaurantId },
-          include: { category: { select: { title: true, parentId: true } } },
+          include: {
+            category: { select: { title: true, parentId: true } },
+            variants: { orderBy: { sortOrder: 'asc' } }
+          },
           orderBy: { sortOrder: 'asc' }
         });
         return items.map(item => ({
@@ -687,11 +788,13 @@ class PrismaMenuService {
     return this.withPrisma(
       'menu_postgres_toggle_availability_failed',
       async prisma => {
-        await prisma.menuItem.update({
-          where: { id: Number(id) },
+        // Tenant-scope the write (defence-in-depth, matching updateItem) — id alone
+        // is a global sequence shared across every restaurantId in this table.
+        const result = await prisma.menuItem.updateMany({
+          where: { id: Number(id), restaurantId: this.restaurantId },
           data: { available: Boolean(available) }
         });
-        return true;
+        return result.count > 0;
       },
       false
     );
@@ -723,10 +826,16 @@ class PrismaMenuService {
     return this.withPrisma(
       'menu_postgres_update_media_failed',
       async prisma => {
-        const item = await prisma.menuItem.update({
-          where: { id: Number(id) },
+        // Tenant-scope the write (defence-in-depth, matching updateItem) — id alone
+        // is a global sequence shared across every restaurantId in this table.
+        const result = await prisma.menuItem.updateMany({
+          where: { id: Number(id), restaurantId: this.restaurantId },
           data
         });
+        if (result.count === 0) {
+          return null;
+        }
+        const item = await prisma.menuItem.findUnique({ where: { id: Number(id) } });
         return dbItemToJson(item, { includeId: true });
       },
       null
@@ -821,6 +930,9 @@ class PrismaMenuService {
       data.normalizedName = normalizeName(name);
     }
     if (Object.prototype.hasOwnProperty.call(patch, 'description')) data.description = String(patch.description || '');
+    if (Object.prototype.hasOwnProperty.call(patch, 'story')) data.story = String(patch.story || '');
+    if (Object.prototype.hasOwnProperty.call(patch, 'subtitle')) data.subtitle = String(patch.subtitle || '');
+    if (Object.prototype.hasOwnProperty.call(patch, 'availability')) data.availability = String(patch.availability || 'available');
     if (Object.prototype.hasOwnProperty.call(patch, 'price')) data.price = Number(patch.price) || 0;
     if (Object.prototype.hasOwnProperty.call(patch, 'calories')) data.calories = String(patch.calories || '');
     if (Object.prototype.hasOwnProperty.call(patch, 'allergens')) data.allergens = String(patch.allergens || '');
@@ -877,7 +989,7 @@ class PrismaMenuService {
 
         const updated = await prisma.menuItem.findUnique({
           where: { id: itemId },
-          include: { category: true }
+          include: { category: true, variants: { orderBy: { sortOrder: 'asc' } } }
         });
         return dbItemToJson(updated, { includeId: true, categoryTitle: categoryTitle || updated?.category?.title || '' });
       },

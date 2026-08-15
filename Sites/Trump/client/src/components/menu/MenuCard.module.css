@@ -1,6 +1,14 @@
 .card {
   position: relative;
-  background: linear-gradient(160deg, rgba(11, 23, 30, 0.96), rgba(6, 13, 18, 0.98));
+  /* Was a hardcoded dark-navy gradient (a hand-typed approximation of
+     --color-panel/--color-panel-soft, ~rgb(8,24,40) vs the literal's
+     rgb(11,23,30) -- close enough that it was clearly meant to be the
+     token). Fine on Trump, where --color-cream (the .name text below) is
+     also light -- but on Carmella's day modes --color-cream is repurposed
+     to dark green text against a LIGHT panel, and this hardcoded dark
+     background never followed along, leaving near-illegible dark-on-dark
+     item names (Priority 4 -- breakfast card readability). */
+  background: linear-gradient(160deg, var(--color-panel-soft), var(--color-panel));
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-card);
   overflow: hidden;
@@ -12,7 +20,7 @@
 .card:hover {
   transform: translateY(-4px);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
-  border-color: rgba(200, 165, 85, 0.32);
+  border-color: rgba(var(--color-gold-rgb), 0.32);
 }
 
 .card:focus-visible {
@@ -39,28 +47,17 @@
 .imageTint {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 30%, rgba(4, 14, 26, 0.65) 85%, rgba(4, 14, 26, 0.9) 100%);
-  pointer-events: none;
-}
-
-.mediaBadge {
-  position: absolute;
-  left: 8px;
-  bottom: 44px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border: 1px solid rgba(255,255,255,0.16);
-  border-radius: var(--radius-pill);
-  background: rgba(4, 14, 26, 0.72);
-  color: rgba(255,255,255,0.82);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  /* Was rgba(var(--color-ink-rgb), ...) -- --color-ink is the app's base
+     SURFACE color, correctly theme-reactive for panels/chrome, but this is a
+     vignette darkening a food PHOTOGRAPH so the chip badges below stay
+     legible over it -- that job doesn't change with time of day. On
+     Carmella's light day-parts --color-ink flips to a light cream, so this
+     "darkening" gradient was instead lightening the photo's bottom edge,
+     leaving the chef/AI badges (also tinted from the same token, see below)
+     low-contrast. Plain black is what a photo scrim should always be,
+     regardless of theme -- on Trump this is visually identical (--color-ink
+     there is already near-black). */
+  background: linear-gradient(180deg, transparent 30%, rgba(0, 0, 0, 0.65) 85%, rgba(0, 0, 0, 0.9) 100%);
   pointer-events: none;
 }
 
@@ -85,19 +82,22 @@
   text-overflow: ellipsis;
 }
 
+/* Both badges sit on the food photo above, not on the app's own surface --
+   same reasoning as .imageTint just above: needs to stay a dark chip so the
+   gold text/icon reads clearly over any photo, regardless of day-part. */
 .chipChef {
   left: 8px;
-  background: rgba(4, 14, 26, 0.85);
-  border: 1px solid rgba(200, 165, 85, 0.65);
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.65);
   color: var(--color-gold);
 }
 
 .chipAi {
   left: 8px;
   top: 34px;
-  background: rgba(113, 72, 188, 0.86);
-  border: 1px solid rgba(180, 145, 255, 0.4);
-  color: #f0e8ff;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.65);
+  color: var(--color-gold);
 }
 
 .pairingBtn {
@@ -108,7 +108,7 @@
   height: 28px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(200, 165, 85, 0.3);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.3);
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.5);
   color: var(--color-gold);
@@ -118,8 +118,25 @@
 }
 
 .pairingBtn:hover {
-  background: rgba(200, 165, 85, 0.18);
+  background: rgba(var(--color-gold-rgb), 0.18);
   border-color: var(--color-gold);
+}
+
+.videoBadge {
+  position: absolute;
+  bottom: 8px;
+  left: 42px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(var(--color-gold-rgb), 0.3);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--color-gold);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
 }
 
 .favoriteBtn {
@@ -192,9 +209,9 @@
 
 .price {
   font-size: 19px;
-  font-weight: 500;
-  color: var(--color-cream);
-  font-family: var(--font-label);
+  font-weight: 700;
+  color: var(--color-gold);
+  font-family: var(--font-heading);
   letter-spacing: 0.02em;
 }
 
@@ -205,9 +222,9 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid rgba(200, 165, 85, 0.5);
+  border: 1px solid rgba(var(--color-gold-rgb), 0.5);
   border-radius: var(--radius-sm);
-  background: linear-gradient(145deg, rgba(200, 165, 85, 0.98), rgba(151, 115, 39, 0.98));
+  background: linear-gradient(145deg, rgba(var(--color-gold-rgb), 0.98), rgba(151, 115, 39, 0.98));
   color: #080705;
   font-size: 14px;
   font-weight: 800;
@@ -224,7 +241,7 @@
 .allergens {
   margin: 6px 0 0;
   font-size: 10px;
-  color: rgba(200, 165, 85, 0.35);
+  color: rgba(var(--color-gold-rgb), 0.35);
   line-height: 1.4;
 }
 
@@ -236,7 +253,7 @@
 .cardSoldOut:hover {
   transform: none;
   box-shadow: none;
-  border-color: rgba(200, 165, 85, 0.14);
+  border-color: rgba(var(--color-gold-rgb), 0.14);
 }
 
 .cardSoldOut .image { filter: grayscale(0.7); }
@@ -249,6 +266,10 @@
   justify-content: center;
   background: rgba(0, 0, 0, 0.45);
   z-index: 1;
+  /* Only needs to show the label — must not intercept clicks meant for the
+     favourite button, which sits above it in stacking order regardless of
+     DOM position because this layer has an explicit z-index. */
+  pointer-events: none;
 }
 
 .soldOutBadge {

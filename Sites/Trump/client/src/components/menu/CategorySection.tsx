@@ -1,25 +1,47 @@
-import { useState, memo } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { MenuCard } from './MenuCard';
 import type { MenuSection, MenuItem } from '../../types/menu';
+import { track } from '../../lib/engagement';
 import styles from './CategorySection.module.css';
 
 interface CategorySectionProps {
   section: MenuSection;
   favorites: string[];
   onFavoriteToggle: (name: string) => void;
-  onAddToCart: (item: MenuItem) => void;
   onItemClick: (item: MenuItem) => void;
   onPairingClick?: (item: MenuItem) => void;
 }
 
 export const CategorySection = memo(function CategorySection({
-  section, favorites, onFavoriteToggle, onAddToCart, onItemClick, onPairingClick
+  section, favorites, onFavoriteToggle, onItemClick, onPairingClick
 }: CategorySectionProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const ref = useRef<HTMLElement>(null);
+
+  // A chapter counts as "viewed" when a real part of it reaches the screen —
+  // not when it is mounted, because the whole menu mounts at once and every
+  // category would score identically. Once per mount: a guest scrolling up and
+  // down past the steaks is one interest, not eight.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    let sent = false;
+    const io = new IntersectionObserver(entries => {
+      for (const e of entries) {
+        if (!sent && e.isIntersecting) {
+          sent = true;
+          track({ eventType: 'CATEGORY_VIEW', label: section.title, categoryName: section.title });
+          io.disconnect();
+        }
+      }
+    }, { threshold: 0.35 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [section.title]);
 
   return (
-    <section className={styles.section} id={`section-${section.title.toLowerCase().replace(/\s+/g, '-')}`}>
+    <section ref={ref} className={styles.section} id={`section-${section.title.toLowerCase().replace(/\s+/g, '-')}`}>
       <button
         className={styles.titleRow}
         onClick={() => setCollapsed(c => !c)}
@@ -30,8 +52,9 @@ export const CategorySection = memo(function CategorySection({
           size={20}
           className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
         />
-        <h2 className={styles.title}>{section.title}</h2>
+        <h2 className={styles.title} dir="auto">{section.displayTitle ?? section.title}</h2>
       </button>
+      {section.intro && <p className={styles.intro} dir="auto">{section.intro}</p>}
       <div className={styles.divider} aria-hidden="true" />
 
       <div
@@ -48,7 +71,6 @@ export const CategorySection = memo(function CategorySection({
                   item={item}
                   isFavorite={favorites.includes(item.name)}
                   onFavoriteToggle={onFavoriteToggle}
-                  onAddToCart={onAddToCart}
                   onClick={onItemClick}
                   onPairingClick={onPairingClick}
                 />
@@ -59,11 +81,10 @@ export const CategorySection = memo(function CategorySection({
           {section.subSections.map(sub => (
             <SubSection
               key={sub.title}
-              title={sub.title}
+              title={sub.displayTitle ?? sub.title}
               items={sub.items}
               favorites={favorites}
               onFavoriteToggle={onFavoriteToggle}
-              onAddToCart={onAddToCart}
               onItemClick={onItemClick}
               onPairingClick={onPairingClick}
             />
@@ -74,12 +95,11 @@ export const CategorySection = memo(function CategorySection({
   );
 });
 
-function SubSection({ title, items, favorites, onFavoriteToggle, onAddToCart, onItemClick, onPairingClick }: {
+function SubSection({ title, items, favorites, onFavoriteToggle, onItemClick, onPairingClick }: {
   title: string;
   items: MenuItem[];
   favorites: string[];
   onFavoriteToggle: (name: string) => void;
-  onAddToCart: (item: MenuItem) => void;
   onItemClick: (item: MenuItem) => void;
   onPairingClick?: (item: MenuItem) => void;
 }) {
@@ -96,7 +116,7 @@ function SubSection({ title, items, favorites, onFavoriteToggle, onAddToCart, on
           size={15}
           className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
         />
-        <h3 className={styles.subTitle}>{title}</h3>
+        <h3 className={styles.subTitle} dir="auto">{title}</h3>
       </button>
       <div
         className={styles.collapseOuter}
@@ -110,8 +130,7 @@ function SubSection({ title, items, favorites, onFavoriteToggle, onAddToCart, on
                 item={item}
                 isFavorite={favorites.includes(item.name)}
                 onFavoriteToggle={onFavoriteToggle}
-                onAddToCart={onAddToCart}
-                onClick={onItemClick}
+                  onClick={onItemClick}
                 onPairingClick={onPairingClick}
               />
             ))}

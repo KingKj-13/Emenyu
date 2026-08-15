@@ -12,6 +12,23 @@ export interface GuestEvent {
   script?: string;
 }
 
+// Phase 1 (Recommendation Brain): what a recommendation would replace in the
+// current cart (a same-role swap), used to explain a price delta.
+export interface RecommendationReplacement {
+  name: string;
+  previousPrice: number;
+}
+
+// Phase 2 (Waiter Experience): three delivery styles for the same recommendation.
+// "friendly" is served from the existing 'casual' NLG tone (no separate tone exists).
+export interface RecommendationScripts {
+  professional: string;
+  friendly: string;
+  luxury: string;
+}
+
+export type RecommendationStatus = 'pending' | 'suggested' | 'accepted' | 'declined' | 'ignored';
+
 export interface CartRec {
   name: string;
   price: number;
@@ -21,17 +38,25 @@ export interface CartRec {
   reason: string;
   upsell: number;
   script?: string;
+  scripts?: RecommendationScripts;
   relation?: string;
   complimentary?: boolean;
   // Phase 4 analytics attribution.
   source_title?: string;
   rotationGroup?: string;
   chef?: boolean;
+  // Phase 1 (Recommendation Brain).
+  confidence?: number;
+  expectedValue?: number;
+  replacement?: RecommendationReplacement | null;
 }
 
 export interface CartRecResponse {
   recommendations: CartRec[];
   eventRec: CartRec | null;
+  // Phase 2 — cart-signal occasion detection (e.g. Champagne added), same
+  // detector the customer chatbot already uses.
+  occasionPrompt?: string | null;
   potentialUplift: number;
 }
 
@@ -66,10 +91,12 @@ export interface FloorTable {
   waiter: string | null;
   vip: boolean;
   guestName: string | null;
+  isLuxury: boolean;
 }
 
 export interface FloorState {
   tableCount: number;
+  luxuryTableCount: number;
   counts: { seated: number; cooking: number; ready: number; empty: number };
   tables: FloorTable[];
 }
@@ -78,6 +105,49 @@ export interface GuestFavorites {
   wine: string | null;
   main: string | null;
   dessert: string | null;
+}
+
+// The raw Guest record (guestService.js) — used by the guest search/seat
+// picker. GuestIntel below is the derived, richer object for a SEATED guest.
+export interface Guest {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  vip: boolean;
+  loyaltyTier: string;
+  dietary: string;
+  allergies: string;
+  preferences: Record<string, unknown> | null;
+  notes: string;
+  visitCount: number;
+  lifetimeSpend: number;
+  avgSpend: number;
+  lastVisitAt: string | null;
+}
+
+// AI Shared Event System — mirrors server/services/aiEventService.js's
+// publicEvent() shape exactly; admin and waiter render from this one type.
+export interface AiEvent {
+  id: number;
+  eventType: string;
+  label: string;
+  icon: string;
+  guestId: number | null;
+  tableId: string;
+  waiterName: string;
+  priority: number;
+  confidence: number;
+  recommendedAction: string;
+  suggestedWaiterMessage: string;
+  suggestedManagerAction: string;
+  status: 'open' | 'acknowledged' | 'resolved' | 'dismissed';
+  source: string;
+  payload: Record<string, unknown>;
+  waiterTaskId: number | null;
+  createdAt: string;
+  acknowledgedAt: string | null;
+  resolvedAt: string | null;
 }
 
 export interface GuestIntel {
@@ -107,6 +177,9 @@ export interface SuggestedItem {
   categoryType?: string;
   source?: string;
   reason?: string;
+  // Phase 1 (Recommendation Brain).
+  confidence?: number;
+  expectedValue?: number;
 }
 
 export interface Opportunity {
@@ -118,6 +191,9 @@ export interface Opportunity {
   bestAction: string | null;
   suggestedItem: SuggestedItem | null;
   alternatives: SuggestedItem[];
+  // Phase 1 (Recommendation Brain).
+  expectedValue?: number;
+  replacement?: RecommendationReplacement | null;
 }
 
 export interface TableInfo {
@@ -142,6 +218,9 @@ export interface CoachResponse {
   sayToTable: string;
   whyItWorks: string;
   alternatives: SuggestedItem[];
+  // Phase 1 (Recommendation Brain).
+  expectedValue?: number;
+  replacement?: RecommendationReplacement | null;
 }
 
 export interface SommelierResponse {
@@ -242,6 +321,21 @@ export interface OrderLine {
   category?: string;
   img?: string;
   categoryType?: string;
+  // Device Awareness / split-bill-by-device: which guest device added this
+  // line (carried through from CartItem.addedByDevice via WaiterContext's
+  // seedGuestLines) and when — blank/undefined for waiter-added lines and
+  // legacy/pre-rollout carts.
+  addedByDevice?: string;
+  addedAt?: number;
+}
+
+// Device Awareness: one entry per guest device that has joined this table's
+// visit — populated from the server's `tableDevices` socket broadcast
+// (socketService.js's getOrAssignDeviceLabel/emitTableDevices).
+export interface TableDeviceInfo {
+  deviceId: string;
+  label: string;
+  joinedAt: number;
 }
 
 export interface ServiceNotes {
