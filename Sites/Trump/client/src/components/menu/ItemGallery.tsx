@@ -55,10 +55,11 @@ export function ItemGallery({ menuItemId, itemName }: { menuItemId: number; item
       <ul className={styles.strip}>
         {assets.map(a => (
           <li key={a.id}>
-            <button
-              type="button"
-              className={`${styles.thumb} ${active?.id === a.id ? styles.thumbOn : ''}`}
-              onClick={() => {
+            <GalleryThumb
+              asset={a}
+              active={active?.id === a.id}
+              itemName={itemName}
+              onSelect={() => {
                 const next = active?.id === a.id ? null : a;
                 setActive(next);
                 if (next) {
@@ -70,17 +71,7 @@ export function ItemGallery({ menuItemId, itemName }: { menuItemId: number; item
                   });
                 }
               }}
-              aria-label={a.caption || a.alt || `${itemName} ${a.kind === 'VIDEO' ? 'video' : 'photo'}`}
-              aria-pressed={active?.id === a.id}
-            >
-              <img
-                src={a.kind === 'VIDEO' ? (a.posterUrl || a.url) : a.url}
-                alt=""
-                loading="lazy"
-                decoding="async"
-              />
-              {a.kind === 'VIDEO' && <span className={styles.play} aria-hidden><Film size={13} /></span>}
-            </button>
+            />
           </li>
         ))}
       </ul>
@@ -99,11 +90,50 @@ export function ItemGallery({ menuItemId, itemName }: { menuItemId: number; item
               onEnded={() => track({ eventType: 'VIDEO_COMPLETE', menuItemId, label: itemName })}
             />
           ) : (
-            <img src={active.url} alt={active.alt || itemName} decoding="async" />
+            <ViewerImage src={active.url} alt={active.alt || itemName} />
           )}
           {active.caption && <figcaption dir="auto">{active.caption}</figcaption>}
         </figure>
       )}
     </div>
   );
+}
+
+/**
+ * One strip thumbnail. A VIDEO asset with no generated poster has nothing an
+ * <img> can render (its `url` is the video file itself, which always fails
+ * to decode as an image) -- render the plain dark tile with just the film
+ * badge instead of asking the browser to show its broken-image glyph.
+ */
+function GalleryThumb({ asset, active, itemName, onSelect }: {
+  asset: Asset; active: boolean; itemName: string; onSelect: () => void;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const imgSrc = asset.kind === 'VIDEO' ? asset.posterUrl : asset.url;
+  const showImage = !!imgSrc && !imgError;
+
+  return (
+    <button
+      type="button"
+      className={`${styles.thumb} ${active ? styles.thumbOn : ''}`}
+      onClick={onSelect}
+      aria-label={asset.caption || asset.alt || `${itemName} ${asset.kind === 'VIDEO' ? 'video' : 'photo'}`}
+      aria-pressed={active}
+    >
+      {showImage && (
+        <img src={imgSrc} alt="" loading="lazy" decoding="async" onError={() => setImgError(true)} />
+      )}
+      {asset.kind === 'VIDEO' && (
+        <span className={`${styles.play} ${showImage ? '' : styles.playCenter}`} aria-hidden><Film size={13} /></span>
+      )}
+    </button>
+  );
+}
+
+/** Same broken-image guard for the larger preview -- a dead URL degrades to
+ *  an empty frame instead of the browser's default glyph. */
+function ViewerImage({ src, alt }: { src: string; alt: string }) {
+  const [imgError, setImgError] = useState(false);
+  if (imgError) return null;
+  return <img src={src} alt={alt} decoding="async" onError={() => setImgError(true)} />;
 }

@@ -52,6 +52,18 @@
   color: var(--color-gold);
 }
 
+/* No poster to sit over -- center the badge on the plain dark tile instead
+   of leaving it pinned to a corner of empty space. */
+.playCenter {
+  inset: 0;
+  inset-block-end: auto;
+  inset-inline-end: auto;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  background: transparent;
+}
+
 .viewer { margin: 10px 0 0; }
 .viewer img, .viewer video {
   width: 100%;

@@ -30,10 +30,17 @@ interface RatingRow { id: number; rating: number; comment: string; tableId: stri
 interface Ratings { average: number; count: number; recent: RatingRow[] }
 interface TableRow { tableId: string; revenue: number; orderCount: number }
 interface Pairing { a: string; b: string; count: number; revenue: number }
-interface EngagementVideo { menuItemId: number; name: string; plays: number; avgWatchSec: number; totalWatchSec: number }
+interface EngagementItem { menuItemId: number; name: string; views: number }
+interface EngagementVideo {
+  menuItemId: number; name: string; plays: number; avgWatchSec: number;
+  conversions: number; conversionRate: number;
+}
+interface MostWatchedVideo { menuItemId: number; name: string; plays: number; avgWatchSec: number; totalWatchSec: number }
 interface Engagement {
   totals: { byType: Record<string, number> };
-  mostWatchedVideos: EngagementVideo[];
+  topItems: EngagementItem[];
+  video: EngagementVideo[];
+  mostWatchedVideos: MostWatchedVideo[];
 }
 
 function watchTime(sec: number): string {
@@ -199,6 +206,17 @@ export function OwnerDashboard() {
     : topFloorWaiter ? { name: topFloorWaiter[0], value: topFloorWaiter[1], inProgress: true } : null;
   const today = new Date().toDateString();
   const celebrationsToday = tasks.filter(t => t.type === 'birthday' && new Date(t.createdAt).toDateString() === today).length;
+
+  // Video watch -> order conversion, aggregated across every dish's video.
+  // Correlated by the guest's own browser session (see server comment on
+  // videoConversionsBySession) -- only ever non-zero for a tenant whose
+  // guests order from their own device. Trump's waiter-submitted orders
+  // carry no guest session, so this reads an honest zero here by design,
+  // not a broken feature.
+  const engagementVideos = engagement?.video || [];
+  const totalVideoPlays = engagementVideos.reduce((s, v) => s + v.plays, 0);
+  const totalConversions = engagementVideos.reduce((s, v) => s + v.conversions, 0);
+  const conversionRate = totalVideoPlays > 0 ? Math.round((totalConversions / totalVideoPlays) * 1000) / 10 : 0;
   // Honest revenue-uplift: recommendation-attributed revenue as a share of the
   // OTHER (non-attributed) revenue in the same period — not a fabricated
   // counterfactual, just the two real totals the server already computes.
@@ -278,6 +296,50 @@ export function OwnerDashboard() {
               <Kpi value={summary?.topTable ? summary.topTable.replace(/^table/i, 'Table ') : '—'} label="Top table" sub={summary?.topTableRevenue ? formatPrice(summary.topTableRevenue) : ''} />
             </section>
 
+            {/* Guest interest — what guests actually looked at, as distinct from what
+                they ordered (that's "Top dishes" further down, sourced from real
+                sales). Everything here comes from anonymous view events. */}
+            <div className={styles.twoUp}>
+              <Panel title="Most viewed dishes" subtitle="Opened to read — not necessarily ordered">
+                <ViewList rows={engagement?.topItems || []} empty="No dish views in this period." />
+              </Panel>
+              <Panel title="Most viewed videos" subtitle="By play count">
+                <ViewList
+                  rows={(engagement?.video || []).map(v => ({ menuItemId: v.menuItemId, name: v.name, views: v.plays }))}
+                  empty="No videos played in this period."
+                />
+              </Panel>
+            </div>
+
+            <div className={styles.twoUp}>
+              <Panel title="Most-watched videos" subtitle="By total time watched, not just plays">
+                {engagement?.mostWatchedVideos.length ? (
+                  <div className={styles.dishList}>
+                    {engagement.mostWatchedVideos.slice(0, 7).map((v, i) => (
+                      <div key={`${v.menuItemId}-${v.name}`} className={styles.dishRow}>
+                        <span className={styles.dishRank}>#{i + 1}</span>
+                        <span className={styles.dishName}>{v.name || '—'}</span>
+                        <span className={styles.dishQty}>{v.plays} play{v.plays !== 1 ? 's' : ''}</span>
+                        <span className={styles.dishRev}>{watchTime(v.avgWatchSec)}/play</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : <Empty msg="No videos played in this period." />}
+              </Panel>
+              <Panel title="Conversion" subtitle="Video plays that went on to be ordered from the guest's own session">
+                <div className={styles.kpiGridInline}>
+                  <Kpi value={String(totalConversions)} label="Watched → ordered" sub={totalVideoPlays > 0 ? `of ${totalVideoPlays} plays` : undefined} />
+                  <Kpi value={`${conversionRate}%`} label="Conversion rate" />
+                </div>
+                {totalVideoPlays > 0 && totalConversions === 0 && (
+                  <p className={styles.panelNote}>
+                    Trump's guests order through their waiter, not a cart on their own device — a video view has no
+                    guest session to link to an order, so this reads zero by design rather than a broken tracker.
+                  </p>
+                )}
+              </Panel>
+            </div>
+
             {/* Revenue trend */}
             <Panel title="Revenue trend">
               {trend.length === 0 ? <Empty msg="No revenue in this period." /> : (
@@ -349,33 +411,6 @@ export function OwnerDashboard() {
                 <DishList rows={dessertItems} empty="No desserts sold yet." />
               </Panel>
             </div>
-
-            {/* Guest engagement — how much of a dish's video guests actually watch.
-                Full breakdown (plays, completion rate, per-dish table) lives in
-                Admin → Guest Engagement; this is the summary. */}
-            <Panel title="Video engagement" subtitle="Most-watched dish videos, by total watch time">
-              <div className={styles.kpiGrid}>
-                <Kpi value={String(engagement?.totals.byType.VIDEO_PLAY ?? 0)} label="Videos played" />
-                <Kpi value={String(engagement?.totals.byType.VIDEO_COMPLETE ?? 0)} label="Watched through" />
-                <Kpi
-                  value={engagement?.mostWatchedVideos[0] ? watchTime(engagement.mostWatchedVideos[0].avgWatchSec) : '—'}
-                  label="Top video, avg. watch"
-                  sub={engagement?.mostWatchedVideos[0]?.name}
-                />
-              </div>
-              {engagement?.mostWatchedVideos.length ? (
-                <div className={styles.dishList}>
-                  {engagement.mostWatchedVideos.slice(0, 5).map((v, i) => (
-                    <div key={`${v.menuItemId}-${v.name}`} className={styles.dishRow}>
-                      <span className={styles.dishRank}>#{i + 1}</span>
-                      <span className={styles.dishName}>{v.name || '—'}</span>
-                      <span className={styles.dishQty}>{v.plays} play{v.plays !== 1 ? 's' : ''}</span>
-                      <span className={styles.dishRev}>{watchTime(v.avgWatchSec)}/play</span>
-                    </div>
-                  ))}
-                </div>
-              ) : <Empty msg="No videos played in this period." />}
-            </Panel>
 
             {/* Highest-spending tables (full ranking) */}
             <Panel title="Highest-spending tables" subtitle="Completed orders, this period">
@@ -521,6 +556,22 @@ function DishList({ rows, empty }: { rows: Item[]; empty: string }) {
           <span className={styles.dishName}>{it.name}</span>
           <span className={styles.dishQty}>{it.quantity}×</span>
           <span className={styles.dishRev}>{formatPrice(it.revenue)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ViewList({ rows, empty }: { rows: EngagementItem[]; empty: string }) {
+  if (!rows || rows.length === 0) return <Empty msg={empty} />;
+  return (
+    <div className={styles.dishList}>
+      {rows.slice(0, 7).map((it, i) => (
+        <div key={`${it.menuItemId}-${it.name}`} className={styles.dishRow}>
+          <span className={styles.dishRank}>#{i + 1}</span>
+          <span className={styles.dishName}>{it.name || '—'}</span>
+          <span className={styles.dishQty} />
+          <span className={styles.dishRev}>{it.views} view{it.views !== 1 ? 's' : ''}</span>
         </div>
       ))}
     </div>

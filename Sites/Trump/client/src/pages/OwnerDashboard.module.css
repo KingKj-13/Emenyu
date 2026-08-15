@@ -92,6 +92,13 @@
 .barGold { background: linear-gradient(180deg, rgba(var(--color-gold-rgb), 0.85), rgba(var(--color-gold-rgb), 0.35)); }
 .trendLabel, .barLabel { font-size: 9px; color: var(--color-sand); white-space: nowrap; }
 
+.panelNote { margin: 10px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--color-sand, #c9bba5); }
+
+/* A KPI pair inside a half-width Panel (twoUp) -- deliberately NOT .kpiGrid,
+   whose desktop breakpoint jumps to 6 columns irrespective of its container's
+   actual width, which would squeeze two tiles into a third of the column. */
+.kpiGridInline { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
 /* Dish lists */
 .dishList { display: flex; flex-direction: column; gap: 6px; }
 .dishRow { display: grid; grid-template-columns: 26px 1fr auto auto; align-items: center; gap: 8px; font-size: 12.5px; }
