@@ -1,11 +1,11 @@
 // Owner / BI dashboard — a decluttered, mobile-first view for the owner role.
 // It REUSES the existing analytics endpoints (summary / items / tables / hours /
-// trend / day-of-week / ratings) and the recommendation analytics + insight
-// engine — no analytics are re-implemented here; this file only fetches and frames
-// data the server already computes. Operational depth still lives in /Admin.
+// trend / day-of-week / ratings / engagement) — no analytics are re-implemented
+// here; this file only fetches and frames data the server already computes.
+// Operational depth still lives in /Admin.
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, Star, LogOut, Sparkles, SlidersHorizontal, ArrowUpRight, Upload } from 'lucide-react';
+import { TrendingUp, Star, LogOut, SlidersHorizontal, ArrowUpRight, Upload } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { Spinner } from '../components/ui/Spinner';
 import { useAuth } from '../hooks/useAuth';
@@ -14,9 +14,7 @@ import { useSocketEvent } from '../hooks/useSocket';
 import { api } from '../services/api';
 import { formatPrice } from '../lib/menuUtils';
 import { sastTodayStartIso } from '../lib/businessDay';
-import { ASSISTANT_NAME } from '../constants/config';
 import { BRAND_NAME } from '../constants/api';
-import type { RecommendationAnalytics, RecoInsightsResult } from '../types/menu';
 import type { FloorState, LeaderboardRow, WaiterTask } from '../types/waiter';
 import styles from './OwnerDashboard.module.css';
 
@@ -86,8 +84,6 @@ export function OwnerDashboard() {
   const [dow, setDow] = useState<Dow[]>([]);
   const [trend, setTrend] = useState<TrendPoint[]>([]);
   const [ratings, setRatings] = useState<Ratings | null>(null);
-  const [reco, setReco] = useState<RecommendationAnalytics | null>(null);
-  const [recoInsights, setRecoInsights] = useState<RecoInsightsResult | null>(null);
   const [tables, setTables] = useState<TableRow[]>([]);
   const [drinkItems, setDrinkItems] = useState<Item[]>([]);
   const [dessertItems, setDessertItems] = useState<Item[]>([]);
@@ -104,7 +100,7 @@ export function OwnerDashboard() {
     const { from, to, bucket } = rangeParams(r);
     const p = { from, to };
     const leaderboardPeriod = r === 'today' ? 'today' : r === '7d' ? 'week' : 'month';
-    const [s, ti, bi, h, dw, tr, rt, ra, ri, tb, di, de, pr, fl, lb, tk, eg] = await Promise.all([
+    const [s, ti, bi, h, dw, tr, rt, tb, di, de, pr, fl, lb, tk, eg] = await Promise.all([
       api.getAnalyticsSummary(p).catch(() => null),
       // "Top/Bottom dishes" must never include drinks — excludeCategory pulls
       // a wider pool server-side and filters before slicing to the display limit.
@@ -114,8 +110,6 @@ export function OwnerDashboard() {
       api.getAnalyticsDayOfWeek(p).catch(() => []),
       api.getAnalyticsTrend({ ...p, bucket }).catch(() => ({ bucket, points: [] })),
       api.getRatings(p).catch(() => null),
-      api.getRecommendationAnalytics({ from, to }).catch(() => null),
-      api.getRecommendationInsights({ from, to }).catch(() => null),
       api.getAnalyticsTables(p).catch(() => []),
       // "Top drinks" subtitle promises wine + cocktails + beer + soft drinks —
       // WINE and DRINK are separate categoryType buckets, so both must be requested.
@@ -134,8 +128,6 @@ export function OwnerDashboard() {
     setDow(dw as Dow[]);
     setTrend((tr as { points: TrendPoint[] })?.points || []);
     setRatings(rt as Ratings | null);
-    setReco(ra as RecommendationAnalytics | null);
-    setRecoInsights(ri as RecoInsightsResult | null);
     setTables(tb as TableRow[]);
     setDrinkItems(di as Item[]);
     setDessertItems(de as Item[]);
@@ -183,8 +175,6 @@ export function OwnerDashboard() {
   useSocketEvent('orderPlaced', reloadSoon);
   useSocketEvent('kitchenStatusUpdate', reloadSoon);
 
-  const totals = reco?.totals;
-  const recoRevenue = totals?.revenue || 0;
   const covers = summary?.covers || 0;
   const avgPerCover = covers > 0 ? (summary!.revenue / covers) : 0;
 
@@ -217,14 +207,6 @@ export function OwnerDashboard() {
   const totalVideoPlays = engagementVideos.reduce((s, v) => s + v.plays, 0);
   const totalConversions = engagementVideos.reduce((s, v) => s + v.conversions, 0);
   const conversionRate = totalVideoPlays > 0 ? Math.round((totalConversions / totalVideoPlays) * 1000) / 10 : 0;
-  // Honest revenue-uplift: recommendation-attributed revenue as a share of the
-  // OTHER (non-attributed) revenue in the same period — not a fabricated
-  // counterfactual, just the two real totals the server already computes.
-  const baseline = Math.max(0, (summary?.revenue || 0) - recoRevenue);
-  const upliftPct = baseline > 0 ? (recoRevenue / baseline) * 100 : null;
-
-  // A few light, plain-English callouts derived from the server's own aggregates.
-  const businessInsights = buildBusinessInsights(dow, reco);
 
   return (
     <AppShell requireRole="owner" hideHeader>
@@ -270,20 +252,6 @@ export function OwnerDashboard() {
               <Kpi value={floor ? String(occupiedTables) : '—'} label="Tables occupied now" sub={onFloorRevenue > 0 ? `${formatPrice(onFloorRevenue)} on the floor` : undefined} />
               <Kpi value={String(celebrationsToday)} label="Celebrations today" hint={celebrationsToday > 0 ? undefined : 'none flagged yet'} />
               <Kpi value={topWaiter ? topWaiter.name : '—'} label="Top waiter" sub={topWaiter ? `${formatPrice(topWaiter.value)}${topWaiter.inProgress ? ' in progress' : ''}` : undefined} />
-            </section>
-
-            {/* Hero — the recommendation ROI story */}
-            <section className={styles.hero}>
-              <div className={styles.heroIcon}><Sparkles size={20} /></div>
-              <div className={styles.heroBody}>
-                <div className={styles.heroLabel}>{ASSISTANT_NAME.toUpperCase()} ADDED TO YOUR TICKETS</div>
-                <div className={styles.heroValue}>{formatPrice(recoRevenue)}</div>
-                <div className={styles.heroSub}>
-                  {totals && totals.impressions > 0
-                    ? `${totals.ordered} orders generated · ${pct(totals.acceptanceRate)} acceptance · ${formatPrice(totals.revenuePerImpression || 0)}/impression${upliftPct != null ? ` · +${Math.round(upliftPct)}% over non-AI revenue` : ''}`
-                    : `${ASSISTANT_NAME} hasn't upsold yet — check Chef Recs are enabled in Menu & Offers.`}
-                </div>
-              </div>
             </section>
 
             {/* KPI strip */}
@@ -459,18 +427,6 @@ export function OwnerDashboard() {
               ) : <Empty msg="No completed orders yet." />}
             </Panel>
 
-            {/* Recommendation funnel (compact) */}
-            <Panel title={`${ASSISTANT_NAME}'s funnel`} subtitle="Shown → tapped → added → ordered">
-              {totals && totals.impressions > 0 ? (
-                <div className={styles.funnel}>
-                  <FunnelStep value={totals.impressions} label="Shown" />
-                  <FunnelStep value={totals.clicks} label="Tapped" sub={pct(totals.clickRate)} />
-                  <FunnelStep value={totals.accepted} label="Added" sub={pct(totals.acceptanceRate)} />
-                  <FunnelStep value={totals.ordered} label="Ordered" sub={formatPrice(totals.revenue)} gold />
-                </div>
-              ) : <Empty msg="No recommendation events yet." />}
-            </Panel>
-
             {/* Ratings */}
             <Panel title="Guest ratings">
               {ratings && ratings.count > 0 ? (
@@ -494,20 +450,6 @@ export function OwnerDashboard() {
               ) : <Empty msg="No ratings in this period." />}
             </Panel>
 
-            {/* Insights — plain English */}
-            {(businessInsights.length > 0 || (recoInsights?.insights?.length || 0) > 0) && (
-              <Panel title="What to act on">
-                <div className={styles.insights}>
-                  {businessInsights.map((ins, i) => (
-                    <Insight key={`b${i}`} severity={ins.severity} title={ins.title} detail={ins.detail} />
-                  ))}
-                  {(recoInsights?.insights || []).slice(0, 5).map((ins, i) => (
-                    <Insight key={`r${i}`} severity={ins.severity} title={ins.title} detail={ins.detail} action={ins.action} />
-                  ))}
-                </div>
-              </Panel>
-            )}
-
             <Link to="/Admin" className={styles.fullLink}>Open full analytics & operations in the admin console <ArrowUpRight size={14} /></Link>
           </>
         )}
@@ -517,8 +459,6 @@ export function OwnerDashboard() {
 }
 
 // ── small presentational helpers (presentation only — no aggregation) ──
-function pct(r?: number) { return `${Math.round((Number(r) || 0) * 100)}%`; }
-
 function Kpi({ value, label, sub, hint }: { value: string; label: string; sub?: string; hint?: string }) {
   return (
     <div className={styles.kpi}>
@@ -578,43 +518,3 @@ function ViewList({ rows, empty }: { rows: EngagementItem[]; empty: string }) {
   );
 }
 
-function FunnelStep({ value, label, sub, gold }: { value: number; label: string; sub?: string; gold?: boolean }) {
-  return (
-    <div className={`${styles.funnelStep} ${gold ? styles.funnelGold : ''}`}>
-      <div className={styles.funnelValue}>{value}</div>
-      <div className={styles.funnelLabel}>{label}</div>
-      {sub && <div className={styles.funnelSub}>{sub}</div>}
-    </div>
-  );
-}
-
-const SEVERITY: Record<string, string> = { high: '#e0696b', medium: 'var(--color-gold)', low: '#6f9a7a' };
-function Insight({ severity, title, detail, action }: { severity: string; title: string; detail: string; action?: string }) {
-  return (
-    <div className={styles.insight} style={{ borderLeftColor: SEVERITY[severity] || '#9aa6b2' }}>
-      <strong className={styles.insightTitle}>{title}</strong>
-      <span className={styles.insightDetail}>{detail}</span>
-      {action && <span className={styles.insightAction}>→ {action}</span>}
-    </div>
-  );
-}
-
-// Plain-English callouts derived from already-aggregated server data.
-function buildBusinessInsights(dow: Dow[], reco: RecommendationAnalytics | null) {
-  const out: { severity: string; title: string; detail: string }[] = [];
-  const active = dow.filter(d => d.count > 0);
-  if (active.length >= 3) {
-    const busiest = [...active].sort((a, b) => b.count - a.count)[0];
-    const slowest = [...active].sort((a, b) => a.count - b.count)[0];
-    if (busiest && slowest && busiest.dow !== slowest.dow) {
-      out.push({ severity: 'low', title: `${dayName(busiest.dow)}s are your busiest day`, detail: `${busiest.count} orders · ${formatPrice(busiest.revenue)}. ${dayName(slowest.dow)}s are slowest (${slowest.count}) — plan staffing accordingly.` });
-    }
-  }
-  const topEarner = (reco?.topRevenue || []).filter(r => r.revenue > 0)[0];
-  if (topEarner) {
-    out.push({ severity: 'low', title: `${topEarner.name} is ${ASSISTANT_NAME}'s top earner`, detail: `${formatPrice(topEarner.revenue)} attributed from recommendations. Keep it stocked and well-paired.` });
-  }
-  return out;
-}
-const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-function dayName(d: number) { return DAYS[d] || ''; }

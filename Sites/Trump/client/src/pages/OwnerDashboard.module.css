@@ -38,25 +38,6 @@
 
 .loading { display: flex; justify-content: center; padding: 80px 0; }
 
-/* Hero */
-.hero {
-  display: flex; align-items: center; gap: 14px;
-  padding: 18px;
-  border-radius: 16px;
-  margin-bottom: 16px;
-  background: linear-gradient(135deg, rgba(var(--color-gold-rgb), 0.16), rgba(var(--color-gold-rgb), 0.04));
-  border: 1px solid rgba(var(--color-gold-rgb), 0.35);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-.heroIcon {
-  flex-shrink: 0; width: 44px; height: 44px; display: grid; place-items: center;
-  border-radius: 12px; background: rgba(var(--color-gold-rgb), 0.2); color: var(--color-gold);
-}
-.heroBody { min-width: 0; }
-.heroLabel { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; color: var(--color-gold); }
-.heroValue { font-family: var(--font-heading, Georgia, serif); font-size: clamp(30px, 9vw, 44px); font-weight: 800; line-height: 1.05; color: var(--color-cream, #f3ead6); }
-.heroSub { font-size: 12px; color: var(--color-sand); margin-top: 2px; }
-
 /* KPI strip */
 .kpiGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
 .kpi {
@@ -107,14 +88,6 @@
 .dishQty { color: var(--color-sand, #c9bba5); font-size: 11px; }
 .dishRev { color: var(--color-gold); font-weight: 700; }
 
-/* Funnel */
-.funnel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.funnelStep { padding: 12px 8px; border-radius: 10px; text-align: center; background: rgba(255, 255, 255, 0.025); border: 1px solid var(--color-line, rgba(var(--color-gold-rgb), 0.14)); }
-.funnelGold { background: rgba(var(--color-gold-rgb), 0.12); border-color: rgba(var(--color-gold-rgb), 0.4); }
-.funnelValue { font-family: var(--font-heading, Georgia, serif); font-size: 22px; font-weight: 800; color: var(--color-cream, #f3ead6); }
-.funnelLabel { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-sand, #c9bba5); margin-top: 2px; }
-.funnelSub { font-size: 11px; font-weight: 700; color: var(--color-gold); margin-top: 2px; }
-
 /* Ratings */
 .ratingHead { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .ratingBig { font-family: var(--font-heading, Georgia, serif); font-size: 30px; font-weight: 800; color: var(--color-cream, #f3ead6); }
@@ -123,19 +96,6 @@
 .ratingRow { padding: 8px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
 .ratingRowStars { display: inline-flex; gap: 1px; color: var(--color-gold); }
 .ratingComment { margin: 3px 0 0; font-size: 12.5px; color: var(--color-sand); line-height: 1.45; }
-
-/* Insights */
-.insights { display: flex; flex-direction: column; gap: 8px; }
-.insight {
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 10px 12px; border-radius: 8px;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid var(--color-line, rgba(var(--color-gold-rgb), 0.14));
-  border-left: 3px solid #9aa6b2;
-}
-.insightTitle { font-size: 13px; color: var(--color-cream, #f3ead6); }
-.insightDetail { font-size: 12px; color: var(--color-sand, #b8a88a); }
-.insightAction { font-size: 12px; color: var(--color-gold); }
 
 .fullLink {
   display: inline-flex; align-items: center; gap: 6px; margin-top: 4px;
@@ -148,5 +108,4 @@
   .page { padding: 22px 22px calc(32px + env(safe-area-inset-bottom)); }
   .kpiGrid { grid-template-columns: repeat(6, 1fr); }
   .twoUp { grid-template-columns: 1fr 1fr; }
-  .heroValue { font-size: 46px; }
 }
